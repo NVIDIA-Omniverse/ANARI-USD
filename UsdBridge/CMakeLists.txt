@@ -1,0 +1,174 @@
+message( "-------------------- Begin UsdBridge CmakeLists.txt ----------------------------------------")
+
+if (WIN32)
+cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
+endif()
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}")
+set(CMAKE_CXX_STANDARD 17)
+
+set(USD_INSTALL_DIR "" CACHE PATH "Path to USD")
+
+set(USD_PYTHON_INSTALL_DIR "" CACHE PATH "Path of python version corresponding to USD dependency")
+
+option(USD_DEVICE_USE_OPENVDB "Enable OpenVDB support for USD device" OFF)
+
+# USD #
+
+MESSAGE(STATUS "Using cmake value of USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
+if(EXISTS "${USD_INSTALL_DIR}/release")
+  set(USD_INSTALL_DIR_RELEASE "${USD_INSTALL_DIR}/release")
+else()
+  set(USD_INSTALL_DIR_RELEASE "${USD_INSTALL_DIR}")
+endif()
+if(EXISTS "${USD_INSTALL_DIR}/debug")
+  set(USD_INSTALL_DIR_DEBUG "${USD_INSTALL_DIR}/debug")
+else()
+  set(USD_INSTALL_DIR_DEBUG "${USD_INSTALL_DIR}")
+endif()
+
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  if(NOT EXISTS "${USD_INSTALL_DIR_DEBUG}/include")
+    message(FATAL_ERROR "USD_INSTALL_DIR or its /debug subfolder does not have an /include subfolder, so it's not configured correctly at ${USD_INSTALL_DIR_DEBUG}")
+  endif()
+elseif(NOT EXISTS "${USD_INSTALL_DIR_RELEASE}/include")
+  message(FATAL_ERROR "USD_INSTALL_DIR or its /release subfolder does not have an /include subfolder, so it's not configured correctly at ${USD_INSTALL_DIR_RELEASE}")
+endif()
+
+set(USD_DIR "$<$<NOT:$<CONFIG:Debug>>:${USD_INSTALL_DIR_RELEASE}>$<$<CONFIG:Debug>:${USD_INSTALL_DIR_DEBUG}>")
+set(USD_INCLUDE_DIR "${USD_DIR}/include")
+
+if (WIN32)
+  add_definitions("-DBOOST_ALL_DYN_LINK")
+  
+  set(USD_LIB_DIR "$<$<NOT:$<CONFIG:Debug>>:${USD_INSTALL_DIR_RELEASE}/lib>$<$<CONFIG:Debug>:${USD_INSTALL_DIR_DEBUG}/lib>")
+else()
+  if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    set(USD_LIB_DIR "${USD_INSTALL_DIR_DEBUG}/lib")
+  else()
+    set(USD_LIB_DIR "${USD_INSTALL_DIR_RELEASE}/lib")
+  endif()
+endif()
+
+list(APPEND USD_SHARED_LIBS ar arch gf js kind ndr pcp plug sdf tf trace usd usdGeom usdVol usdShade vt work)
+MESSAGE(STATUS "USD_SHARED_LIBS: ${USD_SHARED_LIBS}")
+
+# Python #
+
+set(USD_PYTHON_INCLUDE_DIR "${USD_PYTHON_INSTALL_DIR}/include")
+if(NOT EXISTS "${USD_PYTHON_INCLUDE_DIR}/pyconfig.h")
+  file(GLOB USD_PYTHON_INCLUDE_DIR "${USD_PYTHON_INSTALL_DIR}/include/python*")
+endif()
+message(STATUS "USD_PYTHON_INCLUDE_DIR: ${USD_PYTHON_INCLUDE_DIR}")
+
+if (WIN32)
+  set(USD_PYTHON_LIB_DIR "${USD_PYTHON_INSTALL_DIR}/libs")
+else()
+  set(USD_PYTHON_LIB_DIR "${USD_PYTHON_INSTALL_DIR}/lib")
+endif()
+
+if(NOT EXISTS ${USD_PYTHON_LIB_DIR})
+  message(FATAL_ERROR "Python lib dir not found in ${USD_PYTHON_INSTALL_DIR}, aborting.")
+endif()
+
+# Bridge #
+
+add_subdirectory(Mdl)
+add_subdirectory(Connection)
+add_subdirectory(Volume)
+
+set(USDBRIDGE_SOURCES
+  UsdBridge.cpp
+  UsdBridgeUtils.cpp
+  UsdBridgeCaches.cpp
+  UsdBridgeUsdWriter.cpp
+  UsdBridge.h
+  UsdBridgeCaches.h
+  UsdBridgeUsdWriter.h
+  UsdBridgeData.h
+  UsdBridgeUtils.h
+  UsdBridgeMacros.h
+  usd.h
+  ${USDBRIDGE_MDL_SOURCES}
+  ${USDBRIDGE_CONNECT_SOURCES}
+  ${USDBRIDGE_VOLUME_SOURCES}
+)
+
+add_library(UsdBridge STATIC ${USDBRIDGE_SOURCES}) 
+
+# Includes/libs #
+
+target_include_directories(UsdBridge PRIVATE 
+  ${USD_INCLUDE_DIR} 
+  ${USD_PYTHON_INCLUDE_DIR} 
+  ./
+  Mdl/ ${USDBRIDGE_MDL_INCLUDE_DIRS}
+  Connection/ ${USDBRIDGE_CONNECT_INCLUDE_DIRS}
+  Volume/ ${USDBRIDGE_VOLUME_INCLUDE_DIRS}
+  )
+
+target_compile_definitions(UsdBridge PRIVATE
+  ${USDBRIDGE_MDL_COMPILE_DEFS}
+  ${USDBRIDGE_CONNECT_COMPILE_DEFS}
+  ${USDBRIDGE_VOLUME_COMPILE_DEFS}
+  )
+
+if (WIN32)
+  set_source_files_properties(Volume/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+  target_link_directories(UsdBridge PUBLIC
+    ${USD_LIB_DIR}
+    ${USD_PYTHON_LIB_DIR}
+    ${USDBRIDGE_MDL_LINK_DIRS}
+    ${USDBRIDGE_CONNECT_LINK_DIRS}
+    ${USDBRIDGE_VOLUME_LINK_DIRS}
+    )
+  target_link_libraries(UsdBridge PUBLIC 
+    ${USD_SHARED_LIBS} 
+    ${USDBRIDGE_MDL_LINK_LIBS}
+    ${USDBRIDGE_CONNECT_LINK_LIBS}
+    ${USDBRIDGE_VOLUME_LINK_LIBS}
+    )
+else()
+  set(PLATFORM_LIBS pthread dl stdc++fs)
+  target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
+  
+  # Assume compilation against the Nvidia Omniverse USD libraries, 
+  # which are not built with the CXX11 ABI
+  if(${USD_DEVICE_USE_OMNIVERSE})
+    target_compile_definitions(UsdBridge PRIVATE
+      _GLIBCXX_USE_CXX11_ABI=0 )
+  endif()
+  
+  #target_link_options(UsdBridge PUBLIC
+  #  "-Wl,--rpath-link,${USD_LIB_DIR}"
+  #  ${USDBRIDGE_MDL_LINK_OPTIONS}
+  #  ${USDBRIDGE_CONNECT_LINK_OPTIONS}
+  #  ${USDBRIDGE_VOLUME_LINK_OPTIONS})  # Not required for ANARI
+  
+  foreach(lib ${USD_SHARED_LIBS})
+    find_library(path ${lib} PATHS ${USD_LIB_DIR})
+    list(APPEND USD_LIBS ${path})
+    unset(path CACHE)
+  endforeach()
+
+  file(GLOB USD_PYTHON_LIBS "${USD_PYTHON_LIB_DIR}/libpython*.so")
+  message(STATUS "USD_PYTHON_LIBS: ${USD_PYTHON_LIBS}")
+  
+  target_link_libraries(UsdBridge PUBLIC 
+    ${USD_LIBS} 
+    ${USD_PYTHON_LIBS} 
+    ${USDBRIDGE_MDL_LINK_LIBS}
+    ${USDBRIDGE_CONNECT_LINK_LIBS}
+    ${USDBRIDGE_VOLUME_LINK_LIBS}
+    )
+endif()
+
+install(TARGETS UsdBridge
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+message( "-------------------- End UsdBridge CmakeLists.txt ----------------------------------------")
+
+
