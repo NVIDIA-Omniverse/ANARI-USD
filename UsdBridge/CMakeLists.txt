@@ -77,28 +77,27 @@ set(USDBRIDGE_SOURCES
   usd.h
   ${USDBRIDGE_MDL_SOURCES}
   ${USDBRIDGE_CONNECT_SOURCES}
-  ${USDBRIDGE_VOLUME_SOURCES}
 )
 
 add_library(UsdBridge STATIC ${USDBRIDGE_SOURCES})
 
 # Includes/libs #
 
-target_include_directories(UsdBridge PRIVATE
-  ${USD_INCLUDE_DIR}
+target_include_directories(UsdBridge
+PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}
+PRIVATE
+  ${USD_INCLUDE_DIR}
   ${CMAKE_CURRENT_LIST_DIR}/Mdl
   ${CMAKE_CURRENT_LIST_DIR}/Connection
   ${CMAKE_CURRENT_LIST_DIR}/Volume
   ${USDBRIDGE_MDL_INCLUDE_DIRS}
   ${USDBRIDGE_CONNECT_INCLUDE_DIRS}
-  ${USDBRIDGE_VOLUME_INCLUDE_DIRS}
 )
 
 target_compile_definitions(UsdBridge PRIVATE
   ${USDBRIDGE_MDL_COMPILE_DEFS}
   ${USDBRIDGE_CONNECT_COMPILE_DEFS}
-  ${USDBRIDGE_VOLUME_COMPILE_DEFS}
 )
 
 if (WIN32)
@@ -108,7 +107,6 @@ if (WIN32)
     ${USD_PYTHON_LIB_DIR}
     ${USDBRIDGE_MDL_LINK_DIRS}
     ${USDBRIDGE_CONNECT_LINK_DIRS}
-    ${USDBRIDGE_VOLUME_LINK_DIRS}
   )
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
@@ -124,8 +122,7 @@ else()
   #target_link_options(UsdBridge PUBLIC
   #  "-Wl,--rpath-link,${USD_LIB_DIR}"
   #  ${USDBRIDGE_MDL_LINK_OPTIONS}
-  #  ${USDBRIDGE_CONNECT_LINK_OPTIONS}
-  #  ${USDBRIDGE_VOLUME_LINK_OPTIONS})  # Not required for ANARI
+  #  ${USDBRIDGE_CONNECT_LINK_OPTIONS})  # Not required for ANARI
 
   foreach(lib ${USD_SHARED_LIBS})
     find_library(path ${lib} PATHS ${USD_LIB_DIR})
@@ -137,9 +134,9 @@ endif()
 target_link_libraries(UsdBridge PUBLIC
   ${USD_LIBS}
   Python::Module
+  UsdBridge_Volume
   ${USDBRIDGE_MDL_LINK_LIBS}
   ${USDBRIDGE_CONNECT_LINK_LIBS}
-  ${USDBRIDGE_VOLUME_LINK_LIBS}
 )
 
 install(TARGETS UsdBridge
