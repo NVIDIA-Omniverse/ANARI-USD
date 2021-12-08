@@ -1,4 +1,4 @@
-// Copyright 2020 The Khronos Group
+// Copyright 2021 NVIDIA Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #include <errno.h>

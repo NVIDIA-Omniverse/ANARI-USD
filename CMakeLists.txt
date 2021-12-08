@@ -27,11 +27,6 @@ include(GNUInstallDirs)
 
 find_package(anari REQUIRED)
 
-if (NOT USD_INSTALL_DIR)
-  find_path(USD_INSTALL_DIR NAMES include/pxr/pxr.h)
-  message(STATUS "Using USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
-endif()
-
 ## Core UsdBride ##
 
 add_subdirectory(UsdBridge)

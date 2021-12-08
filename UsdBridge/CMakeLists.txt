@@ -4,12 +4,14 @@ if (WIN32)
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(USD_INSTALL_DIR "" CACHE PATH "Path to USD")
-
-option(USD_DEVICE_USE_OPENVDB "Enable OpenVDB support for USD device" OFF)
+if (NOT USD_INSTALL_DIR)
+  find_path(USD_INSTALL_DIR NAMES include/pxr/pxr.h)
+  message(STATUS "Using USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
+endif()
 
 # USD #
 
@@ -84,17 +86,20 @@ add_library(UsdBridge STATIC ${USDBRIDGE_SOURCES})
 
 target_include_directories(UsdBridge PRIVATE
   ${USD_INCLUDE_DIR}
-  ./
-  Mdl/ ${USDBRIDGE_MDL_INCLUDE_DIRS}
-  Connection/ ${USDBRIDGE_CONNECT_INCLUDE_DIRS}
-  Volume/ ${USDBRIDGE_VOLUME_INCLUDE_DIRS}
-  )
+  ${CMAKE_CURRENT_LIST_DIR}
+  ${CMAKE_CURRENT_LIST_DIR}/Mdl
+  ${CMAKE_CURRENT_LIST_DIR}/Connection
+  ${CMAKE_CURRENT_LIST_DIR}/Volume
+  ${USDBRIDGE_MDL_INCLUDE_DIRS}
+  ${USDBRIDGE_CONNECT_INCLUDE_DIRS}
+  ${USDBRIDGE_VOLUME_INCLUDE_DIRS}
+)
 
 target_compile_definitions(UsdBridge PRIVATE
   ${USDBRIDGE_MDL_COMPILE_DEFS}
   ${USDBRIDGE_CONNECT_COMPILE_DEFS}
   ${USDBRIDGE_VOLUME_COMPILE_DEFS}
-  )
+)
 
 if (WIN32)
   set_source_files_properties(Volume/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
@@ -104,14 +109,7 @@ if (WIN32)
     ${USDBRIDGE_MDL_LINK_DIRS}
     ${USDBRIDGE_CONNECT_LINK_DIRS}
     ${USDBRIDGE_VOLUME_LINK_DIRS}
-    )
-  target_link_libraries(UsdBridge PUBLIC
-    ${USD_SHARED_LIBS}
-    Python::Module
-    ${USDBRIDGE_MDL_LINK_LIBS}
-    ${USDBRIDGE_CONNECT_LINK_LIBS}
-    ${USDBRIDGE_VOLUME_LINK_LIBS}
-    )
+  )
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
   target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
@@ -134,15 +132,15 @@ else()
     list(APPEND USD_LIBS ${path})
     unset(path CACHE)
   endforeach()
-
-  target_link_libraries(UsdBridge PUBLIC
-    ${USD_LIBS}
-    Python::Module
-    ${USDBRIDGE_MDL_LINK_LIBS}
-    ${USDBRIDGE_CONNECT_LINK_LIBS}
-    ${USDBRIDGE_VOLUME_LINK_LIBS}
-    )
 endif()
+
+target_link_libraries(UsdBridge PUBLIC
+  ${USD_LIBS}
+  Python::Module
+  ${USDBRIDGE_MDL_LINK_LIBS}
+  ${USDBRIDGE_CONNECT_LINK_LIBS}
+  ${USDBRIDGE_VOLUME_LINK_LIBS}
+)
 
 install(TARGETS UsdBridge
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

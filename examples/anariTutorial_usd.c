@@ -1,4 +1,4 @@
-// Copyright 2020 The Khronos Group
+// Copyright 2021 NVIDIA Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #include <errno.h>
@@ -58,7 +58,7 @@ int main(int argc, const char **argv)
   stbi_flip_vertically_on_write(1);
 
   // image size
-  int imgSize[2] = { 1024, 768 }; 
+  int imgSize[2] = { 1024, 768 };
 
   // camera
   float cam_pos[] = {0.f, 0.f, 0.f};
