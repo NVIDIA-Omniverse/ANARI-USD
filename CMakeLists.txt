@@ -1,9 +1,42 @@
 ## Copyright 2020 The Khronos Group
 ## SPDX-License-Identifier: Apache-2.0
 
-add_subdirectory(UsdBridge)
+cmake_minimum_required(VERSION 3.17)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_BUILD_TYPE_INIT "Release")
+
+set(CMAKE_INSTALL_RPATH "$ORIGIN")
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+## Top-level project ##
+
+project(AnariUsdDevice LANGUAGES C CXX)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_PROJECT_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_PROJECT_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_PROJECT_DIR})
+
+include(GNUInstallDirs)
+
+## Dependencies ##
+
+find_package(anari REQUIRED)
+
+if (NOT USD_INSTALL_DIR)
+  find_path(USD_INSTALL_DIR NAMES include/pxr/pxr.h)
+  message(STATUS "Using USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
+endif()
+
+## Core UsdBride ##
+
+add_subdirectory(UsdBridge)
+
+## Build USD Device ##
 
 if(EXISTS ${CMAKE_SOURCE_DIR}/.git AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/.git)
   find_package(Git REQUIRED)
@@ -53,17 +86,15 @@ set(USDModule_HEADERS
   UsdRenderer.h
   UsdFrame.h)
 
-set(USDModule_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/libs/anari_utilities/include)
 
 add_library(anari_library_usd SHARED ${USDModule_SOURCES} ${USDModule_HEADERS})
 
 target_compile_definitions(anari_library_usd
 	PRIVATE -DDEVICE_VERSION=${USD_DEVICE_VERSION})
 
-target_include_directories(anari_library_usd PUBLIC ${USDModule_INCLUDE_DIRECTORIES})
 target_link_libraries(anari_library_usd
-	PUBLIC anari
-	PRIVATE anari_utilities UsdBridge)
+	PUBLIC anari::anari
+	PRIVATE anari::anari_utilities UsdBridge)
 
 add_subdirectory(examples)
 

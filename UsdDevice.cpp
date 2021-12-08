@@ -25,17 +25,17 @@
 
 static char deviceName[] = "usd";
 
-extern "C"
-{
-#ifdef WIN32
-  USDDevice_INTERFACE void __cdecl anari_library_usd_init()
-#else
-  void anari_library_usd_init()
+#ifndef USDDevice_INTERFACE
+#define USDDevice_INTERFACE
 #endif
-  {
-    printf("...loaded usd library!\n");
-    anari::Device::registerType<UsdDevice>(deviceName);
-  }
+
+extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_NEW_DEVICE(
+    usd, _subtype)
+{
+  auto subtype = std::string_view(_subtype);
+  if (subtype == "default" || subtype == "usd")
+    return (ANARIDevice) new UsdDevice();
+  return nullptr;
 }
 
 ANARI_DEFINE_LIBRARY_GET_DEVICE_SUBTYPES(reference, libdata)
@@ -352,21 +352,6 @@ void UsdDevice::unmapArray(ANARIArray array)
   ((UsdDataArray*)array)->unmap(this);
 }
 
-void UsdDevice::arrayRangeUpdated1D(ANARIArray1D, uint64_t startIndex1, uint64_t elementCount1)
-{
-  reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, "Usd Device arrayRangeUpdated1D not implemented yet.");
-}
-
-void UsdDevice::arrayRangeUpdated2D(ANARIArray2D, uint64_t startIndex1, uint64_t startIndex2, uint64_t elementCount1, uint64_t elementCount2)
-{
-  reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, "Usd Device arrayRangeUpdated2D not implemented yet.");
-}
-
-void UsdDevice::arrayRangeUpdated3D(ANARIArray3D, uint64_t startIndex1, uint64_t startIndex2, uint64_t startIndex3, uint64_t elementCount1, uint64_t elementCount2, uint64_t elementCount3)
-{
-  reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, "Usd Device arrayRangeUpdated3D not implemented yet.");
-}
-
 ANARISampler UsdDevice::newSampler(const char *type)
 {
   const char* name = makeUniqueName("Sampler");
@@ -528,7 +513,7 @@ int UsdDevice::getProperty(ANARIObject object,
   return 0;
 }
 
-ANARIFrame UsdDevice::frameCreate()
+ANARIFrame UsdDevice::newFrame()
 {
   UsdFrame* object = new UsdFrame(internals->bridge.get());
 #ifdef CHECK_MEMLEAKS
