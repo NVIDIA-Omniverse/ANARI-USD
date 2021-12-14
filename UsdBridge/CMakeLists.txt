@@ -55,7 +55,7 @@ message(STATUS "USD_SHARED_LIBS: ${USD_SHARED_LIBS}")
 
 # Python #
 
-find_package(Python REQUIRED COMPONENTS Interpreter Development)
+find_package(Python REQUIRED COMPONENTS Development)
 
 # Bridge #
 
