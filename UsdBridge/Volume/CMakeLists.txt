@@ -4,12 +4,13 @@ option(USD_DEVICE_USE_OPENVDB "Enable OpenVDB support for USD device" OFF)
 
 project(UsdBridge_Volume)
 
-add_library(${PROJECT_NAME} INTERFACE)
+add_library(${PROJECT_NAME} OBJECT)
 target_sources(${PROJECT_NAME}
-INTERFACE
+PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/UsdBridgeVolumeWriter.cpp
   ${CMAKE_CURRENT_LIST_DIR}/UsdBridgeVolumeWriter.h
 )
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
 
 if (USD_DEVICE_USE_OPENVDB)
   # NOTE(jda) - OpenVDB should export a config, not module
@@ -25,9 +26,9 @@ if (USD_DEVICE_USE_OPENVDB)
   mark_as_advanced(OPENVDB_MODULE_DIR)
 
   find_package(OpenVDB REQUIRED)
-  target_link_libraries(${PROJECT_NAME} INTERFACE OpenVDB::openvdb)
+  target_link_libraries(${PROJECT_NAME} PRIVATE OpenVDB::openvdb)
   target_compile_definitions(${PROJECT_NAME}
-  INTERFACE
+  PRIVATE
     USE_OPENVDB
     OPENVDB_STATICLIB
   )
