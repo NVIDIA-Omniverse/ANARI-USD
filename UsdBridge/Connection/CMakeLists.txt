@@ -9,6 +9,11 @@ option(USD_DEVICE_USE_OMNIVERSE "Enable Omniverse support for USD device" OFF)
 if(${USD_DEVICE_USE_OMNIVERSE})
     set(OMNI_CLIENT_INSTALL_DIR "" CACHE PATH "Path to Omniverse Client")
     mark_as_advanced(OMNI_CLIENT_INSTALL_DIR)
+    
+    if (NOT OMNI_CLIENT_INSTALL_DIR)
+      find_path(OMNI_CLIENT_INSTALL_DIR NAMES include/OmniClient.h)
+      message(STATUS "Using OMNI_CLIENT_INSTALL_DIR: ${OMNI_CLIENT_INSTALL_DIR}")
+    endif()
 
     if(EXISTS ${OMNI_CLIENT_INSTALL_DIR})   
       MESSAGE(STATUS "OmniConnect is using OmniClient at: ${OMNI_CLIENT_INSTALL_DIR}")

@@ -8,12 +8,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# USD #
+
+set(USD_INSTALL_DIR "" CACHE PATH "Path to USD")
+
 if (NOT USD_INSTALL_DIR)
   find_path(USD_INSTALL_DIR NAMES include/pxr/pxr.h)
   message(STATUS "Using USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
 endif()
-
-# USD #
 
 message(STATUS "Using cmake value of USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
 if(EXISTS "${USD_INSTALL_DIR}/release")
@@ -54,8 +56,15 @@ list(APPEND USD_SHARED_LIBS ar arch gf js kind ndr pcp plug sdf tf trace usd usd
 message(STATUS "USD_SHARED_LIBS: ${USD_SHARED_LIBS}")
 
 # Python #
+set(USD_PYTHON_INSTALL_DIR "" CACHE PATH "Path of python version corresponding to USD dependency")
+
+set(PREV_PYTHON_ROOT_DIR ${Python_ROOT_DIR})
+if(EXISTS ${USD_PYTHON_INSTALL_DIR})
+  set(Python_ROOT_DIR ${USD_PYTHON_INSTALL_DIR})
+endif()
 
 find_package(Python REQUIRED COMPONENTS Interpreter Development)
+set(Python_ROOT_DIR ${PREV_PYTHON_ROOT_DIR})
 
 # Bridge #
 
@@ -101,13 +110,17 @@ target_compile_definitions(UsdBridge PRIVATE
 )
 
 if (WIN32)
-  set_source_files_properties(Volume/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+  set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/Volume/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+
+  # Due to USD_LIB_DIR being a generator expression, we can't search for absolute dirs. Instead keep libs relative
   target_link_directories(UsdBridge PUBLIC
     ${USD_LIB_DIR}
-    ${USD_PYTHON_LIB_DIR}
     ${USDBRIDGE_MDL_LINK_DIRS}
     ${USDBRIDGE_CONNECT_LINK_DIRS}
   )
+  foreach(lib ${USD_SHARED_LIBS})
+    list(APPEND USD_LIBS ${lib})
+  endforeach()
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
   target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
@@ -131,10 +144,13 @@ else()
   endforeach()
 endif()
 
-target_link_libraries(UsdBridge PUBLIC
+target_link_libraries(UsdBridge 
+PRIVATE
+  UsdBridge_Volume
+PUBLIC
   ${USD_LIBS}
   Python::Module
-  UsdBridge_Volume
+  ${USD_PYTHON_LIBS}
   ${USDBRIDGE_MDL_LINK_LIBS}
   ${USDBRIDGE_CONNECT_LINK_LIBS}
 )
