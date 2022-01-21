@@ -30,7 +30,7 @@ get_filename_component(INSTALL_DIR_ABSOLUTE
 
 ## Superbuild options ##
 
-option(BUILD_USD "Build USD and its minimum required dependencies" OFF)
+option(BUILD_USD "Build USD and its minimum required dependencies" ON)
 option(BUILD_ANARI_SDK "Build ANARI-SDK" ON)
 option(BUILD_ANARI_USD_DEVICE "Build ANARI_USD_DEVICE" ON)
 
@@ -40,26 +40,32 @@ option(USD_DEVICE_USE_OMNIVERSE "Enable Omniverse support for USD device" OFF)
 ## Build projects ##
 
 if (BUILD_USD)
-
-  if(WIN32)
-    set(TBB_URL "https://github.com/oneapi-src/oneTBB/releases/download/2018_U6/tbb2018_20180822oss_win.zip")
-  else()
-    set(TBB_URL "https://github.com/oneapi-src/oneTBB/archive/2018_U6.tar.gz")
-  endif()
-
-  build_subproject(
-    NAME tbb
-    URL ${TBB_URL}
-    BUILD_ARGS
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-  )
   
-  build_subproject(
-    NAME boost
-    URL "https://downloads.sourceforge.net/project/boost/boost/1.70.0/boost_1_70_0.tar.gz"
-    BUILD_ARGS
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-  )
+  find_package(Python3 REQUIRED Interpreter Development)
+
+  #if(WIN32)
+  #  set(TBB_URL "https://github.com/oneapi-src/oneTBB/releases/download/2018_U6/tbb2018_20180822oss_win.zip")
+  #else()
+  #  set(TBB_URL "https://github.com/oneapi-src/oneTBB/archive/2018_U6.tar.gz")
+  #endif()
+
+  #build_subproject(
+  #  NAME tbb
+  #  URL ${TBB_URL}
+  #  BUILD_ARGS
+  #    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+  #)
+  
+  find_package(TBB REQUIRED) # Rely on pre-installed tbb for now
+  
+  #build_subproject(
+  #  NAME boost
+  #  URL "https://downloads.sourceforge.net/project/boost/boost/1.70.0/boost_1_70_0.tar.gz"
+  #  BUILD_ARGS
+  #    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+  #)
+  
+  find_package(boost REQUIRED) # Rely on pre-installed boost for now
   
   build_subproject(
     NAME zlib
@@ -73,6 +79,12 @@ if (BUILD_USD)
     URL "https://github.com/AcademySoftwareFoundation/openexr/archive/v2.3.0.zip"
     BUILD_ARGS
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+      -DPYTHON_LIBRARY=${Python3_LIBRARY_DIRS}
+      -DPYTHON_INCLUDE_DIR=${Python3_INCLUDE_DIRS}
+      -DOPENEXR_PYTHON_MAJOR=${Python3_VERSION_MAJOR}
+      -DOPENEXR_PYTHON_MINOR=${Python3_VERSION_MINOR}
+    DEPENDS_ON
+      zlib
   )
 
   build_subproject(
@@ -88,7 +100,11 @@ if (BUILD_USD)
     BUILD_ARGS
       -DOPENVDB_BUILD_BINARIES=OFF
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-    DEPENDS_ON tbb boost ilmbase Blosc
+    DEPENDS_ON 
+      #tbb 
+      #boost 
+      ilmbase 
+      Blosc
   )
 
   build_subproject(
@@ -158,24 +174,30 @@ if (BUILD_ANARI_SDK)
 endif()
 
 if (BUILD_ANARI_USD_DEVICE)
+  set(ANARI_DEVICE_BUILD_ARGS
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    -DUSD_DEVICE_USE_OPENVDB=${USD_DEVICE_USE_OPENVDB}
+    -DUSD_DEVICE_USE_OMNIVERSE=${USD_DEVICE_USE_OMNIVERSE}
+    -DUSE_USD_OPENVDB_BUILD=${USE_USD_OPENVDB_BUILD})
+  
   if (BUILD_USD)
     list(APPEND DEPS USD)
+  else()
+    list(APPEND ANARI_DEVICE_BUILD_ARGS
+      -DUSD_INSTALL_DIR=${USD_INSTALL_DIR}
+      -DUSD_PYTHON_INSTALL_DIR=${USD_PYTHON_INSTALL_DIR}
+      -DOPENVDB_INSTALL_DIR=${OPENVDB_INSTALL_DIR}
+      -DOMNI_CLIENT_INSTALL_DIR=${OMNI_CLIENT_INSTALL_DIR})
   endif()
+  
   if (BUILD_ANARI_SDK)
     list(APPEND DEPS ANARI-SDK)
   endif()
+
   build_subproject(
     NAME AnariUsdDevice
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/..
-    BUILD_ARGS
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-      -DUSD_INSTALL_DIR=${USD_INSTALL_DIR}
-      -DUSD_PYTHON_INSTALL_DIR=${USD_PYTHON_INSTALL_DIR}
-      -DUSD_DEVICE_USE_OPENVDB=${USD_DEVICE_USE_OPENVDB}
-      -DUSD_DEVICE_USE_OMNIVERSE=${USD_DEVICE_USE_OMNIVERSE}
-      -DUSE_USD_OPENVDB_BUILD=${USE_USD_OPENVDB_BUILD}
-      -DOPENVDB_INSTALL_DIR=${OPENVDB_INSTALL_DIR}
-      -DOMNI_CLIENT_INSTALL_DIR=${OMNI_CLIENT_INSTALL_DIR}
+    BUILD_ARGS ${ANARI_DEVICE_BUILD_ARGS}
     DEPENDS_ON ${DEPS}
   )
 endif()

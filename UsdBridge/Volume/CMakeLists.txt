@@ -44,14 +44,17 @@ if (USD_DEVICE_USE_OPENVDB)
   
   # Support custom install dir OPENVDB_INSTALL_DIR
   
-  set(OPENVDB_INSTALL_DIR "" CACHE PATH "Path of OpenVDB install with static library")
   if(${USE_USD_OPENVDB_BUILD} AND EXISTS ${USD_OPENVDB_BUILD})
     set(OPENVDB_INSTALL_DIR ${USD_INSTALL_DIR} CACHE PATH "" FORCE)
   endif()
   
-  if (NOT OPENVDB_INSTALL_DIR)
+  if (NOT EXISTS ${OPENVDB_INSTALL_DIR})
     find_path(OPENVDB_INSTALL_DIR NAMES include/openvdb/openvdb.h)
     message(STATUS "Using OPENVDB_INSTALL_DIR: ${OPENVDB_INSTALL_DIR}")
+  endif()
+  
+  if (NOT EXISTS ${OPENVDB_INSTALL_DIR})
+    message(FATAL_ERROR "No valid OPENVDB_INSTALL_DIR set, or found using CMAKE_PREFIX_PATH: ${OPENVDB_INSTALL_DIR}")
   endif()
 
   MESSAGE(STATUS "OpenVDB enabled. In case superbuild disabled BUILD_USD, it's taken from OPENVDB_INSTALL_DIR: ${OPENVDB_INSTALL_DIR}")

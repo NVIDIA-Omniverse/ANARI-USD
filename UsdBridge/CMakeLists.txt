@@ -10,11 +10,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # USD #
 
-set(USD_INSTALL_DIR "" CACHE PATH "Path to USD")
-
-if (NOT USD_INSTALL_DIR)
+if (NOT EXISTS ${USD_INSTALL_DIR})
   find_path(USD_INSTALL_DIR NAMES include/pxr/pxr.h)
   message(STATUS "Using USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
+endif()
+
+if (NOT EXISTS ${USD_INSTALL_DIR})
+  message(FATAL_ERROR "No valid USD_INSTALL_DIR set, or found using CMAKE_PREFIX_PATH: ${USD_INSTALL_DIR}")
 endif()
 
 message(STATUS "Using cmake value of USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
