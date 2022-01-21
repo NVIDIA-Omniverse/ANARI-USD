@@ -30,7 +30,7 @@ get_filename_component(INSTALL_DIR_ABSOLUTE
 
 ## Superbuild options ##
 
-option(BUILD_USD "Build USD and its minimum required dependencies" ON)
+option(BUILD_USD "Build USD and its minimum required dependencies" OFF)
 option(BUILD_ANARI_SDK "Build ANARI-SDK" ON)
 option(BUILD_ANARI_USD_DEVICE "Build ANARI_USD_DEVICE" ON)
 
