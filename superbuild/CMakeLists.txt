@@ -57,6 +57,11 @@ if (BUILD_USD)
   #)
   
   find_package(TBB REQUIRED) # Rely on pre-installed tbb for now
+  if(EXISTS "${TBB_DIR}/../../../include")
+    file(COPY "${TBB_DIR}/../../../" DESTINATION ${CMAKE_INSTALL_PREFIX})
+  else()
+    message(FATAL_ERROR "'TBB_DIR/../../../' does not contain include and lib directory")
+  endif()
   
   #build_subproject(
   #  NAME boost
@@ -66,6 +71,11 @@ if (BUILD_USD)
   #)
   
   find_package(boost REQUIRED) # Rely on pre-installed boost for now
+  if(EXISTS "${boost_DIR}/../../../include")
+    file(COPY "${boost_DIR}/../../../" DESTINATION "${CMAKE_INSTALL_PREFIX}/")
+  else()
+    message(FATAL_ERROR "'boost_DIR/../../../' does not contain include and lib directory")
+  endif()
   
   build_subproject(
     NAME zlib
