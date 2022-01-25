@@ -36,6 +36,7 @@ will need to be found on in the host environment. Use `CMAKE_PREFIX_PATH` to
 point to your USD + ANARI-SDK (+ OpenVDB + Omniverse) installations respectively. Alternatively,
 one can use explicit install dir variables which support `debug/` and `release/` subdirs:
 
+- `ANARI_INSTALL_DIR`: for the ANARI-SDK install directory
 - `USD_INSTALL_DIR`: for the USD install directory
 - `OPENVDB_INSTALL_DIR`: for the OpenVDB install directory (if not `USE_USD_OPENVDB_BUILD`)
 - `OMNIVERSE_INSTALL_DIR`: for the Omniverse (OmniClient) install directory

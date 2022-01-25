@@ -8,10 +8,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# USD #
+# USD
 
 if (NOT EXISTS ${USD_INSTALL_DIR})
-  find_path(USD_INSTALL_DIR NAMES include/pxr/pxr.h)
+  find_path(USD_INSTALL_DIR NAMES include/pxr/pxr.h DOC "Path to USD")
   message(STATUS "Using USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
 endif()
 
@@ -42,11 +42,10 @@ endif()
 set(USD_DIR "$<$<NOT:$<CONFIG:Debug>>:${USD_INSTALL_DIR_RELEASE}>$<$<CONFIG:Debug>:${USD_INSTALL_DIR_DEBUG}>")
 set(USD_INCLUDE_DIR "${USD_DIR}/include")
 
-if (WIN32)
-  add_definitions("-DBOOST_ALL_DYN_LINK")
-
-  set(USD_LIB_DIR "$<$<NOT:$<CONFIG:Debug>>:${USD_INSTALL_DIR_RELEASE}/lib>$<$<CONFIG:Debug>:${USD_INSTALL_DIR_DEBUG}/lib>")
+if(CMAKE_CONFIGURATION_TYPES)
+  set(USD_LIB_DIR "${USD_DIR}/lib")
 else()
+  # Generator-expression-free, due to find_library later on
   if(CMAKE_BUILD_TYPE MATCHES "Debug")
     set(USD_LIB_DIR "${USD_INSTALL_DIR_DEBUG}/lib")
   else()
@@ -57,7 +56,8 @@ endif()
 list(APPEND USD_SHARED_LIBS ar arch gf js kind ndr pcp plug sdf tf trace usd usdGeom usdVol usdShade vt work)
 message(STATUS "USD_SHARED_LIBS: ${USD_SHARED_LIBS}")
 
-# Python #
+# Python
+
 set(USD_PYTHON_INSTALL_DIR "" CACHE PATH "Path of python version corresponding to USD dependency")
 
 set(PREV_PYTHON_ROOT_DIR ${Python_ROOT_DIR})
@@ -68,7 +68,7 @@ endif()
 find_package(Python REQUIRED COMPONENTS Interpreter Development)
 set(Python_ROOT_DIR ${PREV_PYTHON_ROOT_DIR})
 
-# Bridge #
+# Bridge source
 
 add_subdirectory(Mdl)
 add_subdirectory(Connection)
@@ -92,7 +92,7 @@ set(USDBRIDGE_SOURCES
 
 add_library(UsdBridge STATIC ${USDBRIDGE_SOURCES})
 
-# Includes/libs #
+# Includes
 
 target_include_directories(UsdBridge
 PUBLIC
@@ -102,27 +102,18 @@ PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/Mdl
   ${CMAKE_CURRENT_LIST_DIR}/Connection
   ${CMAKE_CURRENT_LIST_DIR}/Volume
-  ${USDBRIDGE_MDL_INCLUDE_DIRS}
   ${USDBRIDGE_CONNECT_INCLUDE_DIRS}
 )
 
 target_compile_definitions(UsdBridge PRIVATE
-  ${USDBRIDGE_MDL_COMPILE_DEFS}
   ${USDBRIDGE_CONNECT_COMPILE_DEFS}
 )
 
-if (WIN32)
-  set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/Volume/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+# Platform-dependent defs/links
 
-  # Due to USD_LIB_DIR being a generator expression, we can't search for absolute dirs. Instead keep libs relative
-  target_link_directories(UsdBridge PUBLIC
-    ${USD_LIB_DIR}
-    ${USDBRIDGE_MDL_LINK_DIRS}
-    ${USDBRIDGE_CONNECT_LINK_DIRS}
-  )
-  foreach(lib ${USD_SHARED_LIBS})
-    list(APPEND USD_LIBS ${lib})
-  endforeach()
+if (WIN32)
+  add_definitions("-DBOOST_ALL_DYN_LINK")
+  set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/Volume/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
   target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
@@ -136,9 +127,21 @@ else()
 
   #target_link_options(UsdBridge PUBLIC
   #  "-Wl,--rpath-link,${USD_LIB_DIR}"
-  #  ${USDBRIDGE_MDL_LINK_OPTIONS}
   #  ${USDBRIDGE_CONNECT_LINK_OPTIONS})  # Not required for ANARI
+endif()
 
+# Linking
+
+if(CMAKE_CONFIGURATION_TYPES)
+  # Due to USD_LIB_DIR being a generator expression, we can't search for absolute dirs. Instead keep libs relative
+  target_link_directories(UsdBridge PUBLIC
+    ${USD_LIB_DIR}
+    ${USDBRIDGE_CONNECT_LINK_DIRS}
+  )
+  foreach(lib ${USD_SHARED_LIBS})
+    list(APPEND USD_LIBS ${lib})
+  endforeach()
+else()
   foreach(lib ${USD_SHARED_LIBS})
     find_library(path ${lib} PATHS ${USD_LIB_DIR})
     list(APPEND USD_LIBS ${path})
@@ -147,21 +150,40 @@ else()
 endif()
 
 target_link_libraries(UsdBridge 
-PRIVATE
-  UsdBridge_Volume
-PUBLIC
-  ${USD_LIBS}
-  Python::Module
-  ${USD_PYTHON_LIBS}
-  ${USDBRIDGE_MDL_LINK_LIBS}
-  ${USDBRIDGE_CONNECT_LINK_LIBS}
+  PRIVATE
+    UsdBridge_Volume
+  PUBLIC
+    ${USD_LIBS}
+    Python::Module
+    ${USD_PYTHON_LIBS}
+    ${USDBRIDGE_CONNECT_LINK_LIBS}
 )
+
+#Install UsdBridge
 
 install(TARGETS UsdBridge
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+#Install USD
+install(
+  DIRECTORY "${USD_LIB_DIR}/" 
+  DESTINATION "${CMAKE_INSTALL_BINDIR}/"
+  PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)
+install(
+  DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${USD_INSTALL_DIR_RELEASE}/bin/>$<$<CONFIG:Debug>:${USD_INSTALL_DIR_DEBUG}/bin/>"
+  DESTINATION "${CMAKE_INSTALL_BINDIR}/"
+  FILES_MATCHING PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  
+#Install Python
+if(EXISTS ${USD_PYTHON_INSTALL_DIR})
+  file(GLOB USD_PYTHON_LIBS "${USD_PYTHON_INSTALL_DIR}/*${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  install(
+    FILES ${USD_PYTHON_LIBS}
+    DESTINATION "${CMAKE_INSTALL_BINDIR}/")
+endif()
 
 message( "-------------------- End UsdBridge CmakeLists.txt ----------------------------------------")
 

@@ -49,7 +49,7 @@ if (USD_DEVICE_USE_OPENVDB)
   endif()
   
   if (NOT EXISTS ${OPENVDB_INSTALL_DIR})
-    find_path(OPENVDB_INSTALL_DIR NAMES include/openvdb/openvdb.h)
+    find_path(OPENVDB_INSTALL_DIR NAMES include/openvdb/openvdb.h DOC "Path of OpenVDB install with static library")
     message(STATUS "Using OPENVDB_INSTALL_DIR: ${OPENVDB_INSTALL_DIR}")
   endif()
   
@@ -91,6 +91,7 @@ if (USD_DEVICE_USE_OPENVDB)
   ###
   # FindOpenVDB.cmake tries to pull in irrelevant Boost components, so just manually fetch its dependencies instead.
   
+  set(OPENVDB_LIB_DIR_RELEASE "${OPENVDB_INSTALL_DIR_RELEASE}/lib")
   set(OPENVDB_LIB_DIR_DEBUG "${OPENVDB_INSTALL_DIR_DEBUG}/lib")
   
   # IlmBase 
@@ -132,8 +133,8 @@ if (USD_DEVICE_USE_OPENVDB)
   else()
     set(OPENVDB_LIB_FILE_NAME "libopenvdb.a")
   endif()
-  find_library(OPENVDB_LIBRARY_RELEASE ${OPENVDB_LIB_FILE_NAME} PATHS "${OPENVDB_INSTALL_DIR_RELEASE}/lib" REQUIRED)
-  find_library(OPENVDB_LIBRARY_DEBUG ${OPENVDB_LIB_FILE_NAME} PATHS "${OPENVDB_INSTALL_DIR_DEBUG}/lib" REQUIRED)
+  find_library(OPENVDB_LIBRARY_RELEASE ${OPENVDB_LIB_FILE_NAME} PATHS ${OPENVDB_LIB_DIR_RELEASE} REQUIRED)
+  find_library(OPENVDB_LIBRARY_DEBUG ${OPENVDB_LIB_FILE_NAME} PATHS ${OPENVDB_LIB_DIR_DEBUG} REQUIRED)
   
   # End of manual dependency fetch
   ###
@@ -172,6 +173,21 @@ if (USD_DEVICE_USE_OPENVDB)
         USE_OPENVDB
         OPENVDB_STATICLIB
   )
+  
+  if(NOT ${USE_USD_OPENVDB_BUILD})
+
+    #Install Openvdb + dependencies   
+    install(
+      DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${OPENVDB_LIB_DIR_RELEASE}/>$<$<CONFIG:Debug>:${OPENVDB_LIB_DIR_DEBUG}/>"
+      DESTINATION "${CMAKE_INSTALL_BINDIR}/"
+      PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)   
+    install(
+      DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${OPENVDB_INSTALL_DIR_RELEASE}/bin/>$<$<CONFIG:Debug>:${OPENVDB_INSTALL_DIR_DEBUG}/bin/>"
+      DESTINATION "${CMAKE_INSTALL_BINDIR}/"
+      FILES_MATCHING PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}")
+      
+  endif()
+  
 endif()
 
 message( "-------------------- End UsdBridgeVolume CmakeLists.txt ----------------------------------------")

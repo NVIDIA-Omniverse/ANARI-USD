@@ -25,6 +25,16 @@ include(GNUInstallDirs)
 
 ## Dependencies ##
 
+if (NOT EXISTS ${ANARI_INSTALL_DIR})
+  find_path(ANARI_INSTALL_DIR NAMES include/anari/anari.h DOC "Path to ANARI SDK")
+  message(STATUS "Using ANARI_INSTALL_DIR: ${ANARI_INSTALL_DIR}")
+endif()
+
+if (NOT EXISTS ${ANARI_INSTALL_DIR})
+  message(FATAL_ERROR "No valid ANARI_INSTALL_DIR set, or found using CMAKE_PREFIX_PATH: ${ANARI_INSTALL_DIR}")
+endif()
+
+set(anari_DIR "${ANARI_INSTALL_DIR}")
 find_package(anari REQUIRED)
 
 ## Core UsdBride ##

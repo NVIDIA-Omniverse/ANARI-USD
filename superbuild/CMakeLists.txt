@@ -4,8 +4,14 @@
 cmake_minimum_required(VERSION 3.16)
 
 if(NOT CMAKE_INSTALL_PREFIX)
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(INSTALL_DIR_EXPRESSION "${CMAKE_BINARY_DIR}/install/$<CONFIG>")
+  else()
+    set(INSTALL_DIR_EXPRESSION "${CMAKE_BINARY_DIR}/install")
+  endif()
+  
   set(CMAKE_INSTALL_PREFIX
-      "${CMAKE_BINARY_DIR}/install"
+      "${CMAKE_BINARY_DIR}/install/$<CONFIG>"
       CACHE STRING "Final install location." FORCE)
 endif()
 
@@ -181,6 +187,12 @@ if (BUILD_ANARI_SDK)
       -DBUILD_TESTS=OFF
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON
   )
+else()
+  set(ANARI_INSTALL_DIR "" CACHE PATH "Path to ANARI SDK")
+  
+  if(NOT EXISTS ${ANARI_INSTALL_DIR})
+    message(FATAL_ERROR "When BUILD_ANARI_SDK is off, a valid directory is required for ANARI_INSTALL_DIR")
+  endif()
 endif()
 
 if (BUILD_ANARI_USD_DEVICE)
@@ -202,6 +214,9 @@ if (BUILD_ANARI_USD_DEVICE)
   
   if (BUILD_ANARI_SDK)
     list(APPEND DEPS ANARI-SDK)
+  else()
+    list(APPEND ANARI_DEVICE_BUILD_ARGS
+      -DANARI_INSTALL_DIR=${ANARI_INSTALL_DIR})
   endif()
 
   build_subproject(

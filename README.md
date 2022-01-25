@@ -17,17 +17,12 @@ Device for ANARI generating USD+Omniverse output
 Follow the instructions from `superbuild/README.md` to build and install a superbuild. Typically this requires setting a `USD_INSTALL_DIR` to the directory containing 
 the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Builds](#debug-builds)), and optionally an `OPENVDB_INSTALL_DIR` or `OMNIVERSE_INSTALL_DIR`.
 
-Remember that on Windows, to successfully load the device:
-    - Make sure all .dlls in `<USD_INSTALL_DIR>/lib` and `<USD_INSTALL_DIR>/bin` are visible/copied to the executable's environment.
-    - Also include the `lib/python` and `lib/usd` subfolders to that environment
-    - Lastly, copy over the pythonXX dlls if they do not come standard with the desired USD installation.
-
 ### Usage notes #
 
 - Device name is `usd`
 - All device-specific parameters are prefixed with `usd::`
 - Set device `usd::serialize.location` string to the output location, `usd::serialize.outputBinary` bool for binary or text output. These parameters are **immutable**.
-- Each ANARI scene object has a `name` parameter as scenegraph identifier (over time). Upon setting this name, a formatted version is stored in the `usd::name` parameter.
+- Each ANARI scene object has a `name` parameter as scenegraph identifier (over time). Upon setting this name, a formatted version is stored in the `usd::name` property.
 - Each ANARI scene object has a `usd::timestep` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`.
 - For ANARI object parameters that should be constant over all timesteps, unset their corresponding bits in the `usd::timeVarying` parameter specific to each ANARI scene object (see headers). This parameter is **immutable**.
 - Changes to data are **actually saved** when `anariRenderFrame()` is called.
