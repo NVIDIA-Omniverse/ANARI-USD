@@ -36,6 +36,11 @@ if (NOT EXISTS ${ANARI_INSTALL_DIR})
   message(FATAL_ERROR "No valid ANARI_INSTALL_DIR set, or found using CMAKE_PREFIX_PATH: ${ANARI_INSTALL_DIR}")
 endif()
 
+if (EXISTS "${ANARI_INSTALL_DIR}/release")
+  # Use the release install for now, until release/debug are in the same package
+  set(ANARI_INSTALL_DIR "${ANARI_INSTALL_DIR}/release")
+endif()
+
 list(APPEND CMAKE_PREFIX_PATH ${ANARI_INSTALL_DIR})
 find_package(anari REQUIRED)
 
