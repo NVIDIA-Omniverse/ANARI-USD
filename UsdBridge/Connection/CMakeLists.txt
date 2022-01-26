@@ -7,8 +7,15 @@ option(USD_DEVICE_USE_OMNIVERSE "Enable Omniverse support for USD device" OFF)
 ####################
 
 if(${USD_DEVICE_USE_OMNIVERSE})
-    set(OMNI_CLIENT_INSTALL_DIR "" CACHE PATH "Path to Omniverse Client")
-    mark_as_advanced(OMNI_CLIENT_INSTALL_DIR)
+    
+    if (NOT EXISTS ${OMNI_CLIENT_INSTALL_DIR})
+      find_path(OMNI_CLIENT_INSTALL_DIR NAMES include/OmniClient.h DOC "Path to Omniverse Client")
+      message(STATUS "Using OMNI_CLIENT_INSTALL_DIR: ${OMNI_CLIENT_INSTALL_DIR}")
+    endif()
+    
+    if (NOT EXISTS ${OMNI_CLIENT_INSTALL_DIR})
+      message(FATAL_ERROR "No valid OMNI_CLIENT_INSTALL_DIR set, or found using CMAKE_PREFIX_PATH: ${OMNI_CLIENT_INSTALL_DIR}")
+    endif()
 
     if(EXISTS ${OMNI_CLIENT_INSTALL_DIR})   
       MESSAGE(STATUS "OmniConnect is using OmniClient at: ${OMNI_CLIENT_INSTALL_DIR}")
@@ -23,7 +30,7 @@ if(${USD_DEVICE_USE_OMNIVERSE})
       set(OMNI_CLIENT_LIB_DIR_RELEASE "${OMNI_CLIENT_DIR_RELEASE}")
       set(OMNI_CLIENT_LIB_DIR_DEBUG   "${OMNI_CLIENT_DIR_DEBUG}")
       
-      if (WIN32)
+      if (CMAKE_CONFIGURATION_TYPES)
         set(OMNI_CLIENT_LIB_DIR "$<$<NOT:$<CONFIG:Debug>>:${OMNI_CLIENT_LIB_DIR_RELEASE}>$<$<CONFIG:Debug>:${OMNI_CLIENT_LIB_DIR_DEBUG}>")
       else() 
         if(CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -52,10 +59,11 @@ set(USDBRIDGE_CONNECT_SOURCES
   PARENT_SCOPE)
 
 if(${USD_DEVICE_USE_OMNIVERSE})
+  # Set include and lib dirs
   set(USDBRIDGE_CONNECT_INCLUDE_DIRS ${OMNI_CLIENT_INCLUDE_DIR} PARENT_SCOPE)
   set(USDBRIDGE_CONNECT_COMPILE_DEFS OMNIVERSE_CONNECTION_ENABLE PARENT_SCOPE)
   
-  if (WIN32)
+  if (CMAKE_CONFIGURATION_TYPES)
     set(USDBRIDGE_CONNECT_LINK_DIRS ${OMNI_CLIENT_LIB_DIR} PARENT_SCOPE)
     set(USDBRIDGE_CONNECT_LINK_LIBS ${OMNI_CLIENT_SHARED_LIBS} PARENT_SCOPE)
   else()
@@ -72,6 +80,13 @@ if(${USD_DEVICE_USE_OMNIVERSE})
 
     set(USDBRIDGE_CONNECT_LINK_LIBS ${OMNI_LIBS} PARENT_SCOPE)
   endif()
+  
+  # Install client library
+  install(
+    DIRECTORY "${OMNI_CLIENT_LIB_DIR}/"
+    DESTINATION ${PLATFORM_INSTALL_DEST}
+    PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)
+    
 endif()  
 
 message( "-------------------- End UsdBridgeConnect CmakeLists.txt ----------------------------------------")
