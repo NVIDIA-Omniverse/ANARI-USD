@@ -171,10 +171,10 @@ if(USD_DEVICE_USE_OPENVDB)
 endif()
 
 if(USD_DEVICE_USE_OMNIVERSE)
-  set(OMNI_CLIENT_INSTALL_DIR "" CACHE PATH "Path to Omniverse Client")
+  set(OMNICLIENT_INSTALL_DIR "" CACHE PATH "Path to Omniverse Client")
   
-  if(NOT EXISTS ${OMNI_CLIENT_INSTALL_DIR})
-    message(FATAL_ERROR "When USD_DEVICE_USE_OMNIVERSE is on, a valid directory is required for OMNI_CLIENT_INSTALL_DIR (optionally pointing to debug/ and release/ subdirectories)")
+  if(NOT EXISTS ${OMNICLIENT_INSTALL_DIR})
+    message(FATAL_ERROR "When USD_DEVICE_USE_OMNIVERSE is on, a valid directory is required for OMNICLIENT_INSTALL_DIR (optionally pointing to debug/ and release/ subdirectories)")
   endif()
 endif()
 
@@ -212,7 +212,7 @@ if (BUILD_ANARI_USD_DEVICE)
       -DUSD_INSTALL_DIR=${USD_INSTALL_DIR}
       -DUSD_PYTHON_INSTALL_DIR=${USD_PYTHON_INSTALL_DIR}
       -DOPENVDB_INSTALL_DIR=${OPENVDB_INSTALL_DIR}
-      -DOMNI_CLIENT_INSTALL_DIR=${OMNI_CLIENT_INSTALL_DIR})
+      -DOMNICLIENT_INSTALL_DIR=${OMNICLIENT_INSTALL_DIR})
   endif()
   
   if (BUILD_ANARI_SDK)

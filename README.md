@@ -15,7 +15,7 @@ Device for ANARI generating USD+Omniverse output
 ### Building the ANARI USD device #
 
 Follow the instructions from `superbuild/README.md` to build and install a superbuild. Typically this requires setting a `USD_INSTALL_DIR` to the directory containing 
-the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Builds](#debug-builds)), and optionally an `OPENVDB_INSTALL_DIR` or `OMNIVERSE_INSTALL_DIR`.
+the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Builds](#debug-builds)), and optionally an `OPENVDB_INSTALL_DIR` or `OMNICLIENT_INSTALL_DIR`.
 
 ### Usage notes #
 
