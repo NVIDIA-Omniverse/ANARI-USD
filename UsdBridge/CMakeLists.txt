@@ -65,7 +65,7 @@ if(EXISTS ${USD_PYTHON_INSTALL_DIR})
   set(Python_ROOT_DIR ${USD_PYTHON_INSTALL_DIR})
 endif()
 
-find_package(Python REQUIRED COMPONENTS Interpreter Development)
+find_package(Python REQUIRED COMPONENTS Development)
 set(Python_ROOT_DIR ${PREV_PYTHON_ROOT_DIR})
 
 # Bridge source
