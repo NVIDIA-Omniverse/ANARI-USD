@@ -82,10 +82,9 @@ if(${USD_DEVICE_USE_OMNIVERSE})
   endif()
   
   # Install client library
-  
   install(
     DIRECTORY "${OMNI_CLIENT_LIB_DIR}/"
-    DESTINATION "${CMAKE_INSTALL_BINDIR}/"
+    DESTINATION ${PLATFORM_INSTALL_DEST}
     PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)
     
 endif()  

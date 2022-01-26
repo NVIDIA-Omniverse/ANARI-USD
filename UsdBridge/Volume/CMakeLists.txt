@@ -70,13 +70,12 @@ if (USD_DEVICE_USE_OPENVDB)
     set(OPENVDB_INSTALL_DIR_DEBUG "${OPENVDB_INSTALL_DIR}")
   endif()
 
-  # Add OpenVDB cmake to CMAKE_MODULE_PATH
+  # Find path with Find*.cmake files that find_package() will use for deps
 
   unset(OPENVDB_MODULE_DIR CACHE)
- 
   find_path(OPENVDB_MODULE_DIR
     PATHS
-      ${OPENVDB_INSTALL_DIR_DEBUG}
+      ${OPENVDB_INSTALL_DIR_RELEASE}
     NAMES
       FindOpenVDB.cmake
     PATH_SUFFIXES
@@ -84,7 +83,6 @@ if (USD_DEVICE_USE_OPENVDB)
       cmake/OpenVDB
       lib/cmake/OpenVDB
   )
-  
   list(APPEND CMAKE_MODULE_PATH ${OPENVDB_MODULE_DIR})
   
   
@@ -100,6 +98,7 @@ if (USD_DEVICE_USE_OPENVDB)
   find_package(IlmBase REQUIRED COMPONENTS Half)
   
   set(ILMBASE_LIBRARIES_RELEASE ${IlmBase_LIBRARIES})
+
   unset(ILMBASE_LIBRARIES_DEBUG CACHE)
   find_debug_libraries(
     ILMBASE_LIBRARIES_DEBUG 
@@ -175,17 +174,20 @@ if (USD_DEVICE_USE_OPENVDB)
   )
   
   if(NOT ${USE_USD_OPENVDB_BUILD})
+    option(INSTALL_OPENVDB_DEPS "Enable install of OpenVDB dependencies with USD device" ON)
+    if(${INSTALL_OPENVDB_DEPS})
 
-    #Install Openvdb + dependencies   
-    install(
-      DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${OPENVDB_LIB_DIR_RELEASE}/>$<$<CONFIG:Debug>:${OPENVDB_LIB_DIR_DEBUG}/>"
-      DESTINATION "${CMAKE_INSTALL_BINDIR}/"
-      PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)   
-    install(
-      DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${OPENVDB_INSTALL_DIR_RELEASE}/bin/>$<$<CONFIG:Debug>:${OPENVDB_INSTALL_DIR_DEBUG}/bin/>"
-      DESTINATION "${CMAKE_INSTALL_BINDIR}/"
-      FILES_MATCHING PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}")
-      
+      #Install Openvdb + dependencies   
+      install(
+        DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${OPENVDB_LIB_DIR_RELEASE}/>$<$<CONFIG:Debug>:${OPENVDB_LIB_DIR_DEBUG}/>"
+        DESTINATION ${PLATFORM_INSTALL_DEST}
+        PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)   
+      install(
+        DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${OPENVDB_INSTALL_DIR_RELEASE}/bin/>$<$<CONFIG:Debug>:${OPENVDB_INSTALL_DIR_DEBUG}/bin/>"
+        DESTINATION ${PLATFORM_INSTALL_DEST}
+        FILES_MATCHING PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}")
+        
+    endif()
   endif()
   
 endif()
