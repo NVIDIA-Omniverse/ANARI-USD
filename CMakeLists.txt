@@ -13,8 +13,6 @@ set(CMAKE_INSTALL_RPATH "$ORIGIN")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")
-
 ## Top-level project ##
 
 project(AnariUsdDevice LANGUAGES C CXX)
@@ -118,6 +116,9 @@ install(TARGETS anari_library_usd
 
 option(INSTALL_ANARI_DEPS "Enable install of ANARI SDK dependencies along with USD device" ON)
 if(${INSTALL_ANARI_DEPS})
+
+  set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")
+  
   install(
     DIRECTORY "${ANARI_INSTALL_DIR}/lib/" 
     DESTINATION ${PLATFORM_INSTALL_LIBDIR}

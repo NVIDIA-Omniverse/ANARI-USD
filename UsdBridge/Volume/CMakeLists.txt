@@ -176,6 +176,8 @@ if (USD_DEVICE_USE_OPENVDB)
   if(NOT ${USE_USD_OPENVDB_BUILD})
     option(INSTALL_OPENVDB_DEPS "Enable install of OpenVDB dependencies with USD device" ON)
     if(${INSTALL_OPENVDB_DEPS})
+      
+      set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")
 
       #Install Openvdb + dependencies   
       install(

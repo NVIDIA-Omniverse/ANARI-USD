@@ -170,6 +170,8 @@ install(TARGETS UsdBridge
 option(INSTALL_USD_DEPS "Enable install of USD dependencies with USD device" ON)
 if(${INSTALL_USD_DEPS})
 
+  set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")
+
   #Install USD
   install(
     DIRECTORY "${USD_LIB_DIR}/" 
