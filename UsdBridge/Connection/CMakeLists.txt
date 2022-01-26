@@ -73,7 +73,7 @@ if(${USD_DEVICE_USE_OMNIVERSE})
       PARENT_SCOPE)
       
     foreach(lib ${OMNICLIENT_SHARED_LIBS})
-      find_library(path ${lib} PATHS ${OMNICLIENT_LIB_DIR} REQUIRED)
+      find_library(path ${lib} PATHS ${OMNICLIENT_LIB_DIR} NO_DEFAULT_PATH REQUIRED)
       list(APPEND OMNI_LIBS ${path})
       unset(path CACHE)
     endforeach()
