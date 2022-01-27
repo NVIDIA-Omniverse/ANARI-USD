@@ -64,7 +64,7 @@ if(NOT USD_DEVICE_VERSION_EXPLICIT)
 else()
   set(USD_DEVICE_VERSION ${USD_DEVICE_VERSION_EXPLICIT})
 endif()
-message("USD Device version: ${USD_DEVICE_VERSION}")
+message(STATUS "USD Device version: ${USD_DEVICE_VERSION}")
 
 set(USDModule_SOURCES
   UsdAnari.cpp
