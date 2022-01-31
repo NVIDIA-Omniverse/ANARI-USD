@@ -119,7 +119,7 @@ install(TARGETS anari_library_usd
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-option(INSTALL_ANARI_DEPS "Enable install of ANARI SDK dependencies along with USD device" ON)
+option(INSTALL_ANARI_DEPS "Enable install of ANARI SDK dependencies along with USD device" OFF) # Not truly a dependency of the USD Device, generally one wants to build against ANARI source, not just libs
 if(${INSTALL_ANARI_DEPS})
 
   set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")
