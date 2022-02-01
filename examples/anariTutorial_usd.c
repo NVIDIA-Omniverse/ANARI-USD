@@ -16,10 +16,8 @@
 const char *g_libraryType = "usd";
 
 #ifdef _WIN32
-const char* localOutputDir = "e:/usd/anari";
 const char* texFile = "d:/models/texture.png";
 #else
-const char* localOutputDir = "/home/<username>/usd/anari";
 const char* texFile = "/home/<username>/models/texture.png"; // Point this to any png
 #endif
 
@@ -49,7 +47,10 @@ void statusFunc(void *userData,
     fprintf(stderr, "[PERF ] %s\n", message);
   }
   else if (severity == ANARI_SEVERITY_INFO) {
-    fprintf(stderr, "[INFO] %s\n", message);
+    fprintf(stderr, "[INFO ] %s\n", message);
+  }
+  else if (severity == ANARI_SEVERITY_DEBUG) {
+    fprintf(stderr, "[DEBUG] %s\n", message);
   }
 }
 
@@ -146,10 +147,6 @@ int main(int argc, const char **argv)
   {
     anariSetParameter(dev, dev, "usd::serialize.hostname", ANARI_STRING, "ov-test");
     anariSetParameter(dev, dev, "usd::serialize.outputpath", ANARI_STRING, "/Users/test/anari");
-  }
-  else
-  {
-    anariSetParameter(dev, dev, "usd::serialize.outputpath", ANARI_STRING, localOutputDir);
   }
   anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
 

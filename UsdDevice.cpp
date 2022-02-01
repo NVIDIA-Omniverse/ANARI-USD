@@ -107,7 +107,7 @@ public:
 
 DEFINE_PARAMETER_MAP(UsdDevice,
   REGISTER_PARAMETER_MACRO("usd::serialize.hostname", ANARI_STRING, hostName)
-  REGISTER_PARAMETER_MACRO("usd::serialize.outputpath", ANARI_STRING, outputPath)
+  REGISTER_PARAMETER_MACRO("usd::serialize.location", ANARI_STRING, outputPath)
   REGISTER_PARAMETER_MACRO("usd::serialize.newsession", ANARI_BOOL, createNewSession)
   REGISTER_PARAMETER_MACRO("usd::serialize.outputbinary", ANARI_BOOL, outputBinary)
   REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
@@ -241,16 +241,31 @@ void UsdDevice::deviceCommit()
   statusFunc = userSetStatusFunc ? userSetStatusFunc : defaultStatusCallback();
   statusUserData = userSetStatusUserData ? userSetStatusUserData : defaultStatusCallbackUserPtr();
 
-  if (!paramData.outputPath)
+  std::string location;
+
+  if(paramData.outputPath)
+    location = paramData.outputPath;
+
+  if(location.empty()) {
+    auto *envLocation = getenv("ANARI_USD_SERIALIZE_LOCATION");
+    if (envLocation) {
+      location = envLocation;
+      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR,
+        "Usd Device parameter 'usd::serialize.location' using ANARI_USD_SERIALIZE_LOCATION value");
+    }
+  }
+
+  if (location.empty())
   {
-    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "Usd Device parameter 'serialize.outputpath' not set.");
-    return;
+    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
+      "Usd Device parameter 'usd::serialize.location' not set, defaulting to './'");
+    location = "./";
   }
   if (paramData.hostName)
   {
     internals->settings.HostName = paramData.hostName;
   }
-  internals->settings.OutputPath = paramData.outputPath;
+  internals->settings.OutputPath = location;
   internals->settings.CreateNewSession = paramData.createNewSession;
   internals->settings.BinaryOutput = paramData.outputBinary;
 

@@ -14,7 +14,7 @@ Device for ANARI generating USD+Omniverse output
 
 ### Building the ANARI USD device #
 
-Follow the instructions from `superbuild/README.md` to build and install a superbuild. Typically this requires setting a `USD_INSTALL_DIR` to the directory containing 
+Follow the instructions from `superbuild/README.md` to build and install a superbuild. Typically this requires setting a `USD_INSTALL_DIR` to the directory containing
 the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Builds](#debug-builds)), and optionally an `OPENVDB_INSTALL_DIR` or `OMNICLIENT_INSTALL_DIR`.
 
 ### Usage notes #
@@ -22,13 +22,15 @@ the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Bui
 - Device name is `usd`
 - All device-specific parameters are prefixed with `usd::`
 - Set device `usd::serialize.location` string to the output location, `usd::serialize.outputBinary` bool for binary or text output. These parameters are **immutable**.
+- Alternatively, `usd::serialize.location` will also try the `ANARI_USD_SERIALIZE_LOCATION`
+environment variable. If neither are specified, it will default to `"./"` and emit a warning.
 - Each ANARI scene object has a `name` parameter as scenegraph identifier (over time). Upon setting this name, a formatted version is stored in the `usd::name` property.
 - Each ANARI scene object has a `usd::timestep` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`.
 - For ANARI object parameters that should be constant over all timesteps, unset their corresponding bits in the `usd::timeVarying` parameter specific to each ANARI scene object (see headers). This parameter is **immutable**.
 - Changes to data are **actually saved** when `anariRenderFrame()` is called.
 - If ANARI objects of a certain `name` are not referenced from within any committed timestep, their internal data is only cleaned up when calling `anariDeviceSetParam(d, "usd::garbagecollect", ANARI_VOID_POINTER, 0)`. This is adviced after every `anariRenderFrame()` or a subfrequency thereof.
 - Not supported:
-    - Geometries: 
+    - Geometries:
         - quads and cones
         - `*.attribute` parameters larger than 0 (`*.texcoord` is still supported)
         - color array type other than double/float (so no fixed types)
