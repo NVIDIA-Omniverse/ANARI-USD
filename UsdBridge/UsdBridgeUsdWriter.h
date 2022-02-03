@@ -31,6 +31,8 @@ public:
   UsdBridgeUsdWriter(const UsdBridgeSettings& settings);
   ~UsdBridgeUsdWriter();
 
+  void SetSceneStage(UsdStageRefPtr sceneStage);
+
   int FindSessionNumber();
   bool CreateDirectories();
 #ifdef SUPPORT_MDL_SHADERS 

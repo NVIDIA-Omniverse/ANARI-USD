@@ -48,6 +48,9 @@ environment variable. If neither are specified, it will default to `"./"` and em
         - direct surface/volume parameters
 - Examples in `examples/anariTutorial_usd(_time).c`
 
+### Advanced parameters #
+  - Device parameter `usd::scenestage` allows the user to provide a pre-constructed stage, into which the USD output will be constructed. For correct operation, make sure that `anariSetParameter` for `usd::scenestage` takes a `UsdStage*` (ie. the `mem` argument is of `UsdStage*const*` type) with `ANARI_VOID_POINTER` as type enumeration.
+
 ### Detailed build info #
 
 #### Debug builds #

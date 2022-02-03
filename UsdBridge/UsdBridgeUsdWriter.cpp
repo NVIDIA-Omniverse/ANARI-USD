@@ -354,6 +354,11 @@ UsdBridgeUsdWriter::~UsdBridgeUsdWriter()
 {
 }
 
+void UsdBridgeUsdWriter::SetSceneStage(UsdStageRefPtr sceneStage)
+{
+  this->SceneStage = sceneStage;
+}
+
 int UsdBridgeUsdWriter::FindSessionNumber()
 {
   int sessionNr = Connect->MaxSessionNr();
@@ -460,6 +465,7 @@ bool UsdBridgeUsdWriter::InitializeSession()
 void UsdBridgeUsdWriter::ResetSession()
 {
   this->SessionNumber = -1;
+  this->SceneStage = nullptr;
 }
 
 bool UsdBridgeUsdWriter::OpenSceneStage()
@@ -471,7 +477,8 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   this->RelativeSceneFile = "../" + SceneFile;
 
   const char* absSceneFile = Connect->GetUrl(this->SceneFileName.c_str());
-  this->SceneStage = UsdStage::CreateNew(absSceneFile);
+  if(!this->SceneStage)
+    this->SceneStage = UsdStage::CreateNew(absSceneFile);
 
   if (!this->SceneStage)
   {

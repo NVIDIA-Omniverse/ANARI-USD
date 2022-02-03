@@ -81,6 +81,8 @@ public:
 
     bridge = std::make_unique<UsdBridge>(bridgeSettings);
 
+    bridge->SetExternalSceneStage(externalSceneStage);
+
     bridgeStatusFunc(UsdBridgeLogLevel::STATUS, userData, "Initializing UsdBridge Session");
 
     bool createSuccess = bridge->OpenSession(bridgeStatusFunc, userData);
@@ -100,6 +102,7 @@ public:
 
   UsdDeviceSettings settings; // Settings lifetime should encapsulate bridge lifetime
   std::unique_ptr<UsdBridge> bridge;
+  SceneStagePtr externalSceneStage;
 
   std::set<std::string> uniqueNames;
 };
@@ -193,6 +196,11 @@ void UsdDevice::deviceSetParameter(
   {
     if(type == ANARI_INT32)
       UsdBridge::SetConnectionLogVerbosity(*((int*)mem));
+  }
+  else if(std::strcmp(id, "usd::scenestage") == 0)
+  {
+    if(internals->bridge)
+      internals->externalSceneStage = *(reinterpret_cast<void * const *>(mem));
   }
   else if (std::strcmp(id, "statusCallback") == 0 && type == ANARI_STATUS_CALLBACK)
   {

@@ -7,6 +7,7 @@
 #include "UsdBridgeData.h"
 
 struct UsdBridgeInternals;
+typedef void* SceneStagePtr; // Placeholder for UsdStage*
 
 class UsdBridge
 {
@@ -14,6 +15,8 @@ class UsdBridge
 
     UsdBridge(const UsdBridgeSettings& settings);
     ~UsdBridge();
+
+    void SetExternalSceneStage(SceneStagePtr sceneStage);
   
     bool OpenSession(UsdBridgeLogCallback logCallback, void* logUserData);
     bool GetSessionValid() const { return SessionValid; }

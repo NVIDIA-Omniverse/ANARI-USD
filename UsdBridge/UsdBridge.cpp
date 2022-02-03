@@ -139,6 +139,11 @@ UsdBridge::UsdBridge(const UsdBridgeSettings& settings)
 {
 }
 
+void UsdBridge::SetExternalSceneStage(SceneStagePtr sceneStage)
+{
+  BRIDGE_USDWRITER.SetSceneStage(UsdStageRefPtr((UsdStage*)sceneStage));
+}
+
 bool UsdBridge::OpenSession(UsdBridgeLogCallback logCallback, void* logUserData)
 {
   BRIDGE_USDWRITER.LogUserData = logUserData;
