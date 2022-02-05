@@ -102,7 +102,7 @@ public:
 
   UsdDeviceSettings settings; // Settings lifetime should encapsulate bridge lifetime
   std::unique_ptr<UsdBridge> bridge;
-  SceneStagePtr externalSceneStage;
+  SceneStagePtr externalSceneStage{nullptr};
 
   std::set<std::string> uniqueNames;
 };
