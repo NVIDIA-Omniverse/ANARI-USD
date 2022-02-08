@@ -137,11 +137,18 @@ UsdBridge::UsdBridge(const UsdBridgeSettings& settings)
   : Internals(new UsdBridgeInternals(settings))
   , SessionValid(false)
 {
+  SetEnableSaving(true);
 }
 
 void UsdBridge::SetExternalSceneStage(SceneStagePtr sceneStage)
 {
   BRIDGE_USDWRITER.SetSceneStage(UsdStageRefPtr((UsdStage*)sceneStage));
+}
+
+void UsdBridge::SetEnableSaving(bool enableSaving)
+{
+  this->EnableSaving = enableSaving;
+  BRIDGE_USDWRITER.SetEnableSaving(enableSaving);
 }
 
 bool UsdBridge::OpenSession(UsdBridgeLogCallback logCallback, void* logUserData)
@@ -533,7 +540,8 @@ void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampl
   BRIDGE_USDWRITER.BindSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, texfileName);
 
 #ifdef VALUE_CLIP_RETIMING
-  materialStage->Save();
+  if(this->EnableSaving)
+    materialStage->Save();
 #endif
 }
 
@@ -654,7 +662,8 @@ void UsdBridge::SetGeometryDataTemplate(UsdGeometryHandle geometry, const GeomDa
   BRIDGE_USDWRITER.UpdateUsdGeometry(geomStage, geomPath, geomData, timeStep);
 
 #ifdef VALUE_CLIP_RETIMING
-  geomStage->Save();
+  if(this->EnableSaving)
+    geomStage->Save();
 #endif
 }
 
@@ -685,7 +694,8 @@ void UsdBridge::SetVolumeData(UsdSpatialFieldHandle field, const UsdBridgeVolume
   BRIDGE_USDWRITER.UpdateUsdVolume(volumeStage, cache->PrimPath, cache->Name.GetString(), volumeData, timeStep);
 
 #ifdef VALUE_CLIP_RETIMING
-  volumeStage->Save();
+  if(this->EnableSaving)
+    volumeStage->Save();
 #endif
 }
 
@@ -701,7 +711,8 @@ void UsdBridge::SetMaterialData(UsdMaterialHandle material, const UsdBridgeMater
   BRIDGE_USDWRITER.UpdateUsdMaterial(materialStage, matPrimPath, matData, timeStep);
 
 #ifdef VALUE_CLIP_RETIMING
-  materialStage->Save();
+  if(this->EnableSaving)
+    materialStage->Save();
 #endif
 }
 
@@ -720,7 +731,8 @@ void UsdBridge::SaveScene()
 {
   if (!SessionValid) return;
 
-  BRIDGE_USDWRITER.GetSceneStage()->Save();
+  if(this->EnableSaving)
+    BRIDGE_USDWRITER.GetSceneStage()->Save();
 }
 
 void UsdBridge::GarbageCollect()
@@ -737,7 +749,8 @@ void UsdBridge::GarbageCollect()
       BRIDGE_USDWRITER.DeletePrim(cacheEntry);
     }
   );
-  BRIDGE_USDWRITER.GetSceneStage()->Save();
+  if(this->EnableSaving)
+    BRIDGE_USDWRITER.GetSceneStage()->Save();
 #endif
 }
 

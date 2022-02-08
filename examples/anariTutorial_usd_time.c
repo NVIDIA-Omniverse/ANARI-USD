@@ -132,11 +132,11 @@ int main(int argc, const char **argv)
   if (outputOmniverse)
   {
     anariSetParameter(dev, dev, "usd::serialize.hostname", ANARI_STRING, "ov-test");
-    anariSetParameter(dev, dev, "usd::serialize.outputpath", ANARI_STRING, "/Users/test/anari");
+    anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
   }
   else
   {
-    anariSetParameter(dev, dev, "usd::serialize.outputpath", ANARI_STRING, localOutputDir);
+    anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, localOutputDir);
   }
   anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
 

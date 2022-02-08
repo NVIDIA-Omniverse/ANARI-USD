@@ -32,6 +32,7 @@ public:
   ~UsdBridgeUsdWriter();
 
   void SetSceneStage(UsdStageRefPtr sceneStage);
+  void SetEnableSaving(bool enableSaving);
 
   int FindSessionNumber();
   bool CreateDirectories();
@@ -161,6 +162,7 @@ protected:
   // Session specific info
   int SessionNumber = -1;
   UsdStageRefPtr SceneStage;
+  bool EnableSaving = true;
   std::string SceneFileName;
   std::string RelativeSceneFile; // relative from Asset Folders
   std::string SessionDirectory;

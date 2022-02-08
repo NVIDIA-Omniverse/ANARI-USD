@@ -21,9 +21,10 @@ the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Bui
 
 - Device name is `usd`
 - All device-specific parameters are prefixed with `usd::`
-- Set device `usd::serialize.location` string to the output location, `usd::serialize.outputBinary` bool for binary or text output. These parameters are **immutable**.
+- Set device `usd::serialize.location` string to the output location on disk, `usd::serialize.outputBinary` bool for binary or text output. These parameters are **immutable**.
 - Alternatively, `usd::serialize.location` will also try the `ANARI_USD_SERIALIZE_LOCATION`
 environment variable. If neither are specified, it will default to `"./"` and emit a warning.
+- If Omniverse support is available, `usd::serialize.hostname` has to be used to specify the server name, and optionally port for Omniverse connections. This parameter is **immutable**.
 - Each ANARI scene object has a `name` parameter as scenegraph identifier (over time). Upon setting this name, a formatted version is stored in the `usd::name` property.
 - Each ANARI scene object has a `usd::timestep` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`.
 - For ANARI object parameters that should be constant over all timesteps, unset their corresponding bits in the `usd::timeVarying` parameter specific to each ANARI scene object (see headers). This parameter is **immutable**.
@@ -49,7 +50,8 @@ environment variable. If neither are specified, it will default to `"./"` and em
 - Examples in `examples/anariTutorial_usd(_time).c`
 
 ### Advanced parameters #
-  - Device parameter `usd::scenestage` allows the user to provide a pre-constructed stage, into which the USD output will be constructed. For correct operation, make sure that `anariSetParameter` for `usd::scenestage` takes a `UsdStage*` (ie. the `mem` argument is of `UsdStage*const*` type) with `ANARI_VOID_POINTER` as type enumeration.
+- Device parameter `usd::scenestage` allows the user to provide a pre-constructed stage, into which the USD output will be constructed. For correct operation, make sure that `anariSetParameter` for `usd::scenestage` takes a `UsdStage*` (ie. the `mem` argument is of `UsdStage*const*` type) with `ANARI_VOID_POINTER` as type enumeration. This parameter is **immutable**.
+- Device parameter `usd::enablesaving` of type `ANARI_BOOL` allows the user to explicitly control whether USD output is written out to disk, or kept in memory. Assets that are not stored in USD format, such as MDL materials, texture images and volumes, will always be written to disk regardless of the value of this parameter. In order for no files to be written at all, additionally pass the special string `"void"` to `usd::serialize.location`.
 
 ### Detailed build info #
 

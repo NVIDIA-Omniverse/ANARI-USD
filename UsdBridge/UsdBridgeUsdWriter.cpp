@@ -359,6 +359,11 @@ void UsdBridgeUsdWriter::SetSceneStage(UsdStageRefPtr sceneStage)
   this->SceneStage = sceneStage;
 }
 
+void UsdBridgeUsdWriter::SetEnableSaving(bool enableSaving)
+{
+  this->EnableSaving = enableSaving;
+}
+
 int UsdBridgeUsdWriter::FindSessionNumber()
 {
   int sessionNr = Connect->MaxSessionNr();
@@ -440,7 +445,12 @@ bool UsdBridgeUsdWriter::CreateMdlFiles()
 bool UsdBridgeUsdWriter::InitializeSession()
 {
   if (ConnectionSettings.HostName.empty())
-    Connect = std::make_unique<UsdBridgeLocalConnection>();
+  {
+    if(ConnectionSettings.WorkingDirectory.compare("void") == 0)
+      Connect = std::make_unique<UsdBridgeVoidConnection>();
+    else
+      Connect = std::make_unique<UsdBridgeLocalConnection>();
+  }
   else
     Connect = std::make_unique<UsdBridgeRemoteConnection>();
 
@@ -503,7 +513,8 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   this->SceneStage->SetStartTimeCode(StartTime);
   this->SceneStage->SetEndTimeCode(EndTime);
 
-  this->SceneStage->Save();
+  if(this->EnableSaving)
+    this->SceneStage->Save();
 
   return true;
 }
@@ -629,7 +640,8 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
 #endif
   }
 
-  cacheEntry->PrimStage.second->Save();
+  if(this->EnableSaving)
+    cacheEntry->PrimStage.second->Save();
 }
 
 void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeInstancerData& instancerData)
@@ -713,7 +725,8 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
       pointsGeom.CreateInvisibleIdsAttr();
   }
 
-  cacheEntry->PrimStage.second->Save();
+  if(this->EnableSaving)
+    cacheEntry->PrimStage.second->Save();
 }
 
 void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeCurveData& curveData)
@@ -751,7 +764,8 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
   if (timeEval.IsTimeVarying(DMI::TEXCOORDS))
     curveGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
 
-  cacheEntry->PrimStage.second->Save();
+  if(this->EnableSaving)
+    cacheEntry->PrimStage.second->Save();
 }
 
 const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* clipPostfix, double timeStep, bool& exists)

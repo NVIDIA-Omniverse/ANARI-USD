@@ -199,8 +199,13 @@ void UsdDevice::deviceSetParameter(
   }
   else if(std::strcmp(id, "usd::scenestage") == 0)
   {
-    if(internals->bridge)
+    if(internals->bridge && type == ANARI_VOID_POINTER)
       internals->externalSceneStage = *(reinterpret_cast<void * const *>(mem));
+  }
+  else if (std::strcmp(id, "usd::enablesaving") == 0) 
+  {
+    if(internals->bridge && type == ANARI_BOOL)
+      internals->bridge->SetEnableSaving(*((bool*)mem));
   }
   else if (std::strcmp(id, "statusCallback") == 0 && type == ANARI_STATUS_CALLBACK)
   {

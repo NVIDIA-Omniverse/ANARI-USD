@@ -131,4 +131,37 @@ protected:
   static int ConnectionLogLevel;
 };
 
+class UsdBridgeVoidConnection : public UsdBridgeConnection
+{
+public:
+  UsdBridgeVoidConnection();
+  ~UsdBridgeVoidConnection() override;
+
+  const char* GetBaseUrl() const override;
+  const char* GetUrl(const char* path) const override;
+
+  bool Initialize(const UsdBridgeConnectionSettings& settings,
+    UsdBridgeLogCallback logCallback, void* logUserData) override;
+  void Shutdown() override;
+
+  int MaxSessionNr() const override;
+
+  bool CreateFolder(const char* dirName, bool mayExist) const override;
+  bool RemoveFolder(const char* dirName) const override;
+  bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary = true) const override;
+  bool RemoveFile(const char* filePath) const override;
+  bool LockFile(const char* filePath) const override;
+  bool UnlockFile(const char* filePath) const override;
+
+  std::ostream* GetStream(const char* filePath, bool binary = true) override;
+  void FlushStream() override;
+
+  bool ProcessUpdates() override;
+
+protected:
+
+  std::stringstream DummyStream;
+};
+
+
 #endif

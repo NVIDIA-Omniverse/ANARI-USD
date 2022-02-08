@@ -819,3 +819,84 @@ bool UsdBridgeLocalConnection::ProcessUpdates()
 
   return true;
 }
+
+
+UsdBridgeVoidConnection::UsdBridgeVoidConnection()
+{
+}
+
+UsdBridgeVoidConnection::~UsdBridgeVoidConnection()
+{
+}
+
+const char* UsdBridgeVoidConnection::GetBaseUrl() const
+{
+  return UsdBridgeConnection::GetBaseUrl();
+}
+
+const char* UsdBridgeVoidConnection::GetUrl(const char* path) const
+{
+  return UsdBridgeConnection::GetUrl(path);
+}
+
+bool UsdBridgeVoidConnection::Initialize(const UsdBridgeConnectionSettings& settings, UsdBridgeLogCallback logCallback, void* logUserData)
+{
+  bool initialized = UsdBridgeConnection::Initialize(settings, logCallback, logUserData);
+  Settings.WorkingDirectory = "./";// Force relative working directory in case of unforeseen usd saves based on GetUrl()
+  return initialized;
+}
+
+void UsdBridgeVoidConnection::Shutdown()
+{
+  UsdBridgeConnection::Shutdown();
+}
+
+int UsdBridgeVoidConnection::MaxSessionNr() const
+{
+  return -1;
+}
+
+bool UsdBridgeVoidConnection::CreateFolder(const char* dirName, bool mayExist) const
+{
+  return true;
+}
+
+bool UsdBridgeVoidConnection::RemoveFolder(const char* dirName) const
+{
+  return true;
+}
+
+bool UsdBridgeVoidConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary) const
+{
+  return true;
+}
+
+bool UsdBridgeVoidConnection::RemoveFile(const char* filePath) const
+{
+  return true;
+}
+
+bool UsdBridgeVoidConnection::LockFile(const char* filePath) const
+{
+  return true;
+}
+
+bool UsdBridgeVoidConnection::UnlockFile(const char* filePath) const
+{
+  return true;
+}
+
+std::ostream * UsdBridgeVoidConnection::GetStream(const char* filePath, bool binary)
+{
+  DummyStream.clear();
+  return &DummyStream;
+}
+
+void UsdBridgeVoidConnection::FlushStream()
+{
+}
+
+bool UsdBridgeVoidConnection::ProcessUpdates()
+{
+  return true;
+}
