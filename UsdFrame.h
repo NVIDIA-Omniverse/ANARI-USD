@@ -9,6 +9,7 @@ class UsdRenderer;
 
 struct UsdFrameData
 {
+  UsdWorld* world = nullptr;
   UsdRenderer* renderer = nullptr;
   int size[2];
   ANARIDataType color;
