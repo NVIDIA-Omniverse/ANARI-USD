@@ -6,6 +6,7 @@
 #include "UsdBaseObject.h"
 
 class UsdRenderer;
+class UsdWorld;
 
 struct UsdFrameData
 {
