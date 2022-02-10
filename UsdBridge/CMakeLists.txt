@@ -153,7 +153,6 @@ endif()
 target_link_libraries(UsdBridge 
   PRIVATE
     UsdBridge_Volume
-  PUBLIC
     ${USD_LIBS}
     Python::Module
     ${USD_PYTHON_LIBS}
