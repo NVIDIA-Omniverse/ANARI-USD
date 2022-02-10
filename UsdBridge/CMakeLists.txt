@@ -63,6 +63,7 @@ set(USD_PYTHON_INSTALL_DIR "" CACHE PATH "Path of python version corresponding t
 set(PREV_PYTHON_ROOT_DIR ${Python_ROOT_DIR})
 if(EXISTS ${USD_PYTHON_INSTALL_DIR})
   set(Python_ROOT_DIR ${USD_PYTHON_INSTALL_DIR})
+  list(APPEND CMAKE_PREFIX_PATH ${USD_PYTHON_INSTALL_DIR})
 endif()
 
 find_package(Python REQUIRED COMPONENTS Development)
