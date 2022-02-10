@@ -61,13 +61,20 @@ message(STATUS "USD_SHARED_LIBS: ${USD_SHARED_LIBS}")
 set(USD_PYTHON_INSTALL_DIR "" CACHE PATH "Path of python version corresponding to USD dependency")
 
 set(PREV_PYTHON_ROOT_DIR ${Python_ROOT_DIR})
+
 if(EXISTS ${USD_PYTHON_INSTALL_DIR})
-  set(Python_ROOT_DIR ${USD_PYTHON_INSTALL_DIR})
-  list(APPEND CMAKE_PREFIX_PATH ${USD_PYTHON_INSTALL_DIR})
-  message(STATUS "THIS IS PYTHON ${USD_PYTHON_INSTALL_DIR} AND THIS IS THE CMAKE PREFIX PATH ${CMAKE_PREFIX_PATH}")
+  if(WIN32)
+    set(PY_LIB_DIR "libs") 
+  else()
+    set(PY_LIB_DIR "lib") 
+  endif()
+  file(GLOB USD_PYTHON_LINK_LIBS "${USD_PYTHON_INSTALL_DIR}/${PY_LIB_DIR}/*${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  message(STATUS "Found USD-Python libs: ${USD_PYTHON_LINK_LIBS}")
+else()
+  find_package(Python REQUIRED COMPONENTS Development)
+  set(USD_PYTHON_LINK_LIBS Python::Module)
 endif()
 
-find_package(Python REQUIRED COMPONENTS Development)
 set(Python_ROOT_DIR ${PREV_PYTHON_ROOT_DIR})
 
 # Bridge source
@@ -155,8 +162,7 @@ target_link_libraries(UsdBridge
   PRIVATE
     UsdBridge_Volume
     ${USD_LIBS}
-    Python::Module
-    ${USD_PYTHON_LIBS}
+    ${USD_PYTHON_LINK_LIBS}
     ${USDBRIDGE_CONNECT_LINK_LIBS}
 )
 
@@ -185,11 +191,13 @@ if(${INSTALL_USD_DEPS})
     
   #Install Python
   if(EXISTS ${USD_PYTHON_INSTALL_DIR})
-    file(GLOB USD_PYTHON_LIBS "${USD_PYTHON_INSTALL_DIR}/*${CMAKE_SHARED_LIBRARY_SUFFIX}")
-    install(
-      FILES ${USD_PYTHON_LIBS}
-      DESTINATION ${PLATFORM_INSTALL_LIBDIR})
+    file(GLOB PYTHON_RUNTIME_LIBRARIES "${USD_PYTHON_INSTALL_DIR}/*${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  else()
+    file(GLOB PYTHON_RUNTIME_LIBRARIES "${Python_RUNTIME_LIBRARY_DIRS}/*${CMAKE_SHARED_LIBRARY_SUFFIX}")
   endif()
+  install(
+      FILES ${PYTHON_RUNTIME_LIBRARIES}
+      DESTINATION ${PLATFORM_INSTALL_LIBDIR})
 endif()
 
 message( "-------------------- End UsdBridge CmakeLists.txt ----------------------------------------")
