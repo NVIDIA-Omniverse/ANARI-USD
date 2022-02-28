@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.17)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -101,11 +101,16 @@ set(USDModule_HEADERS
   UsdRenderer.h
   UsdFrame.h)
 
-
 add_library(anari_library_usd SHARED ${USDModule_SOURCES} ${USDModule_HEADERS})
 
 target_compile_definitions(anari_library_usd
 	PRIVATE -DDEVICE_VERSION=${USD_DEVICE_VERSION})
+
+option(CHECK_OBJECT_REFERENCES "Perform a memory check on the reference count of all objects allocated by a USD device, avoiding memleaks and double deletion." OFF)
+if(CHECK_OBJECT_REFERENCES)
+  target_compile_definitions(anari_library_usd
+    PRIVATE -DCHECK_MEMLEAKS)
+endif()
 
 target_link_libraries(anari_library_usd
 	PUBLIC anari::anari

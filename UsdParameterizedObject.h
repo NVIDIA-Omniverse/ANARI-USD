@@ -52,7 +52,7 @@ public:
       }
       else if (anari::isObject(type))
       {
-        anari::RefCounted** baseObj = reinterpret_cast<anari::RefCounted**>(dest);
+        UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
         if (*baseObj)
         {
 #ifdef CHECK_MEMLEAKS
@@ -93,7 +93,7 @@ protected:
           || type == ANARI_ARRAY3D)))
       {
         char* dest = (reinterpret_cast<char*>(&paramData) + it->second.first);
-        anari::RefCounted** baseObj = reinterpret_cast<anari::RefCounted**>(dest);
+        UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
 
         const char* src = static_cast<const char*>(rawSrc);
         size_t numBytes = AnariTypeSize(type);
@@ -160,14 +160,16 @@ protected:
         D defaultParamData;
         char* src = (reinterpret_cast<char*>(&defaultParamData) + it->second.first);
 
-        anari::RefCounted** baseObj = reinterpret_cast<anari::RefCounted**>(dest);
-
-        if (anari::isObject(type) && *baseObj)
+        if (anari::isObject(type))
         {
+          UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
+          if(*baseObj)
+          {
 #ifdef CHECK_MEMLEAKS
-          allocDevice->LogDeallocation(*baseObj);
+            allocDevice->LogDeallocation(*baseObj);
 #endif
-          (*baseObj)->refDec(anari::RefType::INTERNAL);
+            (*baseObj)->refDec(anari::RefType::INTERNAL);
+          }
         }
 
         std::memcpy(dest, src, AnariTypeSize(type));

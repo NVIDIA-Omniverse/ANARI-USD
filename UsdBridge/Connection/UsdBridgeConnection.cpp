@@ -11,8 +11,13 @@
 #include <cstring>
 
 #ifdef WIN32
+#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
 #include <filesystem>
 namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 #else
 #if __GNUC__ < 8
 #include <experimental/filesystem>

@@ -22,6 +22,7 @@
 #include <cstdio>
 #include <set>
 #include <memory>
+#include <sstream>
 
 static char deviceName[] = "usd";
 
@@ -32,8 +33,7 @@ static char deviceName[] = "usd";
 extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_NEW_DEVICE(
     usd, _subtype)
 {
-  auto subtype = std::string_view(_subtype);
-  if (subtype == "default" || subtype == "usd")
+  if (!std::strcmp(_subtype, "default") || !std::strcmp(_subtype, "usd"))
     return (ANARIDevice) new UsdDevice();
   return nullptr;
 }
@@ -125,6 +125,15 @@ UsdDevice::~UsdDevice()
   //internals->bridge->SaveScene(); //Uncomment to test cleanup of usd files.
 
 #ifdef CHECK_MEMLEAKS
+  if(!allocatedObjects.empty())
+  {
+    std::stringstream errstream;
+    errstream << "USD Device memleak reported for: "; 
+    for(auto ptr : allocatedObjects)
+      errstream << "0x" << std::hex << ptr << " of type " << std::dec << ptr->getType() << "; ";
+
+    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, errstream.str().c_str());
+  }
   assert(allocatedObjects.empty());
 #endif
 }
@@ -529,8 +538,7 @@ int UsdDevice::getProperty(ANARIObject object,
 {
   if ((void *)object == (void *)this)
   {
-    std::string_view prop = name;
-    if (prop == "version" && type == ANARI_INT32) {
+    if (!std::strcmp(name, "version") && type == ANARI_INT32) {
       writeToVoidP(mem, DEVICE_VERSION);
       return 1;
     }
@@ -614,18 +622,29 @@ void UsdDevice::commit(ANARIObject object)
 }
 
 #ifdef CHECK_MEMLEAKS
-void UsdDevice::LogAllocation(const anari::RefCounted* ptr)
+void UsdDevice::LogAllocation(const UsdBaseObject* ptr)
 {
   allocatedObjects.push_back(ptr);
 }
 
-void UsdDevice::LogDeallocation(const anari::RefCounted* ptr)
+void UsdDevice::LogDeallocation(const UsdBaseObject* ptr)
 {
-  if (ptr && ptr->useCount() == 1)
+  if (ptr)
   {
     auto it = std::find(allocatedObjects.begin(), allocatedObjects.end(), ptr);
-    assert(it != allocatedObjects.end());
-    allocatedObjects.erase(it);
+    if(it == allocatedObjects.end())
+    {
+      std::stringstream errstream;
+      errstream << "USD Device release of nonexisting or already released/deleted object: 0x" << std::hex << ptr; 
+
+      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_FATAL_ERROR, ANARI_STATUS_INVALID_OPERATION, errstream.str().c_str());
+    }
+
+    if(ptr->useCount() == 1)
+    {
+      assert(it != allocatedObjects.end());
+      allocatedObjects.erase(it);
+    }
   }
 }
 #endif

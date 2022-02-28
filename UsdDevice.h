@@ -29,6 +29,7 @@ extern "C"
 
 class UsdDevice;
 class UsdDeviceInternals;
+class UsdBaseObject;
 
 struct UsdDeviceData
 {
@@ -170,9 +171,9 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
 
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
-    void LogAllocation(const anari::RefCounted* ptr);
-    void LogDeallocation(const anari::RefCounted* ptr);
-    std::vector<const anari::RefCounted*> allocatedObjects;
+    void LogAllocation(const UsdBaseObject* ptr);
+    void LogDeallocation(const UsdBaseObject* ptr);
+    std::vector<const UsdBaseObject*> allocatedObjects;
 #endif
 
     void reportStatus(void* source,

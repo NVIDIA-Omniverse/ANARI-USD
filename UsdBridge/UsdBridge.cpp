@@ -107,7 +107,7 @@ BoolEntryPair UsdBridgeInternals::FindOrCreatePrim(const char* category, const c
     UsdWriter.CreatePrim(primCache->PrimPath);
   }
 
-  return std::pair(!cacheExists, primCache);
+  return BoolEntryPair(!cacheExists, primCache);
 }
 
 void UsdBridgeInternals::FindAndDeletePrim(const UsdBridgeHandle& handle)
@@ -188,7 +188,7 @@ bool UsdBridge::CreateWorld(const char* name, UsdWorldHandle& handle)
     BRIDGE_CACHE.InitializeWorldPrim(cacheEntry);
   }
   
-  handle = UsdWorldHandle({ cacheEntry });
+  handle.value = cacheEntry;
   return newPrim;
 }
 
@@ -205,7 +205,7 @@ bool UsdBridge::CreateInstance(const char* name, UsdInstanceHandle& handle)
     BRIDGE_USDWRITER.InitializeUsdTransform(cacheEntry);
   }
 
-  handle = UsdInstanceHandle({ cacheEntry });
+  handle.value = cacheEntry;
   return newPrim;
 }
 
@@ -222,7 +222,7 @@ bool UsdBridge::CreateGroup(const char* name, UsdGroupHandle& handle)
     BRIDGE_USDWRITER.InitializeUsdTransform(cacheEntry);
   }
 
-  handle = UsdGroupHandle({ cacheEntry });
+  handle.value = cacheEntry;
   return newPrim;
 }
 
@@ -240,7 +240,7 @@ bool UsdBridge::CreateSurface(const char* name, UsdSurfaceHandle& handle)
     BRIDGE_USDWRITER.InitializeUsdTransform(cacheEntry);
   }
 
-  handle = UsdSurfaceHandle({ cacheEntry });
+  handle.value = cacheEntry;
   return newPrim;
 }
 
@@ -257,7 +257,7 @@ bool UsdBridge::CreateVolume(const char * name, UsdVolumeHandle& handle)
     BRIDGE_USDWRITER.InitializeUsdTransform(cacheEntry);
   }
 
-  handle = UsdVolumeHandle({ cacheEntry });
+  handle.value = cacheEntry;
   return newPrim;
 }
 
@@ -290,7 +290,7 @@ bool UsdBridge::CreateGeometryTemplate(const char* name, const GeomDataType& geo
     BRIDGE_USDWRITER.InitializeUsdGeometry(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, geomData, true);
   }
 
-  handle = UsdGeometryHandle({ cacheEntry });
+  handle.value = cacheEntry;
   return newPrim;
 }
 
@@ -329,7 +329,7 @@ bool UsdBridge::CreateSpatialField(const char * name, UsdSpatialFieldHandle& han
     BRIDGE_USDWRITER.InitializeUsdVolume(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, true);
   }
 
-  handle = UsdSpatialFieldHandle({ cacheEntry });
+  handle.value = cacheEntry;
   return newPrim;
 }
 
@@ -342,7 +342,7 @@ bool UsdBridge::CreateMaterial(const char* name, UsdMaterialHandle& handle)
   UsdBridgePrimCache* matCacheEntry = matCreateResult.second;
   bool newPrim = matCreateResult.first;
 
-  UsdMaterialHandle matHandle({ matCacheEntry });
+  UsdMaterialHandle matHandle; matHandle.value = matCacheEntry;
 
   if (newPrim)
   {
@@ -373,7 +373,7 @@ bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle)
     BRIDGE_USDWRITER.InitializeUsdSampler(cacheEntry);
   }
 
-  handle = UsdSamplerHandle({ cacheEntry });
+  handle.value = cacheEntry;
   return newPrim;
 }
 
