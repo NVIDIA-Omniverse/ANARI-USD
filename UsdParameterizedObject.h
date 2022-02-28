@@ -7,11 +7,13 @@
 #include <string>
 #include <cstring>
 #include <cassert>
+#include <algorithm>
 #include "UsdAnari.h"
 #include "anari/detail/IntrusivePtr.h"
 #include "anari/detail/Helpers.h"
 #include "anari/anari_cpp/Traits.h"
 
+class UsdBaseObject;
 class UsdDevice;
 class UsdBridge;
 

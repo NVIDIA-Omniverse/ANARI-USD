@@ -786,7 +786,7 @@ const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimC
     //  clipStage = UsdStage::Open(absoluteFileName); //unlikely to happen, as we could not find timestep in clipstages. Test if this should be removed
     assert(clipStage);
 
-    it = cacheEntry->ClipStages.emplace(timeStep, std::pair(std::move(relativeFileName), clipStage)).first;
+    it = cacheEntry->ClipStages.emplace(timeStep, UsdStagePair(std::move(relativeFileName), clipStage)).first;
   }
   return it->second;
 }

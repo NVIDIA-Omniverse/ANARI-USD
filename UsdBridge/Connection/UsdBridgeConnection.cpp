@@ -19,7 +19,7 @@ namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 #endif
 #else
-#if __GNUC__ < 8
+#if (__GNUC__ < 8 || __cplusplus < 201703L)
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #else

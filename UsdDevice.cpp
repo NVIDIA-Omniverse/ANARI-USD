@@ -23,6 +23,7 @@
 #include <set>
 #include <memory>
 #include <sstream>
+#include <algorithm>
 
 static char deviceName[] = "usd";
 
