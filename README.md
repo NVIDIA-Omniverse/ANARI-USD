@@ -50,7 +50,7 @@ environment variable. If neither are specified, it will default to `"./"` and em
 - Examples in `examples/anariTutorial_usd(_time).c`
 
 ### Advanced parameters #
-- Device parameter `usd::scenestage` allows the user to provide a pre-constructed stage, into which the USD output will be constructed. For correct operation, make sure that `anariSetParameter` for `usd::scenestage` takes a `UsdStage*` (ie. the `mem` argument is of `UsdStage*const*` type) with `ANARI_VOID_POINTER` as type enumeration. This parameter is **immutable**.
+- Device parameter `usd::scenestage` allows the user to provide a pre-constructed stage, into which the USD output will be constructed. For correct operation, make sure that `anariSetParameter` for `usd::scenestage` takes a `UsdStage*` (ie. the `mem` argument is directly of `UsdStage*` type) with `ANARI_VOID_POINTER` as type enumeration. This parameter is **immutable**.
 - Device parameter `usd::enablesaving` of type `ANARI_BOOL` allows the user to explicitly control whether USD output is written out to disk, or kept in memory. Assets that are not stored in USD format, such as MDL materials, texture images and volumes, will always be written to disk regardless of the value of this parameter. In order for no files to be written at all, additionally pass the special string `"void"` to `usd::serialize.location`.
 
 ### Detailed build info #

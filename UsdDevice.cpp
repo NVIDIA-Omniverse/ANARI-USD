@@ -68,7 +68,7 @@ public:
   {
   }
 
-  bool CreateNewBridge(UsdBridgeLogCallback bridgeStatusFunc, void* userData, bool enableSaving)
+  bool CreateNewBridge(UsdBridgeLogCallback bridgeStatusFunc, void* userData)
   {
     if (bridge.get())
       bridge->CloseSession();
@@ -97,13 +97,14 @@ public:
     {
       bridgeStatusFunc(UsdBridgeLogLevel::STATUS, userData, "UsdBridge Session initialization successful.");
 
-      bridge->SetEnableSaving(enableSaving);
+      bridge->SetEnableSaving(this->enableSaving);
     }
 
     return createSuccess;
   }
 
   UsdDeviceSettings settings; // Settings lifetime should encapsulate bridge lifetime
+  bool enableSaving = true;
   std::unique_ptr<UsdBridge> bridge;
   SceneStagePtr externalSceneStage{nullptr};
 
@@ -207,29 +208,29 @@ void UsdDevice::deviceSetParameter(
   else if (std::strcmp(id, "usd::connection.logverbosity") == 0) // 0 <= verbosity <= 4, with 4 being the loudest
   {
     if(type == ANARI_INT32)
-      UsdBridge::SetConnectionLogVerbosity(*((int*)mem));
+      UsdBridge::SetConnectionLogVerbosity(*(reinterpret_cast<const int*>(mem)));
   }
   else if(std::strcmp(id, "usd::scenestage") == 0)
   {
     if(type == ANARI_VOID_POINTER)
-      internals->externalSceneStage = *(reinterpret_cast<void * const *>(mem));
+      internals->externalSceneStage = const_cast<void *>(mem);
   }
   else if (std::strcmp(id, "usd::enablesaving") == 0) 
   {
     if(type == ANARI_BOOL)
     {
-      paramData.enableSaving = *((bool*)mem);
+      internals->enableSaving = *(reinterpret_cast<const bool*>(mem));
       if(internals->bridge)
-        internals->bridge->SetEnableSaving(paramData.enableSaving);
+        internals->bridge->SetEnableSaving(internals->enableSaving);
     }
   }
   else if (std::strcmp(id, "statusCallback") == 0 && type == ANARI_STATUS_CALLBACK)
   {
-    statusFunc = (ANARIStatusCallback)mem;
+    userSetStatusFunc = (ANARIStatusCallback)mem;
   }
   else if (std::strcmp(id, "statusCallbackUserData") == 0 && type == ANARI_VOID_POINTER)
   {
-    statusUserData = (void *)mem;
+    userSetStatusUserData = const_cast<void *>(mem);
   }
   else
   {
@@ -247,11 +248,11 @@ void UsdDevice::deviceUnsetParameter(const char * id)
 {
   if (std::strcmp(id, "statusCallback"))
   {
-    statusFunc = nullptr;
+    userSetStatusFunc = nullptr;
   }
   else if (std::strcmp(id, "statusCallbackUserData"))
   {
-    statusUserData = nullptr;
+    userSetStatusUserData = nullptr;
   }
   else if (std::strcmp(id, "usd::garbagecollect") != 0
     && std::strcmp(id, "usd::removeunusednames") != 0)
@@ -298,7 +299,7 @@ void UsdDevice::deviceCommit()
   internals->settings.CreateNewSession = paramData.createNewSession;
   internals->settings.BinaryOutput = paramData.outputBinary;
 
-  if (!internals->CreateNewBridge(&reportBridgeStatus, this, paramData.enableSaving))
+  if (!internals->CreateNewBridge(&reportBridgeStatus, this))
   {
     reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_UNKNOWN_ERROR, "Usd Bridge failed to load");
   }
