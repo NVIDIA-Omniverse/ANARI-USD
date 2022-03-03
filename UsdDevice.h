@@ -37,6 +37,7 @@ struct UsdDeviceData
   const char* outputPath = nullptr;
   bool createNewSession = true;
   bool outputBinary = false;
+  bool enableSaving = true;
 
   double timeStep = 0.0;
 };

@@ -68,7 +68,7 @@ public:
   {
   }
 
-  bool CreateNewBridge(UsdBridgeLogCallback bridgeStatusFunc, void* userData)
+  bool CreateNewBridge(UsdBridgeLogCallback bridgeStatusFunc, void* userData, bool enableSaving)
   {
     if (bridge.get())
       bridge->CloseSession();
@@ -96,6 +96,8 @@ public:
     else
     {
       bridgeStatusFunc(UsdBridgeLogLevel::STATUS, userData, "UsdBridge Session initialization successful.");
+
+      bridge->SetEnableSaving(enableSaving);
     }
 
     return createSuccess;
@@ -209,13 +211,17 @@ void UsdDevice::deviceSetParameter(
   }
   else if(std::strcmp(id, "usd::scenestage") == 0)
   {
-    if(internals->bridge && type == ANARI_VOID_POINTER)
+    if(type == ANARI_VOID_POINTER)
       internals->externalSceneStage = *(reinterpret_cast<void * const *>(mem));
   }
   else if (std::strcmp(id, "usd::enablesaving") == 0) 
   {
-    if(internals->bridge && type == ANARI_BOOL)
-      internals->bridge->SetEnableSaving(*((bool*)mem));
+    if(type == ANARI_BOOL)
+    {
+      paramData.enableSaving = *((bool*)mem);
+      if(internals->bridge)
+        internals->bridge->SetEnableSaving(paramData.enableSaving);
+    }
   }
   else if (std::strcmp(id, "statusCallback") == 0 && type == ANARI_STATUS_CALLBACK)
   {
@@ -292,7 +298,7 @@ void UsdDevice::deviceCommit()
   internals->settings.CreateNewSession = paramData.createNewSession;
   internals->settings.BinaryOutput = paramData.outputBinary;
 
-  if (!internals->CreateNewBridge(&reportBridgeStatus, this))
+  if (!internals->CreateNewBridge(&reportBridgeStatus, this, paramData.enableSaving))
   {
     reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_UNKNOWN_ERROR, "Usd Bridge failed to load");
   }
