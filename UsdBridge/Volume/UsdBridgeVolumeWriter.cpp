@@ -282,7 +282,7 @@ openvdb::GridBase::Ptr CopyToGridTemplate(const CopyToGridInput& copyInput)
 {
   typename GridType::Ptr scalarGrid = GridType::create();
 
-  openvdb::tools::Dense<const DataType> valArray(copyInput.bBox, static_cast<const DataType*>(copyInput.volumeData.Data));
+  openvdb::tools::Dense<const DataType, openvdb::tools::LayoutXYZ> valArray(copyInput.bBox, static_cast<const DataType*>(copyInput.volumeData.Data));
   openvdb::tools::copyFromDense(valArray, *scalarGrid, (DataType)0); // No tolerance set to clamp values to background value for sparsity.
 
   return scalarGrid;
