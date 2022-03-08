@@ -1,43 +1,4 @@
 
-option(
-  USD_DEVICE_REQUIRE_DEBUG_DEPENDENCIES
-  "Require debug version of dependent libraries to be present"
-  ON
-)
-mark_as_advanced(USD_DEVICE_REQUIRE_DEBUG_DEPENDENCIES)
-
-function(FIND_DEBUG_LIBRARIES LIBRARIES_DEBUG LIBRARIES_RELEASE DEBUG_SEARCH_PATH)
-  # Manually find the debug library from a possibly different build directory
-  message(STATUS "Running find_library on ${DEBUG_SEARCH_PATH}")
-  foreach(RELEASE_LIB ${LIBRARIES_RELEASE})
-    get_filename_component(LIBRARY_FILE_NAME ${RELEASE_LIB} NAME_WE)
-    get_filename_component(LIBRARY_FILE_EXT ${RELEASE_LIB} EXT)
-
-    set(LIBRARY_NAMES_DEBUG
-      "${LIBRARY_FILE_NAME}d${LIBRARY_FILE_EXT}"
-      "${LIBRARY_FILE_NAME}_d${LIBRARY_FILE_EXT}"
-      "${LIBRARY_FILE_NAME}${LIBRARY_FILE_EXT}"
-      "${LIBRARY_FILE_NAME}_s${LIBRARY_FILE_EXT}"
-      "${LIBRARY_FILE_NAME}staticd${LIBRARY_FILE_EXT}"
-      "${LIBRARY_FILE_NAME}_s_d${LIBRARY_FILE_EXT}")
-
-    unset(LIBRARY_FIND_RESULT CACHE)
-
-    if (USD_DEVICE_REQUIRE_DEBUG_DEPENDENCIES)
-      set(REQUIRE_LIB REQUIRED)
-    endif()
-
-    find_library(LIBRARY_FIND_RESULT
-      NAMES ${LIBRARY_NAMES_DEBUG}
-      PATHS ${DEBUG_SEARCH_PATH}
-      NO_DEFAULT_PATH
-      ${REQUIRE_LIB})
-
-    list(APPEND LIBRARIES_DEBUG_LIST ${LIBRARY_FIND_RESULT})
-  endforeach()
-  set(${LIBRARIES_DEBUG} ${LIBRARIES_DEBUG_LIST} PARENT_SCOPE)
-endfunction()
-
 message( "-------------------- Begin UsdBridgeVolume CmakeLists.txt ----------------------------------------")
 
 option(USD_DEVICE_USE_OPENVDB "Enable OpenVDB support for USD device" OFF)
@@ -108,43 +69,24 @@ if (USD_DEVICE_USE_OPENVDB)
 
   # IlmBase
 
-  set(ILMBASE_ROOT "${OPENVDB_INSTALL_DIR_RELEASE}")
+  if(NOT ILMBASE_ROOT)
+    set(ILMBASE_ROOT "${OPENVDB_INSTALL_DIR_RELEASE}")
+  endif()
   find_package(IlmBase REQUIRED COMPONENTS Half)
-
-  set(ILMBASE_LIBRARIES_RELEASE ${IlmBase_LIBRARIES})
-
-  unset(ILMBASE_LIBRARIES_DEBUG CACHE)
-  find_debug_libraries(
-    ILMBASE_LIBRARIES_DEBUG
-    ${ILMBASE_LIBRARIES_RELEASE}
-    ${OPENVDB_LIB_DIR_DEBUG}
-  )
 
   # Zlib
 
-  set(ZLIB_ROOT "${OPENVDB_INSTALL_DIR_RELEASE}")
+  if(NOT ZLIB_ROOT)
+    set(ZLIB_ROOT "${OPENVDB_INSTALL_DIR_RELEASE}")
+  endif()
   find_package(ZLIB REQUIRED)
-
-  set(ZLIB_LIBRARIES_RELEASE ${ZLIB_LIBRARY_RELEASE})
-  unset(ZLIB_LIBRARIES_DEBUG CACHE)
-  find_debug_libraries(
-    ZLIB_LIBRARIES_DEBUG
-    ${ZLIB_LIBRARIES_RELEASE}
-    ${OPENVDB_LIB_DIR_DEBUG}
-  )
 
   # Blosc
 
-  set(BLOSC_ROOT "${OPENVDB_INSTALL_DIR_RELEASE}")
+  if(NOT BLOSC_ROOT)
+    set(BLOSC_ROOT "${OPENVDB_INSTALL_DIR_RELEASE}")
+  endif()
   find_package(Blosc REQUIRED)
-
-  set(BLOSC_LIBRARIES_RELEASE ${Blosc_LIBRARIES})
-  unset(BLOSC_LIBRARIES_DEBUG CACHE)
-  find_debug_libraries(
-    BLOSC_LIBRARIES_DEBUG
-    ${BLOSC_LIBRARIES_RELEASE}
-    ${OPENVDB_LIB_DIR_DEBUG}
-  )
 
   # OpenVDB
 
@@ -164,20 +106,10 @@ if (USD_DEVICE_USE_OPENVDB)
   # Set debug and release variables
 
   set(OPENVDB_INCLUDE_DIRS_RELEASE "${OPENVDB_INSTALL_DIR_RELEASE}/include")
-  set(OPENVDB_LIB_FILES_RELEASE
-    ${OPENVDB_LIBRARY_RELEASE}
-    ${ILMBASE_LIBRARIES_RELEASE}
-    ${ZLIB_LIBRARIES_RELEASE}
-    ${BLOSC_LIBRARIES_RELEASE}
-  )
+  set(OPENVDB_LIB_FILES_RELEASE ${OPENVDB_LIBRARY_RELEASE})
 
   set(OPENVDB_INCLUDE_DIRS_DEBUG "${OPENVDB_INSTALL_DIR_DEBUG}/include")
-  set(OPENVDB_LIB_FILES_DEBUG
-    ${OPENVDB_LIBRARY_DEBUG}
-    ${ILMBASE_LIBRARIES_DEBUG}
-    ${ZLIB_LIBRARIES_DEBUG}
-    ${BLOSC_LIBRARIES_DEBUG}
-  )
+  set(OPENVDB_LIB_FILES_DEBUG ${OPENVDB_LIBRARY_DEBUG})
 
   set(OPENVDB_INCLUDE_DIRS "$<$<NOT:$<CONFIG:Debug>>:${OPENVDB_INCLUDE_DIRS_RELEASE}>$<$<CONFIG:Debug>:${OPENVDB_INCLUDE_DIRS_DEBUG}>")
   set(OPENVDB_LIB_FILES "$<$<NOT:$<CONFIG:Debug>>:${OPENVDB_LIB_FILES_RELEASE}>$<$<CONFIG:Debug>:${OPENVDB_LIB_FILES_DEBUG}>")
@@ -188,7 +120,7 @@ if (USD_DEVICE_USE_OPENVDB)
   # Add include dirs and link libs
 
   target_include_directories(${PROJECT_NAME} INTERFACE ${OPENVDB_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} INTERFACE ${OPENVDB_LIB_FILES})
+  target_link_libraries(${PROJECT_NAME} INTERFACE ${OPENVDB_LIB_FILES} IlmBase::Half Blosc::blosc ZLIB::ZLIB)
   target_compile_definitions(${PROJECT_NAME}
     INTERFACE
         USE_OPENVDB
