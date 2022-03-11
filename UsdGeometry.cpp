@@ -1039,11 +1039,11 @@ void UsdGeometry::commitTemplate(UsdDevice* device)
   const char* debugName = getName();
 
   UsdGeomType geomData;
+  initializeGeomData(geomData);
 
   bool isNew = false;
   if (!usdHandle.value)
   {  
-    initializeGeomData(geomData);
     isNew = usdBridge->CreateGeometry(debugName, geomData, usdHandle);
   }
 
