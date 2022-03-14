@@ -25,21 +25,21 @@ include(GNUInstallDirs)
 
 ## Dependencies ##
 
-if (NOT EXISTS ${ANARI_INSTALL_DIR})
-  find_path(ANARI_INSTALL_DIR NAMES include/anari/anari.h DOC "Path to ANARI SDK")
-  message(STATUS "Using ANARI_INSTALL_DIR: ${ANARI_INSTALL_DIR}")
+if (NOT EXISTS ${ANARI_ROOT_DIR})
+  find_path(ANARI_ROOT_DIR NAMES include/anari/anari.h DOC "Path to ANARI SDK")
+  message(STATUS "Using ANARI_ROOT_DIR: ${ANARI_ROOT_DIR}")
 endif()
 
-if (NOT EXISTS ${ANARI_INSTALL_DIR})
-  message(FATAL_ERROR "No valid ANARI_INSTALL_DIR set, or found using CMAKE_PREFIX_PATH: ${ANARI_INSTALL_DIR}")
+if (NOT EXISTS ${ANARI_ROOT_DIR})
+  message(FATAL_ERROR "No valid ANARI_ROOT_DIR set, or found using CMAKE_PREFIX_PATH: ${ANARI_ROOT_DIR}")
 endif()
 
-if (EXISTS "${ANARI_INSTALL_DIR}/release")
+if (EXISTS "${ANARI_ROOT_DIR}/release")
   # Use the release install for now, until release/debug are in the same package
-  set(ANARI_INSTALL_DIR "${ANARI_INSTALL_DIR}/release")
+  set(ANARI_ROOT_DIR "${ANARI_ROOT_DIR}/release")
 endif()
 
-list(APPEND CMAKE_PREFIX_PATH ${ANARI_INSTALL_DIR})
+list(APPEND CMAKE_PREFIX_PATH ${ANARI_ROOT_DIR})
 find_package(anari REQUIRED)
 
 ## Core UsdBride ##
@@ -130,11 +130,11 @@ if(${INSTALL_ANARI_DEPS})
   set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")
 
   install(
-    DIRECTORY "${ANARI_INSTALL_DIR}/lib/"
+    DIRECTORY "${ANARI_ROOT_DIR}/lib/"
     DESTINATION ${PLATFORM_INSTALL_LIBDIR}
     PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)
   install(
-    DIRECTORY "${ANARI_INSTALL_DIR}/bin/"
+    DIRECTORY "${ANARI_ROOT_DIR}/bin/"
     DESTINATION ${PLATFORM_INSTALL_LIBDIR}
     FILES_MATCHING PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}*")
 endif()

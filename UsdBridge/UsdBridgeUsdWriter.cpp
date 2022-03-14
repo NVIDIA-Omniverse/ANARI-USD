@@ -344,6 +344,7 @@ namespace
 
 UsdBridgeUsdWriter::UsdBridgeUsdWriter(const UsdBridgeSettings& settings)
   : Settings(settings)
+  , VolumeWriter(Create_VolumeWriter(), std::mem_fn(&UsdBridgeVolumeWriterI::Release))
 {
   ConnectionSettings.HostName = Settings.HostName;
   ConnectionSettings.WorkingDirectory = Settings.OutputPath;
@@ -463,7 +464,7 @@ bool UsdBridgeUsdWriter::InitializeSession()
 
   valid = CreateDirectories();
 
-  valid = valid && VolumeWriter.Initialize(this->LogCallback, this->LogUserData);
+  valid = valid && VolumeWriter->Initialize(this->LogCallback, this->LogUserData);
 
 #ifdef SUPPORT_MDL_SHADERS 
   valid = valid && CreateMdlFiles();
@@ -2521,15 +2522,8 @@ void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr volumeStage, const SdfPa
   SdfAssetPath volAsset(relVolPath);
   fileAttr.Set(volAsset, timeEval.Eval(DMI::DATA));
 
-  // Get output stream
+  // Output stream path
   std::string fullVolPath(SessionDirectory + relVolPath);
-
-  std::ostream* vdbOutput = Connect->GetStream(fullVolPath.c_str());
-  if (!vdbOutput)
-  {
-    UsdBridgeLogMacro(this, UsdBridgeLogLevel::ERR, "Cannot create volume file " << fullVolPath.c_str());
-    return;
-  }
 
   // Translate-scale in usd
   volume.ClearXformOpOrder();
@@ -2550,10 +2544,12 @@ void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr volumeStage, const SdfPa
   volume.GetExtentAttr().Set(extentArray, timeEval.Eval(DMI::DATA));
 
   // Write VDB data to stream
-  VolumeWriter.ToVDB(volumeData, *vdbOutput);
+  VolumeWriter->ToVDB(volumeData);
 
   // Flush stream out to storage
-  Connect->FlushStream();
+  const char* volumeStreamData; size_t volumeStreamDataSize;
+  VolumeWriter->GetSerializedVolumeData(volumeStreamData, volumeStreamDataSize);
+  Connect->WriteFile(volumeStreamData, volumeStreamDataSize, fullVolPath.c_str());
 }
 
 void UsdBridgeUsdWriter::UpdateUsdSampler(const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep)

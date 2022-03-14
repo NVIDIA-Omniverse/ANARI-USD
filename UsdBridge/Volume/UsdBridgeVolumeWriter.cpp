@@ -4,6 +4,43 @@
 #include "UsdBridgeVolumeWriter.h"
 #include "UsdBridgeUtils.h"
 
+#include <memory>
+
+class UsdBridgeVolumeWriterInternals;
+
+class UsdBridgeVolumeWriter : public UsdBridgeVolumeWriterI
+{
+  public:
+    UsdBridgeVolumeWriter();
+    ~UsdBridgeVolumeWriter();
+
+    bool Initialize(UsdBridgeLogCallback logCallback, void* logUserData) override;
+
+    void ToVDB(const UsdBridgeVolumeData& volumeData) override;
+
+    void GetSerializedVolumeData(const char*& data, size_t& size) override;
+
+    void Release() override;
+
+    static UsdBridgeLogCallback LogCallback;
+    static void* LogUserData;
+
+  protected:
+
+    std::unique_ptr<UsdBridgeVolumeWriterInternals> Internals;
+};
+
+extern "C" UsdBridgeVolumeWriterI* __cdecl Create_VolumeWriter()
+{
+  return new UsdBridgeVolumeWriter();
+}
+
+void UsdBridgeVolumeWriter::Release()
+{
+  delete this;
+}
+
+
 #ifdef USE_OPENVDB
 
 // GridTransformer.h->LevelSetRebuild.h->MeshToVolume.h->tbb/enumerable_thread_specific.h->windows_api.h
@@ -21,6 +58,7 @@
 
 #include <assert.h>
 #include <limits>
+#include <sstream>
 
 #define UsdBridgeLogMacro(level, message) \
   { std::stringstream logStream; \
@@ -37,6 +75,37 @@ using ColorGridOutType = openvdb::FloatGrid;
 using ColorGridOutType = openvdb::Vec3fGrid;
 #endif
 using OpacityGridOutType = openvdb::FloatGrid;
+
+class UsdBridgeVolumeWriterInternals
+{
+  public:
+    UsdBridgeVolumeWriterInternals()
+      : GridStream(std::ios::in | std::ios::out)
+    {}
+    ~UsdBridgeVolumeWriterInternals()
+    {}
+
+    std::ostream& ResetStream()
+    {
+      GridStream.clear();
+      return GridStream;
+    }
+
+    const char* GetStreamData()
+    {
+      StreamData = GridStream.str(); //copy, should be move
+      return StreamData.c_str();
+    }
+
+    size_t GetStreamDataSize()
+    {
+      return StreamData.length();
+    }
+
+  protected:
+    std::stringstream GridStream;
+    std::string StreamData;
+};
 
 struct TfTransformInput
 {
@@ -341,13 +410,13 @@ static openvdb::GridBase::Ptr CopyToGrid(const CopyToGridInput& copyInput)
 }
 
 UsdBridgeVolumeWriter::UsdBridgeVolumeWriter()
+  : Internals(std::make_unique<UsdBridgeVolumeWriterInternals>())
 {
   
 }
 
 UsdBridgeVolumeWriter::~UsdBridgeVolumeWriter()
 {
-  
 }
 
 bool UsdBridgeVolumeWriter::Initialize(UsdBridgeLogCallback logCallback, void* logUserData)
@@ -360,7 +429,7 @@ bool UsdBridgeVolumeWriter::Initialize(UsdBridgeLogCallback logCallback, void* l
   return true;
 }
 
-void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData& volumeData, std::ostream& vdbOutput)
+void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData& volumeData)
 {
   const char* densityGridName = "density";
   const char* colorGridName = "diffuse";
@@ -421,7 +490,13 @@ void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData& volumeData, std::os
   }
 
   // Must write all grids at once
-  openvdb::io::Stream(vdbOutput).write(*grids);
+  openvdb::io::Stream(Internals->ResetStream()).write(*grids);
+}
+
+void UsdBridgeVolumeWriter::GetSerializedVolumeData(const char*& data, size_t& size)
+{
+  data = Internals->GetStreamData();
+  size = Internals->GetStreamDataSize();
 }
 
 #else //USE_OPENVDB
@@ -441,9 +516,15 @@ bool UsdBridgeVolumeWriter::Initialize(UsdBridgeLogCallback logCallback, void* l
   return true;
 }
 
-void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData & volumeData, std::ostream& vdbOutput)
+void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData & volumeData)
 {
 
+}
+
+void UsdBridgeVolumeWriter::GetSerializedVolumeData(const char*& data, size_t& size)
+{
+  data = nullptr;
+  size = 0;
 }
 
 #endif //USE_OPENVDB

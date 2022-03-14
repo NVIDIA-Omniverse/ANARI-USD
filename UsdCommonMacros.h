@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "UsdBridge/UsdBridgeMacros.h"
+#include "UsdBridge/Common/UsdBridgeMacros.h"
 
 //#define OBJECT_LIFETIME_EQUALS_USD_LIFETIME
 

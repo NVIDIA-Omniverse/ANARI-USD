@@ -8,25 +8,25 @@ option(USD_DEVICE_USE_OMNIVERSE "Enable Omniverse support for USD device" OFF)
 
 if(${USD_DEVICE_USE_OMNIVERSE})
     
-    if (NOT EXISTS ${OMNICLIENT_INSTALL_DIR})
-      find_path(OMNICLIENT_INSTALL_DIR NAMES include/OmniClient.h DOC "Path to Omniverse Client")
-      message(STATUS "Using OMNICLIENT_INSTALL_DIR: ${OMNICLIENT_INSTALL_DIR}")
+    if (NOT EXISTS ${OMNICLIENT_ROOT_DIR})
+      find_path(OMNICLIENT_ROOT_DIR NAMES include/OmniClient.h DOC "Path to Omniverse Client")
+      message(STATUS "Using OMNICLIENT_ROOT_DIR: ${OMNICLIENT_ROOT_DIR}")
     endif()
     
-    if (NOT EXISTS ${OMNICLIENT_INSTALL_DIR})
-      message(FATAL_ERROR "No valid OMNICLIENT_INSTALL_DIR set, or found using CMAKE_PREFIX_PATH: ${OMNICLIENT_INSTALL_DIR}")
+    if (NOT EXISTS ${OMNICLIENT_ROOT_DIR})
+      message(FATAL_ERROR "No valid OMNICLIENT_ROOT_DIR set, or found using CMAKE_PREFIX_PATH: ${OMNICLIENT_ROOT_DIR}")
     endif()
 
-    if(EXISTS ${OMNICLIENT_INSTALL_DIR})   
-      MESSAGE(STATUS "OmniConnect is using OmniClient at: ${OMNICLIENT_INSTALL_DIR}")
+    if(EXISTS ${OMNICLIENT_ROOT_DIR})   
+      MESSAGE(STATUS "OmniConnect is using OmniClient at: ${OMNICLIENT_ROOT_DIR}")
       
-      set(OMNICLIENT_DIR_RELEASE "${OMNICLIENT_INSTALL_DIR}/release")
-      set(OMNICLIENT_DIR_DEBUG "${OMNICLIENT_INSTALL_DIR}/debug")
+      set(OMNICLIENT_DIR_RELEASE "${OMNICLIENT_ROOT_DIR}/release")
+      set(OMNICLIENT_DIR_DEBUG "${OMNICLIENT_ROOT_DIR}/debug")
     
       get_filename_component(USD_EXT_PACKAGE_DIR_RELEASE ${OMNICLIENT_DIR_RELEASE} ABSOLUTE)
       get_filename_component(USD_EXT_PACKAGE_DIR_DEBUG ${OMNICLIENT_DIR_DEBUG} ABSOLUTE)
       
-      set(OMNICLIENT_INCLUDE_DIR "${OMNICLIENT_INSTALL_DIR}/include")
+      set(OMNICLIENT_INCLUDE_DIR "${OMNICLIENT_ROOT_DIR}/include")
       set(OMNICLIENT_LIB_DIR_RELEASE "${OMNICLIENT_DIR_RELEASE}")
       set(OMNICLIENT_LIB_DIR_DEBUG   "${OMNICLIENT_DIR_DEBUG}")
       
@@ -43,7 +43,7 @@ if(${USD_DEVICE_USE_OMNIVERSE})
       list(APPEND OMNICLIENT_SHARED_LIBS omniclient)
       MESSAGE(STATUS "OMNICLIENT_SHARED_LIBS: ${OMNICLIENT_SHARED_LIBS}")
     else() 
-      MESSAGE(FATAL_ERROR "Cannot find OMNICLIENT_INSTALL_DIR: ${OMNICLIENT_INSTALL_DIR}")   
+      MESSAGE(FATAL_ERROR "Cannot find OMNICLIENT_ROOT_DIR: ${OMNICLIENT_ROOT_DIR}")   
     endif()
 else()
     MESSAGE(STATUS "OmniConnect is NOT using OmniClient for remote connections.")
@@ -81,13 +81,15 @@ if(${USD_DEVICE_USE_OMNIVERSE})
     set(USDBRIDGE_CONNECT_LINK_LIBS ${OMNI_LIBS} PARENT_SCOPE)
   endif()
   
-  # Install client library
-  set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")
-  install(
-    DIRECTORY "${OMNICLIENT_LIB_DIR}/"
-    DESTINATION ${PLATFORM_INSTALL_LIBDIR}
-    PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)
-    
+  option(INSTALL_OMNIVERSE_DEPS "Enable install of Omniverse dependencies with USD device" ON)
+  if(${INSTALL_OMNIVERSE_DEPS})
+    # Install client library
+    set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")
+    install(
+      DIRECTORY "${OMNICLIENT_LIB_DIR}/"
+      DESTINATION ${PLATFORM_INSTALL_LIBDIR}
+      PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)
+  endif()
 endif()  
 
 message( "-------------------- End UsdBridgeConnect CmakeLists.txt ----------------------------------------")

@@ -149,11 +149,11 @@ if (BUILD_USD)
 
 else()
 
-  set(USD_INSTALL_DIR "" CACHE PATH "Path to USD")
-  set(USD_PYTHON_INSTALL_DIR "" CACHE PATH "Path of python version corresponding to USD dependency")  
+  set(USD_ROOT_DIR "" CACHE PATH "Path to USD")
+  set(Python_ROOT_DIR "" CACHE PATH "Path to python install with which USD was built")  
   
-  if(NOT EXISTS ${USD_INSTALL_DIR})
-    message(FATAL_ERROR "When BUILD_USD is off, a valid directory is required for USD_INSTALL_DIR (optionally pointing to debug/ and release/ subdirectories)")
+  if(NOT EXISTS ${USD_ROOT_DIR})
+    message(FATAL_ERROR "When BUILD_USD is off, a valid directory is required for USD_ROOT_DIR (optionally pointing to debug/ and release/ subdirectories)")
   endif()
   
 endif()
@@ -162,19 +162,19 @@ if(USD_DEVICE_USE_OPENVDB)
   option(USE_USD_OPENVDB_BUILD "If USD source installation exists, use OpenVDB from there" ON)
   
   if(NOT USE_USD_OPENVDB_BUILD)
-    set(OPENVDB_INSTALL_DIR "" CACHE PATH "Path of OpenVDB install with static library")
+    set(OPENVDB_ROOT_DIR "" CACHE PATH "Path of OpenVDB install with static library")
     
-    if(NOT EXISTS ${OPENVDB_INSTALL_DIR})
-      message(FATAL_ERROR "With USD_DEVICE_USE_OPENVDB and not USE_USD_OPENVDB_BUILD, a valid directory is required for OPENVDB_INSTALL_DIR (optionally pointing to debug/ and release/ subdirectories)")
+    if(NOT EXISTS ${OPENVDB_ROOT_DIR})
+      message(FATAL_ERROR "With USD_DEVICE_USE_OPENVDB and not USE_USD_OPENVDB_BUILD, a valid directory is required for OPENVDB_ROOT_DIR (optionally pointing to debug/ and release/ subdirectories)")
     endif()
   endif()
 endif()
 
 if(USD_DEVICE_USE_OMNIVERSE)
-  set(OMNICLIENT_INSTALL_DIR "" CACHE PATH "Path to Omniverse Client")
+  set(OMNICLIENT_ROOT_DIR "" CACHE PATH "Path to Omniverse Client")
   
-  if(NOT EXISTS ${OMNICLIENT_INSTALL_DIR})
-    message(FATAL_ERROR "When USD_DEVICE_USE_OMNIVERSE is on, a valid directory is required for OMNICLIENT_INSTALL_DIR (optionally pointing to debug/ and release/ subdirectories)")
+  if(NOT EXISTS ${OMNICLIENT_ROOT_DIR})
+    message(FATAL_ERROR "When USD_DEVICE_USE_OMNIVERSE is on, a valid directory is required for OMNICLIENT_ROOT_DIR (optionally pointing to debug/ and release/ subdirectories)")
   endif()
 endif()
 
@@ -188,10 +188,10 @@ if (BUILD_ANARI_SDK)
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON
   )
 else()
-  set(ANARI_INSTALL_DIR "" CACHE PATH "Path to ANARI SDK")
+  set(ANARI_ROOT_DIR "" CACHE PATH "Path to ANARI SDK")
   
-  if(NOT EXISTS ${ANARI_INSTALL_DIR})
-    message(FATAL_ERROR "When BUILD_ANARI_SDK is off, a valid directory is required for ANARI_INSTALL_DIR")
+  if(NOT EXISTS ${ANARI_ROOT_DIR})
+    message(FATAL_ERROR "When BUILD_ANARI_SDK is off, a valid directory is required for ANARI_ROOT_DIR")
   endif()
 endif()
 
@@ -202,7 +202,6 @@ if (BUILD_ANARI_USD_DEVICE)
     -DUSD_DEVICE_USE_OMNIVERSE=${USD_DEVICE_USE_OMNIVERSE}
     -DUSE_USD_OPENVDB_BUILD=${USE_USD_OPENVDB_BUILD}
     -DINSTALL_USD_DEPS=$<NOT:$<BOOL:${BUILD_USD}>>
-    -DINSTALL_OPENVDB_DEPS=$<NOT:$<BOOL:${BUILD_USD}>>
     -DINSTALL_ANARI_DEPS=$<NOT:$<BOOL:${BUILD_ANARI_SDK}>>)
   
   if(USD_DEVICE_VERSION_EXPLICIT)
@@ -214,17 +213,22 @@ if (BUILD_ANARI_USD_DEVICE)
     list(APPEND DEPS USD)
   else()
     list(APPEND ANARI_DEVICE_BUILD_ARGS
-      -DUSD_INSTALL_DIR=${USD_INSTALL_DIR}
-      -DUSD_PYTHON_INSTALL_DIR=${USD_PYTHON_INSTALL_DIR}
-      -DOPENVDB_INSTALL_DIR=${OPENVDB_INSTALL_DIR}
-      -DOMNICLIENT_INSTALL_DIR=${OMNICLIENT_INSTALL_DIR})
+      -DUSD_ROOT_DIR=${USD_ROOT_DIR}
+      -DPython_ROOT_DIR=${Python_ROOT_DIR}
+      )
+    if(USD_DEVICE_USE_OPENVDB)
+      list(APPEND ANARI_DEVICE_BUILD_ARGS -DOPENVDB_ROOT_DIR=${OPENVDB_ROOT_DIR})
+    endif()
+    if(USD_DEVICE_USE_OMNIVERSE)
+      list(APPEND ANARI_DEVICE_BUILD_ARGS -DOMNICLIENT_ROOT_DIR=${OMNICLIENT_ROOT_DIR})
+    endif()
   endif()
   
   if (BUILD_ANARI_SDK)
     list(APPEND DEPS ANARI-SDK)
   else()
     list(APPEND ANARI_DEVICE_BUILD_ARGS
-      -DANARI_INSTALL_DIR=${ANARI_INSTALL_DIR})
+      -DANARI_ROOT_DIR=${ANARI_ROOT_DIR})
   endif()
 
   build_subproject(

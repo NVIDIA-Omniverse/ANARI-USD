@@ -12,6 +12,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 #include "UsdBridgeVolumeWriter.h"
 #include "UsdBridgeConnection.h"
 
+#include <memory>
 #include <functional>
 
 typedef std::pair<UsdStageRefPtr, bool> StageCreatePair;
@@ -157,7 +158,7 @@ protected:
   std::unique_ptr<UsdBridgeConnection> Connect = nullptr;
 
   // Volume writer
-  UsdBridgeVolumeWriter VolumeWriter;
+  std::shared_ptr<UsdBridgeVolumeWriterI> VolumeWriter; // shared - requires custom deleter
 
   // Session specific info
   int SessionNumber = -1;
