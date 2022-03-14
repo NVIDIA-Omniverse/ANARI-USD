@@ -30,7 +30,7 @@ class UsdBridgeVolumeWriter : public UsdBridgeVolumeWriterI
     std::unique_ptr<UsdBridgeVolumeWriterInternals> Internals;
 };
 
-extern "C" UsdBridgeVolumeWriterI* __cdecl Create_VolumeWriter()
+extern "C" UsdBridgeVolumeWriterI* USDDevice_DECL Create_VolumeWriter()
 {
   return new UsdBridgeVolumeWriter();
 }

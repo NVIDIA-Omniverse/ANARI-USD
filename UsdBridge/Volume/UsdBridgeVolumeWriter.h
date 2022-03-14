@@ -7,11 +7,15 @@
 #include "UsdBridgeData.h"
 
 #ifdef _WIN32
+#define USDDevice_DECL __cdecl
 #ifdef UsdBridge_Volume_EXPORTS
 #define USDDevice_INTERFACE __declspec(dllexport)
 #else
 #define USDDevice_INTERFACE __declspec(dllimport)
 #endif
+#else
+#define USDDevice_DECL
+#define USDDevice_INTERFACE
 #endif
 
 class UsdBridgeVolumeWriterI
@@ -27,6 +31,6 @@ class UsdBridgeVolumeWriterI
     virtual void Release() = 0; // Accommodate change of CRT
 };
 
-extern "C" USDDevice_INTERFACE UsdBridgeVolumeWriterI* __cdecl Create_VolumeWriter();
+extern "C" USDDevice_INTERFACE UsdBridgeVolumeWriterI* USDDevice_DECL Create_VolumeWriter();
 
 #endif
