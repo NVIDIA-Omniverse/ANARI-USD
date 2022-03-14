@@ -40,6 +40,7 @@ one can use explicit install dir variables which support `debug/` and `release/`
 - `USD_ROOT_DIR`: for the USD install directory
 - `OPENVDB_ROOT_DIR`: for the OpenVDB install directory (if not `USE_USD_OPENVDB_BUILD`)
 - `OMNICLIENT_ROOT_DIR`: for the Omniverse (OmniClient) install directory
+- `ZLIB_ROOT`: for the ZLIB install directory, required for Linux builds
 
 Lastly, the `BUILD_ANARI_USD_DEVICE` option lets you turn off building the device if you
 only want to build the device's dependencies (mostly this is for developers).
