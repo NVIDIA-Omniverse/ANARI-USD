@@ -4,7 +4,7 @@
 #ifndef UsdBridgeUtils_h
 #define UsdBridgeUtils_h
 
-#include <UsdBridgeData.h>
+#include "UsdBridgeData.h"
 
 const char* UsdBridgeTypeToString(UsdBridgeType type);
 

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdBridgeVolumeWriter.h"
-#include "UsdBridgeUtils.h"
 
 #include <memory>
 
@@ -26,8 +25,9 @@ class UsdBridgeVolumeWriter : public UsdBridgeVolumeWriterI
     static void* LogUserData;
 
   protected:
-
+#ifdef USE_OPENVDB
     std::unique_ptr<UsdBridgeVolumeWriterInternals> Internals;
+#endif
 };
 
 extern "C" UsdBridgeVolumeWriterI* USDDevice_DECL Create_VolumeWriter()
@@ -59,6 +59,8 @@ void UsdBridgeVolumeWriter::Release()
 #include <assert.h>
 #include <limits>
 #include <sstream>
+
+#include "UsdBridgeUtils.h"
 
 #define UsdBridgeLogMacro(level, message) \
   { std::stringstream logStream; \

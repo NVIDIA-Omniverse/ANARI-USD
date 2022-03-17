@@ -39,8 +39,9 @@ if (EXISTS "${ANARI_ROOT_DIR}/release")
   set(ANARI_ROOT_DIR "${ANARI_ROOT_DIR}/release")
 endif()
 
-list(APPEND CMAKE_PREFIX_PATH ${ANARI_ROOT_DIR})
-find_package(anari REQUIRED)
+# Search in config mode
+find_package(anari REQUIRED
+  PATHS ${ANARI_ROOT_DIR})
 
 ## Core UsdBride ##
 

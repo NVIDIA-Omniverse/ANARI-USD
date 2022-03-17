@@ -1,3 +1,19 @@
+# FindBlosc.cmake is broken on windows for static dependencies
+macro(fix_blosc_dependency)
+  if(WIN32 AND BLOSC_USE_STATIC_LIBS)
+    get_property(BLOSC_imploc
+      TARGET Blosc::blosc
+      PROPERTY IMPORTED_LOCATION)
+
+    get_filename_component(BLOSC_imploc_dir ${BLOSC_imploc} DIRECTORY)
+    get_filename_component(BLOSC_imploc_name ${BLOSC_imploc} NAME)
+    set(BLOSC_imploc "${BLOSC_imploc_dir}/lib${BLOSC_imploc_name}")
+    message(STATUS "CHANGED BLOSC LIBRARY TO: ${BLOSC_imploc}")
+
+    set_property(TARGET Blosc::blosc
+      PROPERTY IMPORTED_LOCATION ${BLOSC_imploc})
+  endif()
+endmacro()
 
 message( "-------------------- Begin UsdBridgeVolume CmakeLists.txt ----------------------------------------")
 
@@ -11,6 +27,12 @@ target_sources(${PROJECT_NAME}
     ${CMAKE_CURRENT_LIST_DIR}/../Common/UsdBridgeUtils.cpp
     ${CMAKE_CURRENT_LIST_DIR}/UsdBridgeVolumeWriter.cpp
     ${CMAKE_CURRENT_LIST_DIR}/UsdBridgeVolumeWriter.h
+)
+
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+      ${CMAKE_CURRENT_LIST_DIR}
+      "${CMAKE_CURRENT_LIST_DIR}/../Common"
 )
 
 if (USD_DEVICE_USE_OPENVDB)
@@ -59,17 +81,19 @@ if (USD_DEVICE_USE_OPENVDB)
       cmake/OpenVDB
       lib/cmake/OpenVDB
   )
-  list(APPEND CMAKE_MODULE_PATH ${OPENVDB_MODULE_DIR})
+  list(PREPEND CMAKE_MODULE_PATH ${OPENVDB_MODULE_DIR})
 
   ### Find openVDB package (+ dependencies)
 
   set(OPENVDB_LIB_DIR_RELEASE "${OPENVDB_ROOT_DIR_RELEASE}/lib")
   set(OPENVDB_LIB_DIR_DEBUG "${OPENVDB_ROOT_DIR_DEBUG}/lib")
 
-  if(BOOST_USE_STATIC_LIBS) # No consensus on upper/lower case
+  if(Boost_USE_STATIC_LIBS OR BOOST_USE_STATIC_LIBS) # No consensus on upper/lower case
+    set(BOOST_USE_STATIC_LIBS ON)
     set(Boost_USE_STATIC_LIBS ON)
     set(BUILD_SHARED_LIBS OFF)
   else()
+    set(BOOST_USE_STATIC_LIBS OFF)
     set(Boost_USE_STATIC_LIBS OFF)
     set(BUILD_SHARED_LIBS ON)
   endif()
@@ -145,6 +169,8 @@ if (USD_DEVICE_USE_OPENVDB)
   find_package(Blosc REQUIRED)
   #find_package(OpenVDB REQUIRED)
 
+  fix_blosc_dependency()
+
   set(OPENVDB_DEPENDENCY_TARGETS
     Boost::iostreams
     Boost::system
@@ -152,6 +178,8 @@ if (USD_DEVICE_USE_OPENVDB)
     TBB::tbb
     ZLIB::ZLIB
     Blosc::blosc)
+
+  list(POP_FRONT CMAKE_MODULE_PATH)
 
   # Set debug and release variables
 
@@ -170,9 +198,6 @@ if (USD_DEVICE_USE_OPENVDB)
   # Add include dirs and link libs
 
   target_include_directories(${PROJECT_NAME}
-    PUBLIC
-      ${CMAKE_CURRENT_LIST_DIR}
-      "${CMAKE_CURRENT_LIST_DIR}/../Common"
     PRIVATE
       ${OPENVDB_INCLUDE_DIRS}
   )

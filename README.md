@@ -82,7 +82,7 @@ If you have separate release and debug versions of USD, (or standalone OpenVDB, 
 - On Windows:
     - Make sure `pyside2-uic.exe` from your Python `./Scripts` directory is in the `PATH`
     - **only** for debug builds: In pyconfig.h all `pragma comment(lib,"pythonXX.lib")` statements should change to `pragma comment(lib,"pythonXX_d.lib")`. They can be changed back after building USD.
-- Build and install USD by running the buildscript `python ./build_scripts/build_usd.py <USD_ROOT_DIR>/<config>`
+- Build and install USD by running the buildscript `python <usd_source_dir>/build_scripts/build_usd.py <USD_ROOT_DIR>/<config>` (where `USD_ROOT_DIR` is the desired installation location)
     - Add `--debug` (v21.08-) or `--build-variant debug` (v21.11+) for debug builds
     - For OpenVDB on Windows, run **in a developer command prompt** and add the following flags: `--openvdb --build-args openvdb,"-DCMAKE_CXX_FLAGS=\"-D__TBB_NO_IMPLICIT_LINKAGE /EHsc\""`
         - OpenVDB's FindIlmBase.cmake is broken for debug builds, so make sure that the `_d` suffix is removed from `<USD_ROOT_DIR>/<config>/lib/Half-X_X_d.lib` and `<USD_ROOT_DIR>/<config>/bin/Half-X_X_d.dll` after running the build once, then run it again.

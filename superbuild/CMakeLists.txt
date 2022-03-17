@@ -9,7 +9,7 @@ if(NOT CMAKE_INSTALL_PREFIX)
   else()
     set(INSTALL_DIR_EXPRESSION "${CMAKE_BINARY_DIR}/install")
   endif()
-  
+
   set(CMAKE_INSTALL_PREFIX
       "${INSTALL_DIR_EXPRESSION}"
       CACHE STRING "Final install location." FORCE)
@@ -46,7 +46,7 @@ option(USD_DEVICE_USE_OMNIVERSE "Enable Omniverse support for USD device" OFF)
 ## Build projects ##
 
 if (BUILD_USD)
-  
+
   find_package(Python3 REQUIRED Interpreter Development)
 
   #if(WIN32)
@@ -61,35 +61,35 @@ if (BUILD_USD)
   #  BUILD_ARGS
   #    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
   #)
-  
+
   find_package(TBB REQUIRED) # Rely on pre-installed tbb for now
   if(EXISTS "${TBB_DIR}/../../../include")
     file(COPY "${TBB_DIR}/../../../" DESTINATION ${CMAKE_INSTALL_PREFIX})
   else()
     message(FATAL_ERROR "'TBB_DIR/../../../' does not contain include and lib directory")
   endif()
-  
+
   #build_subproject(
   #  NAME boost
   #  URL "https://downloads.sourceforge.net/project/boost/boost/1.70.0/boost_1_70_0.tar.gz"
   #  BUILD_ARGS
   #    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
   #)
-  
+
   find_package(boost REQUIRED) # Rely on pre-installed boost for now
   if(EXISTS "${boost_DIR}/../../../include")
     file(COPY "${boost_DIR}/../../../" DESTINATION "${CMAKE_INSTALL_PREFIX}/")
   else()
     message(FATAL_ERROR "'boost_DIR/../../../' does not contain include and lib directory")
   endif()
-  
+
   build_subproject(
     NAME zlib
     URL "http://zlib.net/zlib1211.zip"
     BUILD_ARGS
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON
   )
-  
+
   build_subproject(
     NAME ilmbase
     URL "https://github.com/AcademySoftwareFoundation/openexr/archive/v2.3.0.zip"
@@ -116,10 +116,10 @@ if (BUILD_USD)
     BUILD_ARGS
       -DOPENVDB_BUILD_BINARIES=OFF
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-    DEPENDS_ON 
-      #tbb 
-      #boost 
-      ilmbase 
+    DEPENDS_ON
+      #tbb
+      #boost
+      ilmbase
       Blosc
   )
 
@@ -151,7 +151,7 @@ else()
 
   set(USD_ROOT_DIR "" CACHE PATH "Path to USD")
   set(Python_ROOT_DIR "" CACHE PATH "Path to python install used for building USD")
-  
+
   if(NOT EXISTS ${USD_ROOT_DIR})
     message(FATAL_ERROR "When BUILD_USD is off, a valid directory is required for USD_ROOT_DIR (optionally pointing to debug/ and release/ subdirectories)")
   endif()
@@ -162,15 +162,15 @@ else()
       message(FATAL_ERROR "On Linux, a valid directory is required for ZLIB_ROOT (the ZLIB install used for building USD)")
     endif()
   endif()
-  
+
 endif()
 
 if(USD_DEVICE_USE_OPENVDB)
   option(USE_USD_OPENVDB_BUILD "If USD source installation exists, use OpenVDB from there" ON)
-  
+
   if(NOT USE_USD_OPENVDB_BUILD)
     set(OPENVDB_ROOT_DIR "" CACHE PATH "Path of OpenVDB install with static library")
-    
+
     if(NOT EXISTS ${OPENVDB_ROOT_DIR})
       message(FATAL_ERROR "With USD_DEVICE_USE_OPENVDB and not USE_USD_OPENVDB_BUILD, a valid directory is required for OPENVDB_ROOT_DIR (optionally pointing to debug/ and release/ subdirectories)")
     endif()
@@ -179,7 +179,7 @@ endif()
 
 if(USD_DEVICE_USE_OMNIVERSE)
   set(OMNICLIENT_ROOT_DIR "" CACHE PATH "Path to Omniverse Client")
-  
+
   if(NOT EXISTS ${OMNICLIENT_ROOT_DIR})
     message(FATAL_ERROR "When USD_DEVICE_USE_OMNIVERSE is on, a valid directory is required for OMNICLIENT_ROOT_DIR (optionally pointing to debug/ and release/ subdirectories)")
   endif()
@@ -196,7 +196,7 @@ if (BUILD_ANARI_SDK)
   )
 else()
   set(ANARI_ROOT_DIR "" CACHE PATH "Path to ANARI SDK")
-  
+
   if(NOT EXISTS ${ANARI_ROOT_DIR})
     message(FATAL_ERROR "When BUILD_ANARI_SDK is off, a valid directory is required for ANARI_ROOT_DIR")
   endif()
@@ -210,18 +210,19 @@ if (BUILD_ANARI_USD_DEVICE)
     -DUSE_USD_OPENVDB_BUILD=${USE_USD_OPENVDB_BUILD}
     -DINSTALL_USD_DEPS=$<NOT:$<BOOL:${BUILD_USD}>>
     -DINSTALL_ANARI_DEPS=$<NOT:$<BOOL:${BUILD_ANARI_SDK}>>)
-  
+
   if(USD_DEVICE_VERSION_EXPLICIT)
-    list(APPEND ANARI_DEVICE_BUILD_ARGS 
+    list(APPEND ANARI_DEVICE_BUILD_ARGS
       -DUSD_DEVICE_VERSION_EXPLICIT=${USD_DEVICE_VERSION_EXPLICIT})
   endif()
-  
+
   if (BUILD_USD)
     list(APPEND DEPS USD)
   else()
     list(APPEND ANARI_DEVICE_BUILD_ARGS
       -DUSD_ROOT_DIR=${USD_ROOT_DIR}
       -DPython_ROOT_DIR=${Python_ROOT_DIR}
+      -DPython_FIND_STRATEGY=LOCATION
       )
     if(USD_DEVICE_USE_OPENVDB)
       list(APPEND ANARI_DEVICE_BUILD_ARGS -DOPENVDB_ROOT_DIR=${OPENVDB_ROOT_DIR})
@@ -231,9 +232,12 @@ if (BUILD_ANARI_USD_DEVICE)
     endif()
     if(USD_DEVICE_USE_OMNIVERSE)
       list(APPEND ANARI_DEVICE_BUILD_ARGS -DOMNICLIENT_ROOT_DIR=${OMNICLIENT_ROOT_DIR})
+      if(NOT WIN32) # Assume Omniverse-enabled builds use the nvidia-based USD build, which requires CXX11_ABI=0
+        list(APPEND ANARI_DEVICE_BUILD_ARGS -DCMAKE_CXX_FLAGS="CMAKE_CXX_FLAGS='-D_GLIBCXX_USE_CXX11_ABI=0'")
+      endif()
     endif()
   endif()
-  
+
   if (BUILD_ANARI_SDK)
     list(APPEND DEPS ANARI-SDK)
   else()
