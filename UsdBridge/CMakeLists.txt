@@ -11,7 +11,10 @@ function(flatten_and_cleanup_targets RESULT_TARGETS INIT_TARGETS)
     list(POP_FRONT candidate_targets cur_target)
     list(FIND flat_targets ${cur_target} target_processed)
 
-    if((target_processed EQUAL -1) AND NOT (${cur_target} MATCHES ${MATCH_SUFFIX}))
+    if((target_processed EQUAL -1) 
+      AND NOT (${cur_target} MATCHES ${MATCH_SUFFIX})
+      AND NOT (${cur_target} STREQUAL "dl")
+      )
       list(APPEND flat_targets ${cur_target})
       get_property(new_targets
         TARGET ${cur_target}

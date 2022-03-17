@@ -97,6 +97,11 @@ if (USD_DEVICE_USE_OPENVDB)
     set(Boost_USE_STATIC_LIBS OFF)
     set(BUILD_SHARED_LIBS ON)
   endif()
+  if(USDBRIDGE_VOLUME_STATIC_CRT)
+    set(Boost_USE_STATIC_RUNTIME ON)
+  else()
+    set(Boost_USE_STATIC_RUNTIME OFF)
+  endif()
 
   if(USE_USD_OPENVDB_BUILD) # Allow for using the usd install as dependency root
     if(CMAKE_BUILD_TYPE MATCHES "Debug")
