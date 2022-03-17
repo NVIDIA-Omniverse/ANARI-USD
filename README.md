@@ -63,7 +63,7 @@ If you have separate release and debug versions of USD, (or standalone OpenVDB, 
 #### Downloading the Omniverse libraries #
 
 - Get the Nvidia Omniverse Launcher from https://www.nvidia.com/en-us/omniverse/
-- Go to the `Exchange` tab and navigate to the `Connectors` section. Install the Connect Sample.
+- Go to the `Exchange` tab and navigate to the `Connectors` section. Install the Connect Sample (version 102.1.5 is known to work).
 - Go to the install directory of the connect sample, which is typically in `~/.local/share/ov/pkg/` or `<userdir>/AppData/local/ov/pkg/` but can also be found in the launcher by looking at your installed apps, a triple-stack on the right side of the connector sample entry -> settings
 - Build the connect sample by running `build.sh/.bat` in its folder
 - Locate the `nv_usd`, `omni_client_library` and `python` folders in the `_build/target-deps` subfolder

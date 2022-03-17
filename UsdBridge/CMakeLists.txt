@@ -1,37 +1,3 @@
-function(flatten_and_cleanup_targets RESULT_TARGETS INIT_TARGETS)
-  if(WIN32)
-    set(MATCH_SUFFIX "\.lib")
-  else()
-    set(MATCH_SUFFIX "\.so")
-  endif()
-  set(candidate_targets ${INIT_TARGETS})
-  set(flat_targets "")
-  list(LENGTH candidate_targets num_candidates)
-  while(${num_candidates} GREATER 0)
-    list(POP_FRONT candidate_targets cur_target)
-    list(FIND flat_targets ${cur_target} target_processed)
-
-    if((target_processed EQUAL -1) 
-      AND NOT (${cur_target} MATCHES ${MATCH_SUFFIX})
-      AND NOT (${cur_target} STREQUAL "dl")
-      )
-      list(APPEND flat_targets ${cur_target})
-      get_property(new_targets
-        TARGET ${cur_target}
-        PROPERTY INTERFACE_LINK_LIBRARIES)
-      # Clear the target's transitive dependencies, otherwise those will still be taken into account by target_link_libraries
-      set_property(TARGET ${cur_target}
-        PROPERTY INTERFACE_LINK_LIBRARIES
-        "")
-      list(APPEND candidate_targets ${new_targets})
-    endif()
-
-    list(LENGTH candidate_targets num_candidates)
-  endwhile()
-
-  set(${RESULT_TARGETS} ${flat_targets} PARENT_SCOPE)
-endfunction()
-
 message( "-------------------- Begin UsdBridge CmakeLists.txt ----------------------------------------")
 
 if (WIN32)
@@ -41,6 +7,8 @@ endif()
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+include(usdhelpers.cmake)
 
 # USD
 
