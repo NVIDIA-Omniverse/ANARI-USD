@@ -8,85 +8,83 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(usdhelpers.cmake)
+
 # USD
 
-if (NOT EXISTS ${USD_INSTALL_DIR})
-  find_path(USD_INSTALL_DIR NAMES include/pxr/pxr.h DOC "Path to USD")
-  message(STATUS "Using USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
+if (NOT EXISTS ${USD_ROOT_DIR})
+  find_path(USD_ROOT_DIR NAMES include/pxr/pxr.h DOC "Path to USD")
+  message(STATUS "Using USD_ROOT_DIR: ${USD_ROOT_DIR}")
 endif()
 
-if (NOT EXISTS ${USD_INSTALL_DIR})
-  message(FATAL_ERROR "No valid USD_INSTALL_DIR set, or found using CMAKE_PREFIX_PATH: ${USD_INSTALL_DIR}")
+if (NOT EXISTS ${USD_ROOT_DIR})
+  message(FATAL_ERROR "No valid USD_ROOT_DIR set, or found using CMAKE_PREFIX_PATH: ${USD_ROOT_DIR}")
 endif()
 
-message(STATUS "Using cmake value of USD_INSTALL_DIR: ${USD_INSTALL_DIR}")
-if(EXISTS "${USD_INSTALL_DIR}/release")
-  set(USD_INSTALL_DIR_RELEASE "${USD_INSTALL_DIR}/release")
+message(STATUS "Using cmake value of USD_ROOT_DIR: ${USD_ROOT_DIR}")
+if(EXISTS "${USD_ROOT_DIR}/release")
+  set(USD_ROOT_DIR_RELEASE "${USD_ROOT_DIR}/release")
 else()
-  set(USD_INSTALL_DIR_RELEASE "${USD_INSTALL_DIR}")
+  set(USD_ROOT_DIR_RELEASE "${USD_ROOT_DIR}")
 endif()
-if(EXISTS "${USD_INSTALL_DIR}/debug")
-  set(USD_INSTALL_DIR_DEBUG "${USD_INSTALL_DIR}/debug")
+if(EXISTS "${USD_ROOT_DIR}/debug")
+  set(USD_ROOT_DIR_DEBUG "${USD_ROOT_DIR}/debug")
 else()
-  set(USD_INSTALL_DIR_DEBUG "${USD_INSTALL_DIR}")
+  set(USD_ROOT_DIR_DEBUG "${USD_ROOT_DIR}")
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
-  if(NOT EXISTS "${USD_INSTALL_DIR_DEBUG}/include")
-    message(FATAL_ERROR "USD_INSTALL_DIR or its /debug subfolder does not have an /include subfolder, so it's not configured correctly at ${USD_INSTALL_DIR_DEBUG}")
+  if(NOT EXISTS "${USD_ROOT_DIR_DEBUG}/include")
+    message(FATAL_ERROR "USD_ROOT_DIR or its /debug subfolder does not have an /include subfolder, so it's not configured correctly at ${USD_ROOT_DIR_DEBUG}")
   endif()
-elseif(NOT EXISTS "${USD_INSTALL_DIR_RELEASE}/include")
-  message(FATAL_ERROR "USD_INSTALL_DIR or its /release subfolder does not have an /include subfolder, so it's not configured correctly at ${USD_INSTALL_DIR_RELEASE}")
+elseif(NOT EXISTS "${USD_ROOT_DIR_RELEASE}/include")
+  message(FATAL_ERROR "USD_ROOT_DIR or its /release subfolder does not have an /include subfolder, so it's not configured correctly at ${USD_ROOT_DIR_RELEASE}")
 endif()
 
-set(USD_DIR "$<$<NOT:$<CONFIG:Debug>>:${USD_INSTALL_DIR_RELEASE}>$<$<CONFIG:Debug>:${USD_INSTALL_DIR_DEBUG}>")
-set(USD_INCLUDE_DIR "${USD_DIR}/include")
-
+set(USD_DIR "$<$<NOT:$<CONFIG:Debug>>:${USD_ROOT_DIR_RELEASE}>$<$<CONFIG:Debug>:${USD_ROOT_DIR_DEBUG}>")
 if(CMAKE_CONFIGURATION_TYPES)
   set(USD_LIB_DIR "${USD_DIR}/lib")
 else()
   # Generator-expression-free, due to find_library later on
   if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    set(USD_LIB_DIR "${USD_INSTALL_DIR_DEBUG}/lib")
+    set(USD_LIB_DIR "${USD_ROOT_DIR_DEBUG}/lib")
   else()
-    set(USD_LIB_DIR "${USD_INSTALL_DIR_RELEASE}/lib")
+    set(USD_LIB_DIR "${USD_ROOT_DIR_RELEASE}/lib")
   endif()
 endif()
 
-list(APPEND USD_SHARED_LIBS ar arch gf js kind ndr pcp plug sdf tf trace usd usdGeom usdVol usdShade vt work)
-message(STATUS "USD_SHARED_LIBS: ${USD_SHARED_LIBS}")
+# Search in config mode
+find_package(pxr REQUIRED
+  PATHS ${USD_ROOT_DIR_RELEASE})
+
+if(NOT (USD_ROOT_DIR_DEBUG STREQUAL USD_ROOT_DIR_RELEASE))
+  set(USD_DEBUG_TARGET_CMAKE "${USD_ROOT_DIR_DEBUG}/cmake/pxrTargets-debug.cmake")
+  if(EXISTS ${USD_DEBUG_TARGET_CMAKE})
+    set(_IMPORT_PREFIX ${USD_ROOT_DIR_DEBUG})
+    #include USD debug cmake targets
+    include(${USD_DEBUG_TARGET_CMAKE})
+    set(_IMPORT_PREFIX)
+  endif()
+endif()
+
+list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade)
+flatten_and_cleanup_targets(USD_TARGETS "${USD_INIT_TARGETS}")
+message(STATUS "USD_TARGETS: ${USD_TARGETS}")
 
 # Python
 
-set(USD_PYTHON_INSTALL_DIR "" CACHE PATH "Path of python version corresponding to USD dependency")
+list(PREPEND CMAKE_MODULE_PATH ${Python_ROOT_DIR})
+find_package(Python REQUIRED COMPONENTS Development)
+list(POP_FRONT CMAKE_MODULE_PATH)
 
-set(PREV_PYTHON_ROOT_DIR ${Python_ROOT_DIR})
+set(USD_PYTHON_TARGETS Python::Module)
+set(PY_SHARED_LIB_DIR "${Python_RUNTIME_LIBRARY_DIRS}")
+set(USD_PYTHON_LINK_DIRS "${Python_LIBRARY_DIRS}")
 
-if(EXISTS ${USD_PYTHON_INSTALL_DIR})
-  if(WIN32)
-    set(PY_LIB_DIR "libs") 
-    set(PY_SHARED_LIB_DIR "${USD_PYTHON_INSTALL_DIR}")
-    set(PY_LINK_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
-  else()
-    set(PY_LIB_DIR "lib") 
-    set(PY_SHARED_LIB_DIR "${USD_PYTHON_INSTALL_DIR}/lib")
-    set(PY_LINK_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
-  endif()
-  set(USD_PYTHON_INCLUDE_DIR "${USD_PYTHON_INSTALL_DIR}/include")
-  if(NOT EXISTS "${USD_PYTHON_INCLUDE_DIR}/pyconfig.h")
-    file(GLOB USD_PYTHON_INCLUDE_DIR "${USD_PYTHON_INSTALL_DIR}/include/python*")
-  endif()
-  message(STATUS "Found USD-Python include dir: ${USD_PYTHON_INCLUDE_DIR}")
-  file(GLOB USD_PYTHON_LINK_LIBS "${USD_PYTHON_INSTALL_DIR}/${PY_LIB_DIR}/*${PY_LINK_SUFFIX}")
-  message(STATUS "Found USD-Python libs: ${USD_PYTHON_LINK_LIBS}")
-else()
-  find_package(Python REQUIRED COMPONENTS Development)
-  set(USD_PYTHON_INCLUDE_DIR ${Python_INCLUDE_DIRS})
-  set(USD_PYTHON_LINK_LIBS Python::Module)
-  set(PY_SHARED_LIB_DIR "${Python_RUNTIME_LIBRARY_DIRS}")
-endif()
+# Boost may have a custom include directory structure, just take the release ones
 
-set(Python_ROOT_DIR ${PREV_PYTHON_ROOT_DIR})
+file(GLOB Boost_SEP_INCLUDE_DIR "${USD_ROOT_DIR_RELEASE}/include/boost*")
+message(STATUS "Boost_SEP_INCLUDE_DIR ${Boost_SEP_INCLUDE_DIR}")
 
 # Bridge source
 
@@ -96,18 +94,17 @@ add_subdirectory(Volume)
 
 set(USDBRIDGE_SOURCES
   UsdBridge.cpp
-  UsdBridgeUtils.cpp
+  Common/UsdBridgeUtils.cpp
   UsdBridgeCaches.cpp
   UsdBridgeUsdWriter.cpp
   UsdBridge.h
   UsdBridgeCaches.h
   UsdBridgeUsdWriter.h
-  UsdBridgeData.h
-  UsdBridgeUtils.h
-  UsdBridgeMacros.h
+  Common/UsdBridgeData.h
+  Common/UsdBridgeUtils.h
+  Common/UsdBridgeMacros.h
   usd.h
   ${USDBRIDGE_MDL_SOURCES}
-  ${USDBRIDGE_CONNECT_SOURCES}
 )
 
 add_library(UsdBridge STATIC ${USDBRIDGE_SOURCES})
@@ -117,65 +114,35 @@ add_library(UsdBridge STATIC ${USDBRIDGE_SOURCES})
 target_include_directories(UsdBridge
 PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}
+  ${CMAKE_CURRENT_LIST_DIR}/Common
 PRIVATE
-  ${USD_INCLUDE_DIR}
   ${CMAKE_CURRENT_LIST_DIR}/Mdl
   ${CMAKE_CURRENT_LIST_DIR}/Connection
   ${CMAKE_CURRENT_LIST_DIR}/Volume
-  ${USD_PYTHON_INCLUDE_DIR}
-  ${USDBRIDGE_CONNECT_INCLUDE_DIRS}
+  ${Boost_SEP_INCLUDE_DIR}
 )
 
-target_compile_definitions(UsdBridge PRIVATE
-  ${USDBRIDGE_CONNECT_COMPILE_DEFS}
-)
-
-# Platform-dependent defs/links
+# Platform-dependent operations
 
 if (WIN32)
   add_definitions("-DBOOST_ALL_DYN_LINK")
-  set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/Volume/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+  # Combination of boost and python causes pragma linking issues for both libraries.
+  message(STATUS "Python link dirs: ${USD_PYTHON_LINK_DIRS}")
+  target_link_directories(UsdBridge
+    PUBLIC "${USD_PYTHON_LINK_DIRS}" "${USD_LIB_DIR}")
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
   target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
-
-  # Assume compilation against the Nvidia Omniverse USD libraries,
-  # which are not built with the CXX11 ABI
-  if(${USD_DEVICE_USE_OMNIVERSE})
-    target_compile_definitions(UsdBridge PRIVATE
-      _GLIBCXX_USE_CXX11_ABI=0 )
-  endif()
-
-  #target_link_options(UsdBridge PUBLIC
-  #  "-Wl,--rpath-link,${USD_LIB_DIR}"
-  #  ${USDBRIDGE_CONNECT_LINK_OPTIONS})  # Not required for ANARI
 endif()
 
 # Linking
 
-if(CMAKE_CONFIGURATION_TYPES)
-  # Due to USD_LIB_DIR being a generator expression, we can't search for absolute dirs. Instead keep libs relative
-  target_link_directories(UsdBridge PUBLIC
-    ${USD_LIB_DIR}
-    ${USDBRIDGE_CONNECT_LINK_DIRS}
-  )
-  foreach(lib ${USD_SHARED_LIBS})
-    list(APPEND USD_LIBS ${lib})
-  endforeach()
-else()
-  foreach(lib ${USD_SHARED_LIBS})
-    find_library(path ${lib} PATHS ${USD_LIB_DIR} NO_DEFAULT_PATH)
-    list(APPEND USD_LIBS ${path})
-    unset(path CACHE)
-  endforeach()
-endif()
-
-target_link_libraries(UsdBridge 
+target_link_libraries(UsdBridge
   PRIVATE
     UsdBridge_Volume
-    ${USD_LIBS}
-    ${USD_PYTHON_LINK_LIBS}
-    ${USDBRIDGE_CONNECT_LINK_LIBS}
+    UsdBridge_Connect
+    ${USD_TARGETS}
+    ${USD_PYTHON_TARGETS}
 )
 
 #Install UsdBridge
@@ -193,23 +160,23 @@ if(${INSTALL_USD_DEPS})
 
   #Install USD
   install(
-    DIRECTORY "${USD_LIB_DIR}/" 
+    DIRECTORY "${USD_LIB_DIR}/"
     DESTINATION ${PLATFORM_INSTALL_LIBDIR}
     PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)
   install(
-    DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${USD_INSTALL_DIR_RELEASE}/bin/>$<$<CONFIG:Debug>:${USD_INSTALL_DIR_DEBUG}/bin/>"
+    DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${USD_ROOT_DIR_RELEASE}/bin/>$<$<CONFIG:Debug>:${USD_ROOT_DIR_DEBUG}/bin/>"
     DESTINATION ${PLATFORM_INSTALL_LIBDIR}
     FILES_MATCHING PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}*")
-    
+
   #Install Python
+  message(STATUS "Python runtime library dirs: ${PY_SHARED_LIB_DIR}")
   if(WIN32)
-    file(GLOB PYTHON_RUNTIME_LIBRARIES "${PY_SHARED_LIB_DIR}/*${CMAKE_SHARED_LIBRARY_SUFFIX}*")
+    file(GLOB PYTHON_RUNTIME_LIBRARIES "${PY_SHARED_LIB_DIR}/python*${CMAKE_SHARED_LIBRARY_SUFFIX}*")
   else()
-    file(GLOB PYTHON_RUNTIME_LIBRARIES 
+    file(GLOB PYTHON_RUNTIME_LIBRARIES
       "${PY_SHARED_LIB_DIR}/*libffi.so*"
       "${PY_SHARED_LIB_DIR}/*libpython*.so*")
   endif()
-
   message(STATUS "Found Python Runtime Libs: ${PYTHON_RUNTIME_LIBRARIES}")
   install(
       FILES ${PYTHON_RUNTIME_LIBRARIES}

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "UsdBridge/UsdBridgeData.h"
+#include "UsdBridgeData.h"
 #include "anari/anari_enums.h"
 #include "UsdCommonMacros.h"
 

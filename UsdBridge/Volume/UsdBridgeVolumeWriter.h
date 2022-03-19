@@ -6,24 +6,31 @@
 
 #include "UsdBridgeData.h"
 
-#include <ostream>
+#ifdef _WIN32
+#define USDDevice_DECL __cdecl
+#ifdef UsdBridge_Volume_EXPORTS
+#define USDDevice_INTERFACE __declspec(dllexport)
+#else
+#define USDDevice_INTERFACE __declspec(dllimport)
+#endif
+#else
+#define USDDevice_DECL
+#define USDDevice_INTERFACE
+#endif
 
-class UsdBridgeVolumeWriter
+class UsdBridgeVolumeWriterI
 {
   public:
-    UsdBridgeVolumeWriter();
-    ~UsdBridgeVolumeWriter();
 
-    bool Initialize(UsdBridgeLogCallback logCallback, void* logUserData);
+    virtual bool Initialize(UsdBridgeLogCallback logCallback, void* logUserData) = 0;
 
-    void ToVDB(const UsdBridgeVolumeData& volumeData, std::ostream& vdbOutput);
-    
-    static UsdBridgeLogCallback LogCallback;
-    static void* LogUserData;
+    virtual void ToVDB(const UsdBridgeVolumeData& volumeData) = 0;
 
-  protected:
+    virtual void GetSerializedVolumeData(const char*& data, size_t& size) = 0;
+
+    virtual void Release() = 0; // Accommodate change of CRT
 };
 
-
+extern "C" USDDevice_INTERFACE UsdBridgeVolumeWriterI* USDDevice_DECL Create_VolumeWriter();
 
 #endif

@@ -2,7 +2,44 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdBridgeVolumeWriter.h"
-#include "UsdBridgeUtils.h"
+
+#include <memory>
+
+class UsdBridgeVolumeWriterInternals;
+
+class UsdBridgeVolumeWriter : public UsdBridgeVolumeWriterI
+{
+  public:
+    UsdBridgeVolumeWriter();
+    ~UsdBridgeVolumeWriter();
+
+    bool Initialize(UsdBridgeLogCallback logCallback, void* logUserData) override;
+
+    void ToVDB(const UsdBridgeVolumeData& volumeData) override;
+
+    void GetSerializedVolumeData(const char*& data, size_t& size) override;
+
+    void Release() override;
+
+    static UsdBridgeLogCallback LogCallback;
+    static void* LogUserData;
+
+  protected:
+#ifdef USE_OPENVDB
+    std::unique_ptr<UsdBridgeVolumeWriterInternals> Internals;
+#endif
+};
+
+extern "C" UsdBridgeVolumeWriterI* USDDevice_DECL Create_VolumeWriter()
+{
+  return new UsdBridgeVolumeWriter();
+}
+
+void UsdBridgeVolumeWriter::Release()
+{
+  delete this;
+}
+
 
 #ifdef USE_OPENVDB
 
@@ -21,6 +58,9 @@
 
 #include <assert.h>
 #include <limits>
+#include <sstream>
+
+#include "UsdBridgeUtils.h"
 
 #define UsdBridgeLogMacro(level, message) \
   { std::stringstream logStream; \
@@ -37,6 +77,37 @@ using ColorGridOutType = openvdb::FloatGrid;
 using ColorGridOutType = openvdb::Vec3fGrid;
 #endif
 using OpacityGridOutType = openvdb::FloatGrid;
+
+class UsdBridgeVolumeWriterInternals
+{
+  public:
+    UsdBridgeVolumeWriterInternals()
+      : GridStream(std::ios::in | std::ios::out)
+    {}
+    ~UsdBridgeVolumeWriterInternals()
+    {}
+
+    std::ostream& ResetStream()
+    {
+      GridStream.clear();
+      return GridStream;
+    }
+
+    const char* GetStreamData()
+    {
+      StreamData = GridStream.str(); //copy, should be move
+      return StreamData.c_str();
+    }
+
+    size_t GetStreamDataSize()
+    {
+      return StreamData.length();
+    }
+
+  protected:
+    std::stringstream GridStream;
+    std::string StreamData;
+};
 
 struct TfTransformInput
 {
@@ -282,7 +353,7 @@ openvdb::GridBase::Ptr CopyToGridTemplate(const CopyToGridInput& copyInput)
 {
   typename GridType::Ptr scalarGrid = GridType::create();
 
-  openvdb::tools::Dense<const DataType, openvdb::tools::LayoutXYZ> valArray(copyInput.bBox, static_cast<const DataType*>(copyInput.volumeData.Data));
+  openvdb::tools::Dense<const DataType> valArray(copyInput.bBox, static_cast<const DataType*>(copyInput.volumeData.Data));
   openvdb::tools::copyFromDense(valArray, *scalarGrid, (DataType)0); // No tolerance set to clamp values to background value for sparsity.
 
   return scalarGrid;
@@ -341,13 +412,13 @@ static openvdb::GridBase::Ptr CopyToGrid(const CopyToGridInput& copyInput)
 }
 
 UsdBridgeVolumeWriter::UsdBridgeVolumeWriter()
+  : Internals(std::make_unique<UsdBridgeVolumeWriterInternals>())
 {
   
 }
 
 UsdBridgeVolumeWriter::~UsdBridgeVolumeWriter()
 {
-  
 }
 
 bool UsdBridgeVolumeWriter::Initialize(UsdBridgeLogCallback logCallback, void* logUserData)
@@ -360,7 +431,7 @@ bool UsdBridgeVolumeWriter::Initialize(UsdBridgeLogCallback logCallback, void* l
   return true;
 }
 
-void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData& volumeData, std::ostream& vdbOutput)
+void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData& volumeData)
 {
   const char* densityGridName = "density";
   const char* colorGridName = "diffuse";
@@ -421,7 +492,13 @@ void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData& volumeData, std::os
   }
 
   // Must write all grids at once
-  openvdb::io::Stream(vdbOutput).write(*grids);
+  openvdb::io::Stream(Internals->ResetStream()).write(*grids);
+}
+
+void UsdBridgeVolumeWriter::GetSerializedVolumeData(const char*& data, size_t& size)
+{
+  data = Internals->GetStreamData();
+  size = Internals->GetStreamDataSize();
 }
 
 #else //USE_OPENVDB
@@ -441,9 +518,15 @@ bool UsdBridgeVolumeWriter::Initialize(UsdBridgeLogCallback logCallback, void* l
   return true;
 }
 
-void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData & volumeData, std::ostream& vdbOutput)
+void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData & volumeData)
 {
 
+}
+
+void UsdBridgeVolumeWriter::GetSerializedVolumeData(const char*& data, size_t& size)
+{
+  data = nullptr;
+  size = 0;
 }
 
 #endif //USE_OPENVDB

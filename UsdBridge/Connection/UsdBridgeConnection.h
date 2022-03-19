@@ -4,7 +4,7 @@
 #ifndef UsdBridgeConnection_h
 #define UsdBridgeConnection_h
 
-#include "../UsdBridgeData.h"
+#include "UsdBridgeData.h"
 
 #include <string>
 #include <fstream>
