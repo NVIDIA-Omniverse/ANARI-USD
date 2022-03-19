@@ -393,9 +393,7 @@ bool UsdBridgeUsdWriter::CreateDirectories()
 #ifdef SUPPORT_MDL_SHADERS
   valid = valid && Connect->CreateFolder((SessionDirectory + mdlFolder).c_str(), false);
 #endif
-#ifdef USE_OPENVDB
   valid = valid && Connect->CreateFolder((SessionDirectory + volFolder).c_str(), false);
-#endif
 
   if (!valid)
   {
