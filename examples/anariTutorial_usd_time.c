@@ -185,7 +185,7 @@ int main(int argc, const char **argv)
       scaledVertex[v] = vertex[v] * (1.0f + timeIdx);
     }
 
-    ANARIData array = anariNewArray1D(dev, scaledVertex, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
+    ANARIArray1D array = anariNewArray1D(dev, scaledVertex, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
     anariCommit(dev, array);
     anariSetParameter(dev, mesh, "vertex.position", ANARI_ARRAY, &array);
     anariRelease(dev, array); // we are done using this handle

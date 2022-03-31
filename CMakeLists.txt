@@ -40,8 +40,9 @@ if (EXISTS "${ANARI_ROOT_DIR}/release")
 endif()
 
 # Search in config mode
-find_package(anari REQUIRED
-  PATHS ${ANARI_ROOT_DIR})
+find_package(anari 0.1.0 REQUIRED
+  PATHS ${ANARI_ROOT_DIR}
+)
 
 ## Core UsdBride ##
 

@@ -10,7 +10,7 @@
 #include <algorithm>
 #include "UsdAnari.h"
 #include "anari/detail/IntrusivePtr.h"
-#include "anari/detail/Helpers.h"
+#include "anari/type_utility.h"
 #include "anari/anari_cpp/Traits.h"
 
 class UsdBaseObject;
@@ -20,7 +20,7 @@ class UsdBridge;
 // When deriving from UsdParameterizedObject<T>, define a a struct T::Data and
 // a static void T::registerParams() that registers any member of T::Data using REGISTER_PARAMETER_MACRO()
 template<class T, class D>
-class UsdParameterizedObject 
+class UsdParameterizedObject
 {
 public:
 
@@ -35,7 +35,7 @@ public:
 
   ~UsdParameterizedObject()
   {
-    // Make sure the data is automatically decreasing the references 
+    // Make sure the data is automatically decreasing the references
     // which have been set in setParam
     auto it = registeredParams->begin();
     while (it != registeredParams->end())
@@ -135,7 +135,7 @@ protected:
           (*baseObj)->refInc(anari::RefType::INTERNAL);
       }
       else
-        reportStatusThroughDevice(device, this, ANARI_OBJECT, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, 
+        reportStatusThroughDevice(device, this, ANARI_OBJECT, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
           "Param %s should be of type %s", name, AnariTypeToString(it->second.second));
     }
   }
@@ -195,13 +195,13 @@ protected:
   // Memleak checking
   void LogAllocation(const char* ptr) { allocatedStrings.push_back(ptr); }
   void LogDeallocation(const char* ptr)
-  { 
-    if (ptr) 
-    { 
+  {
+    if (ptr)
+    {
       auto it = std::find(allocatedStrings.begin(), allocatedStrings.end(), ptr);
       assert(it != allocatedStrings.end());
       allocatedStrings.erase(it);
-    } 
+    }
   }
   std::vector<const char*> allocatedStrings;
   UsdDevice* allocDevice;

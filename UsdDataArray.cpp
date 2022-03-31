@@ -4,7 +4,7 @@
 #include "UsdDataArray.h"
 #include "UsdDevice.h"
 #include "UsdAnari.h"
-#include "anari/detail/Helpers.h"
+#include "anari/type_utility.h"
 
 #define TO_OBJ_PTR reinterpret_cast<const ANARIObject*>
 
@@ -17,7 +17,7 @@ UsdDataArray::UsdDataArray(void *appMemory,
   uint64_t numItems2,
   int64_t byteStride2,
   uint64_t numItems3,
-  int64_t byteStride3, 
+  int64_t byteStride3,
   UsdDevice* device
 )
   : UsdBaseObject(ANARI_ARRAY)
@@ -99,7 +99,7 @@ int UsdDataArray::getProperty(const char * name, ANARIDataType type, void * mem,
 void UsdDataArray::commit(UsdDevice* device)
 {
   if (anari::isObject(type) && (layout.numItems2 != 1 || layout.numItems3 != 1))
-    device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, 
+    device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdDataArray only supports one-dimensional ANARI_OBJECT arrays");
 }
 
@@ -109,7 +109,7 @@ void * UsdDataArray::map(UsdDevice * device)
   {
     CreateMappedObjectCopy();
   }
-  
+
   return data;
 }
 
@@ -242,13 +242,13 @@ void UsdDataArray::TransferAndRemoveMappedObjectCopy()
   const ANARIObject* newAnariObjects = TO_OBJ_PTR(data);
   const ANARIObject* oldAnariObjects = TO_OBJ_PTR(mappedObjectCopy);
   uint64_t numAnariObjects = layout.numItems1;
-  
+
   // First, increase reference counts of all objects that different in the new object array
   for (int i = 0; i < numAnariObjects; ++i)
   {
     const UsdBaseObject* newObj = (reinterpret_cast<const UsdBaseObject*>(newAnariObjects[i]));
     const UsdBaseObject* oldObj = (reinterpret_cast<const UsdBaseObject*>(oldAnariObjects[i]));
-  
+
     if (newObj != oldObj && newObj)
       newObj->refInc(anari::RefType::INTERNAL);
   }
