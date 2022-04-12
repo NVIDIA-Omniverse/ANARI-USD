@@ -614,7 +614,7 @@ void UsdGeometry::filterResetParam(const char *name)
 template<typename GeomDataType>
 void UsdGeometry::setAttributeTimeVarying(typename GeomDataType::DataMemberId& timeVarying)
 {
-  typedef GeomDataType::DataMemberId DMI;
+  typedef typename GeomDataType::DataMemberId DMI;
 
   for(size_t attribIdx = 0; attribIdx < attributeArray.size(); ++attribIdx)
   {

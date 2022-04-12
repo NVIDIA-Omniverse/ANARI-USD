@@ -4,6 +4,7 @@
 #pragma once
 
 #include "UsdBaseObject.h"
+#include "UsdParameterizedObject.h"
 
 class UsdRenderer;
 class UsdWorld;

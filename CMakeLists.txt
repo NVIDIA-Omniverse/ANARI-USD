@@ -104,6 +104,7 @@ set(USDModule_HEADERS
   UsdParameterizedObject.h
   UsdDevice.h
   UsdBaseObject.h
+  UsdBridgedBaseObject.h
   UsdDataArray.h
   UsdGeometry.h
   UsdSurface.h

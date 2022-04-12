@@ -3,7 +3,7 @@
 
 #include "UsdDevice.h"
 #include "UsdBridge/UsdBridge.h"
-#include "UsdBaseObject.h"
+#include "UsdBridgedBaseObject.h"
 #include "UsdDataArray.h"
 #include "UsdGeometry.h"
 #include "UsdSpatialField.h"

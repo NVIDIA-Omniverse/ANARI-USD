@@ -7,6 +7,7 @@
 #include "UsdBridgeMacros.h"
 
 #include <functional>
+#include <stdint.h>
 
 class UsdBridge;
 

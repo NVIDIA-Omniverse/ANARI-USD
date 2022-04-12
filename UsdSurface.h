@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "UsdBaseObject.h"
+#include "UsdBridgedBaseObject.h"
 
 class UsdGeometry;
 class UsdMaterial;

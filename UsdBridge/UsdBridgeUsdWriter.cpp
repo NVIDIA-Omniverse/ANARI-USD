@@ -1233,7 +1233,7 @@ void UsdBridgeUsdWriter::InitializeUsdTransform(const UsdBridgePrimCache* cacheE
 template<typename UsdGeomType, typename GeomDataType>
 void CreateUsdGeomAttributePrimvars(UsdGeomType& usdGeom, const GeomDataType& geomData, TimeEvaluator<GeomDataType>* timeEval = nullptr)
 {
-  typedef GeomDataType::DataMemberId DMI;
+  typedef typename GeomDataType::DataMemberId DMI;
 
   for(uint32_t attribIndex = 0; attribIndex < geomData.NumAttributes; ++attribIndex)
   {
