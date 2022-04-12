@@ -2104,7 +2104,8 @@ template<typename UsdGeomType, typename GeomDataType>
 void UpdateUsdGeomAttributes(UsdBridgeUsdWriter* writer, UsdGeomType& timeVarGeom, UsdGeomType& uniformGeom, const GeomDataType& geomData, uint64_t numPrims,
   UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
 {
-  for(uint32_t attribIndex = 0; attribIndex < geomData.NumAttributes; ++attribIndex)
+  uint32_t startIdx = UsdGeomDataHasTexCoords(geomData) ? 1 : 0;
+  for(uint32_t attribIndex = startIdx; attribIndex < geomData.NumAttributes; ++attribIndex)
   {
     const UsdBridgeAttribute& attrib = geomData.Attributes[attribIndex];
     if(attrib.Data != nullptr)
@@ -2607,8 +2608,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomNormals);
   if( UsdGeomDataHasTexCoords(geomData) ) 
     { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords); }
-  else 
-    { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes); }
+  UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomColors);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomIndices);
 }
@@ -2636,8 +2636,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomOrientNormals);
     if( UsdGeomDataHasTexCoords(geomData) ) 
       { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords); }
-    else 
-      { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes); }
+    UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomColors);
   }
   else
@@ -2654,8 +2653,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomOrientations);
     if( UsdGeomDataHasTexCoords(geomData) ) 
       { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords); }
-    else 
-      { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes); }
+    UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomColors);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomShapeIndices);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomLinearVelocities);
@@ -2683,8 +2681,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomNormals);
   if( UsdGeomDataHasTexCoords(geomData) ) 
     { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords); }
-  else 
-    { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes); }
+  UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomColors);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomWidths);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomCurveLengths);
