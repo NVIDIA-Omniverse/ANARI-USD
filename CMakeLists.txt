@@ -44,7 +44,21 @@ find_package(anari 0.1.0 REQUIRED
   PATHS ${ANARI_ROOT_DIR}
 )
 
-## Core UsdBride ##
+## Core UsdBridge ##
+
+# Compile defs required by all subdirs
+option(USD_DEVICE_TIME_BASED_OUTPUT "Allow use of timesamples for timevarying properties, but no retiming (so all timesteps are global)" ON)
+if(USD_DEVICE_TIME_BASED_OUTPUT)
+  list(APPEND USD_DEVICE_TIME_DEFS -DTIME_BASED_CACHING)
+  option(USD_DEVICE_VALUE_CLIP_OUTPUT "Retiming of timesteps through value clips for selected objects, resulting in separate USD files for those objects" ON)
+  if(USD_DEVICE_VALUE_CLIP_OUTPUT)
+    list(APPEND USD_DEVICE_TIME_DEFS -DVALUE_CLIP_RETIMING)
+    option(USD_DEVICE_CLIP_STAGE_OUTPUT "Separate clip stages for each timestep for selected objects, resulting in a single USD file per timestep" ON)
+    if(USD_DEVICE_CLIP_STAGE_OUTPUT)
+      list(APPEND USD_DEVICE_TIME_DEFS -DTIME_CLIP_STAGES)
+    endif() 
+  endif()
+endif()
 
 add_subdirectory(UsdBridge)
 
@@ -106,7 +120,7 @@ set(USDModule_HEADERS
 add_library(anari_library_usd SHARED ${USDModule_SOURCES} ${USDModule_HEADERS})
 
 target_compile_definitions(anari_library_usd
-	PRIVATE -DDEVICE_VERSION=${USD_DEVICE_VERSION})
+	PRIVATE -DDEVICE_VERSION=${USD_DEVICE_VERSION} ${USD_DEVICE_TIME_DEFS})
 
 option(CHECK_OBJECT_REFERENCES "Perform a memory check on the reference count of all objects allocated by a USD device, avoiding memleaks and double deletion." OFF)
 if(CHECK_OBJECT_REFERENCES)

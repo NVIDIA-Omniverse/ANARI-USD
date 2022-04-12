@@ -16,10 +16,8 @@
 const char *g_libraryType = "usd";
 
 #ifdef _WIN32
-const char* localOutputDir = "e:/usd/anari";
 const char* texFile = "d:/models/texture.png";
 #else
-const char* localOutputDir = "/home/<username>/usd/anari";
 const char* texFile = "/home/<username>/models/texture.png"; // Point this to any png
 #endif
 
@@ -96,14 +94,15 @@ int main(int argc, const char **argv)
       0.9f,
       0.0f,
       1.0f};
-  float texcoord[] = { 0.0f,
+  float texcoord[] = {
+      0.0f,
       0.0f,
       1.0f,
       0.0f,
       1.0f,
       1.0f,
       0.0f,
-      1.0f };
+      1.0f};
   float sphereSizes[] = { 0.1f,
       2.0f,
       0.3f,
@@ -134,10 +133,6 @@ int main(int argc, const char **argv)
     anariSetParameter(dev, dev, "usd::serialize.hostname", ANARI_STRING, "ov-test");
     anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
   }
-  else
-  {
-    anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, localOutputDir);
-  }
   anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
 
   // commit device
@@ -163,7 +158,7 @@ int main(int argc, const char **argv)
   double matTimeValues[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
   int numTimeSteps = sizeof(timeValues) / sizeof(double);
 
-  int useVertexColors = 1;
+  int useVertexColors = 0;
 
   // CREATE ALL TIMESTEPS:
 
@@ -200,7 +195,7 @@ int main(int argc, const char **argv)
 
     array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
     anariCommit(dev, array);
-    anariSetParameter(dev, mesh, "vertex.texcoord", ANARI_ARRAY, &array);
+    anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
     anariRelease(dev, array);
 
     array = anariNewArray1D(dev, index, 0, 0, ANARI_UINT32_VEC3, 2, 0);
@@ -208,7 +203,7 @@ int main(int argc, const char **argv)
     anariSetParameter(dev, mesh, "primitive.index", ANARI_ARRAY, &array);
     anariRelease(dev, array);
 
-    int timeVarying = 0xFFFFFFFB;// Texcoords are not timeVarying
+    int timeVarying = 0xFFFFFFDF;// Texcoords are not timeVarying
     anariSetParameter(dev, mesh, "usd::timevarying", ANARI_INT32, &timeVarying);
     anariSetParameter(dev, mesh, "usd::timestep", ANARI_FLOAT64, geomTimeValues + timeIdx);
 
@@ -295,7 +290,7 @@ int main(int argc, const char **argv)
 
       array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
       anariCommit(dev, array);
-      anariSetParameter(dev, mesh, "vertex.texcoord", ANARI_ARRAY, &array);
+      anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
       array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4, 0);
@@ -446,7 +441,7 @@ int main(int argc, const char **argv)
 
       array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
       anariCommit(dev, array);
-      anariSetParameter(dev, mesh, "vertex.texcoord", ANARI_ARRAY, &array);
+      anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
       array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4, 0);

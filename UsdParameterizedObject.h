@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cassert>
 #include <algorithm>
+#include <vector>
 #include "UsdAnari.h"
 #include "anari/detail/IntrusivePtr.h"
 #include "anari/type_utility.h"
@@ -216,3 +217,12 @@ protected:
     std::make_pair<size_t, ANARIDataType>(offsetof(DataType, ParamData), ParamType) \
   );
 
+#define REGISTER_PARAMETER_ARRAY_MACRO(ParamName, ParamType, ParamData, NumEntries) \
+  for(int i = 0; i < NumEntries; ++i) \
+  { \
+    std::string ParamNameWithIndex = ParamName + std::to_string(i); \
+    registeredParams.emplace( \
+      ParamNameWithIndex, \
+      std::make_pair<size_t, ANARIDataType>(offsetof(DataType, ParamData[i]), ParamType) \
+    ); \
+  }

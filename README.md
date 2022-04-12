@@ -32,9 +32,8 @@ environment variable. If neither are specified, it will default to `"./"` and em
 - Changes to data are **actually saved** when `anariRenderFrame()` is called.
 - If ANARI objects of a certain `name` are not referenced from within any committed timestep, their internal data is only cleaned up when calling `anariDeviceSetParam(d, "usd::garbagecollect", ANARI_VOID_POINTER, 0)`. This is adviced after every `anariRenderFrame()` or a subfrequency thereof.
 - Not supported:
+    - Arbitrary commit order - commits need to happen from leaf objects (Geometry/Materials/etc.) to root objects (World)
     - Geometries:
-        - quads and cones
-        - `*.attribute` parameters larger than 0 (`*.texcoord` is still supported)
         - color array type other than double/float (so no fixed types)
         - strided arrays
     - Volumes

@@ -3,6 +3,7 @@
 
 #include "UsdBridgeUtils.h"
 
+
 const char* UsdBridgeTypeToString(UsdBridgeType type)
 {
   const char* typeStr = nullptr;

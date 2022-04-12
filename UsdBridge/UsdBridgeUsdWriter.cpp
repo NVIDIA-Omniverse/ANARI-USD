@@ -23,6 +23,10 @@ TF_DEFINE_PRIVATE_TOKENS(
   (st)
   (st1)
   (st2)
+  (attribute0)
+  (attribute1)
+  (attribute2)
+  (attribute3)
   (result)
   (displayColor)
 
@@ -124,11 +128,36 @@ namespace
     return token;
   }
 
+  TfToken AttribIndexToToken(uint32_t attribIndex)
+  {
+    TfToken attribToken;
+    switch(attribIndex)
+    {
+      case 0: attribToken = UsdBridgeTokens->attribute0; break;
+      case 1: attribToken = UsdBridgeTokens->attribute1; break;
+      case 2: attribToken = UsdBridgeTokens->attribute2; break;
+      case 3: attribToken = UsdBridgeTokens->attribute3; break;
+      default: attribToken = TfToken((std::string("attribute")+std::to_string(attribIndex)).c_str()); break;
+    } 
+    return attribToken;
+  }
+
   bool UsesUsdGeomPoints(const UsdBridgeInstancerData& geomData)
   {
     assert(geomData.NumShapes == 1); // Only single shapes supported
     bool simpleSphereInstancer = geomData.Shapes[0] == UsdBridgeInstancerData::SHAPE_SPHERE;
     return !geomData.UsePointInstancer && simpleSphereInstancer;
+  }
+
+  template<typename GeomDataType>
+  bool UsdGeomDataHasTexCoords(const GeomDataType& geomData)
+  {
+    return geomData.Attributes != nullptr &&
+      geomData.Attributes[0].Data != nullptr &&
+      ( 
+        geomData.Attributes[0].DataType == UsdBridgeType::FLOAT2 ||
+        geomData.Attributes[0].DataType == UsdBridgeType::DOUBLE2
+      );
   }
 
   void BlockFieldRelationships(UsdVolVolume& volume, UsdBridgeVolumeFieldType* exception = nullptr)
@@ -253,20 +282,13 @@ namespace
     primvar.Set(*usdArray, timeCode);
   }
 
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarReduced(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
+  template<class ArrayType>
+  void AssignArrayToPrimvarFlatten(const void* data, UsdBridgeType dataType, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
   {
-    using ElementType = typename ArrayType::ElementType;
-    EltType* typedData = (EltType*)data;
+    int elementMultiplier = (int)dataType / UsdBridgeNumFundamentalTypes;
+    size_t numFlattenedElements = numElements * elementMultiplier;
 
-    usdArray->resize(numElements);
-    for (int i = 0; i < numElements; ++i)
-    {
-      for (int j = 0; j < ElementType::dimension; ++j)
-        (*usdArray)[i][j] = typedData[i][j];
-    }
-
-    primvar.Set(*usdArray, timeCode);
+    AssignArrayToPrimvar<ArrayType>(data, numFlattenedElements, primvar, timeCode, usdArray);
   }
 
   template<class ArrayType, class EltType>
@@ -279,6 +301,31 @@ namespace
     for (int i = 0; i < numElements; ++i)
     {
       (*usdArray)[i] = ElementType(typedData[i]);
+    }
+
+    primvar.Set(*usdArray, timeCode);
+  }
+
+  template<class ArrayType, class EltType>
+  void AssignArrayToPrimvarConvertFlatten(const void* data, UsdBridgeType dataType, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
+  {
+    int elementMultiplier = (int)dataType / UsdBridgeNumFundamentalTypes;
+    size_t numFlattenedElements = numElements * elementMultiplier;
+
+    AssignArrayToPrimvarConvert<ArrayType, EltType>(data, numFlattenedElements, primvar, timeCode, usdArray);
+  }
+
+  template<class ArrayType, class EltType>
+  void AssignArrayToPrimvarReduced(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
+  {
+    using ElementType = typename ArrayType::ElementType;
+    EltType* typedData = (EltType*)data;
+
+    usdArray->resize(numElements);
+    for (int i = 0; i < numElements; ++i)
+    {
+      for (int j = 0; j < ElementType::dimension; ++j)
+        (*usdArray)[i][j] = typedData[i][j];
     }
 
     primvar.Set(*usdArray, timeCode);
@@ -301,6 +348,69 @@ namespace
     default:
       break;
     }
+    return result;
+  }
+
+  SdfValueTypeName GetPrimvarArrayType(UsdBridgeType eltType)
+  {
+    assert(eltType != UsdBridgeType::UNDEFINED);
+
+    SdfValueTypeName result = SdfValueTypeNames->UCharArray;
+
+    switch (eltType)
+    {
+      case UsdBridgeType::UCHAR: 
+      case UsdBridgeType::CHAR: { break;}
+      case UsdBridgeType::USHORT: { result = SdfValueTypeNames->UIntArray; break; }
+      case UsdBridgeType::SHORT: { result = SdfValueTypeNames->IntArray; break; }
+      case UsdBridgeType::UINT: { result = SdfValueTypeNames->UIntArray; break; }
+      case UsdBridgeType::INT: { result = SdfValueTypeNames->IntArray; break; }
+      case UsdBridgeType::LONG: { result = SdfValueTypeNames->Int64Array; break; }
+      case UsdBridgeType::ULONG: { result = SdfValueTypeNames->UInt64Array; break; }
+      case UsdBridgeType::HALF: { result = SdfValueTypeNames->HalfArray; break; }
+      case UsdBridgeType::FLOAT: { result = SdfValueTypeNames->FloatArray; break; }
+      case UsdBridgeType::DOUBLE: { result = SdfValueTypeNames->DoubleArray; break; }
+
+      case UsdBridgeType::INT2: { result = SdfValueTypeNames->Int2Array; break; }
+      case UsdBridgeType::HALF2: { result = SdfValueTypeNames->Half2Array; break; }
+      case UsdBridgeType::FLOAT2: { result = SdfValueTypeNames->Float2Array; break; }
+      case UsdBridgeType::DOUBLE2: { result = SdfValueTypeNames->Double2Array; break; }
+
+      case UsdBridgeType::INT3: { result = SdfValueTypeNames->Int3Array; break; }
+      case UsdBridgeType::HALF3: { result = SdfValueTypeNames->Half3Array; break; }
+      case UsdBridgeType::FLOAT3: { result = SdfValueTypeNames->Float3Array; break; }
+      case UsdBridgeType::DOUBLE3: { result = SdfValueTypeNames->Double3Array; break; }
+
+      case UsdBridgeType::INT4: { result = SdfValueTypeNames->Int4Array; break; }
+      case UsdBridgeType::HALF4: { result = SdfValueTypeNames->Half4Array; break; }
+      case UsdBridgeType::FLOAT4: { result = SdfValueTypeNames->Float4Array; break; }
+      case UsdBridgeType::DOUBLE4: { result = SdfValueTypeNames->Double4Array; break; }
+
+      case UsdBridgeType::UCHAR2:
+      case UsdBridgeType::UCHAR3: 
+      case UsdBridgeType::UCHAR4: { result = SdfValueTypeNames->UCharArray; break; }
+      case UsdBridgeType::CHAR2:
+      case UsdBridgeType::CHAR3: 
+      case UsdBridgeType::CHAR4: { result = SdfValueTypeNames->UCharArray; break; }
+      case UsdBridgeType::USHORT2:
+      case UsdBridgeType::USHORT3:
+      case UsdBridgeType::USHORT4: { result = SdfValueTypeNames->UIntArray; break; }
+      case UsdBridgeType::SHORT2:
+      case UsdBridgeType::SHORT3: 
+      case UsdBridgeType::SHORT4: { result = SdfValueTypeNames->IntArray; break; }
+      case UsdBridgeType::UINT2:
+      case UsdBridgeType::UINT3: 
+      case UsdBridgeType::UINT4: { result = SdfValueTypeNames->UIntArray; break; }
+      case UsdBridgeType::LONG2:
+      case UsdBridgeType::LONG3: 
+      case UsdBridgeType::LONG4: { result = SdfValueTypeNames->Int64Array; break; }
+      case UsdBridgeType::ULONG2:
+      case UsdBridgeType::ULONG3: 
+      case UsdBridgeType::ULONG4: { result = SdfValueTypeNames->UInt64Array; break; }
+
+      default: assert(false); break;
+    };
+
     return result;
   }
 
@@ -331,10 +441,14 @@ namespace
 
 #define ASSIGN_ARRAY_TO_PRIMVAR_MACRO(ArrayType) \
   ArrayType usdArray; AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-#define ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(ArrayType, EltType) \
-  ArrayType usdArray; AssignArrayToPrimvarReduced<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
+#define ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(ArrayType) \
+  ArrayType usdArray; AssignArrayToPrimvarFlatten<ArrayType>(arrayData, arrayDataType, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
 #define ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(ArrayType, EltType) \
   ArrayType usdArray; AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
+#define ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_FLATTEN_MACRO(ArrayType, EltType) \
+  ArrayType usdArray; AssignArrayToPrimvarConvertFlatten<ArrayType, EltType>(arrayData, arrayDataType, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
+#define ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(ArrayType, EltType) \
+  ArrayType usdArray; AssignArrayToPrimvarReduced<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
 #define ASSIGN_CUSTOM_ARRAY_TO_PRIMVAR_MACRO(ArrayType, customArray) \
   AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &customArray)
 #define ASSIGN_CUSTOM_ARRAY_TO_PRIMVAR_CONVERT_MACRO(ArrayType, EltType, customArray) \
@@ -604,169 +718,6 @@ void UsdBridgeUsdWriter::RemovePrimStage(const UsdBridgePrimCache* cacheEntry)
 
 
 #ifdef TIME_CLIP_STAGES
-void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeMeshData& meshData)
-{
-  TimeEvaluator<UsdBridgeMeshData> timeEval(meshData);
-  typedef UsdBridgeMeshData::DataMemberId DMI;
-
-  UsdGeomMesh meshGeom = UsdGeomMesh::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
-  assert(meshGeom);
-
-  if (timeEval.IsTimeVarying(DMI::POINTS))
-  {
-    meshGeom.CreatePointsAttr();
-    meshGeom.CreateExtentAttr();
-  }
-
-  if (timeEval.IsTimeVarying(DMI::INDICES))
-  {
-    meshGeom.CreateFaceVertexIndicesAttr();
-    meshGeom.CreateFaceVertexCountsAttr();
-  }
-
-  if (timeEval.IsTimeVarying(DMI::NORMALS))
-    meshGeom.CreateNormalsAttr();
-
-  if (timeEval.IsTimeVarying(DMI::TEXCOORDS))
-    meshGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray);
-
-  if (timeEval.IsTimeVarying(DMI::COLORS))
-  {
-    meshGeom.CreateDisplayColorPrimvar();
-#ifdef SUPPORT_MDL_SHADERS
-    meshGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray);
-    meshGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray);
-#endif
-  }
-
-  if(this->EnableSaving)
-    cacheEntry->PrimStage.second->Save();
-}
-
-void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeInstancerData& instancerData)
-{
-  TimeEvaluator<UsdBridgeInstancerData> timeEval(instancerData);
-  typedef UsdBridgeInstancerData::DataMemberId DMI;
-
-  if(UsesUsdGeomPoints(instancerData))
-  {
-    UsdGeomPoints pointsGeom = UsdGeomPoints::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
-
-    if (timeEval.IsTimeVarying(DMI::POINTS))
-    {
-      pointsGeom.CreatePointsAttr();
-      pointsGeom.CreateExtentAttr();
-    }
-
-    if (timeEval.IsTimeVarying(DMI::INSTANCEIDS))
-      pointsGeom.CreateIdsAttr();
-
-    if (timeEval.IsTimeVarying(DMI::ORIENTATIONS))
-      pointsGeom.CreateNormalsAttr();
-
-    if (timeEval.IsTimeVarying(DMI::SCALES))
-      pointsGeom.CreateWidthsAttr();
-
-    if (timeEval.IsTimeVarying(DMI::COLORS))
-    {
-      pointsGeom.CreateDisplayColorPrimvar();
-#ifdef SUPPORT_MDL_SHADERS
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-#endif
-    }
-
-    if (timeEval.IsTimeVarying(DMI::TEXCOORDS))
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-  }
-  else
-  {
-    UsdGeomPointInstancer pointsGeom = UsdGeomPointInstancer::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
-
-    if (timeEval.IsTimeVarying(DMI::POINTS))
-    {
-      pointsGeom.CreatePositionsAttr();
-      pointsGeom.CreateExtentAttr();
-      pointsGeom.CreateProtoIndicesAttr();
-    }
-
-    if (timeEval.IsTimeVarying(DMI::SHAPEINDICES))
-      pointsGeom.CreateProtoIndicesAttr();
-
-    if (timeEval.IsTimeVarying(DMI::INSTANCEIDS))
-      pointsGeom.CreateIdsAttr();
-
-    if (timeEval.IsTimeVarying(DMI::ORIENTATIONS))
-      pointsGeom.CreateOrientationsAttr();
-
-    if (timeEval.IsTimeVarying(DMI::SCALES))
-      pointsGeom.CreateScalesAttr();
-
-    if (timeEval.IsTimeVarying(DMI::COLORS))
-    {
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray, UsdGeomTokens->vertex);
-#ifdef SUPPORT_MDL_SHADERS
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-#endif
-    }
-
-    if (timeEval.IsTimeVarying(DMI::TEXCOORDS))
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-
-    if (timeEval.IsTimeVarying(DMI::LINEARVELOCITIES))
-      pointsGeom.CreateVelocitiesAttr();
-
-    if (timeEval.IsTimeVarying(DMI::ANGULARVELOCITIES))
-      pointsGeom.CreateAngularVelocitiesAttr();
-
-    if (timeEval.IsTimeVarying(DMI::INVISIBLEIDS))
-      pointsGeom.CreateInvisibleIdsAttr();
-  }
-
-  if(this->EnableSaving)
-    cacheEntry->PrimStage.second->Save();
-}
-
-void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeCurveData& curveData)
-{
-  TimeEvaluator<UsdBridgeCurveData> timeEval(curveData);
-  typedef UsdBridgeCurveData::DataMemberId DMI;
-
-  UsdGeomBasisCurves curveGeom = UsdGeomBasisCurves::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
-  assert(curveGeom);
-
-  if (timeEval.IsTimeVarying(DMI::POINTS))
-  {
-    curveGeom.CreatePointsAttr();
-    curveGeom.CreateExtentAttr();
-  }
-
-  if (timeEval.IsTimeVarying(DMI::CURVELENGTHS))
-    curveGeom.CreateCurveVertexCountsAttr();
-
-  if (timeEval.IsTimeVarying(DMI::NORMALS))
-    curveGeom.CreateNormalsAttr();
-
-  if (timeEval.IsTimeVarying(DMI::SCALES))
-    curveGeom.CreateWidthsAttr();
-
-  if (timeEval.IsTimeVarying(DMI::COLORS))
-  {
-    curveGeom.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
-#ifdef SUPPORT_MDL_SHADERS
-    curveGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-    curveGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-#endif
-  }
-
-  if (timeEval.IsTimeVarying(DMI::TEXCOORDS))
-    curveGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-
-  if(this->EnableSaving)
-    cacheEntry->PrimStage.second->Save();
-}
-
 const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* clipPostfix, double timeStep, bool& exists)
 {
   exists = true;
@@ -1279,6 +1230,30 @@ void UsdBridgeUsdWriter::InitializeUsdTransform(const UsdBridgePrimCache* cacheE
   assert(transform);
 }
 
+template<typename UsdGeomType, typename GeomDataType>
+void CreateUsdGeomAttributePrimvars(UsdGeomType& usdGeom, const GeomDataType& geomData, TimeEvaluator<GeomDataType>* timeEval = nullptr)
+{
+  typedef GeomDataType::DataMemberId DMI;
+
+  for(uint32_t attribIndex = 0; attribIndex < geomData.NumAttributes; ++attribIndex)
+  {
+    bool timeVarChecked = true;
+    if(timeEval)
+    {
+      DMI attributeId = DMI::ATTRIBUTE0 + attribIndex;
+      timeVarChecked = timeEval->IsTimeVarying(attributeId);
+    }
+
+    const UsdBridgeAttribute& attrib = geomData.Attributes[attribIndex];
+    if(attrib.Data != nullptr && timeVarChecked)
+    {
+      SdfValueTypeName primvarType = GetPrimvarArrayType(attrib.DataType);
+      TfToken attribInterpolation = attrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
+      usdGeom.CreatePrimvar(AttribIndexToToken(attribIndex), primvarType, attribInterpolation);
+    }
+  }
+}
+
 UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim)
 {
   UsdGeomMesh geomMesh = GetOrDefinePrim<UsdGeomMesh>(geometryStage, geomPath);
@@ -1295,6 +1270,8 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
   geomMesh.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
   geomMesh.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
 #endif
+
+  CreateUsdGeomAttributePrimvars(geomMesh, meshData);
 
   if (uniformPrim)
   {
@@ -1324,6 +1301,8 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
     geomPoints.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
 #endif
 
+    CreateUsdGeomAttributePrimvars(geomPoints, instancerData);
+
     if (uniformPrim)
     {
       geomPoints.CreateDoubleSidedAttr(VtValue(true));
@@ -1346,6 +1325,7 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
     geomPoints.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
     geomPoints.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
 #endif
+    CreateUsdGeomAttributePrimvars(geomPoints, instancerData);
     geomPoints.CreateProtoIndicesAttr();
     geomPoints.CreateVelocitiesAttr();
     geomPoints.CreateAngularVelocitiesAttr();
@@ -1402,6 +1382,7 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
   geomCurves.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
   geomCurves.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
 #endif
+  CreateUsdGeomAttributePrimvars(geomCurves, curveData);
 
   if (uniformPrim)
   {
@@ -1540,6 +1521,179 @@ void UsdBridgeUsdWriter::InitializeUsdSampler(const UsdBridgePrimCache* cacheEnt
   textureReader.CreateOutput(UsdBridgeTokens->a, SdfValueTypeNames->Float);
 }
 
+#ifdef TIME_CLIP_STAGES
+void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeMeshData& meshData)
+{
+  TimeEvaluator<UsdBridgeMeshData> timeEval(meshData);
+  typedef UsdBridgeMeshData::DataMemberId DMI;
+
+  UsdGeomMesh meshGeom = UsdGeomMesh::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
+  assert(meshGeom);
+
+  if (timeEval.IsTimeVarying(DMI::POINTS))
+  {
+    meshGeom.CreatePointsAttr();
+    meshGeom.CreateExtentAttr();
+  }
+
+  if (timeEval.IsTimeVarying(DMI::INDICES))
+  {
+    meshGeom.CreateFaceVertexIndicesAttr();
+    meshGeom.CreateFaceVertexCountsAttr();
+  }
+
+  if (timeEval.IsTimeVarying(DMI::NORMALS))
+    meshGeom.CreateNormalsAttr();
+
+  if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0))
+    meshGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray);
+
+  CreateUsdGeomAttributePrimvars(meshGeom, meshData, &timeEval);
+
+  if (timeEval.IsTimeVarying(DMI::COLORS))
+  {
+    meshGeom.CreateDisplayColorPrimvar();
+#ifdef SUPPORT_MDL_SHADERS
+    meshGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray);
+    meshGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray);
+#endif
+  }
+
+  if(this->EnableSaving)
+    cacheEntry->PrimStage.second->Save();
+}
+
+void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeInstancerData& instancerData)
+{
+  TimeEvaluator<UsdBridgeInstancerData> timeEval(instancerData);
+  typedef UsdBridgeInstancerData::DataMemberId DMI;
+
+  if(UsesUsdGeomPoints(instancerData))
+  {
+    UsdGeomPoints pointsGeom = UsdGeomPoints::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
+
+    if (timeEval.IsTimeVarying(DMI::POINTS))
+    {
+      pointsGeom.CreatePointsAttr();
+      pointsGeom.CreateExtentAttr();
+    }
+
+    if (timeEval.IsTimeVarying(DMI::INSTANCEIDS))
+      pointsGeom.CreateIdsAttr();
+
+    if (timeEval.IsTimeVarying(DMI::ORIENTATIONS))
+      pointsGeom.CreateNormalsAttr();
+
+    if (timeEval.IsTimeVarying(DMI::SCALES))
+      pointsGeom.CreateWidthsAttr();
+
+    if (timeEval.IsTimeVarying(DMI::COLORS))
+    {
+      pointsGeom.CreateDisplayColorPrimvar();
+#ifdef SUPPORT_MDL_SHADERS
+      pointsGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      pointsGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+#endif
+    }
+
+    if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0))
+      pointsGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+
+    CreateUsdGeomAttributePrimvars(pointsGeom, instancerData, &timeEval);
+  }
+  else
+  {
+    UsdGeomPointInstancer pointsGeom = UsdGeomPointInstancer::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
+
+    if (timeEval.IsTimeVarying(DMI::POINTS))
+    {
+      pointsGeom.CreatePositionsAttr();
+      pointsGeom.CreateExtentAttr();
+      pointsGeom.CreateProtoIndicesAttr();
+    }
+
+    if (timeEval.IsTimeVarying(DMI::SHAPEINDICES))
+      pointsGeom.CreateProtoIndicesAttr();
+
+    if (timeEval.IsTimeVarying(DMI::INSTANCEIDS))
+      pointsGeom.CreateIdsAttr();
+
+    if (timeEval.IsTimeVarying(DMI::ORIENTATIONS))
+      pointsGeom.CreateOrientationsAttr();
+
+    if (timeEval.IsTimeVarying(DMI::SCALES))
+      pointsGeom.CreateScalesAttr();
+
+    if (timeEval.IsTimeVarying(DMI::COLORS))
+    {
+      pointsGeom.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray, UsdGeomTokens->vertex);
+#ifdef SUPPORT_MDL_SHADERS
+      pointsGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      pointsGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+#endif
+    }
+
+    if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0))
+      pointsGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+
+    CreateUsdGeomAttributePrimvars(pointsGeom, instancerData, &timeEval);
+
+    if (timeEval.IsTimeVarying(DMI::LINEARVELOCITIES))
+      pointsGeom.CreateVelocitiesAttr();
+
+    if (timeEval.IsTimeVarying(DMI::ANGULARVELOCITIES))
+      pointsGeom.CreateAngularVelocitiesAttr();
+
+    if (timeEval.IsTimeVarying(DMI::INVISIBLEIDS))
+      pointsGeom.CreateInvisibleIdsAttr();
+  }
+
+  if(this->EnableSaving)
+    cacheEntry->PrimStage.second->Save();
+}
+
+void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeCurveData& curveData)
+{
+  TimeEvaluator<UsdBridgeCurveData> timeEval(curveData);
+  typedef UsdBridgeCurveData::DataMemberId DMI;
+
+  UsdGeomBasisCurves curveGeom = UsdGeomBasisCurves::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
+  assert(curveGeom);
+
+  if (timeEval.IsTimeVarying(DMI::POINTS))
+  {
+    curveGeom.CreatePointsAttr();
+    curveGeom.CreateExtentAttr();
+  }
+
+  if (timeEval.IsTimeVarying(DMI::CURVELENGTHS))
+    curveGeom.CreateCurveVertexCountsAttr();
+
+  if (timeEval.IsTimeVarying(DMI::NORMALS))
+    curveGeom.CreateNormalsAttr();
+
+  if (timeEval.IsTimeVarying(DMI::SCALES))
+    curveGeom.CreateWidthsAttr();
+
+  if (timeEval.IsTimeVarying(DMI::COLORS))
+  {
+    curveGeom.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
+#ifdef SUPPORT_MDL_SHADERS
+    curveGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    curveGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+#endif
+  }
+
+  if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0))
+    curveGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+
+  CreateUsdGeomAttributePrimvars(curveGeom, curveData, &timeEval);
+
+  if(this->EnableSaving)
+    cacheEntry->PrimStage.second->Save();
+}
+#endif
+
 void UsdBridgeUsdWriter::BindMaterialToGeom(const SdfPath & refGeomPath, const SdfPath & refMatPath)
 {
   UsdPrim refGeomPrim = this->SceneStage->GetPrimAtPath(refGeomPath);
@@ -1640,6 +1794,65 @@ void UsdBridgeUsdWriter::UpdateUsdTransform(const SdfPath& transPrimPath, float*
   assert(tfPrim);
   tfPrim.ClearXformOpOrder();
   tfPrim.AddTransformOp().Set(transMat, timeEval.Eval());
+}
+
+void CopyArrayToPrimvar(UsdBridgeUsdWriter* writer, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, UsdAttribute arrayPrimvar, const UsdTimeCode& timeCode)
+{
+  SdfValueTypeName primvarType = GetPrimvarArrayType(arrayDataType);
+
+  switch (arrayDataType)
+  {
+    case UsdBridgeType::UCHAR: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtUCharArray); break; }
+    case UsdBridgeType::CHAR: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtUCharArray); break; }
+    case UsdBridgeType::USHORT: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtUIntArray, short); break; }
+    case UsdBridgeType::SHORT: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtIntArray, unsigned short); break; }
+    case UsdBridgeType::UINT: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtUIntArray); break; }
+    case UsdBridgeType::INT: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtIntArray); break; }
+    case UsdBridgeType::LONG: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtInt64Array); break; }
+    case UsdBridgeType::ULONG: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtUInt64Array); break; }
+    case UsdBridgeType::HALF: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtHalfArray); break; }
+    case UsdBridgeType::FLOAT: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtFloatArray); break; }
+    case UsdBridgeType::DOUBLE: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtDoubleArray); break; }
+
+    case UsdBridgeType::INT2: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec2iArray); break; }
+    case UsdBridgeType::FLOAT2: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec2fArray); break; }
+    case UsdBridgeType::DOUBLE2: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec2dArray); break; }
+
+    case UsdBridgeType::INT3: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3iArray); break; }
+    case UsdBridgeType::FLOAT3: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
+    case UsdBridgeType::DOUBLE3: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3dArray); break; }
+
+    case UsdBridgeType::INT4: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec4iArray); break; }
+    case UsdBridgeType::FLOAT4: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec4fArray); break; }
+    case UsdBridgeType::DOUBLE4: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec4dArray); break; }
+
+    case UsdBridgeType::UCHAR2:
+    case UsdBridgeType::UCHAR3: 
+    case UsdBridgeType::UCHAR4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
+    case UsdBridgeType::CHAR2:
+    case UsdBridgeType::CHAR3: 
+    case UsdBridgeType::CHAR4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
+    case UsdBridgeType::USHORT2:
+    case UsdBridgeType::USHORT3:
+    case UsdBridgeType::USHORT4: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_FLATTEN_MACRO(VtUIntArray, short); break; }
+    case UsdBridgeType::SHORT2:
+    case UsdBridgeType::SHORT3: 
+    case UsdBridgeType::SHORT4: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_FLATTEN_MACRO(VtIntArray, unsigned short); break; }
+    case UsdBridgeType::UINT2:
+    case UsdBridgeType::UINT3: 
+    case UsdBridgeType::UINT4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtUIntArray); break; }
+    case UsdBridgeType::LONG2:
+    case UsdBridgeType::LONG3: 
+    case UsdBridgeType::LONG4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtInt64Array); break; }
+    case UsdBridgeType::ULONG2:
+    case UsdBridgeType::ULONG3: 
+    case UsdBridgeType::ULONG4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtUInt64Array); break; }
+    case UsdBridgeType::HALF2:
+    case UsdBridgeType::HALF3: 
+    case UsdBridgeType::HALF4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtHalfArray); break; }
+
+    default: {UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom Attribute<Index> primvar copy does not support source data type: " << arrayDataType) break; }
+  };
 }
 
 template<typename UsdGeomType, typename GeomDataType>
@@ -1799,30 +2012,33 @@ void UpdateUsdGeomTexCoords(UsdBridgeUsdWriter* writer, UsdGeomType& timeVarGeom
   UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
 {
   using DMI = typename GeomDataType::DataMemberId;
-  bool performsUpdate = updateEval.PerformsUpdate(DMI::TEXCOORDS);
-  bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::TEXCOORDS);
+  bool performsUpdate = updateEval.PerformsUpdate(DMI::ATTRIBUTE0);
+  bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::ATTRIBUTE0);
   if (performsUpdate)
   {
     UsdGeomType* outGeom = timeVaryingUpdate ? &timeVarGeom : &uniformGeom;
-    UsdTimeCode timeCode = timeEval.Eval(DMI::TEXCOORDS);
+    UsdTimeCode timeCode = timeEval.Eval(DMI::ATTRIBUTE0);
 
     UsdAttribute texcoordPrimvar = outGeom->GetPrimvar(UsdBridgeTokens->st);
     assert(texcoordPrimvar);
 
-    if (geomData.TexCoords != nullptr)
+    const UsdBridgeAttribute& texCoordAttrib = geomData.Attributes[0];
+
+    if (texCoordAttrib.Data != nullptr)
     {
-      const void* arrayData = geomData.TexCoords;
-      size_t arrayNumElements = geomData.PerPrimTexCoords ? numPrims : geomData.NumPoints;
+      const void* arrayData = texCoordAttrib.Data;
+      size_t arrayNumElements = texCoordAttrib.PerPrimData ? numPrims : geomData.NumPoints;
       UsdAttribute arrayPrimvar = texcoordPrimvar;
-      switch (geomData.TexCoordsType)
+
+      switch (texCoordAttrib.DataType)
       {
       case UsdBridgeType::FLOAT2: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec2fArray); break; }
       case UsdBridgeType::DOUBLE2: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec2fArray, GfVec2d); break; }
       default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom st primvar should be FLOAT2 or DOUBLE2."); break; }
       }
-
+ 
       // Per face or per-vertex interpolation. This will break timesteps that have been written before.
-      TfToken texcoordInterpolation = geomData.PerPrimTexCoords ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
+      TfToken texcoordInterpolation = texCoordAttrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
       uniformGeom.GetPrimvar(UsdBridgeTokens->st).SetInterpolation(texcoordInterpolation);
     }
     else
@@ -1832,8 +2048,69 @@ void UpdateUsdGeomTexCoords(UsdBridgeUsdWriter* writer, UsdGeomType& timeVarGeom
   }
   if (!timeVaryingUpdate)
   {
-    UsdAttribute texcoordPrimvar = timeVarGeom.GetPrimvar(TfToken("st"));
+    UsdAttribute texcoordPrimvar = timeVarGeom.GetPrimvar(UsdBridgeTokens->st);
     texcoordPrimvar.ClearAtTime(timeEval.TimeCode);
+  }
+}
+
+template<typename UsdGeomType, typename GeomDataType>
+void UpdateUsdGeomAttribute(UsdBridgeUsdWriter* writer, UsdGeomType& timeVarGeom, UsdGeomType& uniformGeom, const GeomDataType& geomData, uint64_t numPrims,
+  UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval, uint32_t attribIndex)
+{
+  assert(attribIndex < geomData.NumAttributes);
+  const UsdBridgeAttribute& bridgeAttrib = geomData.Attributes[attribIndex];
+
+  TfToken attribToken = AttribIndexToToken(attribIndex);
+
+  using DMI = typename GeomDataType::DataMemberId;
+  DMI attributeId = DMI::ATTRIBUTE0 + attribIndex;
+  bool performsUpdate = updateEval.PerformsUpdate(attributeId);
+  bool timeVaryingUpdate = timeEval.IsTimeVarying(attributeId);
+  if (performsUpdate)
+  {
+    UsdGeomType* outGeom = timeVaryingUpdate ? &timeVarGeom : &uniformGeom;
+    UsdTimeCode timeCode = timeEval.Eval(attributeId);
+
+    UsdAttribute attributePrimvar = outGeom->GetPrimvar(attribToken);
+
+    if(!attributePrimvar)
+       UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom Attribute<Index> primvar not found, was the attribute at requested index valid during initialization of the prim? Index is " << attribIndex);
+
+    if (bridgeAttrib.Data != nullptr)
+    {
+      const void* arrayData = bridgeAttrib.Data;
+      size_t arrayNumElements = bridgeAttrib.PerPrimData ? numPrims : geomData.NumPoints;
+      UsdAttribute arrayPrimvar = attributePrimvar;
+
+      CopyArrayToPrimvar(writer, arrayData, bridgeAttrib.DataType, arrayNumElements, arrayPrimvar, timeCode);
+ 
+      // Per face or per-vertex interpolation. This will break timesteps that have been written before.
+      TfToken attribInterpolation = bridgeAttrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
+      uniformGeom.GetPrimvar(attribToken).SetInterpolation(attribInterpolation);
+    }
+    else
+    {
+      attributePrimvar.ClearAtTime(timeCode);
+    }
+  }
+  if (!timeVaryingUpdate)
+  {
+    UsdAttribute attributePrimvar = timeVarGeom.GetPrimvar(attribToken);
+    attributePrimvar.ClearAtTime(timeEval.TimeCode);
+  }
+}
+
+template<typename UsdGeomType, typename GeomDataType>
+void UpdateUsdGeomAttributes(UsdBridgeUsdWriter* writer, UsdGeomType& timeVarGeom, UsdGeomType& uniformGeom, const GeomDataType& geomData, uint64_t numPrims,
+  UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
+{
+  for(uint32_t attribIndex = 0; attribIndex < geomData.NumAttributes; ++attribIndex)
+  {
+    const UsdBridgeAttribute& attrib = geomData.Attributes[attribIndex];
+    if(attrib.Data != nullptr)
+    {
+      UpdateUsdGeomAttribute(writer, timeVarGeom, uniformGeom, geomData, numPrims, updateEval, timeEval, attribIndex);
+    }
   }
 }
 
@@ -2328,7 +2605,10 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
 
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomPoints);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomNormals);
-  UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords);
+  if( UsdGeomDataHasTexCoords(geomData) ) 
+    { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords); }
+  else 
+    { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes); }
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomColors);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomIndices);
 }
@@ -2354,7 +2634,10 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomInstanceIds);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomWidths);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomOrientNormals);
-    UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords);
+    if( UsdGeomDataHasTexCoords(geomData) ) 
+      { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords); }
+    else 
+      { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes); }
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomColors);
   }
   else
@@ -2369,7 +2652,10 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomInstanceIds);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomScales);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomOrientations);
-    UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords);
+    if( UsdGeomDataHasTexCoords(geomData) ) 
+      { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords); }
+    else 
+      { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes); }
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomColors);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomShapeIndices);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomLinearVelocities);
@@ -2395,7 +2681,10 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
 
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomPoints);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomNormals);
-  UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords);
+  if( UsdGeomDataHasTexCoords(geomData) ) 
+    { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomTexCoords); }
+  else 
+    { UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAttributes); }
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomColors);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomWidths);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomCurveLengths);

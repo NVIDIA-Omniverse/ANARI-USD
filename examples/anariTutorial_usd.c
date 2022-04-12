@@ -110,7 +110,8 @@ int main(int argc, const char **argv)
       0.9f,
       0.0f,
       1.0f};
-  float texcoord[] = { 0.0f,
+  float texcoord[] = {
+      0.0f,
       0.0f,
       1.0f,
       0.0f,
@@ -140,6 +141,8 @@ int main(int argc, const char **argv)
   int outputBinary = 0;
   int outputOmniverse = 0;
   int connLogVerbosity = 0;
+
+  int useVertexColors = 1;
 
   anariSetParameter(dev, dev, "usd::connection.logverbosity", ANARI_INT32, &connLogVerbosity);
 
@@ -185,14 +188,17 @@ int main(int argc, const char **argv)
   anariRelease(dev, array);
 
   // Set the vertex colors
-  array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4, 0);
-  anariCommit(dev, array);
-  anariSetParameter(dev, mesh, "vertex.color", ANARI_ARRAY, &array);
-  anariRelease(dev, array);
+  if (useVertexColors)
+  {
+    array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4, 0);
+    anariCommit(dev, array);
+    anariSetParameter(dev, mesh, "vertex.color", ANARI_ARRAY, &array);
+    anariRelease(dev, array);
+  }
 
   array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
   anariCommit(dev, array);
-  anariSetParameter(dev, mesh, "vertex.texcoord", ANARI_ARRAY, &array);
+  anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
   anariRelease(dev, array);
 
   //array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4, 0);
@@ -219,7 +225,6 @@ int main(int argc, const char **argv)
   ANARIMaterial mat = anariNewMaterial(dev, "matte");
   anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial");
 
-  int useVertexColors = 0;
   float opacity = 1.0f;
   anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
   if (!useVertexColors)

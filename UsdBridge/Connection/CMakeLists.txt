@@ -1,5 +1,7 @@
 message( "-------------------- Begin UsdBridgeConnect CmakeLists.txt ----------------------------------------")
 
+message(STATUS "----- UsdCon level: ${USD_DEVICE_TIME_DEFS}")
+
 option(USD_DEVICE_USE_OMNIVERSE "Enable Omniverse support for USD device" OFF)
 
 project(UsdBridge_Connect)

@@ -122,6 +122,11 @@ PRIVATE
   ${Boost_SEP_INCLUDE_DIR}
 )
 
+# Defs
+
+target_compile_definitions(UsdBridge
+	PRIVATE ${USD_DEVICE_TIME_DEFS})
+
 # Platform-dependent operations
 
 if (WIN32)

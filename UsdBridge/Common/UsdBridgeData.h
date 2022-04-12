@@ -6,14 +6,9 @@
 
 #include "UsdBridgeMacros.h"
 
-#include <vector>
-#include <string>
 #include <functional>
 
 class UsdBridge;
-
-typedef std::vector<size_t> UsdIdArray;
-typedef std::vector<std::pair<size_t, size_t>> UsdIdMapArray;
 
 struct UsdBridgePrimCache;
 struct UsdBridgeHandle
@@ -88,7 +83,7 @@ enum class UsdBridgeType
 
   UNDEFINED
 };
-constexpr int UsdBridgeNumFundamentalTypes = (int)UsdBridgeType::UCHAR2;
+constexpr int UsdBridgeNumFundamentalTypes = (int)UsdBridgeType::UCHAR2; // Multi-component groups sizes should be equal
 
 enum class UsdBridgeGeomType
 {
@@ -121,20 +116,32 @@ struct UsdBridgeSettings
   bool BinaryOutput;                // Select usda or usd output.
 };
 
+// Generic attribute definition
+struct UsdBridgeAttribute
+{
+  const void* Data = nullptr;
+  UsdBridgeType DataType = UsdBridgeType::UNDEFINED;
+  bool PerPrimData = false;
+  uint32_t EltSize;
+};
+
 struct UsdBridgeMeshData
 {
   static const UsdBridgeGeomType GeomType = UsdBridgeGeomType::MESH;
 
-  //Clas definitions
+  //Class definitions
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
     POINTS = (1 << 0), // Goes together with extent
     NORMALS = (1 << 1),
-    TEXCOORDS = (1 << 2),
-    COLORS = (1 << 3),
-    INDICES = (1 << 4),
-    ALL = (1 << 5) - 1
+    COLORS = (1 << 2),
+    INDICES = (1 << 3),
+    ATTRIBUTE0 = (1 << 4),
+    ATTRIBUTE1 = (1 << 5),
+    ATTRIBUTE2 = (1 << 6),
+    ATTRIBUTE3 = (1 << 7),
+    ALL = (1 << 8) - 1
   };
   
   DataMemberId UpdatesToPerform = DataMemberId::ALL;
@@ -150,12 +157,11 @@ struct UsdBridgeMeshData
   const void* Normals = nullptr;
   UsdBridgeType NormalsType = UsdBridgeType::UNDEFINED;
   bool PerPrimNormals = false;
-  const void* TexCoords = nullptr;
-  UsdBridgeType TexCoordsType = UsdBridgeType::UNDEFINED;
-  bool PerPrimTexCoords = false;
   const void* Colors = nullptr;
   UsdBridgeType ColorsType = UsdBridgeType::UNDEFINED;
   bool PerPrimColors = false;
+  const UsdBridgeAttribute* Attributes = nullptr; // Pointer to externally managed attribute array
+  uint32_t NumAttributes = 0;
 
   const void* Indices = nullptr;
   UsdBridgeType IndicesType = UsdBridgeType::UNDEFINED;
@@ -188,10 +194,13 @@ struct UsdBridgeInstancerData
     LINEARVELOCITIES = (1 << 5),
     ANGULARVELOCITIES = (1 << 6),
     INSTANCEIDS = (1 << 7),
-    TEXCOORDS = (1 << 8),
-    COLORS = (1 << 9),
-    INVISIBLEIDS = (1 << 10),
-    ALL = (1 << 11) - 1
+    COLORS = (1 << 8),
+    INVISIBLEIDS = (1 << 9),
+    ATTRIBUTE0 = (1 << 10),
+    ATTRIBUTE1 = (1 << 11),
+    ATTRIBUTE2 = (1 << 12),
+    ATTRIBUTE3 = (1 << 13),
+    ALL = (1 << 14) - 1
   };
 
   DataMemberId UpdatesToPerform = DataMemberId::ALL;
@@ -212,14 +221,13 @@ struct UsdBridgeInstancerData
   double UniformScale = 1;// In case no scales are given
   const void* Orientations = nullptr;
   UsdBridgeType OrientationsType = UsdBridgeType::UNDEFINED;
-  const void* TexCoords = nullptr;
-  UsdBridgeType TexCoordsType = UsdBridgeType::UNDEFINED;
-  static constexpr bool PerPrimTexCoords = false; // For compatibility
   const void* Colors = nullptr;
   UsdBridgeType ColorsType = UsdBridgeType::UNDEFINED;
   static constexpr bool PerPrimColors = false; // For compatibility
   const float* LinearVelocities = nullptr;
   const float* AngularVelocities = nullptr;
+  const UsdBridgeAttribute* Attributes = nullptr; // Pointer to externally managed attribute array
+  uint32_t NumAttributes = 0;
   const void* InstanceIds = nullptr; 
   UsdBridgeType InstanceIdsType = UsdBridgeType::UNDEFINED;
 
@@ -239,10 +247,13 @@ struct UsdBridgeCurveData
     POINTS = (1 << 0), // Goes together with extent and curvelengths
     NORMALS = (1 << 1),
     SCALES = (1 << 2),
-    TEXCOORDS = (1 << 3),
-    COLORS = (1 << 4),
-    CURVELENGTHS = (1 << 5),
-    ALL = (1 << 6) - 1
+    COLORS = (1 << 3),
+    CURVELENGTHS = (1 << 4),
+    ATTRIBUTE0 = (1 << 5),
+    ATTRIBUTE1 = (1 << 6),
+    ATTRIBUTE2 = (1 << 7),
+    ATTRIBUTE3 = (1 << 8),
+    ALL = (1 << 9) - 1
   };
 
   DataMemberId UpdatesToPerform = DataMemberId::ALL;
@@ -257,15 +268,14 @@ struct UsdBridgeCurveData
   const void* Normals = nullptr;
   UsdBridgeType NormalsType = UsdBridgeType::UNDEFINED;
   bool PerPrimNormals = false;
-  const void* TexCoords = nullptr;
-  UsdBridgeType TexCoordsType = UsdBridgeType::UNDEFINED;
-  bool PerPrimTexCoords = false;
   const void* Colors = nullptr;
   UsdBridgeType ColorsType = UsdBridgeType::UNDEFINED;
   bool PerPrimColors = false; // One prim would be a full curve
   const void* Scales = nullptr; // Used for line width, typically 1-component
   UsdBridgeType ScalesType = UsdBridgeType::UNDEFINED;
   double UniformScale = 1;// In case no scales are given
+  const UsdBridgeAttribute* Attributes = nullptr; // Pointer to externally managed attribute array
+  uint32_t NumAttributes = 0;
 
   const int* CurveLengths = nullptr;
   uint64_t NumCurveLengths = 0;
@@ -370,8 +380,19 @@ struct DefineBitMaskOps
   static const bool enable = false;
 };
 
+template<class TEnum>
+struct DefineAddSubOps
+{
+  static const bool enable = false;
+};
+
 template<>
 struct DefineBitMaskOps<UsdBridgeMeshData::DataMemberId>
+{
+  static const bool enable = true; 
+};
+template<>
+struct DefineAddSubOps<UsdBridgeMeshData::DataMemberId>
 {
   static const bool enable = true; 
 };
@@ -381,9 +402,19 @@ struct DefineBitMaskOps<UsdBridgeInstancerData::DataMemberId>
 {
   static const bool enable = true;
 };
+template<>
+struct DefineAddSubOps<UsdBridgeInstancerData::DataMemberId>
+{
+  static const bool enable = true;
+};
 
 template<>
 struct DefineBitMaskOps<UsdBridgeCurveData::DataMemberId>
+{
+  static const bool enable = true;
+};
+template<>
+struct DefineAddSubOps<UsdBridgeCurveData::DataMemberId>
 {
   static const bool enable = true;
 };
@@ -431,6 +462,13 @@ typename std::enable_if<DefineBitMaskOps<TEnum>::enable, TEnum>::type operator ~
 {
   using underlying = typename std::underlying_type<TEnum>::type;
   return static_cast<TEnum> (~static_cast<underlying>(rhs));
+}
+
+template<class TEnum>
+typename std::enable_if<DefineAddSubOps<TEnum>::enable, TEnum>::type operator +(TEnum lhs, int rhs)
+{
+  using underlying = typename std::underlying_type<TEnum>::type;
+  return static_cast<TEnum> ( static_cast<underlying>(lhs) + rhs );
 }
 
 template<class T>

@@ -54,12 +54,12 @@ struct UsdBridgePrimCache
   ResourceCollectFunc ResourceCollect;
 
 #ifdef VALUE_CLIP_RETIMING
-  UsdStagePair PrimStage;
+  UsdStagePair PrimStage; // Holds the stage with timevarying data for the prim, or the (init-only) manifest if TIME_CLIP_STAGES and prim supports it (ie. geometry) 
   bool OwnsPrimStage = true;
 #endif
 
 #ifdef TIME_CLIP_STAGES
-  std::unordered_map<double, UsdStagePair> ClipStages;
+  std::unordered_map<double, UsdStagePair> ClipStages; // Holds the stages to the per-clip data
 #endif
 
 #ifndef NDEBUG
