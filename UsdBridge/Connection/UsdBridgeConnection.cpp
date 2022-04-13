@@ -559,28 +559,6 @@ bool UsdBridgeRemoteConnection::RemoveFile(const char* filePath) const
   return context.result == eOmniClientResult_Ok || context.result == eOmniClientResult_OkLatest;
 }
 
-bool UsdBridgeRemoteConnection::LockFile(const char* filePath) const
-{
-  const char* fileUrl = this->GetUrl(filePath);
-  omniUsdLiveLock(fileUrl, nullptr, [](void* userData, OmniClientResult result) OMNICLIENT_NOEXCEPT
-    {
-      OmniClientResult res = result;
-    });
-
-  return true;
-}
-
-bool UsdBridgeRemoteConnection::UnlockFile(const char* filePath) const
-{
-  const char* fileUrl = this->GetUrl(filePath);
-  omniUsdLiveUnlock(fileUrl, nullptr, [](void* userData, OmniClientResult result) OMNICLIENT_NOEXCEPT
-    {
-      OmniClientResult res = result;
-    });
-
-  return true;
-}
-
 std::ostream * UsdBridgeRemoteConnection::GetStream(const char * filePath, bool binary)
 {
   return Internals->ResetStream(filePath, binary);
@@ -665,16 +643,6 @@ bool UsdBridgeRemoteConnection::WriteFile(const char* data, size_t dataSize, con
 bool UsdBridgeRemoteConnection::RemoveFile(const char* filePath) const
 {
   return UsdBridgeConnection::RemoveFile(filePath);
-}
-
-bool UsdBridgeRemoteConnection::LockFile(const char* filePath) const
-{
-  return true;
-}
-
-bool UsdBridgeRemoteConnection::UnlockFile(const char* filePath) const
-{
-  return true;
 }
 
 std::ostream * UsdBridgeRemoteConnection::GetStream(const char * filePath, bool binary)
@@ -786,16 +754,6 @@ bool UsdBridgeLocalConnection::RemoveFile(const char* filePath) const
   return UsdBridgeConnection::RemoveFile(filePath);
 }
 
-bool UsdBridgeLocalConnection::LockFile(const char* filePath) const
-{
-  return true;
-}
-
-bool UsdBridgeLocalConnection::UnlockFile(const char* filePath) const
-{
-  return true;
-}
-
 std::ostream * UsdBridgeLocalConnection::GetStream(const char* filePath, bool binary)
 {
   if (LocalStream.is_open())
@@ -877,16 +835,6 @@ bool UsdBridgeVoidConnection::WriteFile(const char* data, size_t dataSize, const
 }
 
 bool UsdBridgeVoidConnection::RemoveFile(const char* filePath) const
-{
-  return true;
-}
-
-bool UsdBridgeVoidConnection::LockFile(const char* filePath) const
-{
-  return true;
-}
-
-bool UsdBridgeVoidConnection::UnlockFile(const char* filePath) const
 {
   return true;
 }
