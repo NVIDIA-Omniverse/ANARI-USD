@@ -44,9 +44,14 @@ void UsdBridgeTemporalCache::AddChild(UsdBridgePrimCache* parent, UsdBridgePrimC
 void UsdBridgeTemporalCache::RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
 {
   auto it = std::find(parent->Children.begin(), parent->Children.end(), child);
-  child->DecRef();
-  *it = parent->Children.back();
-  parent->Children.pop_back();
+  // Allow for find to fail; in the case where the bridge is recreated and destroyed, 
+  // a child prim exists which doesn't have a ref in the cache. 
+  if(it != parent->Children.end()) 
+  {
+    child->DecRef();
+    *it = parent->Children.back();
+    parent->Children.pop_back();
+  }
 }
 
 void UsdBridgeTemporalCache::RemoveUnreferencedChildTree(UsdBridgePrimCache* parent)

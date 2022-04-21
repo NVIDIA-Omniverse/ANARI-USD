@@ -39,6 +39,8 @@ struct UsdDeviceData
   bool outputBinary = false;
 
   double timeStep = 0.0;
+
+  bool noMaterialOutput = false;
 };
 
 class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameterizedObject<UsdDevice, UsdDeviceData>

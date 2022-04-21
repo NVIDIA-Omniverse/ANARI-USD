@@ -39,6 +39,11 @@ namespace
 
   // Postfixes for clip stage names
   const char* const geomClipPf = "_Geom_";
+
+  bool PrimIsNew(const BoolEntryPair& createResult)
+  {
+    return !createResult.first.first && !createResult.first.second;
+  }
 }
 
 typedef UsdBridgeTemporalCache::PrimCacheIterator PrimCacheIterator;
@@ -59,8 +64,9 @@ struct UsdBridgeInternals
     RefModCallbacks.AtRemoveRef = [this](UsdBridgePrimCache* parentCache, const std::string& childName) {
 #ifdef TIME_BASED_CACHING
       ConstPrimCacheIterator it = this->Cache.FindPrimCache(childName);
-      assert(this->Cache.ValidIterator(it));
-      this->Cache.RemoveChild(parentCache, it->second.get());
+      // Not an assert: allow the case where child prims in a stage aren't cached, ie. when the bridge is destroyed and recreated
+      if(this->Cache.ValidIterator(it)) 
+        this->Cache.RemoveChild(parentCache, it->second.get());
 #endif
     };
   }
@@ -94,6 +100,7 @@ BoolEntryPair UsdBridgeInternals::FindOrCreatePrim(const char* category, const c
   // Find existing entry
   ConstPrimCacheIterator it = Cache.FindPrimCache(name);
   bool cacheExists = Cache.ValidIterator(it);
+  bool stageExists = true;
 
   if (cacheExists)
   {
@@ -104,10 +111,10 @@ BoolEntryPair UsdBridgeInternals::FindOrCreatePrim(const char* category, const c
   {
     primCache = Cache.CreatePrimCache(name, UsdWriter.CreatePrimName(name, category), collectFunc)->second.get();
 
-    UsdWriter.CreatePrim(primCache->PrimPath);
+    stageExists = !UsdWriter.CreatePrim(primCache->PrimPath);
   }
 
-  return BoolEntryPair(!cacheExists, primCache);
+  return BoolEntryPair(std::pair<bool,bool>(stageExists, cacheExists), primCache);
 }
 
 void UsdBridgeInternals::FindAndDeletePrim(const UsdBridgeHandle& handle)
@@ -179,9 +186,9 @@ bool UsdBridge::CreateWorld(const char* name, UsdWorldHandle& handle)
   // Find or create a cache entry belonging to a prim located under worldPathCp in the usd.
   BoolEntryPair createResult = Internals->FindOrCreatePrim(worldPathCp, name);
   UsdBridgePrimCache* cacheEntry = createResult.second;
-  bool newPrim = createResult.first;
+  bool cacheExists = createResult.first.second;
 
-  if (newPrim)
+  if (!cacheExists)
   {
     BRIDGE_USDWRITER.SetSceneGraphRoot(cacheEntry, name);
 
@@ -189,7 +196,7 @@ bool UsdBridge::CreateWorld(const char* name, UsdWorldHandle& handle)
   }
   
   handle.value = cacheEntry;
-  return newPrim;
+  return PrimIsNew(createResult);
 }
 
 bool UsdBridge::CreateInstance(const char* name, UsdInstanceHandle& handle)
@@ -198,15 +205,15 @@ bool UsdBridge::CreateInstance(const char* name, UsdInstanceHandle& handle)
 
   BoolEntryPair createResult = Internals->FindOrCreatePrim(instancePathCp, name);
   UsdBridgePrimCache* cacheEntry = createResult.second;
-  bool newPrim = createResult.first;
+  bool cacheExists = createResult.first.second;
 
-  if (newPrim)
+  if (!cacheExists)
   {
     BRIDGE_USDWRITER.InitializeUsdTransform(cacheEntry);
   }
 
   handle.value = cacheEntry;
-  return newPrim;
+  return PrimIsNew(createResult);
 }
 
 bool UsdBridge::CreateGroup(const char* name, UsdGroupHandle& handle)
@@ -215,15 +222,15 @@ bool UsdBridge::CreateGroup(const char* name, UsdGroupHandle& handle)
 
   BoolEntryPair createResult = Internals->FindOrCreatePrim(groupPathCp, name);
   UsdBridgePrimCache* cacheEntry = createResult.second;
-  bool newPrim = createResult.first;
+  bool cacheExists = createResult.first.second;
 
-  if (newPrim)
+  if (!cacheExists)
   {
     BRIDGE_USDWRITER.InitializeUsdTransform(cacheEntry);
   }
 
   handle.value = cacheEntry;
-  return newPrim;
+  return PrimIsNew(createResult);
 }
 
 bool UsdBridge::CreateSurface(const char* name, UsdSurfaceHandle& handle)
@@ -233,15 +240,15 @@ bool UsdBridge::CreateSurface(const char* name, UsdSurfaceHandle& handle)
   // Although surface doesn't support transform operations, a transform prim supports timevarying visibility.
   BoolEntryPair createResult = Internals->FindOrCreatePrim(surfacePathCp, name);
   UsdBridgePrimCache* cacheEntry = createResult.second;
-  bool newPrim = createResult.first;
+  bool cacheExists = createResult.first.second;
 
-  if (newPrim)
+  if (!cacheExists)
   {
     BRIDGE_USDWRITER.InitializeUsdTransform(cacheEntry);
   }
 
   handle.value = cacheEntry;
-  return newPrim;
+  return PrimIsNew(createResult);
 }
 
 bool UsdBridge::CreateVolume(const char * name, UsdVolumeHandle& handle)
@@ -250,15 +257,15 @@ bool UsdBridge::CreateVolume(const char * name, UsdVolumeHandle& handle)
 
   BoolEntryPair createResult = Internals->FindOrCreatePrim(volumePathCp, name);
   UsdBridgePrimCache* cacheEntry = createResult.second;
-  bool newPrim = createResult.first;
+  bool cacheExists = createResult.first.second;
 
-  if (newPrim)
+  if (!cacheExists)
   {
     BRIDGE_USDWRITER.InitializeUsdTransform(cacheEntry);
   }
 
   handle.value = cacheEntry;
-  return newPrim;
+  return PrimIsNew(createResult);
 }
 
 template<typename GeomDataType>
@@ -268,9 +275,9 @@ bool UsdBridge::CreateGeometryTemplate(const char* name, const GeomDataType& geo
 
   BoolEntryPair createResult = Internals->FindOrCreatePrim(geometryPathCp, name);
   UsdBridgePrimCache* cacheEntry = createResult.second;
-  bool newPrim = createResult.first;
+  bool cacheExists = createResult.first.second;
 
-  if (newPrim)
+  if (!cacheExists)
   {
 #ifdef VALUE_CLIP_RETIMING
     BRIDGE_USDWRITER.OpenPrimStage(name, geomPrimStagePf, cacheEntry
@@ -291,7 +298,7 @@ bool UsdBridge::CreateGeometryTemplate(const char* name, const GeomDataType& geo
   }
 
   handle.value = cacheEntry;
-  return newPrim;
+  return PrimIsNew(createResult);
 }
 
 bool UsdBridge::CreateGeometry(const char* name, const UsdBridgeMeshData& meshData, UsdGeometryHandle& handle)
@@ -315,9 +322,9 @@ bool UsdBridge::CreateSpatialField(const char * name, UsdSpatialFieldHandle& han
 
   BoolEntryPair createResult = Internals->FindOrCreatePrim(fieldPathCp, name, &ResourceCollectVolume);
   UsdBridgePrimCache* cacheEntry = createResult.second;
-  bool newPrim = createResult.first;
+  bool cacheExists = createResult.first.second;
 
-  if (newPrim)
+  if (!cacheExists)
   {
 #ifdef VALUE_CLIP_RETIMING
     // Create a separate stage to be referenced by the value clips
@@ -330,7 +337,7 @@ bool UsdBridge::CreateSpatialField(const char * name, UsdSpatialFieldHandle& han
   }
 
   handle.value = cacheEntry;
-  return newPrim;
+  return PrimIsNew(createResult);
 }
 
 bool UsdBridge::CreateMaterial(const char* name, UsdMaterialHandle& handle)
@@ -338,13 +345,13 @@ bool UsdBridge::CreateMaterial(const char* name, UsdMaterialHandle& handle)
   if (!SessionValid) return false;
 
   // Create the material
-  BoolEntryPair matCreateResult = Internals->FindOrCreatePrim(materialPathCp, name);
-  UsdBridgePrimCache* matCacheEntry = matCreateResult.second;
-  bool newPrim = matCreateResult.first;
+  BoolEntryPair createResult = Internals->FindOrCreatePrim(materialPathCp, name);
+  UsdBridgePrimCache* matCacheEntry = createResult.second;
+  bool cacheExists = createResult.first.second;
 
   UsdMaterialHandle matHandle; matHandle.value = matCacheEntry;
 
-  if (newPrim)
+  if (!cacheExists)
   {
 #ifdef VALUE_CLIP_RETIMING
     // Create a separate stage to be referenced by the value clips
@@ -357,7 +364,7 @@ bool UsdBridge::CreateMaterial(const char* name, UsdMaterialHandle& handle)
   }
 
   handle = matHandle;
-  return newPrim;
+  return PrimIsNew(createResult);
 }
 
 bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle)
@@ -366,15 +373,15 @@ bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle)
 
   BoolEntryPair createResult = Internals->FindOrCreatePrim(samplerPathCp, name, &ResourceCollectSampler);
   UsdBridgePrimCache* cacheEntry = createResult.second;
-  bool newPrim = createResult.first;
+  bool cacheExists = createResult.first.second;
 
-  if (newPrim)
+  if (!cacheExists)
   {
     BRIDGE_USDWRITER.InitializeUsdSampler(cacheEntry);
   }
 
   handle.value = cacheEntry;
-  return newPrim;
+  return PrimIsNew(createResult);
 }
 
 void UsdBridge::DeleteWorld(UsdWorldHandle handle)
@@ -495,6 +502,16 @@ void UsdBridge::SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volum
   {
     BRIDGE_USDWRITER.AddRef_NoClip(groupCache, volumeCaches[i], volumePathRp, timeVarying, timeStep, timeStep, false, Internals->RefModCallbacks);
   }
+}
+
+void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep)
+{
+  if (surface.value == nullptr) return;
+
+  UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
+  UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
+
+  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, false, true, true, geomClipPf, timeStep, geomTimeStep, true, Internals->RefModCallbacks);
 }
 
 void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep)

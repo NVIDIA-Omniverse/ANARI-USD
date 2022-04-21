@@ -242,6 +242,9 @@ if (USD_DEVICE_USE_OPENVDB)
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 
+  ## Install optional pdbs
+  ## install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
+
   # No dependency install required; all dynamic dependencies should be shared with USD and therefore installed in the parent-level cmake,
   # and if not, make sure they are static to avoid problems with versioning.
 

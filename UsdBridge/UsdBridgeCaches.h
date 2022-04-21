@@ -14,7 +14,7 @@ class UsdBridgeUsdWriter;
 class UsdBridgeTemporalCache;
 
 typedef std::pair<std::string, UsdStageRefPtr> UsdStagePair; //Stage ptr and filename
-typedef std::pair<bool, UsdBridgePrimCache*> BoolEntryPair;
+typedef std::pair<std::pair<bool,bool>, UsdBridgePrimCache*> BoolEntryPair; // Prim exists in stage, prim exists in cache, result cache entry ptr
 typedef void (*ResourceCollectFunc)(const UsdBridgePrimCache*, const UsdBridgeUsdWriter&);
 typedef std::vector<UsdBridgePrimCache*> UsdBridgePrimCacheList;
 

@@ -15,7 +15,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ## Top-level project ##
 
-project(AnariUsdDevice LANGUAGES C CXX)
+project(anari_library_usd LANGUAGES C CXX)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -118,28 +118,31 @@ set(USDModule_HEADERS
   UsdRenderer.h
   UsdFrame.h)
 
-add_library(anari_library_usd SHARED ${USDModule_SOURCES} ${USDModule_HEADERS})
+add_library(${PROJECT_NAME} SHARED ${USDModule_SOURCES} ${USDModule_HEADERS})
 
-target_compile_definitions(anari_library_usd
+target_compile_definitions(${PROJECT_NAME}
 	PRIVATE -DDEVICE_VERSION=${USD_DEVICE_VERSION} ${USD_DEVICE_TIME_DEFS})
 
 option(CHECK_OBJECT_REFERENCES "Perform a memory check on the reference count of all objects allocated by a USD device, avoiding memleaks and double deletion." OFF)
 if(CHECK_OBJECT_REFERENCES)
-  target_compile_definitions(anari_library_usd
+  target_compile_definitions(${PROJECT_NAME}
     PRIVATE -DCHECK_MEMLEAKS)
 endif()
 
-target_link_libraries(anari_library_usd
+target_link_libraries(${PROJECT_NAME}
 	PUBLIC anari::anari
 	PRIVATE anari::anari_utilities UsdBridge)
 
 add_subdirectory(examples)
 
-install(TARGETS anari_library_usd
+install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+## Install optional pdbs
+## install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
 
 option(INSTALL_ANARI_DEPS "Enable install of ANARI SDK dependencies along with USD device" OFF) # Not truly a dependency of the USD Device, generally one wants to build against ANARI source, not just libs
 if(${INSTALL_ANARI_DEPS})

@@ -63,7 +63,7 @@ public:
   void RemoveSceneGraphRoot(UsdBridgePrimCache* worldCache);
 
   const std::string& CreatePrimName(const char* name, const char* category);
-  void CreatePrim(const SdfPath& path);
+  bool CreatePrim(const SdfPath& path);
   void DeletePrim(const UsdBridgePrimCache* cacheEntry);
   void InitializePrimVisibility(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode);
   void SetPrimVisibility(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode, bool visible);

@@ -84,7 +84,7 @@ if(${USD_DEVICE_USE_OMNIVERSE})
 
   target_link_libraries(${PROJECT_NAME} INTERFACE ${USDBRIDGE_CONNECT_LINK_LIBS})
 
-  option(INSTALL_OMNIVERSE_DEPS "Enable install of Omniverse dependencies with USD device" ON)
+  option(INSTALL_OMNIVERSE_DEPS "Enable install of Omniverse dependencies with USD device" OFF)
   if(${INSTALL_OMNIVERSE_DEPS})
     # Install client library
     set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")

@@ -766,10 +766,16 @@ const std::string & UsdBridgeUsdWriter::CreatePrimName(const char * name, const 
   return this->TempNameStr;
 }
 
-void UsdBridgeUsdWriter::CreatePrim(const SdfPath& path)
+bool UsdBridgeUsdWriter::CreatePrim(const SdfPath& path)
 {
-  UsdPrim classPrim = SceneStage->DefinePrim(path);
-  assert(classPrim);
+  UsdPrim classPrim = SceneStage->GetPrimAtPath(path);
+  if(!classPrim)
+  {
+    classPrim = SceneStage->DefinePrim(path);
+    assert(classPrim);
+    return true;
+  }
+  return false;
 }
 
 void UsdBridgeUsdWriter::DeletePrim(const UsdBridgePrimCache* cacheEntry)

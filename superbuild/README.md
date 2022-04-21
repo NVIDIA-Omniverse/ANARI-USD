@@ -42,6 +42,10 @@ one can use explicit install dir variables which support `debug/` and `release/`
 - `OMNICLIENT_ROOT_DIR`: for the Omniverse (OmniClient) install directory
 - `ZLIB_ROOT`: for the ZLIB install directory, required for Linux builds
 
+For ease of use, if you want the USD and Omniverse libraries to be copied into the installation's `bin`
+directory, make sure `USD_DEVICE_INSTALL_DEPS` is turned on. Otherwise, all dependency folders have to
+be manually included into the path before executing the device binaries.
+
 Lastly, the `BUILD_ANARI_USD_DEVICE` option lets you turn off building the device if you
 only want to build the device's dependencies (mostly this is for developers).
 
