@@ -141,6 +141,7 @@ int main(int argc, const char **argv)
   int outputBinary = 0;
   int outputOmniverse = 0;
   int connLogVerbosity = 0;
+  int materialOutput = 1;
 
   int useVertexColors = 1;
 
@@ -152,6 +153,7 @@ int main(int argc, const char **argv)
     anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
   }
   anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
+  anariSetParameter(dev, dev, "usd::materialoutput", ANARI_BOOL, &materialOutput);
 
   // commit device
   anariCommit(dev, dev);

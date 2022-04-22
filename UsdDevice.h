@@ -40,7 +40,7 @@ struct UsdDeviceData
 
   double timeStep = 0.0;
 
-  bool noMaterialOutput = false;
+  bool materialOutput = true;
 };
 
 class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameterizedObject<UsdDevice, UsdDeviceData>

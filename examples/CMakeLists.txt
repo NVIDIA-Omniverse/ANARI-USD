@@ -3,8 +3,17 @@
 
 add_subdirectory(stb_image)
 
-add_executable(anariTutorialUsd anariTutorial_usd.c)
-target_link_libraries(anariTutorialUsd PRIVATE anari::anari stb_image)
+project(anariTutorialUsd)
+add_executable(${PROJECT_NAME} anariTutorial_usd.c)
+target_link_libraries(${PROJECT_NAME} PRIVATE anari::anari stb_image)
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-add_executable(anariTutorialUsdTime anariTutorial_usd_time.c)
-target_link_libraries(anariTutorialUsdTime PRIVATE anari::anari stb_image)
+project(anariTutorialUsdTime)
+add_executable(${PROJECT_NAME} anariTutorial_usd_time.c)
+target_link_libraries(${PROJECT_NAME} PRIVATE anari::anari stb_image)
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+project(anariTutorialUsdRecreate)
+add_executable(${PROJECT_NAME} anariTutorial_usd_recreate.c)
+target_link_libraries(${PROJECT_NAME} PRIVATE anari::anari stb_image)
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

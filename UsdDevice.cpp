@@ -118,7 +118,7 @@ DEFINE_PARAMETER_MAP(UsdDevice,
   REGISTER_PARAMETER_MACRO("usd::serialize.newsession", ANARI_BOOL, createNewSession)
   REGISTER_PARAMETER_MACRO("usd::serialize.outputbinary", ANARI_BOOL, outputBinary)
   REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
-  REGISTER_PARAMETER_MACRO("usd::nomaterialoutput", ANARI_BOOL, noMaterialOutput)
+  REGISTER_PARAMETER_MACRO("usd::materialoutput", ANARI_BOOL, materialOutput)
 )
 
 UsdDevice::UsdDevice()

@@ -133,7 +133,10 @@ target_link_libraries(${PROJECT_NAME}
 	PUBLIC anari::anari
 	PRIVATE anari::anari_utilities UsdBridge)
 
-add_subdirectory(examples)
+option(USD_DEVICE_BUILD_EXAMPLES "Build USD device examples" OFF)
+if(USD_DEVICE_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
