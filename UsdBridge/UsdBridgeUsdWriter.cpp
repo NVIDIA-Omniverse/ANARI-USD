@@ -494,20 +494,22 @@ bool UsdBridgeUsdWriter::CreateDirectories()
 
   valid = Connect->CreateFolder("", true);
 
-  Connect->RemoveFolder(SessionDirectory.c_str());
-  valid = valid && Connect->CreateFolder(SessionDirectory.c_str(), false);
+  //Connect->RemoveFolder(SessionDirectory.c_str());
+  bool folderMayExist = !Settings.CreateNewSession;
+  
+  valid = valid && Connect->CreateFolder(SessionDirectory.c_str(), folderMayExist);
 
 #ifdef VALUE_CLIP_RETIMING
-  valid = valid && Connect->CreateFolder((SessionDirectory + manifestFolder).c_str(), false);
-  valid = valid && Connect->CreateFolder((SessionDirectory + primStageFolder).c_str(), false);
+  valid = valid && Connect->CreateFolder((SessionDirectory + manifestFolder).c_str(), folderMayExist);
+  valid = valid && Connect->CreateFolder((SessionDirectory + primStageFolder).c_str(), folderMayExist);
 #endif
 #ifdef TIME_CLIP_STAGES
-  valid = valid && Connect->CreateFolder((SessionDirectory + clipFolder).c_str(), false);
+  valid = valid && Connect->CreateFolder((SessionDirectory + clipFolder).c_str(), folderMayExist);
 #endif
 #ifdef SUPPORT_MDL_SHADERS
-  valid = valid && Connect->CreateFolder((SessionDirectory + mdlFolder).c_str(), false);
+  valid = valid && Connect->CreateFolder((SessionDirectory + mdlFolder).c_str(), folderMayExist);
 #endif
-  valid = valid && Connect->CreateFolder((SessionDirectory + volFolder).c_str(), false);
+  valid = valid && Connect->CreateFolder((SessionDirectory + volFolder).c_str(), folderMayExist);
 
   if (!valid)
   {

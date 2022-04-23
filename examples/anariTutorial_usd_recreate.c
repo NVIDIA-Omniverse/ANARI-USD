@@ -144,6 +144,7 @@ int main(int argc, const char **argv)
     int outputOmniverse = 0;
     int connLogVerbosity = 0;
     int materialOutput = 1;
+    int createNewSession = (anariPass == 0) ? 1 : 0;
 
     int useVertexColors = 1;
 
@@ -155,6 +156,7 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
     }
     anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
+    anariSetParameter(dev, dev, "usd::serialize.newsession", ANARI_BOOL, &createNewSession);
     anariSetParameter(dev, dev, "usd::materialoutput", ANARI_BOOL, &materialOutput);
 
     // commit device
@@ -374,6 +376,11 @@ int main(int argc, const char **argv)
     anariUnloadLibrary(lib);
 
     printf("done!\n");
+
+    for(int vIdx = 0; vIdx < sizeof(vertex)/sizeof(float); ++vIdx)
+    {
+      vertex[vIdx] += 1.0f;
+    }
   }
 
   return 0;

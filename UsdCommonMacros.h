@@ -8,5 +8,6 @@
 //#define OBJECT_LIFETIME_EQUALS_USD_LIFETIME
 
 #ifndef NDEBUG
+// This is now handled in CMake
 //#define CHECK_MEMLEAKS //asserts at ~UsdDevice() if memleak found
 #endif
