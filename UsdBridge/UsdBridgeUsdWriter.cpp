@@ -198,15 +198,18 @@ namespace
         return TimeCode;
       else
 #endif
-        return DefaultTime;
+      return DefaultTime;
     }
 
-#ifdef TIME_BASED_CACHING
     bool IsTimeVarying(typename T::DataMemberId member) const
     {
+#ifdef TIME_BASED_CACHING
       return ((Data.TimeVarying & member) != T::DataMemberId::NONE);
-    }
+#else
+      return false;
 #endif
+    }
+
 
     const T& Data;
     const UsdTimeCode TimeCode;
@@ -234,7 +237,7 @@ namespace
         return TimeCode;
       else
 #endif
-        return DefaultTime;
+      return DefaultTime;
     }
 
     const bool TimeVarying;
