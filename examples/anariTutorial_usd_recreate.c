@@ -219,32 +219,39 @@ int main(int argc, const char **argv)
 
     anariCommit(dev, mesh);
 
-    // Create a sampler
     ANARISampler sampler = anariNewSampler(dev, "texture2d");
-    anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
-    anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
-    anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
-    anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
-    anariCommit(dev, sampler);
-
-    // Create a material
     ANARIMaterial mat = anariNewMaterial(dev, "matte");
-    anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial");
+    // The second iteration should not commit samplers/materials and not add it to the surface, 
+    // so the material prim itself will remain untouched in the pre-existing stage, 
+    // while its reference will be removed from the newly committed surface prim
+    if(anariPass == 0) 
+    { 
+      // Create a sampler
+      anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
+      anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
+      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
+      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
+      anariCommit(dev, sampler);
 
-    float opacity = 1.0f;
-    anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
-    if (!useVertexColors)
-      anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
-    anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
-    anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
-    anariCommit(dev, mat);
+      // Create a material
+      anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial");
+
+      float opacity = 1.0f;
+      anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
+      if (!useVertexColors)
+        anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
+      anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
+      anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
+      anariCommit(dev, mat);
+    }
     anariRelease(dev, sampler);
 
     // put the mesh into a surface
     ANARISurface surface = anariNewSurface(dev);
     anariSetParameter(dev, surface, "name", ANARI_STRING, "tutorialSurface");
     anariSetParameter(dev, surface, "geometry", ANARI_GEOMETRY, &mesh);
-    anariSetParameter(dev, surface, "material", ANARI_MATERIAL, &mat);
+    if (anariPass == 0)
+      anariSetParameter(dev, surface, "material", ANARI_MATERIAL, &mat);
     anariCommit(dev, surface);
     anariRelease(dev, mesh);
     anariRelease(dev, mat);

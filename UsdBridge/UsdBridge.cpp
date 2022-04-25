@@ -771,6 +771,16 @@ void UsdBridge::GarbageCollect()
 #endif
 }
 
+const char* UsdBridge::GetPrimPath(UsdBridgeHandle* handle)
+{
+  if(handle && handle->value)
+  {
+    return handle->value->PrimPath.GetString().c_str();
+  }
+  else
+    return nullptr;
+}
+
 void UsdBridge::SetConnectionLogVerbosity(int logVerbosity)
 {
   int logLevel = UsdBridgeRemoteConnection::GetConnectionLogLevelMax() - logVerbosity; // Just invert verbosity to get the level

@@ -26,7 +26,7 @@ In short, use the above to set `USD_ROOT_DIR` to the directory containing the `/
 - Alternatively, `usd::serialize.location` will also try the `ANARI_USD_SERIALIZE_LOCATION`
 environment variable. If neither are specified, it will default to `"./"` and emit a warning.
 - If Omniverse support is available, `usd::serialize.hostname` has to be used to specify the server name, and optionally port for Omniverse connections. This parameter is **immutable**.
-- Each ANARI scene object has a `name` parameter as scenegraph identifier (over time). Upon setting this name, a formatted version is stored in the `usd::name` property.
+- Each ANARI scene object has a `name` parameter as scenegraph identifier (over time). Upon setting this name, a formatted version is stored in the `usd::name` property (with corresponding `.size` as uint64). After `commit()` its full USD primpath can be retrieved with `usd::primpath` (with corresponding `.size` as uint64).
 - Each ANARI scene object has a `usd::timestep` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`.
 - For ANARI object parameters that should be constant over all timesteps, unset their corresponding bits in the `usd::timeVarying` parameter specific to each ANARI scene object (see headers). This parameter is **immutable**.
 - Changes to data are **actually saved** when `anariRenderFrame()` is called.

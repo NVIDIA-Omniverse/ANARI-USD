@@ -602,17 +602,15 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   this->RelativeSceneFile = "../" + SceneFile;
 
   const char* absSceneFile = Connect->GetUrl(this->SceneFileName.c_str());
-  if(!this->SceneStage)
+  if (!this->SceneStage && !Settings.CreateNewSession)
+      this->SceneStage = UsdStage::Open(absSceneFile);
+  if (!this->SceneStage)
     this->SceneStage = UsdStage::CreateNew(absSceneFile);
-
+  
   if (!this->SceneStage)
   {
-    this->SceneStage = UsdStage::Open(absSceneFile);
-    if (!this->SceneStage)
-    {
-      UsdBridgeLogMacro(this, UsdBridgeLogLevel::ERR, "Scene UsdStage cannot be created or opened. Maybe a filesystem issue?");
-      return false;
-    }
+    UsdBridgeLogMacro(this, UsdBridgeLogLevel::ERR, "Scene UsdStage cannot be created or opened. Maybe a filesystem issue?");
+    return false;
   }
 
   this->RootClassName = "/RootClass";
@@ -625,8 +623,16 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   this->SceneStage->SetDefaultPrim(rootPrim);
   UsdModelAPI(rootPrim).SetKind(KindTokens->component);
 
-  this->SceneStage->SetStartTimeCode(StartTime);
-  this->SceneStage->SetEndTimeCode(EndTime);
+  if(!this->SceneStage->HasAuthoredTimeCodeRange())
+  {
+    this->SceneStage->SetStartTimeCode(StartTime);
+    this->SceneStage->SetEndTimeCode(EndTime);
+  }
+  else
+  {
+    StartTime = this->SceneStage->GetStartTimeCode();
+    EndTime = this->SceneStage->GetEndTimeCode();
+  }
 
   if(this->EnableSaving)
     this->SceneStage->Save();

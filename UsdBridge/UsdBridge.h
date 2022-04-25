@@ -76,6 +76,8 @@ class UsdBridge
 
     void GarbageCollect();
 
+    const char* GetPrimPath(UsdBridgeHandle* handle);
+
     //
     // Static parameter interface
     //

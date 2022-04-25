@@ -96,7 +96,23 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
       {
         if (checkSizeOnStringLengthProperty(device, this, size, "usd::name.size"))
         {
-          uint64_t nameLen = strlen(ParamClass::paramData.usdName);
+          uint64_t nameLen = strlen(ParamClass::paramData.usdName)+1;
+          memcpy(mem, &nameLen, size);
+        }
+        return 1;
+      }
+      else if (type == ANARI_STRING && strcmp(name, "usd::primpath") == 0)
+      {
+        const char* primPath = usdBridge->GetPrimPath(&usdHandle);
+        snprintf((char*)mem, size, "%s", primPath);
+        return 1;
+      }
+      else if (type == ANARI_UINT64 && strcmp(name, "usd::primpath.size") == 0)
+      {
+        if (checkSizeOnStringLengthProperty(device, this, size, "usd::primpath.size"))
+        {
+          const char* primPath = usdBridge->GetPrimPath(&usdHandle);
+          uint64_t nameLen = strlen(primPath)+1;
           memcpy(mem, &nameLen, size);
         }
         return 1;
