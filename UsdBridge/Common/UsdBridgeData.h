@@ -6,6 +6,7 @@
 
 #include "UsdBridgeMacros.h"
 
+#include <cstddef>
 #include <functional>
 #include <stdint.h>
 
