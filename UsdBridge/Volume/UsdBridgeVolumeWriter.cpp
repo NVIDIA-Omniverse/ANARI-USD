@@ -82,20 +82,25 @@ class UsdBridgeVolumeWriterInternals
 {
   public:
     UsdBridgeVolumeWriterInternals()
-      : GridStream(std::ios::in | std::ios::out)
+      //: GridStream(std::ios::in | std::ios::out)
     {}
     ~UsdBridgeVolumeWriterInternals()
     {}
 
     std::ostream& ResetStream()
     {
-      GridStream.clear();
-      return GridStream;
+      //GridStream.clear(); // Bug in OpenVDB prevents reuse of stream
+      delete GridStream;
+      GridStream = new std::stringstream(std::ios::in | std::ios::out);
+      return *GridStream;
     }
 
     const char* GetStreamData()
     {
-      StreamData = GridStream.str(); //copy, should be move
+      if(!GridStream)
+        return nullptr;
+
+      StreamData = GridStream->str();
       return StreamData.c_str();
     }
 
@@ -105,7 +110,7 @@ class UsdBridgeVolumeWriterInternals
     }
 
   protected:
-    std::stringstream GridStream;
+    std::stringstream* GridStream = nullptr;
     std::string StreamData;
 };
 
