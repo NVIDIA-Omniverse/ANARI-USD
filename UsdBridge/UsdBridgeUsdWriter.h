@@ -148,11 +148,11 @@ public:
   VtIntArray TempIndexArray;
   VtVec3fArray TempScalesArray;
 
-protected:
-
   // Settings 
   UsdBridgeSettings Settings;
   UsdBridgeConnectionSettings ConnectionSettings;
+
+protected:
 
   // Connect
   std::unique_ptr<UsdBridgeConnection> Connect = nullptr;

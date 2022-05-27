@@ -64,7 +64,7 @@ void UsdMaterial::filterResetParam(const char *name)
 
 void UsdMaterial::commit(UsdDevice* device)
 {
-  if(!usdBridge || !device->getParams().materialOutput)
+  if(!usdBridge || !device->getParams().outputMaterial)
     return;
 
   bool isNew = false;

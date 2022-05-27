@@ -463,8 +463,10 @@ UsdBridgeUsdWriter::UsdBridgeUsdWriter(const UsdBridgeSettings& settings)
   : Settings(settings)
   , VolumeWriter(Create_VolumeWriter(), std::mem_fn(&UsdBridgeVolumeWriterI::Release))
 {
-  ConnectionSettings.HostName = Settings.HostName;
-  ConnectionSettings.WorkingDirectory = Settings.OutputPath;
+  if(Settings.HostName)
+    ConnectionSettings.HostName = Settings.HostName;
+  if(Settings.OutputPath)
+    ConnectionSettings.WorkingDirectory = Settings.OutputPath;
   FormatDirName(ConnectionSettings.WorkingDirectory);
 }
 
@@ -510,7 +512,10 @@ bool UsdBridgeUsdWriter::CreateDirectories()
   valid = valid && Connect->CreateFolder((SessionDirectory + clipFolder).c_str(), folderMayExist);
 #endif
 #ifdef SUPPORT_MDL_SHADERS
-  valid = valid && Connect->CreateFolder((SessionDirectory + mdlFolder).c_str(), folderMayExist);
+  if(Settings.EnableMdlShader)
+  {
+    valid = valid && Connect->CreateFolder((SessionDirectory + mdlFolder).c_str(), folderMayExist);
+  }
 #endif
   valid = valid && Connect->CreateFolder((SessionDirectory + volFolder).c_str(), folderMayExist);
 
@@ -584,7 +589,10 @@ bool UsdBridgeUsdWriter::InitializeSession()
   valid = valid && VolumeWriter->Initialize(this->LogCallback, this->LogUserData);
 
 #ifdef SUPPORT_MDL_SHADERS 
-  valid = valid && CreateMdlFiles();
+  if(Settings.EnableMdlShader)
+  {
+    valid = valid && CreateMdlFiles();
+  }
 #endif
 
   return valid;
@@ -1247,12 +1255,13 @@ void UsdBridgeUsdWriter::InitializeUsdTransform(const UsdBridgePrimCache* cacheE
   assert(transform);
 }
 
-template<typename UsdGeomType, typename GeomDataType>
-void CreateUsdGeomAttributePrimvars(UsdGeomType& usdGeom, const GeomDataType& geomData, TimeEvaluator<GeomDataType>* timeEval = nullptr)
+template<typename GeomDataType>
+void CreateUsdGeomAttributePrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, TimeEvaluator<GeomDataType>* timeEval = nullptr)
 {
   typedef typename GeomDataType::DataMemberId DMI;
 
-  for(uint32_t attribIndex = 0; attribIndex < geomData.NumAttributes; ++attribIndex)
+  bool hasTexCoords = UsdGeomDataHasTexCoords(geomData);
+  for(uint32_t attribIndex = hasTexCoords ? 1 : 0; attribIndex < geomData.NumAttributes; ++attribIndex)
   {
     bool timeVarChecked = true;
     if(timeEval)
@@ -1266,7 +1275,7 @@ void CreateUsdGeomAttributePrimvars(UsdGeomType& usdGeom, const GeomDataType& ge
     {
       SdfValueTypeName primvarType = GetPrimvarArrayType(attrib.DataType);
       TfToken attribInterpolation = attrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
-      usdGeom.CreatePrimvar(AttribIndexToToken(attribIndex), primvarType, attribInterpolation);
+      primvarApi.CreatePrimvar(AttribIndexToToken(attribIndex), primvarType, attribInterpolation);
     }
   }
 }
@@ -1274,6 +1283,7 @@ void CreateUsdGeomAttributePrimvars(UsdGeomType& usdGeom, const GeomDataType& ge
 UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim)
 {
   UsdGeomMesh geomMesh = GetOrDefinePrim<UsdGeomMesh>(geometryStage, geomPath);
+  UsdGeomPrimvarsAPI primvarApi(geomMesh);
 
   geomMesh.CreatePointsAttr();
   geomMesh.CreateExtentAttr();
@@ -1281,14 +1291,23 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
   geomMesh.CreateFaceVertexCountsAttr();
   geomMesh.CreateNormalsAttr();
   geomMesh.SetNormalsInterpolation(UsdGeomTokens->vertex);
-  geomMesh.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
-  geomMesh.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-#ifdef SUPPORT_MDL_SHADERS
-  geomMesh.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-  geomMesh.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-#endif
+  if(Settings.EnableDisplayColors)
+  {
+    geomMesh.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
+  }
+  
+  if(UsdGeomDataHasTexCoords(meshData) || Settings.EnableMdlColors)
+    primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
 
-  CreateUsdGeomAttributePrimvars(geomMesh, meshData);
+  CreateUsdGeomAttributePrimvars(primvarApi, meshData);
+
+#ifdef SUPPORT_MDL_SHADERS
+  if(Settings.EnableMdlColors)
+  {
+    primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+  }
+#endif
 
   if (uniformPrim)
   {
@@ -1304,6 +1323,7 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
   if (UsesUsdGeomPoints(instancerData))
   {
     UsdGeomPoints geomPoints = GetOrDefinePrim<UsdGeomPoints>(geometryStage, geomPath);
+    UsdGeomPrimvarsAPI primvarApi(geomPoints);
 
     geomPoints.CreatePointsAttr();
     geomPoints.CreateExtentAttr();
@@ -1311,14 +1331,23 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
     geomPoints.CreateNormalsAttr();
     geomPoints.CreateWidthsAttr();
 
-    geomPoints.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
-    geomPoints.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    if(Settings.EnableDisplayColors)
+    {
+      geomPoints.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
+    }
+
+    if(UsdGeomDataHasTexCoords(instancerData) || Settings.EnableMdlColors)
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+
 #ifdef SUPPORT_MDL_SHADERS
-    geomPoints.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-    geomPoints.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    if(Settings.EnableMdlColors)
+    {
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    }
 #endif
 
-    CreateUsdGeomAttributePrimvars(geomPoints, instancerData);
+    CreateUsdGeomAttributePrimvars(primvarApi, instancerData);
 
     if (uniformPrim)
     {
@@ -1330,19 +1359,31 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
   else
   {
     UsdGeomPointInstancer geomPoints = GetOrDefinePrim<UsdGeomPointInstancer>(geometryStage, geomPath);
+    UsdGeomPrimvarsAPI primvarApi(geomPoints);
 
     geomPoints.CreatePositionsAttr();
     geomPoints.CreateExtentAttr();
     geomPoints.CreateIdsAttr();
     geomPoints.CreateOrientationsAttr();
     geomPoints.CreateScalesAttr();
-    geomPoints.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray, UsdGeomTokens->uniform);
-    geomPoints.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    if(Settings.EnableDisplayColors)
+    {
+      primvarApi.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray, UsdGeomTokens->uniform);
+    }
+
+    if(UsdGeomDataHasTexCoords(instancerData) || Settings.EnableMdlColors)
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+
 #ifdef SUPPORT_MDL_SHADERS
-    geomPoints.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-    geomPoints.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    if(Settings.EnableMdlColors)
+    {
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    }
 #endif
-    CreateUsdGeomAttributePrimvars(geomPoints, instancerData);
+
+    CreateUsdGeomAttributePrimvars(primvarApi, instancerData);
+
     geomPoints.CreateProtoIndicesAttr();
     geomPoints.CreateVelocitiesAttr();
     geomPoints.CreateAngularVelocitiesAttr();
@@ -1378,8 +1419,6 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
       protoRel.AddTarget(shapePath);
     }
 
-    //geomPoints.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex); // to be implemented
-
     return geomPoints.GetPrim();
   }
 }
@@ -1387,19 +1426,30 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
 UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim)
 {
   UsdGeomBasisCurves geomCurves = GetOrDefinePrim<UsdGeomBasisCurves>(geometryStage, geomPath);
+  UsdGeomPrimvarsAPI primvarApi(geomCurves);
 
   geomCurves.CreatePointsAttr();
   geomCurves.CreateExtentAttr();
   geomCurves.CreateCurveVertexCountsAttr();
   geomCurves.CreateNormalsAttr();
   geomCurves.CreateWidthsAttr();
-  geomCurves.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
-  geomCurves.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+  if(Settings.EnableDisplayColors)
+  {
+    geomCurves.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
+  }
+
+  if(UsdGeomDataHasTexCoords(curveData) || Settings.EnableMdlColors)
+    primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+
 #ifdef SUPPORT_MDL_SHADERS
-  geomCurves.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-  geomCurves.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+  if(Settings.EnableMdlColors)
+  {
+    primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+  }
 #endif
-  CreateUsdGeomAttributePrimvars(geomCurves, curveData);
+
+  CreateUsdGeomAttributePrimvars(primvarApi, curveData);
 
   if (uniformPrim)
   {
@@ -1439,37 +1489,43 @@ UsdShadeMaterial UsdBridgeUsdWriter::InitializeUsdMaterial(UsdStageRefPtr materi
   UsdShadeMaterial matPrim = UsdShadeMaterial::Define(materialStage, matPrimPath);
   assert(matPrim);
 
-  if (uniformPrim)
+  if(Settings.EnablePreviewSurfaceShader)
   {
-    // Create a standard texture coordinate reader
-    SdfPath texCoordReaderPrimPath = matPrimPath.AppendPath(SdfPath(texCoordReaderPrimPf));
-    UsdShadeShader texCoordReader = UsdShadeShader::Define(materialStage, texCoordReaderPrimPath);
-    assert(texCoordReader);
-    texCoordReader.CreateIdAttr(VtValue(UsdBridgeTokens->PrimStId));
-    texCoordReader.CreateInput(UsdBridgeTokens->varname, SdfValueTypeNames->Token).Set(UsdBridgeTokens->st);
+    if (uniformPrim)
+    {
+      // Create a standard texture coordinate reader
+      SdfPath texCoordReaderPrimPath = matPrimPath.AppendPath(SdfPath(texCoordReaderPrimPf));
+      UsdShadeShader texCoordReader = UsdShadeShader::Define(materialStage, texCoordReaderPrimPath);
+      assert(texCoordReader);
+      texCoordReader.CreateIdAttr(VtValue(UsdBridgeTokens->PrimStId));
+      texCoordReader.CreateInput(UsdBridgeTokens->varname, SdfValueTypeNames->Token).Set(UsdBridgeTokens->st);
 
-    // Create a vertexcolorreader
-    SdfPath vertexColorReaderPrimPath = matPrimPath.AppendPath(SdfPath(vertexColorReaderPrimPf));
-    UsdShadeShader vertexColorReader = UsdShadeShader::Define(materialStage, vertexColorReaderPrimPath);
-    assert(vertexColorReader);
-    vertexColorReader.CreateIdAttr(VtValue(UsdBridgeTokens->PrimDisplayColorId));
-    vertexColorReader.CreateInput(UsdBridgeTokens->varname, SdfValueTypeNames->Token).Set(UsdBridgeTokens->displayColor);
+      // Create a vertexcolorreader
+      SdfPath vertexColorReaderPrimPath = matPrimPath.AppendPath(SdfPath(vertexColorReaderPrimPf));
+      UsdShadeShader vertexColorReader = UsdShadeShader::Define(materialStage, vertexColorReaderPrimPath);
+      assert(vertexColorReader);
+      vertexColorReader.CreateIdAttr(VtValue(UsdBridgeTokens->PrimDisplayColorId));
+      vertexColorReader.CreateInput(UsdBridgeTokens->varname, SdfValueTypeNames->Token).Set(UsdBridgeTokens->displayColor);
+    }
+
+    // Create a shader
+    SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
+    UsdShadeOutput shaderOutput = this->InitializeUsdShader(materialStage, shaderPrimPath, uniformPrim);
+
+    if(uniformPrim)
+      this->BindShaderToMaterial(matPrim, shaderOutput, nullptr);
   }
 
-  // Create a shader
-  SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
-  UsdShadeOutput shaderOutput = this->InitializeUsdShader(materialStage, shaderPrimPath, uniformPrim);
+#ifdef SUPPORT_MDL_SHADERS 
+  if(Settings.EnableMdlShader)
+  {
+    // Create an mdl shader
+    SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
+    UsdShadeOutput mdlShaderPrim = this->InitializeMdlShader(materialStage, mdlShaderPrimPath, uniformPrim);
 
-  if(uniformPrim)
-    this->BindShaderToMaterial(matPrim, shaderOutput, nullptr);
-
-#ifdef SUPPORT_MDL_SHADERS  
-  // Create an mdl shader
-  SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
-  UsdShadeOutput mdlShaderPrim = this->InitializeMdlShader(materialStage, mdlShaderPrimPath, uniformPrim);
-
-  if(uniformPrim)
-    this->BindShaderToMaterial(matPrim, mdlShaderPrim, &UsdBridgeTokens->mdl);
+    if(uniformPrim)
+      this->BindShaderToMaterial(matPrim, mdlShaderPrim, &UsdBridgeTokens->mdl);
+  }
 #endif
 
   return matPrim;
@@ -1546,6 +1602,7 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
 
   UsdGeomMesh meshGeom = UsdGeomMesh::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
   assert(meshGeom);
+  UsdGeomPrimvarsAPI primvarApi(meshGeom);
 
   if (timeEval.IsTimeVarying(DMI::POINTS))
   {
@@ -1562,17 +1619,23 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
   if (timeEval.IsTimeVarying(DMI::NORMALS))
     meshGeom.CreateNormalsAttr();
 
-  if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0))
-    meshGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray);
+  if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0) && (UsdGeomDataHasTexCoords(meshData) || Settings.EnableMdlColors))
+    primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray);
 
-  CreateUsdGeomAttributePrimvars(meshGeom, meshData, &timeEval);
+  CreateUsdGeomAttributePrimvars(primvarApi, meshData, &timeEval);
 
   if (timeEval.IsTimeVarying(DMI::COLORS))
   {
-    meshGeom.CreateDisplayColorPrimvar();
+    if(Settings.EnableDisplayColors)
+    {
+      meshGeom.CreateDisplayColorPrimvar();
+    }
 #ifdef SUPPORT_MDL_SHADERS
-    meshGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray);
-    meshGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray);
+    if(Settings.EnableMdlColors)
+    {
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray);
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray);
+    }
 #endif
   }
 
@@ -1588,6 +1651,7 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
   if(UsesUsdGeomPoints(instancerData))
   {
     UsdGeomPoints pointsGeom = UsdGeomPoints::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
+    UsdGeomPrimvarsAPI primvarApi(pointsGeom);
 
     if (timeEval.IsTimeVarying(DMI::POINTS))
     {
@@ -1606,21 +1670,28 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
 
     if (timeEval.IsTimeVarying(DMI::COLORS))
     {
-      pointsGeom.CreateDisplayColorPrimvar();
+      if(Settings.EnableDisplayColors)
+      {
+        pointsGeom.CreateDisplayColorPrimvar();
+      }
 #ifdef SUPPORT_MDL_SHADERS
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      if(Settings.EnableMdlColors)
+      {
+        primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+        primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      }
 #endif
     }
 
-    if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0))
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0) && (UsdGeomDataHasTexCoords(instancerData) || Settings.EnableMdlColors))
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
 
-    CreateUsdGeomAttributePrimvars(pointsGeom, instancerData, &timeEval);
+    CreateUsdGeomAttributePrimvars(primvarApi, instancerData, &timeEval);
   }
   else
   {
     UsdGeomPointInstancer pointsGeom = UsdGeomPointInstancer::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
+    UsdGeomPrimvarsAPI primvarApi(pointsGeom);
 
     if (timeEval.IsTimeVarying(DMI::POINTS))
     {
@@ -1643,17 +1714,23 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
 
     if (timeEval.IsTimeVarying(DMI::COLORS))
     {
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray, UsdGeomTokens->vertex);
+      if(Settings.EnableDisplayColors)
+      {
+        primvarApi.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray, UsdGeomTokens->vertex);
+      }
 #ifdef SUPPORT_MDL_SHADERS
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      if(Settings.EnableMdlColors)
+      {
+        primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+        primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      }
 #endif
     }
 
-    if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0))
-      pointsGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0) && (UsdGeomDataHasTexCoords(instancerData) || Settings.EnableMdlColors))
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
 
-    CreateUsdGeomAttributePrimvars(pointsGeom, instancerData, &timeEval);
+    CreateUsdGeomAttributePrimvars(primvarApi, instancerData, &timeEval);
 
     if (timeEval.IsTimeVarying(DMI::LINEARVELOCITIES))
       pointsGeom.CreateVelocitiesAttr();
@@ -1676,6 +1753,7 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
 
   UsdGeomBasisCurves curveGeom = UsdGeomBasisCurves::Define(cacheEntry->PrimStage.second, cacheEntry->PrimPath);
   assert(curveGeom);
+  UsdGeomPrimvarsAPI primvarApi(curveGeom);
 
   if (timeEval.IsTimeVarying(DMI::POINTS))
   {
@@ -1694,17 +1772,23 @@ void UsdBridgeUsdWriter::CreateUsdGeometryManifest(const char* name, const UsdBr
 
   if (timeEval.IsTimeVarying(DMI::COLORS))
   {
-    curveGeom.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
+    if(Settings.EnableDisplayColors)
+    {
+      curveGeom.CreateDisplayColorPrimvar(UsdGeomTokens->vertex);
+    }
 #ifdef SUPPORT_MDL_SHADERS
-    curveGeom.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-    curveGeom.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    if(Settings.EnableMdlColors)
+    {
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+    }
 #endif
   }
 
-  if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0))
-    curveGeom.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+  if (timeEval.IsTimeVarying(DMI::ATTRIBUTE0) && (UsdGeomDataHasTexCoords(curveData) || Settings.EnableMdlColors))
+    primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
 
-  CreateUsdGeomAttributePrimvars(curveGeom, curveData, &timeEval);
+  CreateUsdGeomAttributePrimvars(primvarApi, curveData, &timeEval);
 
   if(this->EnableSaving)
     cacheEntry->PrimStage.second->Save();
@@ -1734,65 +1818,77 @@ void UsdBridgeUsdWriter::BindShaderToMaterial(const UsdShadeMaterial& matPrim, c
 
 void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, const char* texFileName)
 {
-  // Find the coordinate reader using the material path
-  SdfPath coordReaderPath = matPrimPath.AppendPath(SdfPath(texCoordReaderPrimPf));
-  UsdShadeShader coordReaderPrim = UsdShadeShader::Get(this->SceneStage, coordReaderPath);
-  assert(coordReaderPrim);
+  if(Settings.EnablePreviewSurfaceShader)
+  {
+    // Find the coordinate reader using the material path
+    SdfPath coordReaderPath = matPrimPath.AppendPath(SdfPath(texCoordReaderPrimPf));
+    UsdShadeShader coordReaderPrim = UsdShadeShader::Get(this->SceneStage, coordReaderPath);
+    assert(coordReaderPrim);
 
-  // Bind the texture reader to the coordinate reader
-  UsdShadeShader refTexReader = UsdShadeShader::Get(this->SceneStage, refSamplerPrimPath); // type inherited from sampler prim (in AddRef)
-  assert(refTexReader);
-  UsdShadeOutput tcReaderOutput = coordReaderPrim.CreateOutput(UsdBridgeTokens->result, SdfValueTypeNames->Float2);
-  refTexReader.CreateInput(UsdBridgeTokens->st, SdfValueTypeNames->Float2).ConnectToSource(tcReaderOutput);
+    // Bind the texture reader to the coordinate reader
+    UsdShadeShader refTexReader = UsdShadeShader::Get(this->SceneStage, refSamplerPrimPath); // type inherited from sampler prim (in AddRef)
+    assert(refTexReader);
+    UsdShadeOutput tcReaderOutput = coordReaderPrim.CreateOutput(UsdBridgeTokens->result, SdfValueTypeNames->Float2);
+    refTexReader.CreateInput(UsdBridgeTokens->st, SdfValueTypeNames->Float2).ConnectToSource(tcReaderOutput);
 
-  // Update usd shader
-  SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
+    // Update usd shader
+    SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
 
-  UsdShadeShader uniformShad = UsdShadeShader::Get(this->SceneStage, shaderPrimPath);
-  assert(uniformShad);
-  UsdShadeShader timeVarShad = UsdShadeShader::Get(materialStage, shaderPrimPath);
-  assert(timeVarShad);
+    UsdShadeShader uniformShad = UsdShadeShader::Get(this->SceneStage, shaderPrimPath);
+    assert(uniformShad);
+    UsdShadeShader timeVarShad = UsdShadeShader::Get(materialStage, shaderPrimPath);
+    assert(timeVarShad);
 
-  //Bind the sampler to the diffuse color of the (mdl)shader
-  timeVarShad.GetPrim().RemoveProperty(TfToken("input:diffuseColor"));
-  timeVarShad.GetPrim().RemoveProperty(TfToken("input:specularColor"));
+    //Bind the sampler to the diffuse color of the (mdl)shader
+    timeVarShad.GetPrim().RemoveProperty(TfToken("input:diffuseColor"));
+    timeVarShad.GetPrim().RemoveProperty(TfToken("input:specularColor"));
 
-  UsdShadeOutput texReaderOutput = refTexReader.CreateOutput(UsdBridgeTokens->rgb, SdfValueTypeNames->Color3f);
+    UsdShadeOutput texReaderOutput = refTexReader.CreateOutput(UsdBridgeTokens->rgb, SdfValueTypeNames->Color3f);
 
-  uniformShad.CreateInput(UsdBridgeTokens->diffuseColor, SdfValueTypeNames->Color3f).ConnectToSource(texReaderOutput);
-  uniformShad.CreateInput(UsdBridgeTokens->specularColor, SdfValueTypeNames->Color3f).ConnectToSource(texReaderOutput);
+    uniformShad.CreateInput(UsdBridgeTokens->diffuseColor, SdfValueTypeNames->Color3f).ConnectToSource(texReaderOutput);
+    uniformShad.CreateInput(UsdBridgeTokens->specularColor, SdfValueTypeNames->Color3f).ConnectToSource(texReaderOutput);
+  }
 
 #ifdef SUPPORT_MDL_SHADERS
-  SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
-  UsdShadeShader uniformMdlShad = UsdShadeShader::Get(this->SceneStage, mdlShaderPrimPath);
-  assert(uniformMdlShad);
+  if(Settings.EnableMdlShader)
+  {
+    SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
+    UsdShadeShader uniformMdlShad = UsdShadeShader::Get(this->SceneStage, mdlShaderPrimPath);
+    assert(uniformMdlShad);
 
-  uniformMdlShad.GetInput(UsdBridgeTokens->vertexcolor_coordinate_index).Set(-1);
-  uniformMdlShad.CreateInput(UsdBridgeTokens->diffuse_texture, SdfValueTypeNames->Asset).Set(SdfAssetPath(texFileName));
+    uniformMdlShad.GetInput(UsdBridgeTokens->vertexcolor_coordinate_index).Set(-1);
+    uniformMdlShad.CreateInput(UsdBridgeTokens->diffuse_texture, SdfValueTypeNames->Asset).Set(SdfAssetPath(texFileName));
+  }
 #endif
 }
 
 void UsdBridgeUsdWriter::UnBindSamplerFromMaterial(const SdfPath& matPrimPath)
 {
-  SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
+  if(Settings.EnablePreviewSurfaceShader)
+  {
+    SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
 
-  // Disconnect the sampler from the shader
-  UsdShadeShader uniformShad = UsdShadeShader::Get(this->SceneStage, shaderPrimPath);
-  assert(uniformShad);
+    // Disconnect the sampler from the shader
+    UsdShadeShader uniformShad = UsdShadeShader::Get(this->SceneStage, shaderPrimPath);
+    assert(uniformShad);
 
-  UsdShadeInput diffuseInput = uniformShad.GetInput(UsdBridgeTokens->diffuseColor);
-  if (diffuseInput && diffuseInput.HasConnectedSource())
-    diffuseInput.DisconnectSource();
-  UsdShadeInput specularInput = uniformShad.GetInput(UsdBridgeTokens->specularColor);
-  if (specularInput && specularInput.HasConnectedSource())
-    specularInput.DisconnectSource();
+    UsdShadeInput diffuseInput = uniformShad.GetInput(UsdBridgeTokens->diffuseColor);
+    if (diffuseInput && diffuseInput.HasConnectedSource())
+      diffuseInput.DisconnectSource();
+    UsdShadeInput specularInput = uniformShad.GetInput(UsdBridgeTokens->specularColor);
+    if (specularInput && specularInput.HasConnectedSource())
+      specularInput.DisconnectSource();
+  }
 
 #ifdef SUPPORT_MDL_SHADERS
-  SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
-  UsdShadeShader uniformMdlShad = UsdShadeShader::Get(this->SceneStage, mdlShaderPrimPath);
-  assert(uniformMdlShad);
+  if(Settings.EnableMdlShader)
+  {
+    SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
+    UsdShadeShader uniformMdlShad = UsdShadeShader::Get(this->SceneStage, mdlShaderPrimPath);
+    assert(uniformMdlShad);
 
-  uniformMdlShad.GetPrim().RemoveProperty(TfToken("inputs:diffuse_texture"));
+    uniformMdlShad.GetPrim().RemoveProperty(TfToken("inputs:diffuse_texture"));
+  }
 #endif
 }
 
@@ -2145,36 +2241,47 @@ void UpdateUsdGeomColors(UsdBridgeUsdWriter* writer, UsdGeomType& timeVarGeom, U
     UsdTimeCode timeCode = timeEval.Eval(DMI::COLORS);
 
     UsdGeomPrimvar colorPrimvar = outGeom->GetPrimvar(UsdBridgeTokens->displayColor);
-    assert(colorPrimvar);
 #ifdef SUPPORT_MDL_SHADERS
     UsdGeomPrimvar vc0Primvar = outGeom->GetPrimvar(UsdBridgeTokens->st1);
-    assert(vc0Primvar);
     UsdGeomPrimvar vc1Primvar = outGeom->GetPrimvar(UsdBridgeTokens->st2);
-    assert(vc1Primvar);
 #endif
 
     if (geomData.Colors != nullptr)
     {
       const void* arrayData = geomData.Colors;
       size_t arrayNumElements = geomData.PerPrimColors ? numPrims : geomData.NumPoints;
-      UsdAttribute arrayPrimvar = colorPrimvar;
+      TfToken colorInterpolation = geomData.PerPrimColors ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
+
       bool typeSupported = true;
-      switch (geomData.ColorsType)
+      if(writer->Settings.EnableDisplayColors)
       {
-      case UsdBridgeType::FLOAT3: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
-      case UsdBridgeType::FLOAT4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3fArray, GfVec4f); break; }
-      case UsdBridgeType::DOUBLE3: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
-      case UsdBridgeType::DOUBLE4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3dArray, GfVec4d); break; }
-      default: { typeSupported = false; UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom DisplayColorPrimvar should be FLOAT3, FLOAT4, DOUBLE3 or DOUBLE4."); break; }
+        assert(colorPrimvar);
+
+        UsdAttribute arrayPrimvar = colorPrimvar;
+        switch (geomData.ColorsType)
+        {
+        case UsdBridgeType::FLOAT3: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
+        case UsdBridgeType::FLOAT4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3fArray, GfVec4f); break; }
+        case UsdBridgeType::DOUBLE3: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
+        case UsdBridgeType::DOUBLE4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3dArray, GfVec4d); break; }
+        default: { typeSupported = false; UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom DisplayColorPrimvar should be FLOAT3, FLOAT4, DOUBLE3 or DOUBLE4."); break; }
+        }
+
+        // Per face or per-vertex interpolation. This will break timesteps that have been written before.
+        uniformGeom.GetPrimvar(UsdBridgeTokens->displayColor).SetInterpolation(colorInterpolation);
+      }
+      else
+      {
+        typeSupported = (geomData.ColorsType == UsdBridgeType::FLOAT3 || geomData.ColorsType == UsdBridgeType::FLOAT4 ||
+          geomData.ColorsType == UsdBridgeType::DOUBLE3 || geomData.ColorsType == UsdBridgeType::DOUBLE4);
       }
 
-      // Per face or per-vertex interpolation. This will break timesteps that have been written before.
-      TfToken colorInterpolation = geomData.PerPrimColors ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
-      uniformGeom.GetPrimvar(UsdBridgeTokens->displayColor).SetInterpolation(colorInterpolation);
-
 #ifdef SUPPORT_MDL_SHADERS
-      if (typeSupported)
+      if (typeSupported && writer->Settings.EnableMdlColors)
       {
+        assert(vc0Primvar);
+        assert(vc1Primvar);
+
         // Make sure the "st" array has values
         {
           UsdAttribute texcoordPrimvar = outGeom->GetPrimvar(UsdBridgeTokens->st);
@@ -2224,19 +2331,31 @@ void UpdateUsdGeomColors(UsdBridgeUsdWriter* writer, UsdGeomType& timeVarGeom, U
     }
     else
     {
-      colorPrimvar.GetAttr().ClearAtTime(timeCode);
+      if(writer->Settings.EnableDisplayColors)
+      {
+        colorPrimvar.GetAttr().ClearAtTime(timeCode);
+      }
 #ifdef SUPPORT_MDL_SHADERS
-      vc0Primvar.GetAttr().ClearAtTime(timeCode);
-      vc1Primvar.GetAttr().ClearAtTime(timeCode);
+      if (writer->Settings.EnableMdlColors)
+      {
+        vc0Primvar.GetAttr().ClearAtTime(timeCode);
+        vc1Primvar.GetAttr().ClearAtTime(timeCode);
+      }
 #endif
     }
   }
   if (!timeVaryingUpdate)
   {
-    timeVarGeom.GetPrimvar(UsdBridgeTokens->displayColor).GetAttr().ClearAtTime(timeEval.TimeCode);
+    if(writer->Settings.EnableDisplayColors)
+    {
+      timeVarGeom.GetPrimvar(UsdBridgeTokens->displayColor).GetAttr().ClearAtTime(timeEval.TimeCode);
+    }
 #ifdef SUPPORT_MDL_SHADERS
-    timeVarGeom.GetPrimvar(UsdBridgeTokens->st1).GetAttr().ClearAtTime(timeEval.TimeCode);
-    timeVarGeom.GetPrimvar(UsdBridgeTokens->st2).GetAttr().ClearAtTime(timeEval.TimeCode);
+    if (writer->Settings.EnableMdlColors)
+    {
+      timeVarGeom.GetPrimvar(UsdBridgeTokens->st1).GetAttr().ClearAtTime(timeEval.TimeCode);
+      timeVarGeom.GetPrimvar(UsdBridgeTokens->st2).GetAttr().ClearAtTime(timeEval.TimeCode);
+    }
 #endif
   }
 }
@@ -2707,13 +2826,19 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
 void UsdBridgeUsdWriter::UpdateUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, double timeStep)
 {
   // Update usd shader
-  SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
-  this->UpdateUsdShader(materialStage, matPrimPath, shaderPrimPath, matData, timeStep);
+  if(Settings.EnablePreviewSurfaceShader)
+  {
+    SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
+    this->UpdateUsdShader(materialStage, matPrimPath, shaderPrimPath, matData, timeStep);
+  }
 
 #ifdef SUPPORT_MDL_SHADERS  
-  // Update mdl shader
-  SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
-  this->UpdateMdlShader(materialStage, mdlShaderPrimPath, matData, timeStep);
+  if(Settings.EnableMdlShader)
+  {
+    // Update mdl shader
+    SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
+    this->UpdateMdlShader(materialStage, mdlShaderPrimPath, matData, timeStep);
+  }
 #endif
 }
 

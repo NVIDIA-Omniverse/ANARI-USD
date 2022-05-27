@@ -101,39 +101,46 @@ protected:
         const char* src = static_cast<const char*>(rawSrc);
         size_t numBytes = AnariTypeSize(type);
 
-        if (type == ANARI_STRING)
+        if (type == ANARI_BOOL)
         {
-          char** destStr = reinterpret_cast<char**>(dest);
-          numBytes = strlen(src) + 1;
+          *(reinterpret_cast<bool*>(dest)) = *(reinterpret_cast<const uint32_t*>(src));
+        }
+        else
+        {
+          if (type == ANARI_STRING)
+          {
+            char** destStr = reinterpret_cast<char**>(dest);
+            numBytes = strlen(src) + 1;
 
 #ifdef CHECK_MEMLEAKS
-          LogDeallocation(*destStr);
+            LogDeallocation(*destStr);
 #endif
-          delete[] *destStr;
-          *destStr = new char[numBytes];
-          dest = *destStr;
+            delete[] * destStr;
+            *destStr = new char[numBytes];
+            dest = *destStr;
 
 #ifdef CHECK_MEMLEAKS
-          LogAllocation(dest);
+            LogAllocation(dest);
 #endif
-        }
-        else if (anari::isObject(type) && *baseObj)
-        {
+          }
+          else if (anari::isObject(type) && *baseObj)
+          {
 #ifdef CHECK_MEMLEAKS
-          allocDevice->LogDeallocation(*baseObj);
+            allocDevice->LogDeallocation(*baseObj);
 #endif
-          (*baseObj)->refDec(anari::RefType::INTERNAL);
-        }
+            (*baseObj)->refDec(anari::RefType::INTERNAL);
+          }
 
 #ifdef TIME_BASED_CACHING
-        paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
+          paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
 #else
-        paramChanged = paramChanged || bool(memcmp(dest, src, numBytes));
+          paramChanged = paramChanged || bool(memcmp(dest, src, numBytes));
 #endif
-        std::memcpy(dest, src, numBytes);
+          std::memcpy(dest, src, numBytes);
 
-        if (anari::isObject(type) && *baseObj)
-          (*baseObj)->refInc(anari::RefType::INTERNAL);
+          if (anari::isObject(type) && *baseObj)
+            (*baseObj)->refInc(anari::RefType::INTERNAL);
+        }
       }
       else
         reportStatusThroughDevice(device, this, ANARI_OBJECT, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
@@ -163,19 +170,26 @@ protected:
         D defaultParamData;
         char* src = (reinterpret_cast<char*>(&defaultParamData) + it->second.first);
 
-        if (anari::isObject(type))
+        if (type == ANARI_BOOL)
         {
-          UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
-          if(*baseObj)
-          {
-#ifdef CHECK_MEMLEAKS
-            allocDevice->LogDeallocation(*baseObj);
-#endif
-            (*baseObj)->refDec(anari::RefType::INTERNAL);
-          }
+          *(reinterpret_cast<bool*>(dest)) = *(reinterpret_cast<const bool*>(src));
         }
+        else
+        {
+          if (anari::isObject(type))
+          {
+            UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
+            if (*baseObj)
+            {
+#ifdef CHECK_MEMLEAKS
+              allocDevice->LogDeallocation(*baseObj);
+#endif
+              (*baseObj)->refDec(anari::RefType::INTERNAL);
+            }
+          }
 
-        std::memcpy(dest, src, AnariTypeSize(type));
+          std::memcpy(dest, src, AnariTypeSize(type));
+        }
       }
 
       paramChanged = true;

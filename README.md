@@ -31,28 +31,36 @@ environment variable. If neither are specified, it will default to `"./"` and em
 - For ANARI object parameters that should be constant over all timesteps, unset their corresponding bits in the `usd::timeVarying` parameter specific to each ANARI scene object (see headers). This parameter is **immutable**.
 - Changes to data are **actually saved** when `anariRenderFrame()` is called.
 - If ANARI objects of a certain `name` are not referenced from within any committed timestep, their internal data is only cleaned up when calling `anariDeviceSetParam(d, "usd::garbagecollect", ANARI_VOID_POINTER, 0)`. This is adviced after every `anariRenderFrame()` or a subfrequency thereof.
-- Not supported:
-    - Arbitrary commit order - commits need to happen from leaf objects (Geometry/Materials/etc.) to root objects (World)
-    - Geometries:
-        - color array type other than double/float (so no fixed types)
-        - strided arrays
-    - Volumes
-        - `color/opacity.position` parameters
-    - Materials:
-        - `obj` materials, just use `matte` and `transparentMatte`
-        - string/sampler parameters, except `map_kd` which remains as texture sampler (set `usevertexcolors` for vertex coloring - for full parameter list see `UsdMaterial.cpp`)
-    - Samplers:
-        - anything other than `filename` argument for texture source, with `wrapmode1/wrapmode2`
-    - Lights
-        - completely unsupported
-    - World
-        - direct surface/volume parameters
 - Examples in `examples/anariTutorial_usd(_time).c`
 
 ### Advanced parameters #
 - Device parameter `usd::scenestage` allows the user to provide a pre-constructed stage, into which the USD output will be constructed. For correct operation, make sure that `anariSetParameter` for `usd::scenestage` takes a `UsdStage*` (ie. the `mem` argument is directly of `UsdStage*` type) with `ANARI_VOID_POINTER` as type enumeration. This parameter is **immutable**.
 - Device parameter `usd::enablesaving` of type `ANARI_BOOL` (default `ON`) allows the user to explicitly control whether USD output is written out to disk, or kept in memory. Assets that are not stored in USD format, such as MDL materials, texture images and volumes, will always be written to disk regardless of the value of this parameter. In order for no files to be written at all, additionally pass the special string `"void"` to `usd::serialize.location`.
 - Device parameter `usd::serialize.newsession` of type `ANARI_BOOL` (default `ON`) allows the user to explicitly control whether a new empty session directory has to be created for USD output, or whether the last written session and its USD files have to be reopened, after which the device will continue (over-)writing the existing files. In the latter case, existing prims will be changed to match the contents of any committed ANARI objects that go by their corresponding name, but other already existing prims within the USD files will be left untouched.
+- Device parameters `usd::output.<x>`, which give control over what or how certain objects are converted to USD, to increase compatibility with certain renderers or reduce clutter in the resulting USD graph. Permissible values for `<x>` are: 
+    - `material`: Whether material objects are included in the output 
+    - `previewsurfaceshader`: Whether previewsurface shader prims are output for material objects
+    - `mdlshader`: Whether mdl shader prims are output for material objects
+    - `displaycolors`: Whether displaycolor primvars are output for geometry objects, to support vertex coloring on previewsurface shaders
+    - `mdlcolors`: Whether `st1/2` color arrays are output for geometries, to support vertex coloring on mdl shaders
+
+### Not supported #
+
+- Arbitrary commit order - commits need to happen from leaf objects (Geometry/Materials/etc.) to root objects (World)
+- Geometries:
+    - color array type other than double/float (so no fixed types)
+    - strided arrays
+- Volumes
+    - `color/opacity.position` parameters
+- Materials:
+    - `obj` materials, just use `matte` and `transparentMatte`
+    - string/sampler parameters, except `map_kd` which remains as texture sampler (set `usevertexcolors` for vertex coloring - for full parameter list see `UsdMaterial.cpp`)
+- Samplers:
+    - anything other than `filename` argument for texture source, with `wrapmode1/wrapmode2`
+- Lights
+    - completely unsupported
+- World
+    - direct surface/volume parameters
 
 ### Detailed build info #
 

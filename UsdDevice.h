@@ -40,7 +40,11 @@ struct UsdDeviceData
 
   double timeStep = 0.0;
 
-  bool materialOutput = true;
+  bool outputMaterial = true;
+  bool outputDisplayColors = true;
+  bool outputMdlColors = true;
+  bool outputPreviewSurfaceShader = true;
+  bool outputMdlShader = true;
 };
 
 class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameterizedObject<UsdDevice, UsdDeviceData>

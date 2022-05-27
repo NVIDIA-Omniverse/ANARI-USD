@@ -52,15 +52,6 @@ inline void writeToVoidP(void *_p, T v)
   *p = v;
 }
 
-class UsdDeviceSettings
-{
-public:
-  std::string HostName;
-  std::string OutputPath;
-  bool CreateNewSession;
-  bool BinaryOutput;
-};
-
 class UsdDeviceInternals
 {
 public:
@@ -68,16 +59,22 @@ public:
   {
   }
 
-  bool CreateNewBridge(UsdBridgeLogCallback bridgeStatusFunc, void* userData)
+  bool CreateNewBridge(const UsdDeviceData& deviceParams, UsdBridgeLogCallback bridgeStatusFunc, void* userData)
   {
     if (bridge.get())
       bridge->CloseSession();
 
     UsdBridgeSettings bridgeSettings = {
-      settings.HostName.c_str(),
-      settings.OutputPath.c_str(),
-      settings.CreateNewSession,
-      settings.BinaryOutput
+      deviceParams.hostName,
+      outputLocation.c_str(),
+      deviceParams.createNewSession,
+      deviceParams.outputBinary,
+      deviceParams.outputPreviewSurfaceShader,
+      deviceParams.outputDisplayColors,
+#ifdef SUPPORT_MDL_SHADERS
+      deviceParams.outputMdlShader,
+      deviceParams.outputMdlColors
+#endif
     };
 
     bridge = std::make_unique<UsdBridge>(bridgeSettings);
@@ -103,7 +100,7 @@ public:
     return createSuccess;
   }
 
-  UsdDeviceSettings settings; // Settings lifetime should encapsulate bridge lifetime
+  std::string outputLocation;
   bool enableSaving = true;
   std::unique_ptr<UsdBridge> bridge;
   SceneStagePtr externalSceneStage{nullptr};
@@ -118,7 +115,11 @@ DEFINE_PARAMETER_MAP(UsdDevice,
   REGISTER_PARAMETER_MACRO("usd::serialize.newsession", ANARI_BOOL, createNewSession)
   REGISTER_PARAMETER_MACRO("usd::serialize.outputbinary", ANARI_BOOL, outputBinary)
   REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
-  REGISTER_PARAMETER_MACRO("usd::materialoutput", ANARI_BOOL, materialOutput)
+  REGISTER_PARAMETER_MACRO("usd::output.material", ANARI_BOOL, outputMaterial)
+  REGISTER_PARAMETER_MACRO("usd::output.displaycolors", ANARI_BOOL, outputDisplayColors)
+  REGISTER_PARAMETER_MACRO("usd::output.mdlcolors", ANARI_BOOL, outputMdlColors)
+  REGISTER_PARAMETER_MACRO("usd::output.previewsurfaceshader", ANARI_BOOL, outputPreviewSurfaceShader)
+  REGISTER_PARAMETER_MACRO("usd::output.mdlshader", ANARI_BOOL, outputMdlShader)
 )
 
 UsdDevice::UsdDevice()
@@ -272,35 +273,26 @@ void UsdDevice::deviceCommit()
   statusFunc = userSetStatusFunc ? userSetStatusFunc : defaultStatusCallback();
   statusUserData = userSetStatusUserData ? userSetStatusUserData : defaultStatusCallbackUserPtr();
 
-  std::string location;
-
   if(paramData.outputPath)
-    location = paramData.outputPath;
+    internals->outputLocation = paramData.outputPath;
 
-  if(location.empty()) {
+  if(internals->outputLocation.empty()) {
     auto *envLocation = getenv("ANARI_USD_SERIALIZE_LOCATION");
     if (envLocation) {
-      location = envLocation;
+      internals->outputLocation = envLocation;
       reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR,
         "Usd Device parameter 'usd::serialize.location' using ANARI_USD_SERIALIZE_LOCATION value");
     }
   }
 
-  if (location.empty())
+  if (internals->outputLocation.empty())
   {
     reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
       "Usd Device parameter 'usd::serialize.location' not set, defaulting to './'");
-    location = "./";
+    internals->outputLocation = "./";
   }
-  if (paramData.hostName)
-  {
-    internals->settings.HostName = paramData.hostName;
-  }
-  internals->settings.OutputPath = location;
-  internals->settings.CreateNewSession = paramData.createNewSession;
-  internals->settings.BinaryOutput = paramData.outputBinary;
 
-  if (!internals->CreateNewBridge(&reportBridgeStatus, this))
+  if (!internals->CreateNewBridge(paramData, &reportBridgeStatus, this))
   {
     reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_UNKNOWN_ERROR, "Usd Bridge failed to load");
   }

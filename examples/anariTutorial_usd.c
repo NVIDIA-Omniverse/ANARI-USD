@@ -141,7 +141,11 @@ int main(int argc, const char **argv)
   int outputBinary = 0;
   int outputOmniverse = 0;
   int connLogVerbosity = 0;
-  int materialOutput = 1;
+  int outputMaterial = 1;
+  int outputPreviewSurface = 1;
+  int outputMdl = 1;
+  int outputDisplayColors = 1;
+  int outputMdlColors = 1;
 
   int useVertexColors = 1;
 
@@ -153,7 +157,11 @@ int main(int argc, const char **argv)
     anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
   }
   anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
-  anariSetParameter(dev, dev, "usd::materialoutput", ANARI_BOOL, &materialOutput);
+  anariSetParameter(dev, dev, "usd::output.material", ANARI_BOOL, &outputMaterial);
+  anariSetParameter(dev, dev, "usd::output.previewsurfaceshader", ANARI_BOOL, &outputPreviewSurface);
+  anariSetParameter(dev, dev, "usd::output.mdlshader", ANARI_BOOL, &outputMdl);
+  anariSetParameter(dev, dev, "usd::output.displaycolors", ANARI_BOOL, &outputDisplayColors);
+  anariSetParameter(dev, dev, "usd::output.mdlcolors", ANARI_BOOL, &outputMdlColors);
 
   // commit device
   anariCommit(dev, dev);

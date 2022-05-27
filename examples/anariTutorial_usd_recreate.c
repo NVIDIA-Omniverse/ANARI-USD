@@ -143,7 +143,7 @@ int main(int argc, const char **argv)
     int outputBinary = 0;
     int outputOmniverse = 0;
     int connLogVerbosity = 0;
-    int materialOutput = 1;
+    int outputMaterial = 1;
     int createNewSession = (anariPass == 0) ? 1 : 0;
 
     int useVertexColors = 1;
@@ -157,7 +157,7 @@ int main(int argc, const char **argv)
     }
     anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
     anariSetParameter(dev, dev, "usd::serialize.newsession", ANARI_BOOL, &createNewSession);
-    anariSetParameter(dev, dev, "usd::materialoutput", ANARI_BOOL, &materialOutput);
+    anariSetParameter(dev, dev, "usd::output.material", ANARI_BOOL, &outputMaterial);
 
     // commit device
     anariCommit(dev, dev);

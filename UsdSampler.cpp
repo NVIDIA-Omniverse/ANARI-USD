@@ -65,7 +65,7 @@ void UsdSampler::filterResetParam(const char *name)
 
 void UsdSampler::commit(UsdDevice* device)
 {
-  if(!usdBridge || !device->getParams().materialOutput)
+  if(!usdBridge || !device->getParams().outputMaterial)
     return;
 
   bool isNew = false;

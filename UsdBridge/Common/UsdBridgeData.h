@@ -114,8 +114,16 @@ struct UsdBridgeSettings
 {
   const char* HostName;             // Name of the remote server 
   const char* OutputPath;           // Directory for output (on server if HostName is not empty) 
-  bool CreateNewSession;            // Find a new session directory on creation of the bridge, or re-use the last opened one. 
+  bool CreateNewSession;            // Find a new session directory on creation of the bridge, or re-use the last opened one (leave contents intact). 
   bool BinaryOutput;                // Select usda or usd output.
+
+  // Output settings
+  bool EnablePreviewSurfaceShader;
+  bool EnableDisplayColors;
+#ifdef SUPPORT_MDL_SHADERS
+  bool EnableMdlShader;
+  bool EnableMdlColors;
+#endif
 };
 
 // Generic attribute definition
