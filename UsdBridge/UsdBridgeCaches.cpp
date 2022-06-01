@@ -6,7 +6,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 #include "UsdBridgeCaches.h"
 
-UsdBridgeTemporalCache::ConstPrimCacheIterator UsdBridgeTemporalCache::FindPrimCache(const UsdBridgeHandle& handle) const
+UsdBridgePrimCacheManager::ConstPrimCacheIterator UsdBridgePrimCacheManager::FindPrimCache(const UsdBridgeHandle& handle) const
 {
   ConstPrimCacheIterator it = std::find_if(
     UsdPrimCaches.begin(),
@@ -17,7 +17,7 @@ UsdBridgeTemporalCache::ConstPrimCacheIterator UsdBridgeTemporalCache::FindPrimC
   return it;
 }
 
-UsdBridgeTemporalCache::ConstPrimCacheIterator UsdBridgeTemporalCache::CreatePrimCache(const std::string& name, const std::string& fullPath, ResourceCollectFunc collectFunc)
+UsdBridgePrimCacheManager::ConstPrimCacheIterator UsdBridgePrimCacheManager::CreatePrimCache(const std::string& name, const std::string& fullPath, ResourceCollectFunc collectFunc)
 {
   SdfPath nameSuffix(name);
   SdfPath primPath(fullPath);
@@ -27,21 +27,18 @@ UsdBridgeTemporalCache::ConstPrimCacheIterator UsdBridgeTemporalCache::CreatePri
   return UsdPrimCaches.emplace(name, std::move(cacheEntry)).first;
 }
 
-void UsdBridgeTemporalCache::InitializeWorldPrim(UsdBridgePrimCache* worldCache)
+void UsdBridgePrimCacheManager::InitializeWorldPrim(UsdBridgePrimCache* worldCache)
 {
-#ifdef TIME_BASED_CACHING
   worldCache->IncRef(); // No DecRef() to go with this IncRef(). Worlds remain within the usd.
-#endif
 }
 
-#ifdef TIME_BASED_CACHING
-void UsdBridgeTemporalCache::AddChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
+void UsdBridgePrimCacheManager::AddChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
 {
   parent->Children.push_back(child);
   child->IncRef();
 }
 
-void UsdBridgeTemporalCache::RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
+void UsdBridgePrimCacheManager::RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
 {
   auto it = std::find(parent->Children.begin(), parent->Children.end(), child);
   // Allow for find to fail; in the case where the bridge is recreated and destroyed, 
@@ -54,18 +51,21 @@ void UsdBridgeTemporalCache::RemoveChild(UsdBridgePrimCache* parent, UsdBridgePr
   }
 }
 
-void UsdBridgeTemporalCache::RemoveUnreferencedChildTree(UsdBridgePrimCache* parent)
+void UsdBridgePrimCacheManager::RemoveUnreferencedChildTree(UsdBridgePrimCache* parent, AtRemoveFunc atRemove)
 {
+  assert(parent->RefCount == 0);
+  atRemove(parent);
+
   for (UsdBridgePrimCache* child : parent->Children)
   {
     child->DecRef();
     if(child->RefCount == 0)
-      RemoveUnreferencedChildTree(child);
+      RemoveUnreferencedChildTree(child, atRemove);
   }
   parent->Children.clear();
 }
 
-void UsdBridgeTemporalCache::RemoveUnreferencedPrimCaches(std::function<void(ConstPrimCacheIterator)> atRemove)
+void UsdBridgePrimCacheManager::RemoveUnreferencedPrimCaches(AtRemoveFunc atRemove)
 {
   // First recursively remove all the child references for unreferenced prims
   // Can only be performed at garbage collect. 
@@ -75,7 +75,7 @@ void UsdBridgeTemporalCache::RemoveUnreferencedPrimCaches(std::function<void(Con
   {
     if (it->second->RefCount == 0)
     {
-      RemoveUnreferencedChildTree(it->second.get());
+      RemoveUnreferencedChildTree(it->second.get(), atRemove);
     }
     ++it;
   }
@@ -85,13 +85,8 @@ void UsdBridgeTemporalCache::RemoveUnreferencedPrimCaches(std::function<void(Con
   while (it != UsdPrimCaches.end())
   {
     if (it->second->RefCount == 0)
-    {
-      atRemove(it);
-
       it = UsdPrimCaches.erase(it);
-    }
     else
       ++it;
   }
 }
-#endif

@@ -79,15 +79,14 @@ public:
 #endif
 
   SdfPath AddRef_NoClip(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-    bool timeVarying, double parentTimeStep, double childTimeStep, bool replaceExisting,
+    bool timeVarying, double parentTimeStep, double childTimeStep,
     const RefModFuncs& refModCallbacks);
   SdfPath AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-    bool timeVarying, double parentTimeStep, double childTimeStep, bool replaceExisting,
+    bool timeVarying, double parentTimeStep, double childTimeStep,
     const RefModFuncs& refModCallbacks);
   SdfPath AddRef(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, bool valueClip, bool clipStages, const char* clipPostFix,
     double parentTimeStep, double childTimeStep,
-    bool replaceExisting,
     const RefModFuncs& refModCallbacks);
   // Timevarying means that the existence of a reference between prim A and B can differ over time, valueClip denotes the addition of clip metadata for re-timing, 
   // and clipStages will carve up the referenced clip asset files into one for each timestep (stages are created as necessary). clipPostFix is irrelevant if !clipStages.
@@ -95,10 +94,9 @@ public:
   SdfPath AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, bool valueClip, bool clipStages, const char* clipPostFix,
     double parentTimeStep, double childTimeStep,
-    bool replaceExisting, // replaceExisting will make sure any other prims are gone
     const RefModFuncs& refModCallbacks);
   void RemoveAllRefs(UsdBridgePrimCache* parentCache, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
-  void RemoveAllRefs(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
+  void RemoveAllRefs(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, SdfPath childBasePath, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
   void ManageUnusedRefs(UsdBridgePrimCache* parentCache, const UsdBridgePrimCacheList& newChildren, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
   void ManageUnusedRefs(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const UsdBridgePrimCacheList& newChildren, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
 

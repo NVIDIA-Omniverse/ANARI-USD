@@ -7,6 +7,7 @@
 #include "UsdBridgeCaches.h"
 
 #include <string>
+#include <memory>
 
 #define BRIDGE_CACHE Internals->Cache
 #define BRIDGE_USDWRITER Internals->UsdWriter
@@ -46,8 +47,67 @@ namespace
   }
 }
 
-typedef UsdBridgeTemporalCache::PrimCacheIterator PrimCacheIterator;
-typedef UsdBridgeTemporalCache::ConstPrimCacheIterator ConstPrimCacheIterator;
+typedef UsdBridgePrimCacheManager::PrimCacheIterator PrimCacheIterator;
+typedef UsdBridgePrimCacheManager::ConstPrimCacheIterator ConstPrimCacheIterator;
+
+class UsdBridgeDiagnosticMgrDelegate : public TfDiagnosticMgr::Delegate
+{
+  public:
+    UsdBridgeDiagnosticMgrDelegate(void* logUserData,
+      UsdBridgeLogCallback logCallback)
+      : LogUserData(logUserData)
+      , LogCallback(logCallback)
+    {}
+
+    void IssueError(TfError const& err) override
+    {
+      LogTfMessage(UsdBridgeLogLevel::ERR, err);
+    }
+
+    virtual void IssueFatalError(TfCallContext const& context,
+      std::string const& msg) override
+    {
+      std::string message = TfStringPrintf(
+        "[USD Internal error]: %s in %s at line %zu of %s",
+        msg.c_str(), context.GetFunction(), context.GetLine(), context.GetFile()
+        );
+      LogMessage(UsdBridgeLogLevel::ERR, message);
+    }
+ 
+    virtual void IssueStatus(TfStatus const& status) override
+    {
+      LogTfMessage(UsdBridgeLogLevel::STATUS, status);
+    }
+
+    virtual void IssueWarning(TfWarning const& warning) override
+    {
+      LogTfMessage(UsdBridgeLogLevel::WARNING, warning);
+    }
+
+  protected:
+
+    void LogTfMessage(UsdBridgeLogLevel level, TfDiagnosticBase const& diagBase)
+    {
+      std::string message = TfStringPrintf(
+        "[USD Internal Message]: %s with error code %s in %s at line %zu of %s",
+        diagBase.GetCommentary().c_str(),
+        TfDiagnosticMgr::GetCodeName(diagBase.GetDiagnosticCode()).c_str(),
+        diagBase.GetContext().GetFunction(),
+        diagBase.GetContext().GetLine(),
+        diagBase.GetContext().GetFile()
+      );
+
+      LogMessage(level, message);
+    }
+
+    void LogMessage(UsdBridgeLogLevel level, const std::string& message)
+    {
+      LogCallback(level, LogUserData, message.c_str());
+    }
+
+    void* LogUserData;
+    UsdBridgeLogCallback LogCallback;
+};
 
 struct UsdBridgeInternals
 {
@@ -55,36 +115,44 @@ struct UsdBridgeInternals
     : UsdWriter(settings)
   {
     RefModCallbacks.AtNewRef = [this](UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache){
-#ifdef TIME_BASED_CACHING
       // Increase the reference count for the child on creation of referencing prim
       this->Cache.AddChild(parentCache, childCache);
-#endif
     };
 
     RefModCallbacks.AtRemoveRef = [this](UsdBridgePrimCache* parentCache, const std::string& childName) {
-#ifdef TIME_BASED_CACHING
       ConstPrimCacheIterator it = this->Cache.FindPrimCache(childName);
       // Not an assert: allow the case where child prims in a stage aren't cached, ie. when the bridge is destroyed and recreated
       if(this->Cache.ValidIterator(it)) 
         this->Cache.RemoveChild(parentCache, it->second.get());
-#endif
     };
+  }
+
+  ~UsdBridgeInternals()
+  {
+    if(DiagRemoveFunc)
+      DiagRemoveFunc(DiagnosticDelegate.get());
   }
 
   BoolEntryPair FindOrCreatePrim(const char* category, const char* name, ResourceCollectFunc collectFunc = nullptr);
   void FindAndDeletePrim(const UsdBridgeHandle& handle);
 
   template<class T>
-  const UsdBridgePrimCacheList& ExtractPrimCaches(const UsdBridgeTemporalCache& Cache, const T* handles, uint64_t numHandles);
+  const UsdBridgePrimCacheList& ExtractPrimCaches(const T* handles, uint64_t numHandles);
+
+  const UsdBridgePrimCacheList& ToCacheList(UsdBridgePrimCache* primCache);
 
   // Cache
-  UsdBridgeTemporalCache Cache;
+  UsdBridgePrimCacheManager Cache;
 
   // USDWriter
   UsdBridgeUsdWriter UsdWriter;
 
   // Callbacks
   UsdBridgeUsdWriter::RefModFuncs RefModCallbacks;
+
+  // Diagnostic Manager
+  std::unique_ptr<UsdBridgeDiagnosticMgrDelegate> DiagnosticDelegate;
+  std::function<void (UsdBridgeDiagnosticMgrDelegate*)> DiagRemoveFunc;
 
   // Temp arrays
   UsdBridgePrimCacheList TempPrimCaches;
@@ -129,16 +197,22 @@ void UsdBridgeInternals::FindAndDeletePrim(const UsdBridgeHandle& handle)
 }
 
 template<class T>
-const UsdBridgePrimCacheList& UsdBridgeInternals::ExtractPrimCaches(const UsdBridgeTemporalCache& Cache, const T* handles, uint64_t numHandles)
+const UsdBridgePrimCacheList& UsdBridgeInternals::ExtractPrimCaches(const T* handles, uint64_t numHandles)
 {
   TempPrimCaches.resize(numHandles);
   for (uint64_t i = 0; i < numHandles; ++i)
   {
-    TempPrimCaches[i] = Cache.ConvertToPrimCache(handles[i]);
+    TempPrimCaches[i] = this->Cache.ConvertToPrimCache(handles[i]);
   }
   return TempPrimCaches;
 }
 
+const UsdBridgePrimCacheList& UsdBridgeInternals::ToCacheList(UsdBridgePrimCache* primCache)
+{
+  TempPrimCaches.resize(1);
+  TempPrimCaches[0] = primCache;
+  return TempPrimCaches;
+}
 
 UsdBridge::UsdBridge(const UsdBridgeSettings& settings) 
   : Internals(new UsdBridgeInternals(settings))
@@ -162,6 +236,11 @@ bool UsdBridge::OpenSession(UsdBridgeLogCallback logCallback, void* logUserData)
 {
   BRIDGE_USDWRITER.LogUserData = logUserData;
   BRIDGE_USDWRITER.LogCallback = logCallback;
+
+  Internals->DiagnosticDelegate = std::make_unique<UsdBridgeDiagnosticMgrDelegate>(logUserData, logCallback);
+  Internals->DiagRemoveFunc = [](UsdBridgeDiagnosticMgrDelegate* delegate)
+    { TfDiagnosticMgr::GetInstance().RemoveDelegate(delegate); };
+  TfDiagnosticMgr::GetInstance().AddDelegate(Internals->DiagnosticDelegate.get());
 
   SessionValid = BRIDGE_USDWRITER.InitializeSession();
   SessionValid = SessionValid && BRIDGE_USDWRITER.OpenSceneStage();
@@ -457,12 +536,12 @@ void UsdBridge::SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* i
   if (world.value == nullptr) return;
 
   UsdBridgePrimCache* worldCache = BRIDGE_CACHE.ConvertToPrimCache(world);
-  const UsdBridgePrimCacheList& instanceCaches = Internals->ExtractPrimCaches<UsdInstanceHandle>(BRIDGE_CACHE, instances, numInstances);
+  const UsdBridgePrimCacheList& instanceCaches = Internals->ExtractPrimCaches<UsdInstanceHandle>(instances, numInstances);
 
   BRIDGE_USDWRITER.ManageUnusedRefs(worldCache, instanceCaches, nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   for (uint64_t i = 0; i < numInstances; ++i)
   {
-    BRIDGE_USDWRITER.AddRef_NoClip(worldCache, instanceCaches[i], nullptr, timeVarying, timeStep, timeStep, false, Internals->RefModCallbacks);
+    BRIDGE_USDWRITER.AddRef_NoClip(worldCache, instanceCaches[i], nullptr, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
   }
 }
 
@@ -473,7 +552,8 @@ void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bo
   UsdBridgePrimCache* instanceCache = BRIDGE_CACHE.ConvertToPrimCache(instance);
   UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
 
-  BRIDGE_USDWRITER.AddRef_NoClip(instanceCache, groupCache, nullptr, timeVarying, timeStep, timeStep, true, Internals->RefModCallbacks);
+  BRIDGE_USDWRITER.ManageUnusedRefs(instanceCache, Internals->ToCacheList(groupCache), nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  BRIDGE_USDWRITER.AddRef_NoClip(instanceCache, groupCache, nullptr, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
 }
 
 void UsdBridge::SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
@@ -481,12 +561,12 @@ void UsdBridge::SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* sur
   if (group.value == nullptr) return;
 
   UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-  const UsdBridgePrimCacheList& surfaceCaches = Internals->ExtractPrimCaches<UsdSurfaceHandle>(BRIDGE_CACHE, surfaces, numSurfaces);
+  const UsdBridgePrimCacheList& surfaceCaches = Internals->ExtractPrimCaches<UsdSurfaceHandle>(surfaces, numSurfaces);
 
   BRIDGE_USDWRITER.ManageUnusedRefs(groupCache, surfaceCaches, surfacePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   for (uint64_t i = 0; i < numSurfaces; ++i)
   {
-    BRIDGE_USDWRITER.AddRef_NoClip(groupCache, surfaceCaches[i], surfacePathRp, timeVarying, timeStep, timeStep, false, Internals->RefModCallbacks);
+    BRIDGE_USDWRITER.AddRef_NoClip(groupCache, surfaceCaches[i], surfacePathRp, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
   }
 }
 
@@ -495,12 +575,12 @@ void UsdBridge::SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volum
   if (group.value == nullptr) return;
 
   UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-  const UsdBridgePrimCacheList& volumeCaches = Internals->ExtractPrimCaches<UsdVolumeHandle>(BRIDGE_CACHE, volumes, numVolumes);
+  const UsdBridgePrimCacheList& volumeCaches = Internals->ExtractPrimCaches<UsdVolumeHandle>(volumes, numVolumes);
 
   BRIDGE_USDWRITER.ManageUnusedRefs(groupCache, volumeCaches, volumePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   for (uint64_t i = 0; i < numVolumes; ++i)
   {
-    BRIDGE_USDWRITER.AddRef_NoClip(groupCache, volumeCaches[i], volumePathRp, timeVarying, timeStep, timeStep, false, Internals->RefModCallbacks);
+    BRIDGE_USDWRITER.AddRef_NoClip(groupCache, volumeCaches[i], volumePathRp, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
   }
 }
 
@@ -511,7 +591,9 @@ void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geome
   UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
   UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
 
-  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, false, true, true, geomClipPf, timeStep, geomTimeStep, true, Internals->RefModCallbacks);
+  bool timeVarying = false;
+  BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, true, true, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks);
 }
 
 void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep)
@@ -522,9 +604,14 @@ void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHand
   UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
   UsdBridgePrimCache* materialCache = BRIDGE_CACHE.ConvertToPrimCache(material);
 
+  bool timeVarying = false;
+  // Remove any dangling references
+  BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(materialCache), materialPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+
   // Update the references
-  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, false, true, true, geomClipPf, timeStep, geomTimeStep, true, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the surface.
-  SdfPath refMatPath = BRIDGE_USDWRITER.AddRef(surfaceCache, materialCache, materialPathRp, false, true, false, nullptr, timeStep, matTimeStep, true, Internals->RefModCallbacks);
+  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, true, true, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the surface.
+  SdfPath refMatPath = BRIDGE_USDWRITER.AddRef(surfaceCache, materialCache, materialPathRp, timeVarying, true, false, nullptr, timeStep, matTimeStep, Internals->RefModCallbacks);
 
   // Bind the referencing material to the referencing geom prim (as they are within same scope in this usd prim)
   BRIDGE_USDWRITER.BindMaterialToGeom(refGeomPath, refMatPath);
@@ -537,7 +624,10 @@ void UsdBridge::SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle
   UsdBridgePrimCache* volumeCache = BRIDGE_CACHE.ConvertToPrimCache(volume);
   UsdBridgePrimCache* fieldCache = BRIDGE_CACHE.ConvertToPrimCache(field);
 
-  SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, false, true, false, nullptr, timeStep, fieldTimeStep, true, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
+  bool timeVarying = false;
+  BRIDGE_USDWRITER.ManageUnusedRefs(volumeCache, Internals->ToCacheList(fieldCache), fieldPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+
+  SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, timeVarying, true, false, nullptr, timeStep, fieldTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
 }
 
 void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampler, const char* texfileName, double timeStep)
@@ -545,13 +635,17 @@ void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampl
   if (material.value == nullptr) return;
 
   UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
-  SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
-
   UsdBridgePrimCache* samplerCache = BRIDGE_CACHE.ConvertToPrimCache(sampler);
 
-  // Sampler references cannot be time-varying (connectToSource doesn't allow for that), and are set on the scenestage prim (so they inherit the type of the sampler prim)
-  SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef_NoClip(matCache, samplerCache, samplerPathRp, false, timeStep, timeStep, true, Internals->RefModCallbacks);
+  bool timeVarying = false;
+  BRIDGE_USDWRITER.ManageUnusedRefs(matCache, Internals->ToCacheList(samplerCache), samplerPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
+  // Sampler references cannot be time-varying (connectToSource doesn't allow for that), and are set on the scenestage prim (so they inherit the type of the sampler prim)
+  SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef_NoClip(matCache, samplerCache, samplerPathRp, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
+
+
+  // Bind sampler and material
+  SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache).first;
 
   BRIDGE_USDWRITER.BindSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, texfileName);
@@ -754,12 +848,9 @@ void UsdBridge::SaveScene()
 
 void UsdBridge::GarbageCollect()
 {
-#ifdef TIME_BASED_CACHING
   BRIDGE_CACHE.RemoveUnreferencedPrimCaches(
-    [this](ConstPrimCacheIterator it) 
+    [this](UsdBridgePrimCache* cacheEntry) 
     { 
-      UsdBridgePrimCache* cacheEntry = (*it).second.get();
-
       if(cacheEntry->ResourceCollect)
         cacheEntry->ResourceCollect(cacheEntry, BRIDGE_USDWRITER);
 
@@ -768,7 +859,6 @@ void UsdBridge::GarbageCollect()
   );
   if(this->EnableSaving)
     BRIDGE_USDWRITER.GetSceneStage()->Save();
-#endif
 }
 
 const char* UsdBridge::GetPrimPath(UsdBridgeHandle* handle)

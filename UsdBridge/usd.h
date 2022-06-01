@@ -14,6 +14,7 @@
 #include <boost/python/object.hpp>
 #include <pxr/pxr.h>
 #include <pxr/base/tf/token.h>
+#include <pxr/base/tf/diagnosticMgr.h>
 #include <pxr/base/trace/reporter.h>
 #include <pxr/base/trace/trace.h>
 #include <pxr/base/vt/array.h>

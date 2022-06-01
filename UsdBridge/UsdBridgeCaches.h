@@ -11,18 +11,19 @@
 
 struct UsdBridgePrimCache;
 class UsdBridgeUsdWriter;
-class UsdBridgeTemporalCache;
+class UsdBridgePrimCacheManager;
 
 typedef std::pair<std::string, UsdStageRefPtr> UsdStagePair; //Stage ptr and filename
 typedef std::pair<std::pair<bool,bool>, UsdBridgePrimCache*> BoolEntryPair; // Prim exists in stage, prim exists in cache, result cache entry ptr
 typedef void (*ResourceCollectFunc)(const UsdBridgePrimCache*, const UsdBridgeUsdWriter&);
+typedef std::function<void(UsdBridgePrimCache*)> AtRemoveFunc;
 typedef std::vector<UsdBridgePrimCache*> UsdBridgePrimCacheList;
 
-#ifdef TIME_BASED_CACHING
+
 struct UsdBridgeRefCache
 {
 public:
-  friend class UsdBridgeTemporalCache; // Only temporal cache can manage references
+  friend class UsdBridgePrimCacheManager; 
 
 protected:
   void IncRef() { ++RefCount; }
@@ -30,16 +31,15 @@ protected:
 
   unsigned int RefCount = 0;
   std::vector<UsdBridgePrimCache*> Children;
+#ifdef TIME_BASED_CACHING
   //Could also contain a mapping from child to an array of (parentTime,childTime) 
   //This would allow single timesteps to be removed in case of unused/replaced references at a parentTime (instead of removal of child if visible), without breaking garbage collection.
   //Additionally, a refcount per timestep would help to perform garbage collection of individual child clip stages/files, 
   //when no parent references that particular childTime anymore (due to removal/replacing with refs to other children, or replacement with different childTimes for the same child).
+#endif
 };
 
 struct UsdBridgePrimCache : public UsdBridgeRefCache
-#else
-struct UsdBridgePrimCache
-#endif
 {
   //Constructors
   UsdBridgePrimCache(const SdfPath& pp, const SdfPath& nm, ResourceCollectFunc cf)
@@ -67,7 +67,7 @@ struct UsdBridgePrimCache
 #endif
 };
 
-class UsdBridgeTemporalCache
+class UsdBridgePrimCacheManager
 {
 public:
   typedef std::unordered_map<std::string, std::unique_ptr<UsdBridgePrimCache>> PrimCacheContainer;
@@ -93,12 +93,10 @@ public:
 
   void InitializeWorldPrim(UsdBridgePrimCache* worldCache);
 
-#ifdef TIME_BASED_CACHING
   void AddChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child);
   void RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child);
-  void RemoveUnreferencedChildTree(UsdBridgePrimCache* parent);
-  void RemoveUnreferencedPrimCaches(std::function<void(ConstPrimCacheIterator)> atRemove);
-#endif
+  void RemoveUnreferencedChildTree(UsdBridgePrimCache* parent, AtRemoveFunc atRemove);
+  void RemoveUnreferencedPrimCaches(AtRemoveFunc atRemove);
 
 protected:
 

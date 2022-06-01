@@ -1053,27 +1053,26 @@ void UsdBridgeUsdWriter::UpdateClipMetaData(const UsdPrim& clipPrim, UsdBridgePr
 #endif
 
 SdfPath UsdBridgeUsdWriter::AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-  bool timeVarying, double parentTimeStep, double childTimeStep, bool replaceExisting,
+  bool timeVarying, double parentTimeStep, double childTimeStep,
   const RefModFuncs& refModCallbacks)
 {
-  return AddRef_Impl(SceneStage, parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, childTimeStep, replaceExisting, refModCallbacks);
+  return AddRef_Impl(SceneStage, parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, childTimeStep, refModCallbacks);
 }
 
 SdfPath UsdBridgeUsdWriter::AddRef_NoClip(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-  bool timeVarying, double parentTimeStep, double childTimeStep, bool replaceExisting,
+  bool timeVarying, double parentTimeStep, double childTimeStep,
   const RefModFuncs& refModCallbacks)
 {
-  return AddRef_Impl(stage, parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, childTimeStep, replaceExisting, refModCallbacks);
+  return AddRef_Impl(stage, parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, childTimeStep, refModCallbacks);
 }
 
 SdfPath UsdBridgeUsdWriter::AddRef(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
   bool timeVarying, bool valueClip, bool clipStages, const char* clipPostfix,
   double parentTimeStep, double childTimeStep,
-  bool replaceExisting,
   const RefModFuncs& refModCallbacks)
 {
   // Value clip-enabled references have to be defined on the scenestage, as usd does not re-time recursively.
-  return AddRef_Impl(SceneStage, parentCache, childCache, refPathExt, timeVarying, valueClip, clipStages, clipPostfix, parentTimeStep, childTimeStep, replaceExisting, refModCallbacks);
+  return AddRef_Impl(SceneStage, parentCache, childCache, refPathExt, timeVarying, valueClip, clipStages, clipPostfix, parentTimeStep, childTimeStep, refModCallbacks);
 }
 
 SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
@@ -1081,7 +1080,6 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePri
   bool valueClip,   // Retiming through a value clip
   bool clipStages,  // Separate stages for separate time slots (can only exist in usd if valueClip enabled)
   const char* clipPostfix, double parentTimeStep, double childTimeStep,
-  bool replaceExisting,
   const RefModFuncs& refModCallbacks)
 {
   UsdTimeCode parentTimeCode(parentTimeStep);
@@ -1089,34 +1087,18 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePri
   SdfPath childBasePath = parentCache->PrimPath;
   if (refPathExt)
     childBasePath = parentCache->PrimPath.AppendPath(SdfPath(refPathExt));
+  
   SdfPath referencingPrimPath = childBasePath.AppendPath(childCache->Name);
-
   UsdPrim referencingPrim = parentStage->GetPrimAtPath(referencingPrimPath);
 
   if (!referencingPrim)
   {
-    if (replaceExisting)
-    {
-#ifdef TIME_BASED_CACHING
-      //SetChildrenVisibility(stage, childBasePath, parentTimeCode, false);
-      ChildrenRemoveIfVisible(parentStage, parentCache, childBasePath, timeVarying, parentTimeCode, refModCallbacks.AtRemoveRef);
-#else
-      // Remove the whole base path or empty the parent prim
-      if (refPathExt)
-        parentStage->RemovePrim(childBasePath);
-      else
-        RemoveAllRefs(parentStage, parentCache, nullptr, timeVarying, 0.0, refModCallbacks.AtRemoveRef);
-#endif
-    }
-
-    UsdPrim referencingPrim = parentStage->DefinePrim(referencingPrimPath);
+    referencingPrim = parentStage->DefinePrim(referencingPrimPath);
     assert(referencingPrim);
 
 #ifdef VALUE_CLIP_RETIMING
     if (valueClip)
-    {
       InitializeClipMetaData(referencingPrim, childCache, parentTimeStep, childTimeStep, clipStages, clipPostfix);
-    }
 #endif
 
     {
@@ -1141,24 +1123,13 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePri
   {
 #ifdef TIME_BASED_CACHING
     if (timeVarying)
-    {
-      if (replaceExisting)
-      {
-        // Set all children's visibility to false except for the referencing prim.
-        //SetChildrenVisibility(stage, childBasePath, parentTimeCode, false); 
-
-        // Use ChildrenRemoveIfVisible instead; removes references for all timesteps and decreases refcount for garbage collection (no tracking of visibility over all timesteps atm). 
-        ChildrenRemoveIfVisible(parentStage, parentCache, childBasePath, timeVarying, parentTimeCode, refModCallbacks.AtRemoveRef, referencingPrimPath);
-      }
       SetPrimVisibility(parentStage, referencingPrimPath, parentTimeCode, true);
-    }
+
 #ifdef VALUE_CLIP_RETIMING
     // Cliptimes are added as additional info, not actively removed (visibility values remain leading in defining existing relationships over timesteps)
     // Also, clip stages at childTimeSteps which are not referenced anymore, are not removed; they could still be referenced from other parents!
     if (valueClip)
-    {
       UpdateClipMetaData(referencingPrim, childCache, parentTimeStep, childTimeStep, clipStages, clipPostfix);
-    }
 #endif
 #endif
   }
@@ -1168,34 +1139,31 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePri
 
 void UsdBridgeUsdWriter::RemoveAllRefs(UsdBridgePrimCache* parentCache, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef)
 {
-  RemoveAllRefs(SceneStage, parentCache, refPathExt, timeVarying, timeStep, atRemoveRef);
-}
-
-void UsdBridgeUsdWriter::RemoveAllRefs(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef)
-{
-#ifdef TIME_BASED_CACHING
-  UsdTimeCode timeCode(timeStep);
-
   SdfPath childBasePath = parentCache->PrimPath;
   if (refPathExt)
     childBasePath = parentCache->PrimPath.AppendPath(SdfPath(refPathExt));
+
+  RemoveAllRefs(SceneStage, parentCache, childBasePath, timeVarying, timeStep, atRemoveRef);
+}
+
+void UsdBridgeUsdWriter::RemoveAllRefs(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, SdfPath childBasePath, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef)
+{
+#ifdef TIME_BASED_CACHING
+  UsdTimeCode timeCode(timeStep);
 
   // Remove refs just for this timecode, so leave invisible refs (could still be visible in other timecodes) intact.
   //SetChildrenVisibility(stage, childBasePath, timeCode, false);
   ChildrenRemoveIfVisible(stage, parentCache, childBasePath, timeVarying, timeCode, atRemoveRef);
 #else
-  if (refPathExt)
+  UsdPrim parentPrim = stage->GetPrimAtPath(childBasePath);
+  if(parentPrim)
   {
-    SdfPath childBasePath = parentCache->PrimPath.AppendPath(SdfPath(refPathExt));
-    stage->RemovePrim(childBasePath);
-  }
-  else
-  {
-    UsdPrim parentPrim = stage->GetPrimAtPath(parentCache->PrimPath);
     UsdPrimSiblingRange children = parentPrim.GetAllChildren();
     for (UsdPrim child : children)
     {
-      stage->RemovePrim(child.GetPath());
+      const std::string& childName = child.GetName().GetString();
+      atRemoveRef(parentCache, childName); // Decrease reference count in caches
+      stage->RemovePrim(child.GetPath()); // Remove reference prim
     }
   }
 #endif
@@ -1235,12 +1203,16 @@ void UsdBridgeUsdWriter::ManageUnusedRefs(UsdStageRefPtr stage, UsdBridgePrimCac
 
       if (!found)
 #ifdef TIME_BASED_CACHING
-      {// make referencing prim invisible at timestep
+      {
+        // make *referencing* prim invisible at timestep
         //SetPrimVisibility(oldChild.GetPath(), timeCode, false);
-        PrimRemoveIfVisible(stage, parentCache, oldChild, timeVarying, timeCode, atRemoveRef);
+
+        // Remove *referencing* prim if visible
+        PrimRemoveIfVisible(stage, parentCache, oldChild, timeVarying, timeCode, atRemoveRef); 
       }
 #else
       {// remove the whole referencing prim
+        atRemoveRef(parentCache, oldChildName);
         stage->RemovePrim(oldChild.GetPath());
       }
 #endif
