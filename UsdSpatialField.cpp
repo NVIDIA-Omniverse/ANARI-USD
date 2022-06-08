@@ -3,9 +3,12 @@
 
 #include "UsdSpatialField.h"
 #include "UsdBridge/UsdBridge.h"
-#include "UsdDataArray.h"
 #include "UsdAnari.h"
+#include "UsdDataArray.h"
 #include "UsdDevice.h"
+#include "UsdVolume.h"
+
+#include <algorithm>
 
 DEFINE_PARAMETER_MAP(UsdSpatialField,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
@@ -45,12 +48,39 @@ void UsdSpatialField::filterResetParam(const char *name)
   resetParam(name);
 }
 
-void UsdSpatialField::commit(UsdDevice* device)
+void UsdSpatialField::addParent(UsdVolume* volume)
+{
+  anari::IntrusivePtr<UsdVolume> volPtr(volume);
+  auto it = std::find(parents.begin(), parents.end(), volPtr);
+  if(it == parents.end())
+    parents.emplace_back(volPtr);
+}
+    
+void UsdSpatialField::removeParent(UsdVolume* volume)
+{
+  auto it = std::find(parents.begin(), parents.end(), anari::IntrusivePtr<UsdVolume>(volume));
+  if(it != parents.end())
+  {
+    *it = parents.back();
+    parents.pop_back();
+  }
+}
+
+bool UsdSpatialField::deferCommit(UsdDevice* device)
+{
+  // The parent volumes may not yet be known at this commit. To have a list of spatialfields from which to gather
+  // parent volumes, put them in commit list and collect at renderFrame().
+  // (It could also be a separate list, in which case commit can happen immediately, but that doesn't have much of an advantage)
+  return true; 
+}
+
+void UsdSpatialField::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge)
     return;
 
   const char* debugName = getName();
+  LogInfo logInfo(device, this, ANARI_SPATIAL_FIELD, debugName);
 
   bool isNew = false;
   if(!usdHandle.value)
@@ -66,7 +96,7 @@ void UsdSpatialField::commit(UsdDevice* device)
   }
 
   const UsdDataLayout& dataLayout = fieldDataArray->getLayout();
-  if (AssertNoStride(dataLayout, device, debugName, "data"))
+  if (!AssertNoStride(dataLayout, logInfo, "data"))
     return;
 
   switch (fieldDataArray->getType())
@@ -90,22 +120,4 @@ void UsdSpatialField::commit(UsdDevice* device)
 
   // Make sure that parameters are set a first time
   paramChanged = paramChanged || isNew;
-
-  // Handled in UsdVolume
-  //if (paramChanged)
-  //{
-  //  if (paramData.data)
-  //  {
-  //
-  //
-  //
-  //  }
-  //  else
-  //  {
-  //    if (!paramData.data)
-  //      device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdSpatialField '%s' commit failed: missing 'data'.", debugName);
-  //  }
-  //
-  //  paramChanged = false;
-  //}
 }

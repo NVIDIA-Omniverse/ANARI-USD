@@ -13,7 +13,7 @@ struct UsdWorldData
   const char* usdName = nullptr;
 
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:instances
-  const UsdDataArray* instances = nullptr;
+  UsdDataArray* instances = nullptr;
 };
 
 class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHandle>
@@ -30,8 +30,9 @@ class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHan
     void filterResetParam(
       const char *name) override;
 
-    void commit(UsdDevice* device) override;
-
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
+
     std::vector<UsdInstanceHandle> instanceHandles; // for convenience
 };

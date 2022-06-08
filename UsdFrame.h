@@ -38,14 +38,14 @@ class UsdFrame : public UsdBaseObject, public UsdParameterizedObject<UsdFrame, U
       uint64_t size,
       UsdDevice* device) override;
 
-    void commit(UsdDevice* device) override;
-
     const void* mapBuffer(const char* channel);
     void unmapBuffer(const char* channel);
 
     UsdRenderer* getRenderer();
 
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
 
     char* ReserveBuffer(ANARIDataType format);
 

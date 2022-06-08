@@ -58,8 +58,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
         {
           if (strcmp(objectName, "") == 0)
           {
-            reportStatusThroughDevice(device,
-              this, ANARI_OBJECT, ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
+            reportStatusThroughDevice(LogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
               "%s: ANARI object %s cannot be an empty string, using auto-generated name instead.", getName(), "name");
           }
           else
@@ -72,8 +71,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
         }
         else if (strcmp(name, "usd::name") == 0)
         {
-          reportStatusThroughDevice(device,
-            this, ANARI_OBJECT, ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
+          reportStatusThroughDevice(LogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
             "%s parameter '%s' cannot be set, only read with getProperty().", getName(), "usd::name");
           return false;
         }
@@ -94,7 +92,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
       }
       else if (type == ANARI_UINT64 && strcmp(name, "usd::name.size") == 0)
       {
-        if (checkSizeOnStringLengthProperty(device, this, size, "usd::name.size"))
+        if (Assert64bitStringLengthProperty(size, LogInfo(device, this, ANARI_OBJECT, this->getName()), "usd::name.size"))
         {
           uint64_t nameLen = strlen(ParamClass::paramData.usdName)+1;
           memcpy(mem, &nameLen, size);
@@ -109,7 +107,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
       }
       else if (type == ANARI_UINT64 && strcmp(name, "usd::primpath.size") == 0)
       {
-        if (checkSizeOnStringLengthProperty(device, this, size, "usd::primpath.size"))
+        if (Assert64bitStringLengthProperty(size, LogInfo(device, this, ANARI_OBJECT, this->getName()), "usd::primpath.size"))
         {
           const char* primPath = usdBridge->GetPrimPath(&usdHandle);
           uint64_t nameLen = strlen(primPath)+1;
@@ -120,6 +118,12 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
       return 0;
     }
 
+    virtual void commit(UsdDevice* device) override
+    {
+      FlipParamBuffers();
+      UsdBaseObject::commit(device);
+    }
+
   protected:
     typedef UsdBridgedBaseObject<T,D,H> BridgedBaseObjectType;
 
@@ -127,3 +131,26 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
     UsdBridge* usdBridge;
     H usdHandle;
 };
+
+template<class T, class D, class H>
+inline bool UsdObjectNotInitialized(const UsdBridgedBaseObject<T,D,H>* obj)
+{
+  return obj && !obj->getUsdHandle().value;
+}
+
+template<class T>
+inline bool UsdObjectNotInitialized(UsdDataArray* objects)
+{
+  bool notInitialized = false;
+  if(anari::isObject(objects->getType()))
+  {
+    const T* const * object = reinterpret_cast<const T* const *>(objects->getData());
+    uint64_t numObjects = objects->getLayout().numItems1;
+    for(int i = 0; i < numObjects; ++i)
+    {
+      notInitialized = notInitialized || UsdObjectNotInitialized(object[i]);
+    }
+  }
+
+  return notInitialized;
+}

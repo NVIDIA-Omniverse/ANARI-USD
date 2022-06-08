@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdRenderer.h"
-#include "UsdDevice.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdAnari.h"
+#include "UsdDevice.h"
 
 DEFINE_PARAMETER_MAP(UsdRenderer,
 )
@@ -35,7 +36,7 @@ int UsdRenderer::getProperty(const char * name, ANARIDataType type, void * mem, 
   return 0;
 }
 
-void UsdRenderer::commit(UsdDevice* device)
+void UsdRenderer::doCommitWork(UsdDevice* device)
 {
   
 }

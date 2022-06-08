@@ -3,14 +3,18 @@
 
 #include "UsdInstance.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdAnari.h"
 #include "UsdDevice.h"
 #include "UsdGroup.h"
+
+#define GroupType ANARI_GROUP
+using GroupUsdType = AnariToUsdBridgedObject<GroupType>::Type;
 
 DEFINE_PARAMETER_MAP(UsdInstance,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
   REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
-  REGISTER_PARAMETER_MACRO("group", ANARI_GROUP, group)
+  REGISTER_PARAMETER_MACRO("group", GroupType, group)
   REGISTER_PARAMETER_MACRO("transform", ANARI_FLOAT32_MAT3x4, transform)
 )
 
@@ -42,7 +46,16 @@ void UsdInstance::filterResetParam(const char *name)
   resetParam(name);
 }
 
-void UsdInstance::commit(UsdDevice* device)
+bool UsdInstance::deferCommit(UsdDevice* device)
+{
+  if(UsdObjectNotInitialized<GroupUsdType>(paramData.group))
+  {
+    return true;
+  }
+  return false;
+}
+
+void UsdInstance::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge)
     return;

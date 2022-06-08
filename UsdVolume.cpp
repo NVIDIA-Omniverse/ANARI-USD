@@ -3,6 +3,7 @@
 
 #include "UsdVolume.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdAnari.h"
 #include "UsdDevice.h"
 #include "UsdSpatialField.h"
 #include "UsdDataArray.h"
@@ -26,6 +27,9 @@ UsdVolume::UsdVolume(const char* name, UsdBridge* bridge, UsdDevice* device)
 
 UsdVolume::~UsdVolume()
 {
+  if(this->paramData.field)
+    this->paramData.field->removeParent(this);
+
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
   // Given that the object is destroyed, none of its references to other objects
   // has to be updated anymore.
@@ -39,18 +43,32 @@ void UsdVolume::filterSetParam(const char *name,
   const void *mem,
   UsdDevice* device)
 {
+  bool isField = std::strcmp(name, "field") == 0;
+
+  if(isField && this->paramData.field)
+    this->paramData.field->removeParent(this);
+
   if (filterNameParam(name, type, mem, device))
     setParam(name, type, mem, device);
+
+  if(isField && this->paramData.field)
+    this->paramData.field->addParent(this);
 }
 
 void UsdVolume::filterResetParam(const char *name)
 {
+  bool isField = std::strcmp(name, "field") == 0;
+  if(isField && this->paramData.field)
+    this->paramData.field->removeParent(this);
+
   resetParam(name);
 }
 
 bool UsdVolume::CheckTfParams(UsdDevice* device)
 {
   const char* debugName = getName();
+
+  LogInfo logInfo(device, this, ANARI_VOLUME, debugName);
 
   // Only perform data(type) checks, data upload along with field in UsdVolume::commit()
   const UsdDataArray* tfColor = this->paramData.color;
@@ -69,14 +87,14 @@ bool UsdVolume::CheckTfParams(UsdDevice* device)
     return false;
   }
 
-  if (AssertOneDimensional(tfColor->getLayout(), device, debugName, "tfColor"))
+  if (!AssertOneDimensional(tfColor->getLayout(), logInfo, "tfColor"))
   {
     device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction color array not one-dimensional.", debugName);
     return false;
   }
 
-  if (AssertOneDimensional(tfOpacity->getLayout(), device, debugName, "tfOpacity"))
+  if (!AssertOneDimensional(tfOpacity->getLayout(), logInfo, "tfOpacity"))
   {
     device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction opacity array not one-dimensional.", debugName);
@@ -156,11 +174,23 @@ bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
   return true;
 }
 
+bool UsdVolume::deferCommit(UsdDevice* device)
+{
+  // The spatial field may not yet be committed, but the volume reads data from its params during commit. So always defer.
+  return true; 
+}
 
-void UsdVolume::commit(UsdDevice* device)
+void UsdVolume::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge)
     return;
+
+  if(UsdObjectNotInitialized(paramData.field))
+  {
+    device->addToCommitList(paramData.field);
+    device->addToCommitList(this);
+    return;
+  }
 
   bool isNew = false;
   if (!usdHandle.value)
@@ -191,14 +221,17 @@ void UsdVolume::commit(UsdDevice* device)
   // Regardless of whether tf param changes, field params or the vol reference itself, UpdateVolume is required.
   if (paramChanged || paramData.field->paramChanged)
   {
-    UpdateVolume(device, debugName);
+    if(paramData.field)
+    {
+      UpdateVolume(device, debugName);
 
-    paramChanged = false;
-    paramData.field->paramChanged = false;
-  }
-  else
-  {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
-      "UsdVolume '%s' commit failed: field or transferfunction reference missing.", debugName);
+      paramChanged = false;
+      paramData.field->paramChanged = false;
+    }
+    else
+    {
+      device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+        "UsdVolume '%s' commit failed: field reference missing.", debugName);
+    }
   }
 }

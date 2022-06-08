@@ -32,7 +32,7 @@ class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSa
     void filterResetParam(
       const char *name) override;
 
-    void commit(UsdDevice* device) override;
-
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
 };

@@ -6,6 +6,7 @@
 #include "UsdBridgedBaseObject.h"
 
 class UsdDataArray;
+class UsdVolume;
 
 struct UsdSpatialFieldData
 {
@@ -26,9 +27,9 @@ struct UsdSpatialFieldData
 
 class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialFieldData, UsdSpatialFieldHandle>
 {
-  protected:
-
   public:
+    using ParentList = std::vector<anari::IntrusivePtr<UsdVolume>>;
+
     UsdSpatialField(const char* name, const char* type, UsdBridge* bridge);
     ~UsdSpatialField();
 
@@ -40,11 +41,16 @@ class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialF
     void filterResetParam(
       const char *name) override;
 
-    void commit(UsdDevice* device) override;
-
     friend class UsdVolume;
+    void addParent(UsdVolume* volume);
+    void removeParent(UsdVolume* volume);
+    const ParentList& getParents() { return parents; };
 
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
+
+    ParentList parents;
 
     void toBridge(UsdDevice* device, const char* debugName);
 };

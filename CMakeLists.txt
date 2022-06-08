@@ -84,6 +84,7 @@ message(STATUS "USD Device version: ${USD_DEVICE_VERSION}")
 
 set(USDModule_SOURCES
   UsdAnari.cpp
+  UsdBaseObject.cpp
   UsdDevice.cpp
   UsdDataArray.cpp
   UsdGeometry.cpp

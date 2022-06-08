@@ -13,7 +13,7 @@ struct UsdInstanceData
   const char* usdName = nullptr;
 
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:group, 1:transform
-  const UsdGroup* group = nullptr;
+  UsdGroup* group = nullptr;
   float transform[12] = { 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 };
 };
 
@@ -32,7 +32,7 @@ class UsdInstance : public UsdBridgedBaseObject<UsdInstance, UsdInstanceData, Us
     void filterResetParam(
       const char *name) override;
 
-    void commit(UsdDevice* device) override;
-
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
 };

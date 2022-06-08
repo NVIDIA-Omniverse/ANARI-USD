@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdFrame.h"
-#include "UsdDevice.h"
-#include "UsdAnari.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdAnari.h"
+#include "UsdDevice.h"
 
 DEFINE_PARAMETER_MAP(UsdFrame,
   REGISTER_PARAMETER_MACRO("world", ANARI_WORLD, world)
@@ -44,7 +44,7 @@ int UsdFrame::getProperty(const char * name, ANARIDataType type, void * mem, uin
   return 0;
 }
 
-void UsdFrame::commit(UsdDevice* device)
+void UsdFrame::doCommitWork(UsdDevice* device)
 {
   
 }

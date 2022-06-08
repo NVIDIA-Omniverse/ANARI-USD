@@ -13,7 +13,6 @@
 #include "UsdGroup.h"
 #include "UsdMaterial.h"
 #include "UsdSampler.h"
-#include "UsdTransferFunction.h"
 #include "UsdWorld.h"
 #include "UsdRenderer.h"
 #include "UsdFrame.h"
@@ -115,6 +114,7 @@ DEFINE_PARAMETER_MAP(UsdDevice,
   REGISTER_PARAMETER_MACRO("usd::serialize.newsession", ANARI_BOOL, createNewSession)
   REGISTER_PARAMETER_MACRO("usd::serialize.outputbinary", ANARI_BOOL, outputBinary)
   REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
+  REGISTER_PARAMETER_MACRO("usd::writeatcommit", ANARI_BOOL, writeAtCommit)
   REGISTER_PARAMETER_MACRO("usd::output.material", ANARI_BOOL, outputMaterial)
   REGISTER_PARAMETER_MACRO("usd::output.displaycolors", ANARI_BOOL, outputDisplayColors)
   REGISTER_PARAMETER_MACRO("usd::output.mdlcolors", ANARI_BOOL, outputMdlColors)
@@ -270,31 +270,36 @@ int UsdDevice::deviceImplements(const char *)
 
 void UsdDevice::deviceCommit()
 {
-  statusFunc = userSetStatusFunc ? userSetStatusFunc : defaultStatusCallback();
-  statusUserData = userSetStatusUserData ? userSetStatusUserData : defaultStatusCallbackUserPtr();
+  if(!bridgeInitialized)
+  {
+    bridgeInitialized = true;
 
-  if(paramData.outputPath)
-    internals->outputLocation = paramData.outputPath;
+    statusFunc = userSetStatusFunc ? userSetStatusFunc : defaultStatusCallback();
+    statusUserData = userSetStatusUserData ? userSetStatusUserData : defaultStatusCallbackUserPtr();
 
-  if(internals->outputLocation.empty()) {
-    auto *envLocation = getenv("ANARI_USD_SERIALIZE_LOCATION");
-    if (envLocation) {
-      internals->outputLocation = envLocation;
-      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR,
-        "Usd Device parameter 'usd::serialize.location' using ANARI_USD_SERIALIZE_LOCATION value");
+    if(paramData.outputPath)
+      internals->outputLocation = paramData.outputPath;
+
+    if(internals->outputLocation.empty()) {
+      auto *envLocation = getenv("ANARI_USD_SERIALIZE_LOCATION");
+      if (envLocation) {
+        internals->outputLocation = envLocation;
+        reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR,
+          "Usd Device parameter 'usd::serialize.location' using ANARI_USD_SERIALIZE_LOCATION value");
+      }
     }
-  }
 
-  if (internals->outputLocation.empty())
-  {
-    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
-      "Usd Device parameter 'usd::serialize.location' not set, defaulting to './'");
-    internals->outputLocation = "./";
-  }
+    if (internals->outputLocation.empty())
+    {
+      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
+        "Usd Device parameter 'usd::serialize.location' not set, defaulting to './'");
+      internals->outputLocation = "./";
+    }
 
-  if (!internals->CreateNewBridge(paramData, &reportBridgeStatus, this))
-  {
-    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_UNKNOWN_ERROR, "Usd Bridge failed to load");
+    if (!internals->CreateNewBridge(paramData, &reportBridgeStatus, this))
+    {
+      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_UNKNOWN_ERROR, "Usd Bridge failed to load");
+    }
   }
 }
 
@@ -501,6 +506,8 @@ ANARIRenderer UsdDevice::newRenderer(const char *type)
 
 void UsdDevice::renderFrame(ANARIFrame frame)
 {
+  flushCommitList();
+
   UsdRenderer* ren = ((UsdFrame*)frame)->getRenderer();
   if(ren)
     ren->saveUsd();
@@ -528,6 +535,104 @@ const char* UsdDevice::makeUniqueName(const char* name)
 bool UsdDevice::nameExists(const char* name)
 {
   return internals->uniqueNames.find(name) != internals->uniqueNames.end();
+}
+
+void UsdDevice::addToCommitList(UsdBaseObject* object)
+{
+  if(!object)
+    return;
+
+  if(lockCommitList)
+  {
+    this->reportStatus(object, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, 
+      "Usd device internal error; addToCommitList called while list is locked");
+  }
+  else
+  {
+    anari::IntrusivePtr<UsdBaseObject> objPtr(object);
+    auto it = std::find(commitList.begin(), commitList.end(), objPtr);
+    if(it == commitList.end())
+      commitList.emplace_back(objPtr);
+  }
+}
+
+void UsdDevice::removeFromCommitList(UsdBaseObject* object)
+{
+  if(lockCommitList)
+  {
+    this->reportStatus(object, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, 
+      "Usd device internal error; removeFromCommitList called while list is locked");
+  }
+  else
+  {
+    anari::IntrusivePtr<UsdBaseObject> objPtr(object);
+    auto it = std::find(commitList.begin(), commitList.end(), objPtr);
+    if(it != commitList.end())
+      commitList.erase(it);
+  }
+}
+
+void UsdDevice::flushCommitList()
+{
+  for(auto object : commitList)
+  {
+    if(object->getType() == ANARI_SPATIAL_FIELD)
+    {
+      UsdSpatialField* spatialField = reinterpret_cast<UsdSpatialField*>(object.ptr);
+
+      // Writing out a Spatialfield implies writing out the parent UsdVolume.
+      const UsdSpatialField::ParentList& parents = spatialField->getParents();
+      for(auto parent : parents)
+      {
+        device->addToCommitList(parent.ptr);
+      }
+    }
+  }
+
+  lockCommitList = true;
+
+  writeTypeToUsd<(int)ANARI_SAMPLER>();
+  
+  writeTypeToUsd<(int)ANARI_SPATIAL_FIELD>();
+  writeTypeToUsd<(int)ANARI_GEOMETRY>();
+  writeTypeToUsd<(int)ANARI_LIGHT>();
+
+  writeTypeToUsd<(int)ANARI_MATERIAL>();
+
+  writeTypeToUsd<(int)ANARI_SURFACE>();
+  writeTypeToUsd<(int)ANARI_VOLUME>();
+
+  writeTypeToUsd<(int)ANARI_GROUP>();
+  writeTypeToUsd<(int)ANARI_INSTANCE>();
+  writeTypeToUsd<(int)ANARI_WORLD>();
+
+  writeTypeToUsd<(int)ANARI_RENDERER>();
+  writeTypeToUsd<(int)ANARI_FRAME>();
+
+  commitList.resize(0);
+
+  lockCommitList = false;
+}
+
+template<int typeInt>
+void UsdDevice::writeTypeToUsd()
+{
+  for(auto object : commitList)
+  {
+    if((int)object->getType() == typeInt)
+    {
+      if(!object->deferCommit(device))
+        object->doCommitWork(this, true);
+      else
+      {
+        using ObjectType = AnariToUsdBridgedObject<typeInt>::Type;
+        ObjectType* typedObj = reinterpret_cast<ObjectType*>(object.ptr);
+
+        this->reportStatus(object, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, 
+          "User forgot to at least once commit an ANARI child object of parent object '%s'", typedObj->getName());
+      }
+    }
+  }
 }
 
 int UsdDevice::getProperty(ANARIObject object,

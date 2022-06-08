@@ -3,8 +3,8 @@
 
 #include "UsdGeometry.h"
 #include "UsdBridge/UsdBridge.h"
-#include "UsdDataArray.h"
 #include "UsdAnari.h"
+#include "UsdDataArray.h"
 #include "UsdDevice.h"
 #include "UsdBridgeUtils.h"
 
@@ -732,6 +732,8 @@ void UsdGeometry::initializeGeomData(UsdBridgeCurveData& geomData)
 bool UsdGeometry::checkArrayConstraints(const UsdDataArray* vertexArray, const UsdDataArray* primArray,
   const char* paramName, UsdDevice* device, const char* debugName, int attribIndex)
 {
+  LogInfo logInfo(device, this, ANARI_GEOMETRY, debugName);
+
   const UsdDataArray* vertices = paramData.vertexPositions;
   const UsdDataLayout& vertLayout = vertices->getLayout();
 
@@ -743,8 +745,8 @@ bool UsdGeometry::checkArrayConstraints(const UsdDataArray* vertexArray, const U
 
   const UsdDataLayout& attrLayout = vertexArray ? perVertLayout : perPrimLayout;
 
-  if (AssertOneDimensional(attrLayout, device, debugName, paramName)
-    || AssertNoStride(attrLayout, device, debugName, paramName)
+  if (!AssertOneDimensional(attrLayout, logInfo, paramName)
+    || !AssertNoStride(attrLayout, logInfo, paramName)
     )
   {
     return false;
@@ -1189,7 +1191,7 @@ void UsdGeometry::commitTemplate(UsdDevice* device)
   }
 }
 
-void UsdGeometry::commit(UsdDevice* device)
+void UsdGeometry::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge)
     return;

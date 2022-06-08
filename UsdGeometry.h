@@ -74,8 +74,6 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
     void filterResetParam(
       const char *name) override;
 
-    void commit(UsdDevice* device) override;
-
     struct TempArrays
     {
       std::vector<int> CurveLengths;
@@ -90,6 +88,8 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
     };
 
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
 
     void initializeGeomData(UsdBridgeMeshData& geomData);
     void initializeGeomData(UsdBridgeInstancerData& geomData);

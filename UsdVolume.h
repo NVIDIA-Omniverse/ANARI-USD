@@ -40,10 +40,10 @@ class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolum
 
     void filterResetParam(
       const char *name) override;
-  
-    virtual void commit(UsdDevice* device);
 
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
 
     bool CheckTfParams(UsdDevice* device);
     bool UpdateVolume(UsdDevice* device, const char* debugName);

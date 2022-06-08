@@ -3,15 +3,21 @@
 
 #include "UsdSurface.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdAnari.h"
 #include "UsdDevice.h"
 #include "UsdMaterial.h"
 #include "UsdGeometry.h"
 
+#define GeometryType ANARI_GEOMETRY
+#define MaterialType ANARI_MATERIAL
+using GeometryUsdType = AnariToUsdBridgedObject<GeometryType>::Type;
+using MaterialUsdType = AnariToUsdBridgedObject<MaterialType>::Type;
+
 DEFINE_PARAMETER_MAP(UsdSurface,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("geometry", ANARI_GEOMETRY, geometry)
-  REGISTER_PARAMETER_MACRO("material", ANARI_MATERIAL, material)
+  REGISTER_PARAMETER_MACRO("geometry", GeometryType, geometry)
+  REGISTER_PARAMETER_MACRO("material", MaterialType, material)
 )
 
 UsdSurface::UsdSurface(const char* name, UsdBridge* bridge, UsdDevice* device)
@@ -43,7 +49,16 @@ void UsdSurface::filterResetParam(const char *name)
   resetParam(name);
 }
 
-void UsdSurface::commit(UsdDevice* device)
+bool UsdSurface::deferCommit(UsdDevice* device)
+{
+  if(UsdObjectNotInitialized<GeometryUsdType>(paramData.geometry) || UsdObjectNotInitialized<MaterialUsdType>(paramData.material))
+  {
+    return true;
+  }
+  return false;
+}
+
+void UsdSurface::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge)
     return;
@@ -57,7 +72,7 @@ void UsdSurface::commit(UsdDevice* device)
     double worldTimeStep = device->getParams().timeStep;
 
     // Make sure the references are updated on the Bridge side.
-    if (paramData.geometry && paramData.material)
+    if (paramData.geometry && (!device->getParams().outputMaterial || paramData.material))
     {
       if(device->getParams().outputMaterial)
         usdBridge->SetGeometryMaterialRef(usdHandle, 

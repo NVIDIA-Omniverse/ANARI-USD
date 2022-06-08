@@ -460,40 +460,49 @@ ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level)
   return severity;
 }
 
-void reportStatusThroughDevice(UsdDevice* device,
-  void* source, ANARIDataType sourceType, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
+void reportStatusThroughDevice(const LogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
   const char *format, const char* firstArg, const char* secondArg)
 {
-  device->reportStatus(source, sourceType, severity, statusCode, format, firstArg, secondArg);
+  logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, severity, statusCode, format, firstArg, secondArg);
 }
 
-bool checkSizeOnStringLengthProperty(UsdDevice* device, void* source, uint64_t size, const char* name)
+bool Assert64bitStringLengthProperty(uint64_t size, const LogInfo& logInfo, const char* name)
 {
   if (size != sizeof(uint64_t))
   {
-    device->reportStatus(source, ANARI_OBJECT, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
-      "getProperty() on %s, size parameter differs from sizeof(uint64_t)", name);
+    logInfo.device->reportStatus(logInfo.source, ANARI_OBJECT, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+      "On object '%s', getProperty() on %s, size parameter differs from sizeof(uint64_t)", logInfo.sourceName, name);
     return false;
   }
   return true;
 }
 
-bool AssertOneDimensional(const UsdDataLayout& layout, UsdDevice* device, const char* objName, const char* arrayName)
+bool AssertOneDimensional(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName)
 {
   if (!layout.isOneDimensional())
   {
-    device->reportStatus(nullptr, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "'%s' commit failed: '%s' array has to be 1-dimensional.", objName, arrayName);
-    return true;
+    logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "On object '%s', '%s' array has to be 1-dimensional.", logInfo.sourceName, arrayName);
+    return false;
   }
-  return false;
+  return true;
 }
 
-bool AssertNoStride(const UsdDataLayout& layout, UsdDevice* device, const char* objName, const char* arrayName)
+bool AssertNoStride(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName)
 {
   if (!layout.isDense())
   {
-    device->reportStatus(nullptr, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "'%s' commit failed: '%s' layout strides should all be 0.", objName, arrayName);
-    return true;
+    logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "On object '%s', '%s' layout strides should all be 0.", logInfo.sourceName, arrayName);
+    return false;
   }
-  return false;
+  return true;
+}
+
+bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const LogInfo& logInfo, const char* errorMessage)
+{
+  if (dataArray && dataArray->getType() != dataType)
+  {
+    logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "On object '%s', '%s'", logInfo.sourceName, errorMessage);
+    return false;
+  }
+  return true;
 }

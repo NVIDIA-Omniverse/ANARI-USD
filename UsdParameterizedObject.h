@@ -103,7 +103,16 @@ protected:
 
         if (type == ANARI_BOOL)
         {
-          *(reinterpret_cast<bool*>(dest)) = *(reinterpret_cast<const uint32_t*>(src));
+          bool* destBool_p = reinterpret_cast<bool*>(dest);
+          bool srcBool = *(reinterpret_cast<const uint32_t*>(src));
+
+#ifdef TIME_BASED_CACHING
+          paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
+#else
+          paramChanged = paramChanged || (*destBool_p != srcBool);
+#endif
+
+          *destBool_p = srcBool;
         }
         else
         {
@@ -143,7 +152,7 @@ protected:
         }
       }
       else
-        reportStatusThroughDevice(device, this, ANARI_OBJECT, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+        reportStatusThroughDevice(LogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
           "Param %s should be of type %s", name, AnariTypeToString(it->second.second));
     }
   }

@@ -3,9 +3,13 @@
 
 #include "UsdWorld.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdAnari.h"
 #include "UsdInstance.h"
 #include "UsdDevice.h"
 #include "UsdDataArray.h"
+
+#define InstanceType ANARI_INSTANCE
+using InstanceUsdType = AnariToUsdBridgedObject<InstanceType>::Type;
 
 DEFINE_PARAMETER_MAP(UsdWorld,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
@@ -13,7 +17,6 @@ DEFINE_PARAMETER_MAP(UsdWorld,
   REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("instance", ANARI_ARRAY, instances)
 )
-
 
 UsdWorld::UsdWorld(const char* name, UsdBridge* bridge)
   : BridgedBaseObjectType(ANARI_WORLD, name, bridge)
@@ -42,7 +45,16 @@ void UsdWorld::filterResetParam(const char *name)
   resetParam(name);
 }
 
-void UsdWorld::commit(UsdDevice* device)
+bool UsdWorld::deferCommit(UsdDevice* device)
+{
+  if(UsdObjectNotInitialized<InstanceUsdType>(paramData.instances))
+  {
+    return true;
+  }
+  return false;
+}
+
+void UsdWorld::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge)
     return;
@@ -60,7 +72,7 @@ void UsdWorld::commit(UsdDevice* device)
 
     if (paramData.instances)
     {
-      if (paramData.instances->getType() == ANARI_INSTANCE)
+      if (paramData.instances->getType() == InstanceType)
       {
         const ANARIInstance* instances = reinterpret_cast<const ANARIInstance*>(paramData.instances->getData());
 

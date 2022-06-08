@@ -33,10 +33,15 @@ class UsdBaseObject : public anari::RefCounted
       uint64_t size,
       UsdDevice* device) = 0;
 
-    virtual void commit(UsdDevice* device) = 0;
+    virtual void commit(UsdDevice* device);
 
     ANARIDataType getType() const { return type; }
 
   protected:
+    virtual bool deferCommit(UsdDevice* device) = 0;
+    virtual void doCommitWork(UsdDevice* device) = 0;
+
     ANARIDataType type;
+
+    friend class UsdDevice;
 };

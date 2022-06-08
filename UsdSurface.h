@@ -16,8 +16,8 @@ struct UsdSurfaceData
 
   // No timevarying data: geometry and material reference always set over all timesteps
 
-  const UsdGeometry* geometry = nullptr;
-  const UsdMaterial* material = nullptr;
+  UsdGeometry* geometry = nullptr;
+  UsdMaterial* material = nullptr;
 };
 
 class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSurfaceHandle>
@@ -33,8 +33,8 @@ class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSu
 
     void filterResetParam(
       const char *name) override;
-  
-    virtual void commit(UsdDevice* device);
 
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
 };

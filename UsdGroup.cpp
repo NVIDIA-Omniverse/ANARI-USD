@@ -3,10 +3,16 @@
 
 #include "UsdGroup.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdAnari.h"
 #include "UsdDataArray.h"
 #include "UsdDevice.h"
 #include "UsdSurface.h"
 #include "UsdVolume.h"
+
+#define SurfaceType ANARI_SURFACE
+#define VolumeType ANARI_VOLUME
+using SurfaceUsdType = AnariToUsdBridgedObject<SurfaceType>::Type;
+using VolumeUsdType = AnariToUsdBridgedObject<VolumeType>::Type;
 
 DEFINE_PARAMETER_MAP(UsdGroup,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
@@ -44,26 +50,39 @@ void UsdGroup::filterResetParam(const char *name)
   resetParam(name);
 }
 
-void UsdGroup::commit(UsdDevice* device)
+bool UsdGroup::deferCommit(UsdDevice* device)
+{
+  if(UsdObjectNotInitialized<SurfaceUsdType>(paramData.surfaces) || 
+    UsdObjectNotInitialized<VolumeUsdType>(paramData.volumes))
+  {
+    return true;
+  }
+  return false;
+}
+
+void UsdGroup::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge)
     return;
 
-  const char* debugName = getName();
-
   bool isNew = false;
   if (!usdHandle.value)
-    isNew = usdBridge->CreateGroup(debugName, usdHandle);
+    isNew = usdBridge->CreateGroup(getName(), usdHandle);
 
   if (paramChanged || isNew)
   {
-    double timeStep = device->getParams().timeStep;
-    bool surfacesTimeVarying = paramData.timeVarying & 1;
-    bool volumesTimeVarying = paramData.timeVarying & (1 << 1);
+    LogInfo logInfo(device, this, ANARI_GROUP, this->getName());
+    bool validRefs = 
+      AssertArrayType(paramData.surfaces, SurfaceType, logInfo, "UsdGroup commit failed: 'surface' array elements should be of type ANARI_SURFACE") &&
+      AssertArrayType(paramData.volumes, VolumeType, logInfo, "UsdGroup commit failed: 'volume' array elements should be of type ANARI_VOLUME");
 
-    if (paramData.surfaces)
+    if(validRefs)
     {
-      if (paramData.surfaces->getType() == ANARI_SURFACE)
+      double timeStep = device->getParams().timeStep;
+      bool surfacesTimeVarying = paramData.timeVarying & 1;
+      bool volumesTimeVarying = paramData.timeVarying & (1 << 1);
+
+      if (paramData.surfaces)
       {
         const ANARISurface* surfaces = reinterpret_cast<const ANARISurface*>(paramData.surfaces->getData());
 
@@ -75,22 +94,14 @@ void UsdGroup::commit(UsdDevice* device)
           surfaceHandles[i] = usdSurface->getUsdHandle();
         }
 
-        if (numModels)
-          usdBridge->SetSurfaceRefs(usdHandle, &surfaceHandles[0], numModels, surfacesTimeVarying, timeStep);
+        usdBridge->SetSurfaceRefs(usdHandle, &surfaceHandles[0], numModels, surfacesTimeVarying, timeStep);
       }
       else
       {
-        device->reportStatus(this, ANARI_INSTANCE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGroup '%s' commit failed: 'surface' array elements should be of type ANARI_SURFACE", debugName);
+        usdBridge->DeleteSurfaceRefs(usdHandle, surfacesTimeVarying, timeStep);
       }
-    }
-    else
-    {
-      usdBridge->DeleteSurfaceRefs(usdHandle, surfacesTimeVarying, timeStep);
-    }
 
-    if (paramData.volumes)
-    {
-      if (paramData.volumes->getType() == ANARI_VOLUME)
+      if (paramData.volumes)
       {
         const ANARIVolume* volumes = reinterpret_cast<const ANARIVolume*>(paramData.volumes->getData());
 
@@ -102,17 +113,12 @@ void UsdGroup::commit(UsdDevice* device)
           volumeHandles[i] = usdVolume->getUsdHandle();
         }
 
-        if (numModels)
-          usdBridge->SetVolumeRefs(usdHandle, &volumeHandles[0], numModels, volumesTimeVarying, timeStep);
+        usdBridge->SetVolumeRefs(usdHandle, &volumeHandles[0], numModels, volumesTimeVarying, timeStep);
       }
       else
       {
-        device->reportStatus(this, ANARI_INSTANCE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGroup '%s' commit failed: 'volume' array elements should be of type ANARI_VOLUME", debugName);
+        usdBridge->DeleteVolumeRefs(usdHandle, volumesTimeVarying, timeStep);
       }
-    }
-    else
-    {
-      usdBridge->DeleteVolumeRefs(usdHandle, volumesTimeVarying, timeStep);
     }
 
     paramChanged = false;

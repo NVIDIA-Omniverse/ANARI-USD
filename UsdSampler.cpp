@@ -3,6 +3,7 @@
 
 #include "UsdSampler.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdAnari.h"
 #include "UsdDevice.h"
 
 DEFINE_PARAMETER_MAP(UsdSampler, 
@@ -63,7 +64,7 @@ void UsdSampler::filterResetParam(const char *name)
   resetParam(name);
 }
 
-void UsdSampler::commit(UsdDevice* device)
+void UsdSampler::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge || !device->getParams().outputMaterial)
     return;

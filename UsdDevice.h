@@ -37,6 +37,7 @@ struct UsdDeviceData
   const char* outputPath = nullptr;
   bool createNewSession = true;
   bool outputBinary = false;
+  bool writeAtCommit = false;
 
   double timeStep = 0.0;
 
@@ -175,6 +176,10 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
 
     bool nameExists(const char* name);
 
+    void addToCommitList(UsdBaseObject* object);
+    void removeFromCommitList(UsdBaseObject* object);
+    void flushCommitList();
+
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
     void LogAllocation(const UsdBaseObject* ptr);
@@ -207,8 +212,19 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
       int64_t byteStride2,
       uint64_t numItems3,
       int64_t byteStride3);
+    
+    template<int typeInt>
+    void writeTypeToUsd();
 
     std::unique_ptr<UsdDeviceInternals> internals;
+
+    bool bridgeInitialized = false;
+
+    // Using object pointers as basis for deferred commits; another option would be to traverse
+    // the bridge's internal cache handles, but a handle may map to multiple objects (with the same name)
+    // so that's not 1-1 with the effects of a non-deferred commit order.
+    std::vector<anari::IntrusivePtr<UsdBaseObject>> commitList;
+    bool lockCommitList = false;
 
     ANARIStatusCallback statusFunc = nullptr;
     void* statusUserData = nullptr;

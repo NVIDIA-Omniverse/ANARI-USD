@@ -24,7 +24,7 @@ struct UsdMaterialData
   float metallic = -1.0f;
   float ior = 1.0f;
   bool useVertexColors = false;
-  const UsdSampler* diffuseMap = nullptr;
+  UsdSampler* diffuseMap = nullptr;
 };
 
 class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, UsdMaterialHandle>
@@ -41,9 +41,9 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     void filterResetParam(
       const char *name) override;
 
-    void commit(UsdDevice* device) override;
-
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
 
     bool IsTranslucent = false;
 };

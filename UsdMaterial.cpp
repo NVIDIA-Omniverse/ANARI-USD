@@ -3,8 +3,12 @@
 
 #include "UsdMaterial.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdAnari.h"
 #include "UsdDevice.h"
 #include "UsdSampler.h"
+
+#define SamplerType ANARI_SAMPLER
+using SamplerUsdType = AnariToUsdBridgedObject<SamplerType>::Type;
 
 DEFINE_PARAMETER_MAP(UsdMaterial, 
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
@@ -20,7 +24,7 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
   REGISTER_PARAMETER_MACRO("metallic", ANARI_FLOAT32, metallic)
   REGISTER_PARAMETER_MACRO("ior", ANARI_FLOAT32, ior)
   REGISTER_PARAMETER_MACRO("usevertexcolors", ANARI_BOOL, useVertexColors)
-  REGISTER_PARAMETER_MACRO("map_kd", ANARI_SAMPLER, diffuseMap)
+  REGISTER_PARAMETER_MACRO("map_kd", SamplerType, diffuseMap)
 )
 
 UsdMaterial::UsdMaterial(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device)
@@ -62,7 +66,16 @@ void UsdMaterial::filterResetParam(const char *name)
   resetParam(name);
 }
 
-void UsdMaterial::commit(UsdDevice* device)
+bool UsdMaterial::deferCommit(UsdDevice* device)
+{
+  if(UsdObjectNotInitialized<SamplerUsdType>(paramData.sampler))
+  {
+    return true;
+  }
+  return false;
+}
+
+void UsdMaterial::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge || !device->getParams().outputMaterial)
     return;

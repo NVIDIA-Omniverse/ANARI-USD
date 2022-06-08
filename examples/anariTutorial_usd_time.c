@@ -153,9 +153,9 @@ int main(int argc, const char **argv)
   printf("done!\n");
   printf("setting up scene...");
 
-  double timeValues[] = { 1, 0, 2, 3, 5, 8, 4, 6, 7, 9 };
-  double geomTimeValues[] = { 3, 0, 4, 9, 7, 8, 6, 5, 1, 2 };
-  double matTimeValues[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+  double timeValues[] = { 1, 0, 2, 3, 5, 8, 4, 6, 7, 9, 10 };
+  double geomTimeValues[] = { 3, 0, 4, 9, 7, 8, 6, 5, 1, 2, 10 };
+  double matTimeValues[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
   int numTimeSteps = sizeof(timeValues) / sizeof(double);
 
   int useVertexColors = 0;

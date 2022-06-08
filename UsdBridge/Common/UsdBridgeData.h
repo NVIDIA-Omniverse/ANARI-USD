@@ -24,7 +24,6 @@ struct UsdSurfaceHandle : public UsdBridgeHandle {};
 struct UsdGeometryHandle : public UsdBridgeHandle {};
 struct UsdVolumeHandle : public UsdBridgeHandle {};
 struct UsdSpatialFieldHandle : public UsdBridgeHandle {};
-struct UsdTransferFunctionHandle : public UsdBridgeHandle {};
 struct UsdSamplerHandle : public UsdBridgeHandle {};
 struct UsdShaderHandle : public UsdBridgeHandle {};
 struct UsdMaterialHandle : public UsdBridgeHandle {};

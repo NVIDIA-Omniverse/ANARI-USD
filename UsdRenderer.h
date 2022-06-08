@@ -32,10 +32,11 @@ class UsdRenderer : public UsdBaseObject, public UsdParameterizedObject<UsdRende
       uint64_t size,
       UsdDevice* device) override;
 
-    void commit(UsdDevice* device) override;
-
     void saveUsd();
 
   protected:
+    bool deferCommit(UsdDevice* device) override;
+    void doCommitWork(UsdDevice* device) override;
+
     UsdBridge* usdBridge;
 };
