@@ -21,17 +21,20 @@ namespace
   UsdBridgeSamplerData::WrapMode ANARIToUsdBridgeWrapMode(const char* anariWrapMode)
   {
     UsdBridgeSamplerData::WrapMode usdWrapMode = UsdBridgeSamplerData::WrapMode::BLACK;
-    if (!std::strcmp(anariWrapMode, "clampToEdge"))
+    if(anariWrapMode)
     {
-      usdWrapMode = UsdBridgeSamplerData::WrapMode::CLAMP;
-    }
-    else if (!std::strcmp(anariWrapMode, "repeat"))
-    {
-      usdWrapMode = UsdBridgeSamplerData::WrapMode::REPEAT;
-    }
-    else if (!std::strcmp(anariWrapMode, "mirrorRepeat"))
-    {
-      usdWrapMode = UsdBridgeSamplerData::WrapMode::MIRROR;
+      if (!std::strcmp(anariWrapMode, "clampToEdge"))
+      {
+        usdWrapMode = UsdBridgeSamplerData::WrapMode::CLAMP;
+      }
+      else if (!std::strcmp(anariWrapMode, "repeat"))
+      {
+        usdWrapMode = UsdBridgeSamplerData::WrapMode::REPEAT;
+      }
+      else if (!std::strcmp(anariWrapMode, "mirrorRepeat"))
+      {
+        usdWrapMode = UsdBridgeSamplerData::WrapMode::MIRROR;
+      }
     }
     return usdWrapMode;
   }
@@ -64,6 +67,11 @@ void UsdSampler::filterResetParam(const char *name)
   resetParam(name);
 }
 
+bool UsdSampler::deferCommit(UsdDevice* device)
+{
+  return false;
+}
+
 void UsdSampler::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge || !device->getParams().outputMaterial)
@@ -76,9 +84,9 @@ void UsdSampler::doCommitWork(UsdDevice* device)
   if (paramChanged || isNew)
   {
     UsdBridgeSamplerData samplerData;
-    samplerData.FileName = paramData.fileName;
-    samplerData.WrapS = ANARIToUsdBridgeWrapMode(paramData.wrapS);
-    samplerData.WrapT = ANARIToUsdBridgeWrapMode(paramData.wrapT);
+    samplerData.FileName = UsdSharedString::c_str(paramData.fileName);
+    samplerData.WrapS = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapS));
+    samplerData.WrapT = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapT));
 
     samplerData.TimeVarying = (UsdBridgeSamplerData::DataMemberId)paramData.timeVarying;
 

@@ -73,7 +73,7 @@ class UsdDataArray : public UsdBaseObject
     size_t getDataSizeInBytes() const { return dataSizeInBytes; }
 
   protected:
-    bool deferCommit(UsdDevice* device) override {}
+    bool deferCommit(UsdDevice* device) override { return false; }
     void doCommitWork(UsdDevice* device) override {}
 
     void setLayoutAndSize(uint64_t numItems1,

@@ -27,6 +27,7 @@ struct UsdSpatialFieldHandle : public UsdBridgeHandle {};
 struct UsdSamplerHandle : public UsdBridgeHandle {};
 struct UsdShaderHandle : public UsdBridgeHandle {};
 struct UsdMaterialHandle : public UsdBridgeHandle {};
+struct UsdLightHandle : public UsdBridgeHandle {};
 
 enum class UsdBridgeType
 {

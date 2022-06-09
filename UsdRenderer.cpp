@@ -36,6 +36,11 @@ int UsdRenderer::getProperty(const char * name, ANARIDataType type, void * mem, 
   return 0;
 }
 
+bool UsdRenderer::deferCommit(UsdDevice* device)
+{
+  return false;
+}
+
 void UsdRenderer::doCommitWork(UsdDevice* device)
 {
   

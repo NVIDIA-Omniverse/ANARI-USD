@@ -23,6 +23,29 @@ class UsdBridge;
 template<class T, class D>
 class UsdParameterizedObject
 {
+protected:
+  bool isBaseObject(ANARIDataType type) const { return anari::isObject(type) || type == ANARI_STRING; }
+
+  void safeRefInc(char* paramPtr) // Pointer to the parameter address which holds a UsdBaseObject*
+  {
+    UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(paramPtr);
+    if (*baseObj)
+      (*baseObj)->refInc(anari::RefType::INTERNAL);
+  }
+
+  void safeRefDec(char* paramPtr) // Pointer to the parameter address which holds a UsdBaseObject*
+  {
+    UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(paramPtr);
+    if (*baseObj)
+    {
+#ifdef CHECK_MEMLEAKS
+      allocDevice->LogDeallocation(*baseObj);
+#endif
+      (*baseObj)->refDec(anari::RefType::INTERNAL);
+      *baseObj = nullptr; // Explicitly clear the pointer
+    }
+  }
+
 public:
 
   typedef UsdParameterizedObject<T, D> ParameterizedClassType;
@@ -45,33 +68,11 @@ public:
 
       char* dest = (reinterpret_cast<char*>(&paramData) + it->second.first);
 
-      if (type == ANARI_STRING)
-      {
-        char** destStr = reinterpret_cast<char**>(dest);
-#ifdef CHECK_MEMLEAKS
-        LogDeallocation(*destStr);
-#endif
-        delete[] *destStr;
-      }
-      else if (anari::isObject(type))
-      {
-        UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
-        if (*baseObj)
-        {
-#ifdef CHECK_MEMLEAKS
-          allocDevice->LogDeallocation(*baseObj);
-#endif
-          (*baseObj)->refDec(anari::RefType::INTERNAL);
-          *baseObj = nullptr;
-        }
-      }
+      if (isBaseObject(type))
+        safeRefDec(dest);
 
       ++it;
     }
-
-#ifdef CHECK_MEMLEAKS
-    assert(allocatedStrings.empty());
-#endif
   }
 
   const D& getParams() const { return paramData; }
@@ -98,58 +99,63 @@ protected:
         char* dest = (reinterpret_cast<char*>(&paramData) + it->second.first);
         UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
 
-        const char* src = static_cast<const char*>(rawSrc);
+        const void* src = rawSrc; //temporary src
         size_t numBytes = AnariTypeSize(type);
+
+        bool contentUpdate = true;
 
         if (type == ANARI_BOOL)
         {
           bool* destBool_p = reinterpret_cast<bool*>(dest);
           bool srcBool = *(reinterpret_cast<const uint32_t*>(src));
-
-#ifdef TIME_BASED_CACHING
-          paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
-#else
-          paramChanged = paramChanged || (*destBool_p != srcBool);
-#endif
+          
+          contentUpdate =  (*destBool_p != srcBool);
 
           *destBool_p = srcBool;
         }
         else
         {
+          UsdSharedString* sharedStr = nullptr;
           if (type == ANARI_STRING)
           {
-            char** destStr = reinterpret_cast<char**>(dest);
-            numBytes = strlen(src) + 1;
+            // Wrap strings to make them refcounted, 
+            // from that point they are considered normal UsdBaseObjects. 
+            UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*baseObj);
+            const char* srcCstr = reinterpret_cast<const char*>(src);
+
+            contentUpdate = !destStr || std::strcmp(destStr->c_str(), srcCstr) != 0;
+
+            if(contentUpdate)
+            {
+              sharedStr = new UsdSharedString(srcCstr);
+              numBytes = sizeof(void*);
+              src = &sharedStr;
 
 #ifdef CHECK_MEMLEAKS
-            LogDeallocation(*destStr);
-#endif
-            delete[] * destStr;
-            *destStr = new char[numBytes];
-            dest = *destStr;
-
-#ifdef CHECK_MEMLEAKS
-            LogAllocation(dest);
-#endif
+              allocDevice->LogAllocation(sharedStr);
+#endif    
+            }        
           }
-          else if (anari::isObject(type) && *baseObj)
+          else
+            contentUpdate = bool(memcmp(dest, src, numBytes));
+
+          if(contentUpdate)
           {
-#ifdef CHECK_MEMLEAKS
-            allocDevice->LogDeallocation(*baseObj);
-#endif
-            (*baseObj)->refDec(anari::RefType::INTERNAL);
+            if(isBaseObject(type))
+              safeRefDec(dest);
+
+            std::memcpy(dest, src, numBytes);
+
+            if(isBaseObject(type))
+              safeRefInc(dest);
           }
+        }
 
 #ifdef TIME_BASED_CACHING
-          paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
+        paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
 #else
-          paramChanged = paramChanged || bool(memcmp(dest, src, numBytes));
+        paramChanged = paramChanged || contentUpdate;
 #endif
-          std::memcpy(dest, src, numBytes);
-
-          if (anari::isObject(type) && *baseObj)
-            (*baseObj)->refInc(anari::RefType::INTERNAL);
-        }
       }
       else
         reportStatusThroughDevice(LogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
@@ -165,40 +171,19 @@ protected:
       ANARIDataType type = it->second.second;
       char* dest = (reinterpret_cast<char*>(&paramData) + it->second.first);
 
-      if (type == ANARI_STRING)
+      D defaultParamData;
+      char* src = (reinterpret_cast<char*>(&defaultParamData) + it->second.first);
+
+      if (type == ANARI_BOOL)
       {
-        char** destStr = reinterpret_cast<char**>(dest);
-#ifdef CHECK_MEMLEAKS
-        LogDeallocation(*destStr);
-#endif
-        delete[] *destStr;
-        *destStr = nullptr;
+        *(reinterpret_cast<bool*>(dest)) = *(reinterpret_cast<const bool*>(src));
       }
       else
       {
-        D defaultParamData;
-        char* src = (reinterpret_cast<char*>(&defaultParamData) + it->second.first);
+        if(isBaseObject(type))
+          safeRefDec(dest);
 
-        if (type == ANARI_BOOL)
-        {
-          *(reinterpret_cast<bool*>(dest)) = *(reinterpret_cast<const bool*>(src));
-        }
-        else
-        {
-          if (anari::isObject(type))
-          {
-            UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
-            if (*baseObj)
-            {
-#ifdef CHECK_MEMLEAKS
-              allocDevice->LogDeallocation(*baseObj);
-#endif
-              (*baseObj)->refDec(anari::RefType::INTERNAL);
-            }
-          }
-
-          std::memcpy(dest, src, AnariTypeSize(type));
-        }
+        std::memcpy(dest, src, AnariTypeSize(type));
       }
 
       paramChanged = true;
@@ -216,19 +201,7 @@ protected:
   bool paramChanged = false;
 
 #ifdef CHECK_MEMLEAKS
-  // Memleak checking
-  void LogAllocation(const char* ptr) { allocatedStrings.push_back(ptr); }
-  void LogDeallocation(const char* ptr)
-  {
-    if (ptr)
-    {
-      auto it = std::find(allocatedStrings.begin(), allocatedStrings.end(), ptr);
-      assert(it != allocatedStrings.end());
-      allocatedStrings.erase(it);
-    }
-  }
-  std::vector<const char*> allocatedStrings;
-  UsdDevice* allocDevice;
+  UsdDevice* allocDevice = nullptr;
 #endif
 };
 

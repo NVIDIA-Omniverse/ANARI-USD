@@ -68,7 +68,7 @@ void UsdMaterial::filterResetParam(const char *name)
 
 bool UsdMaterial::deferCommit(UsdDevice* device)
 {
-  if(UsdObjectNotInitialized<SamplerUsdType>(paramData.sampler))
+  if(UsdObjectNotInitialized<SamplerUsdType>(paramData.diffuseMap))
   {
     return true;
   }
@@ -113,7 +113,8 @@ void UsdMaterial::doCommitWork(UsdDevice* device)
     // Diffuse sampler overrides vertex colors (and must always do so at paramchange, due to colors being rebound blindly)
     if (paramData.diffuseMap)
     {
-      usdBridge->SetSamplerRef(usdHandle, paramData.diffuseMap->getUsdHandle(), paramData.diffuseMap->getParams().fileName, timeStep);
+      UsdSharedString* fName = paramData.diffuseMap->getParams().fileName;
+      usdBridge->SetSamplerRef(usdHandle, paramData.diffuseMap->getUsdHandle(), UsdSharedString::c_str(fName), timeStep);
     }
 
     paramChanged = false;

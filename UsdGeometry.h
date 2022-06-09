@@ -14,8 +14,8 @@ static constexpr int MAX_ATTRIBS = 16;
 
 struct UsdGeometryData
 {
-  const char* name = nullptr;
-  const char* usdName = nullptr;
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
 
   double timeStep = 0.0;
   int timeVarying = 0xFFFFFFFF; // TimeVarying bits: 0: position, 1: normal, 2: color, 3: index, 4: radius, 5: ids, 6: attribute0, 7: attribute1, etc.  

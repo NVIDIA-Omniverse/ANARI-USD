@@ -44,6 +44,11 @@ int UsdFrame::getProperty(const char * name, ANARIDataType type, void * mem, uin
   return 0;
 }
 
+bool UsdFrame::deferCommit(UsdDevice* device)
+{
+  return false;
+}
+
 void UsdFrame::doCommitWork(UsdDevice* device)
 {
   

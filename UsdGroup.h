@@ -10,8 +10,8 @@ class UsdBridge;
 
 struct UsdGroupData
 {
-  const char* name = nullptr;
-  const char* usdName = nullptr;
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
 
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:surfaces, 1:volumes
   UsdDataArray* surfaces = nullptr;

@@ -11,8 +11,8 @@ class UsdDataArray;
 
 struct UsdVolumeData
 {
-  const char* name = nullptr;
-  const char* usdName = nullptr;
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
 
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:color, 1:opacity, 2:valueRange (field reference always set over all timesteps)
 

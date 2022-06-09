@@ -9,8 +9,8 @@ class UsdDataArray;
 
 struct UsdWorldData
 {
-  const char* name = nullptr;
-  const char* usdName = nullptr;
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
 
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:instances
   UsdDataArray* instances = nullptr;

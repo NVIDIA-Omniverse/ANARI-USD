@@ -5,24 +5,18 @@
 
 #include "UsdBridgedBaseObject.h"
 
-struct UsdSamplerData
+struct UsdLightData
 {
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
-
-  double timeStep = 0.0;
-  int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0:fileName, 1:wrapS, 2:wrapT
-
-  UsdSharedString* fileName = nullptr;
-  UsdSharedString* wrapS = nullptr;
-  UsdSharedString* wrapT = nullptr;
 };
 
-class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSamplerHandle>
+class UsdLight : public UsdBridgedBaseObject<UsdLight, UsdLightData, UsdLightHandle>
 {
   public:
-    UsdSampler(const char* name, UsdBridge* bridge);
-    ~UsdSampler();
+    UsdLight(const char* name, UsdBridge* bridge, 
+      UsdDevice* device);
+    ~UsdLight();
 
     void filterSetParam(const char *name,
       ANARIDataType type,

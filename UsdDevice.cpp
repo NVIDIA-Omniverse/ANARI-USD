@@ -16,6 +16,7 @@
 #include "UsdWorld.h"
 #include "UsdRenderer.h"
 #include "UsdFrame.h"
+#include "UsdLight.h"
 
 #include <cstdarg>
 #include <cstdio>
@@ -64,7 +65,7 @@ public:
       bridge->CloseSession();
 
     UsdBridgeSettings bridgeSettings = {
-      deviceParams.hostName,
+      UsdSharedString::c_str(deviceParams.hostName),
       outputLocation.c_str(),
       deviceParams.createNewSession,
       deviceParams.outputBinary,
@@ -278,7 +279,7 @@ void UsdDevice::deviceCommit()
     statusUserData = userSetStatusUserData ? userSetStatusUserData : defaultStatusCallbackUserPtr();
 
     if(paramData.outputPath)
-      internals->outputLocation = paramData.outputPath;
+      internals->outputLocation = paramData.outputPath->c_str();
 
     if(internals->outputLocation.empty()) {
       auto *envLocation = getenv("ANARI_USD_SERIALIZE_LOCATION");
@@ -584,7 +585,7 @@ void UsdDevice::flushCommitList()
       const UsdSpatialField::ParentList& parents = spatialField->getParents();
       for(auto parent : parents)
       {
-        device->addToCommitList(parent.ptr);
+        addToCommitList(parent.ptr);
       }
     }
   }
@@ -606,9 +607,6 @@ void UsdDevice::flushCommitList()
   writeTypeToUsd<(int)ANARI_INSTANCE>();
   writeTypeToUsd<(int)ANARI_WORLD>();
 
-  writeTypeToUsd<(int)ANARI_RENDERER>();
-  writeTypeToUsd<(int)ANARI_FRAME>();
-
   commitList.resize(0);
 
   lockCommitList = false;
@@ -621,14 +619,14 @@ void UsdDevice::writeTypeToUsd()
   {
     if((int)object->getType() == typeInt)
     {
-      if(!object->deferCommit(device))
-        object->doCommitWork(this, true);
+      if(!object->deferCommit(this))
+        object->doCommitWork(this);
       else
       {
-        using ObjectType = AnariToUsdBridgedObject<typeInt>::Type;
+        using ObjectType = typename AnariToUsdBridgedObject<typeInt>::Type;
         ObjectType* typedObj = reinterpret_cast<ObjectType*>(object.ptr);
 
-        this->reportStatus(object, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, 
+        this->reportStatus(object.ptr, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, 
           "User forgot to at least once commit an ANARI child object of parent object '%s'", typedObj->getName());
       }
     }

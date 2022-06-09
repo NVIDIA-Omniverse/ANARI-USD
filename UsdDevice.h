@@ -33,8 +33,8 @@ class UsdBaseObject;
 
 struct UsdDeviceData
 {
-  const char* hostName = nullptr;
-  const char* outputPath = nullptr;
+  UsdSharedString* hostName = nullptr;
+  UsdSharedString* outputPath = nullptr;
   bool createNewSession = true;
   bool outputBinary = false;
   bool writeAtCommit = false;

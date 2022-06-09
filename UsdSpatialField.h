@@ -10,8 +10,8 @@ class UsdVolume;
 
 struct UsdSpatialFieldData
 {
-  const char* name = nullptr;
-  const char* usdName = nullptr;
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
 
   double timeStep = 0.0;
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:data, 1:gridSpacing, 2:gridOrigin

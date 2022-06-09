@@ -11,8 +11,8 @@ class UsdDevice;
 
 struct UsdSurfaceData
 {
-  const char* name = nullptr;
-  const char* usdName = nullptr;
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
 
   // No timevarying data: geometry and material reference always set over all timesteps
 

@@ -9,8 +9,8 @@ class UsdSampler;
 
 struct UsdMaterialData
 {
-  const char* name = nullptr;
-  const char* usdName = nullptr;
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
 
   double timeStep = 0.0;
   int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0:diffuse, 1:specular, 2:opacity, 3:shininess

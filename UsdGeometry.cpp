@@ -1191,6 +1191,11 @@ void UsdGeometry::commitTemplate(UsdDevice* device)
   }
 }
 
+bool UsdGeometry::deferCommit(UsdDevice* device)
+{
+  return false;
+}
+
 void UsdGeometry::doCommitWork(UsdDevice* device)
 {
   if(!usdBridge)

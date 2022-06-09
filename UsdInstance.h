@@ -9,8 +9,8 @@ class UsdGroup;
 
 struct UsdInstanceData
 {
-  const char* name = nullptr;
-  const char* usdName = nullptr;
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
 
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:group, 1:transform
   UsdGroup* group = nullptr;

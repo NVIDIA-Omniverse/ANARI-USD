@@ -97,7 +97,8 @@ set(USDModule_SOURCES
   UsdMaterial.cpp
   UsdWorld.cpp
   UsdRenderer.cpp
-  UsdFrame.cpp)
+  UsdFrame.cpp
+  UsdLight.cpp)
 
 set(USDModule_HEADERS
   UsdCommonMacros.h
@@ -117,7 +118,8 @@ set(USDModule_HEADERS
   UsdMaterial.h
   UsdWorld.h
   UsdRenderer.h
-  UsdFrame.h)
+  UsdFrame.h
+  UsdLight.h)
 
 add_library(anari_library_usd SHARED ${USDModule_SOURCES} ${USDModule_HEADERS})
 
