@@ -72,10 +72,12 @@ bool UsdSampler::deferCommit(UsdDevice* device)
   return false;
 }
 
-void UsdSampler::doCommitWork(UsdDevice* device)
+bool UsdSampler::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge || !device->getParams().outputMaterial)
-    return;
+  if(!usdBridge || !device->getReadParams().outputMaterial)
+    return false;
+
+  const UsdSamplerData& paramData = getReadParams();
 
   bool isNew = false;
   if (!usdHandle.value)
@@ -94,4 +96,6 @@ void UsdSampler::doCommitWork(UsdDevice* device)
 
     paramChanged = false;
   }
+
+  return false;
 }

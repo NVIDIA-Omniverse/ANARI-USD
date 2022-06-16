@@ -68,6 +68,8 @@ void UsdMaterial::filterResetParam(const char *name)
 
 bool UsdMaterial::deferCommit(UsdDevice* device)
 {
+  const UsdMaterialData& paramData = getReadParams();
+
   if(UsdObjectNotInitialized<SamplerUsdType>(paramData.diffuseMap))
   {
     return true;
@@ -75,10 +77,10 @@ bool UsdMaterial::deferCommit(UsdDevice* device)
   return false;
 }
 
-void UsdMaterial::doCommitWork(UsdDevice* device)
+bool UsdMaterial::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge || !device->getParams().outputMaterial)
-    return;
+  if(!usdBridge || !device->getReadParams().outputMaterial)
+    return false;
 
   bool isNew = false;
   if (!usdHandle.value)
@@ -86,6 +88,8 @@ void UsdMaterial::doCommitWork(UsdDevice* device)
 
   if (paramChanged || isNew)
   {
+    const UsdMaterialData& paramData = getReadParams();
+
     double timeStep = paramData.timeStep;
 
     // Make sure to decouple before setting vertexcolors.
@@ -110,13 +114,23 @@ void UsdMaterial::doCommitWork(UsdDevice* device)
 
     usdBridge->SetMaterialData(usdHandle, matData, timeStep);
 
-    // Diffuse sampler overrides vertex colors (and must always do so at paramchange, due to colors being rebound blindly)
-    if (paramData.diffuseMap)
-    {
-      UsdSharedString* fName = paramData.diffuseMap->getParams().fileName;
-      usdBridge->SetSamplerRef(usdHandle, paramData.diffuseMap->getUsdHandle(), UsdSharedString::c_str(fName), timeStep);
-    }
-
     paramChanged = false;
+
+    return paramData.diffuseMap;
+  }
+
+  return false;
+}
+
+void UsdMaterial::doCommitRefs(UsdDevice* device)
+{
+  const UsdMaterialData& paramData = getReadParams();
+
+  // Diffuse sampler overrides vertex colors (and must always do so at paramchange, due to colors being rebound blindly)
+  if (paramData.diffuseMap)
+  {
+    double timeStep = paramData.timeStep;
+    UsdSharedString* fName = paramData.diffuseMap->getReadParams().fileName;
+    usdBridge->SetSamplerRef(usdHandle, paramData.diffuseMap->getUsdHandle(), UsdSharedString::c_str(fName), timeStep);
   }
 }

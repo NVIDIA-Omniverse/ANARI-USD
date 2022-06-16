@@ -39,8 +39,9 @@ class UsdBaseObject : public anari::RefCounted
     ANARIDataType getType() const { return type; }
 
   protected:
-    virtual bool deferCommit(UsdDevice* device) = 0;
-    virtual void doCommitWork(UsdDevice* device) = 0;
+    virtual bool deferCommit(UsdDevice* device) = 0;  // Returns whether data commit has to be deferred
+    virtual bool doCommitData(UsdDevice* device) = 0; // Data commit, execution can be immediate, returns whether doCommitRefs has to be performed
+    virtual void doCommitRefs(UsdDevice* device) = 0; // For updates with dependencies on referenced object's data, is always executed deferred 
 
     ANARIDataType type;
 
@@ -77,7 +78,8 @@ class UsdRefCountWrapped : public UsdBaseObject
 
   protected:
     virtual bool deferCommit(UsdDevice* device) { return false; }
-    virtual void doCommitWork(UsdDevice* device) {}
+    virtual bool doCommitData(UsdDevice* device) { return false; } 
+    virtual void doCommitRefs(UsdDevice* device) {}
 };
 
 class UsdSharedString : public UsdRefCountWrapped<std::string, const char*>

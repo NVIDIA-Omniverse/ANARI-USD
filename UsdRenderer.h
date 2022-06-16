@@ -11,7 +11,6 @@ struct UsdRendererData
 
 };
 
-
 class UsdRenderer : public UsdBaseObject, public UsdParameterizedObject<UsdRenderer, UsdRendererData>
 {
   public:
@@ -36,7 +35,8 @@ class UsdRenderer : public UsdBaseObject, public UsdParameterizedObject<UsdRende
 
   protected:
     bool deferCommit(UsdDevice* device) override;
-    void doCommitWork(UsdDevice* device) override;
+    bool doCommitData(UsdDevice* device) override;
+    void doCommitRefs(UsdDevice* device) override {}
 
     UsdBridge* usdBridge;
 };

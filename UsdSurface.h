@@ -7,7 +7,6 @@
 
 class UsdGeometry;
 class UsdMaterial;
-class UsdDevice;
 
 struct UsdSurfaceData
 {
@@ -36,5 +35,6 @@ class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSu
 
   protected:
     bool deferCommit(UsdDevice* device) override;
-    void doCommitWork(UsdDevice* device) override;
+    bool doCommitData(UsdDevice* device) override;
+    void doCommitRefs(UsdDevice* device) override;
 };

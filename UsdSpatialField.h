@@ -28,8 +28,6 @@ struct UsdSpatialFieldData
 class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialFieldData, UsdSpatialFieldHandle>
 {
   public:
-    using ParentList = std::vector<anari::IntrusivePtr<UsdVolume>>;
-
     UsdSpatialField(const char* name, const char* type, UsdBridge* bridge);
     ~UsdSpatialField();
 
@@ -42,15 +40,11 @@ class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialF
       const char *name) override;
 
     friend class UsdVolume;
-    void addParent(UsdVolume* volume);
-    void removeParent(UsdVolume* volume);
-    const ParentList& getParents() { return parents; };
 
   protected:
     bool deferCommit(UsdDevice* device) override;
-    void doCommitWork(UsdDevice* device) override;
-
-    ParentList parents;
+    bool doCommitData(UsdDevice* device) override;
+    void doCommitRefs(UsdDevice* device) override {}
 
     void toBridge(UsdDevice* device, const char* debugName);
 };

@@ -49,13 +49,15 @@ bool UsdFrame::deferCommit(UsdDevice* device)
   return false;
 }
 
-void UsdFrame::doCommitWork(UsdDevice* device)
+bool UsdFrame::doCommitData(UsdDevice* device)
 {
-  
+  return false;
 }
 
 const void* UsdFrame::mapBuffer(const char *channel)
 {
+  const UsdFrameData& paramData = getReadParams();
+
   if (strcmp(channel, "color") == 0)
   {
     mappedColorMem = ReserveBuffer(paramData.color);
@@ -85,11 +87,13 @@ void UsdFrame::unmapBuffer(const char *channel)
 
 UsdRenderer* UsdFrame::getRenderer()
 {
+  const UsdFrameData& paramData = getReadParams();
   return paramData.renderer;
 }
 
 char* UsdFrame::ReserveBuffer(ANARIDataType format)
 {
+  const UsdFrameData& paramData = getReadParams();
   size_t formatSize = AnariTypeSize(format);
   size_t memSize = formatSize * paramData.size[0] * paramData.size[1];
   return new char[memSize];

@@ -45,7 +45,8 @@ class UsdFrame : public UsdBaseObject, public UsdParameterizedObject<UsdFrame, U
 
   protected:
     bool deferCommit(UsdDevice* device) override;
-    void doCommitWork(UsdDevice* device) override;
+    bool doCommitData(UsdDevice* device) override;
+    void doCommitRefs(UsdDevice* device) override {}
 
     char* ReserveBuffer(ANARIDataType format);
 

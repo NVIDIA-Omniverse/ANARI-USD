@@ -22,13 +22,14 @@ DEFINE_PARAMETER_MAP(UsdVolume,
 
 UsdVolume::UsdVolume(const char* name, UsdBridge* bridge, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_VOLUME, name, bridge)
+  , usdDevice(device)
 {
+  usdDevice->addToVolumeList(this);
 }
 
 UsdVolume::~UsdVolume()
 {
-  if(this->paramData.field)
-    this->paramData.field->removeParent(this);
+  usdDevice->removeFromVolumeList(this);
 
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
   // Given that the object is destroyed, none of its references to other objects
@@ -43,43 +44,33 @@ void UsdVolume::filterSetParam(const char *name,
   const void *mem,
   UsdDevice* device)
 {
-  bool isField = std::strcmp(name, "field") == 0;
-
-  if(isField && this->paramData.field)
-    this->paramData.field->removeParent(this);
-
   if (filterNameParam(name, type, mem, device))
     setParam(name, type, mem, device);
-
-  if(isField && this->paramData.field)
-    this->paramData.field->addParent(this);
 }
 
 void UsdVolume::filterResetParam(const char *name)
 {
-  bool isField = std::strcmp(name, "field") == 0;
-  if(isField && this->paramData.field)
-    this->paramData.field->removeParent(this);
-
   resetParam(name);
 }
 
 bool UsdVolume::CheckTfParams(UsdDevice* device)
 {
+  const UsdVolumeData& paramData = getReadParams();
+
   const char* debugName = getName();
 
   LogInfo logInfo(device, this, ANARI_VOLUME, debugName);
 
   // Only perform data(type) checks, data upload along with field in UsdVolume::commit()
-  const UsdDataArray* tfColor = this->paramData.color;
-  if (this->paramData.color == nullptr)
+  const UsdDataArray* tfColor = paramData.color;
+  if (paramData.color == nullptr)
   {
     device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction color array not set.", debugName);
     return false;
   }
 
-  const UsdDataArray* tfOpacity = this->paramData.opacity;
+  const UsdDataArray* tfOpacity = paramData.opacity;
   if (tfOpacity == nullptr)
   {
     device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
@@ -120,13 +111,15 @@ bool UsdVolume::CheckTfParams(UsdDevice* device)
 
 bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
 {
+  const UsdVolumeData& paramData = getReadParams();
+
   UsdSpatialField* field = paramData.field;
 
   if (!CheckTfParams(device))
     return false;
 
   // Get field data
-  UsdSpatialFieldData& fieldParams = field->paramData;
+  const UsdSpatialFieldData& fieldParams = field->getReadParams();
   const UsdDataArray* fieldDataArray = fieldParams.data;
   if(!fieldDataArray) return false; // Enforced in field commit()
   const UsdDataLayout& posLayout = fieldDataArray->getLayout();
@@ -168,7 +161,7 @@ bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
   typedef UsdBridgeVolumeData::DataMemberId DMI;
   volumeData.TimeVarying = (DMI)(fieldParams.timeVarying | (paramData.timeVarying << UsdBridgeVolumeData::TFDataStart));
 
-  double fieldTimeStep = field->paramData.timeStep;
+  double fieldTimeStep = fieldParams.timeStep;
   usdBridge->SetVolumeData(field->getUsdHandle(), volumeData, fieldTimeStep);
 
   return true;
@@ -180,17 +173,12 @@ bool UsdVolume::deferCommit(UsdDevice* device)
   return true; 
 }
 
-void UsdVolume::doCommitWork(UsdDevice* device)
+bool UsdVolume::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge)
-    return;
+  const UsdVolumeData& paramData = getReadParams();
 
-  if(UsdObjectNotInitialized(paramData.field))
-  {
-    device->addToCommitList(paramData.field);
-    device->addToCommitList(this);
-    return;
-  }
+  if(!usdBridge)
+    return false;
 
   bool isNew = false;
   if (!usdHandle.value)
@@ -200,7 +188,7 @@ void UsdVolume::doCommitWork(UsdDevice* device)
 
   if (prevField != paramData.field)
   {
-    double worldTimeStep = device->getParams().timeStep;
+    double worldTimeStep = device->getReadParams().timeStep;
 
     // Make sure the references are updated on the Bridge side.
     if (paramData.field)
@@ -208,7 +196,7 @@ void UsdVolume::doCommitWork(UsdDevice* device)
       usdBridge->SetSpatialFieldRef(usdHandle,
         paramData.field->getUsdHandle(),
         worldTimeStep,
-        paramData.field->getParams().timeStep);
+        paramData.field->getReadParams().timeStep);
     }
     else
     {
@@ -234,4 +222,6 @@ void UsdVolume::doCommitWork(UsdDevice* device)
         "UsdVolume '%s' commit failed: field reference missing.", debugName);
     }
   }
+
+  return false;
 }

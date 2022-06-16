@@ -135,7 +135,7 @@ namespace
     }
   }
 
-  void generateIndexedSphereData(UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays)
+  void generateIndexedSphereData(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays)
   {
     if (paramData.indices)
     {
@@ -240,7 +240,7 @@ namespace
     }
   }
 
-  void convertLinesToSticks(UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays)
+  void convertLinesToSticks(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays)
   {
     auto& attribDataArrays = tempArrays->AttributeDataArrays;
     assert(attribDataArrays.size() == attributeArray.size());
@@ -378,7 +378,7 @@ namespace
     }
   }
 
-  void pushVertex(UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays,
+  void pushVertex(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays,
     const void* vertices, ANARIDataType vertexType,
     bool hasNormals, bool hasColors, bool hasRadii,
     size_t segStart, size_t primIdx)
@@ -478,7 +478,7 @@ namespace
     hasNormals, hasColors, hasRadii, \
     x, y)
 
-  void reorderCurveGeometry(UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays)
+  void reorderCurveGeometry(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays)
   {
     auto& attribDataArrays = tempArrays->AttributeDataArrays;
     assert(attribDataArrays.size() == attributeArray.size());
@@ -615,6 +615,7 @@ template<typename GeomDataType>
 void UsdGeometry::setAttributeTimeVarying(typename GeomDataType::DataMemberId& timeVarying)
 {
   typedef typename GeomDataType::DataMemberId DMI;
+  const UsdGeometryData& paramData = getReadParams();
 
   for(size_t attribIdx = 0; attribIdx < attributeArray.size(); ++attribIdx)
   {
@@ -627,6 +628,8 @@ void UsdGeometry::setAttributeTimeVarying(typename GeomDataType::DataMemberId& t
 
 void UsdGeometry::syncAttributeArrays()
 {
+  const UsdGeometryData& paramData = getReadParams();
+
   int attribCount = 0;
   for(int i = 0; i < MAX_ATTRIBS; ++i)
   {
@@ -677,6 +680,8 @@ void UsdGeometry::assignTempDataToAttributes(bool perPrimInterpolation)
 void UsdGeometry::initializeGeomData(UsdBridgeMeshData& geomData)
 {
   typedef UsdBridgeMeshData::DataMemberId DMI;
+  const UsdGeometryData& paramData = getReadParams();
+
   geomData.TimeVarying = DMI::ALL
     & (isBitSet(paramData.timeVarying, 0) ? DMI::ALL : ~DMI::POINTS)
     & (isBitSet(paramData.timeVarying, 1) ? DMI::ALL : ~DMI::NORMALS)
@@ -690,6 +695,8 @@ void UsdGeometry::initializeGeomData(UsdBridgeMeshData& geomData)
 void UsdGeometry::initializeGeomData(UsdBridgeInstancerData& geomData)
 {
   typedef UsdBridgeInstancerData::DataMemberId DMI;
+  const UsdGeometryData& paramData = getReadParams();
+
   geomData.TimeVarying = DMI::ALL
     & (isBitSet(paramData.timeVarying, 0) ? DMI::ALL : ~DMI::POINTS)
     & (  (isBitSet(paramData.timeVarying, 1) 
@@ -719,6 +726,8 @@ void UsdGeometry::initializeGeomData(UsdBridgeInstancerData& geomData)
 void UsdGeometry::initializeGeomData(UsdBridgeCurveData& geomData)
 {
   typedef UsdBridgeCurveData::DataMemberId DMI;
+  const UsdGeometryData& paramData = getReadParams();
+
   // Turn off what is not timeVarying
   geomData.TimeVarying = DMI::ALL
     & (isBitSet(paramData.timeVarying, 0) ? DMI::ALL : ~DMI::POINTS)
@@ -732,6 +741,8 @@ void UsdGeometry::initializeGeomData(UsdBridgeCurveData& geomData)
 bool UsdGeometry::checkArrayConstraints(const UsdDataArray* vertexArray, const UsdDataArray* primArray,
   const char* paramName, UsdDevice* device, const char* debugName, int attribIndex)
 {
+  const UsdGeometryData& paramData = getReadParams();
+
   LogInfo logInfo(device, this, ANARI_GEOMETRY, debugName);
 
   const UsdDataArray* vertices = paramData.vertexPositions;
@@ -775,6 +786,8 @@ bool UsdGeometry::checkArrayConstraints(const UsdDataArray* vertexArray, const U
 
 bool UsdGeometry::checkGeomParams(UsdDevice* device)
 {
+  const UsdGeometryData& paramData = getReadParams();
+
   const char* debugName = getName();
 
   bool success = true;
@@ -887,6 +900,8 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
 
 void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeMeshData& meshData)
 {
+  const UsdGeometryData& paramData = getReadParams();
+
   const UsdDataArray* vertices = paramData.vertexPositions;
   meshData.NumPoints = vertices->getLayout().numItems1;
   meshData.Points = vertices->getData();
@@ -937,6 +952,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeMeshData& meshData)
 
 void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeInstancerData& instancerData)
 {
+  const UsdGeometryData& paramData = getReadParams();
   const char* debugName = getName();
 
   if (geomType == GEOM_SPHERE)
@@ -1117,6 +1133,8 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeInstancerData& inst
 
 void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeCurveData& curveData)
 {
+  const UsdGeometryData& paramData = getReadParams();
+
   reorderCurveGeometry(paramData, attributeArray, tempArrays.get());
 
   curveData.NumPoints = tempArrays->PointsArray.size() / 3;
@@ -1161,6 +1179,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeCurveData& curveDat
 template<typename UsdGeomType>
 void UsdGeometry::commitTemplate(UsdDevice* device)
 {
+  const UsdGeometryData& paramData = getReadParams();
   const char* debugName = getName();
 
   UsdGeomType geomData;
@@ -1196,10 +1215,10 @@ bool UsdGeometry::deferCommit(UsdDevice* device)
   return false;
 }
 
-void UsdGeometry::doCommitWork(UsdDevice* device)
+bool UsdGeometry::doCommitData(UsdDevice* device)
 {
   if(!usdBridge)
-    return;
+    return false;
 
   switch (geomType)
   {
@@ -1211,4 +1230,6 @@ void UsdGeometry::doCommitWork(UsdDevice* device)
     case GEOM_CURVE: commitTemplate<UsdBridgeCurveData>(device); break;
     default: break;
   }
+
+  return false;
 }

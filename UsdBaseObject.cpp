@@ -6,11 +6,13 @@
 
 void UsdBaseObject::commit(UsdDevice* device)
 { 
-  if(device->getParams().writeAtCommit && !deferCommit(device))
-  {                    
-    doCommitWork(device);
-    //device->removeFromCommitList(this); // In case a different object added this one to the commit list
+  bool deferDataCommit = !device->isInitialized() || !device->getReadParams().writeAtCommit || deferCommit(device);
+  if(!deferDataCommit)
+  {                 
+    bool commitRefs = doCommitData(device);
+    if(commitRefs)
+      device->addToCommitList(this, false); // Commit refs, but no more data
   }
-  else
-    device->addToCommitList(this); // Simply add to the commit list
+
+  device->addToCommitList(this, true); // Commit data and refs
 }

@@ -23,11 +23,11 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 
     H getUsdHandle() const { return usdHandle; }
 
-    const char* getName() const { return ParamClass::paramData.usdName ? ParamClass::paramData.usdName->c_str() : uniqueName; }
+    const char* getName() const { return getReadParams().usdName ? getReadParams().usdName->c_str() : uniqueName; }
 
     void formatUsdName()
     {
-      char* name = const_cast<char*>(UsdSharedString::c_str(ParamClass::paramData.usdName));
+      char* name = const_cast<char*>(UsdSharedString::c_str(getReadParams().usdName));
       assert(strlen(name) > 0);
 
       auto letter = [](unsigned c) { return ((c - 'A') < 26) || ((c - 'a') < 26); };
@@ -87,14 +87,14 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
     {
       if (type == ANARI_STRING && strcmp(name, "usd::name") == 0)
       {
-        snprintf((char*)mem, size, "%s", UsdSharedString::c_str(ParamClass::paramData.usdName));
+        snprintf((char*)mem, size, "%s", UsdSharedString::c_str(getReadParams().usdName));
         return 1;
       }
       else if (type == ANARI_UINT64 && strcmp(name, "usd::name.size") == 0)
       {
         if (Assert64bitStringLengthProperty(size, LogInfo(device, this, ANARI_OBJECT, this->getName()), "usd::name.size"))
         {
-          uint64_t nameLen = ParamClass::paramData.usdName ? strlen(ParamClass::paramData.usdName->c_str())+1 : 0;
+          uint64_t nameLen = getReadParams().usdName ? strlen(getReadParams().usdName->c_str())+1 : 0;
           memcpy(mem, &nameLen, size);
         }
         return 1;
@@ -120,7 +120,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 
     virtual void commit(UsdDevice* device) override
     {
-      //FlipParamBuffers();
+      TransferWriteToReadParams();
       UsdBaseObject::commit(device);
     }
 

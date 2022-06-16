@@ -33,5 +33,7 @@ bool UsdLight::deferCommit(UsdDevice* device)
   return false; 
 }
 
-void UsdLight::doCommitWork(UsdDevice* device) 
-{}
+bool UsdLight::doCommitData(UsdDevice* device) 
+{
+  return false;
+}

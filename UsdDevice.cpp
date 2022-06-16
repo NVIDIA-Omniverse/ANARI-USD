@@ -238,12 +238,6 @@ void UsdDevice::deviceSetParameter(
   else
   {
     setParam(id, type, mem, this);
-
-    if (std::strcmp(id, "usd::timestep") == 0)
-    {
-      if(internals->bridge)
-        internals->bridge->UpdateBeginEndTime(paramData.timeStep);
-    }
   }
 }
 
@@ -271,6 +265,10 @@ int UsdDevice::deviceImplements(const char *)
 
 void UsdDevice::deviceCommit()
 {
+  TransferWriteToReadParams();
+
+  const UsdDeviceData& paramData = getReadParams();
+
   if(!bridgeInitialized)
   {
     bridgeInitialized = true;
@@ -301,6 +299,10 @@ void UsdDevice::deviceCommit()
     {
       reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_UNKNOWN_ERROR, "Usd Bridge failed to load");
     }
+  }
+  else
+  {
+    internals->bridge->UpdateBeginEndTime(paramData.timeStep);
   }
 }
 
@@ -507,6 +509,10 @@ ANARIRenderer UsdDevice::newRenderer(const char *type)
 
 void UsdDevice::renderFrame(ANARIFrame frame)
 {
+  // Always commit device changes if not initialized, otherwise no conversion can be performed.
+  if(!isInitialized()) 
+    deviceCommit(); 
+
   flushCommitList();
 
   UsdRenderer* ren = ((UsdFrame*)frame)->getRenderer();
@@ -538,7 +544,7 @@ bool UsdDevice::nameExists(const char* name)
   return internals->uniqueNames.find(name) != internals->uniqueNames.end();
 }
 
-void UsdDevice::addToCommitList(UsdBaseObject* object)
+void UsdDevice::addToCommitList(UsdBaseObject* object, bool commitData)
 {
   if(!object)
     return;
@@ -550,10 +556,10 @@ void UsdDevice::addToCommitList(UsdBaseObject* object)
   }
   else
   {
-    anari::IntrusivePtr<UsdBaseObject> objPtr(object);
-    auto it = std::find(commitList.begin(), commitList.end(), objPtr);
+    auto it = std::find_if(commitList.begin(), commitList.end(), 
+      [&object](const CommitListType& entry) -> bool { return entry.first.ptr == object; });
     if(it == commitList.end())
-      commitList.emplace_back(objPtr);
+      commitList.emplace_back(CommitListType(object, commitData));
   }
 }
 
@@ -566,26 +572,38 @@ void UsdDevice::removeFromCommitList(UsdBaseObject* object)
   }
   else
   {
-    anari::IntrusivePtr<UsdBaseObject> objPtr(object);
-    auto it = std::find(commitList.begin(), commitList.end(), objPtr);
+    auto it = std::find_if(commitList.begin(), commitList.end(), 
+      [&object](const CommitListType& entry) -> bool { return entry.first.ptr == object; });
     if(it != commitList.end())
-      commitList.erase(it);
+    {
+      *it = commitList.back();
+      commitList.pop_back();
+    }
   }
 }
 
 void UsdDevice::flushCommitList()
 {
-  for(auto object : commitList)
+  // Automatically commit volumes which are not committed yet, 
+  // but for which their (writedata) spatial field is in commitlist.
+  for(UsdVolume* volume : volumeList)
   {
-    if(object->getType() == ANARI_SPATIAL_FIELD)
+    const UsdVolumeData& writeParams = volume->getWriteParams();
+    if(writeParams.field)
     {
-      UsdSpatialField* spatialField = reinterpret_cast<UsdSpatialField*>(object.ptr);
-
-      // Writing out a Spatialfield implies writing out the parent UsdVolume.
-      const UsdSpatialField::ParentList& parents = spatialField->getParents();
-      for(auto parent : parents)
+      //volume not in commitlist
+      auto volEntry = std::find_if(commitList.begin(), commitList.end(), 
+        [&volume](const CommitListType& entry) -> bool { return entry.first.ptr == volume; });
+      if(volEntry == commitList.end())
       {
-        addToCommitList(parent.ptr);
+        auto fieldEntry = std::find_if(commitList.begin(), commitList.end(), 
+          [&writeParams](const CommitListType& entry) -> bool { return entry.first.ptr == writeParams.field; });
+
+        // spatialfield from writeparams is in commit list
+        if(fieldEntry != commitList.end())
+        {
+          volume->commit(this);
+        }
       }
     }
   }
@@ -612,15 +630,41 @@ void UsdDevice::flushCommitList()
   lockCommitList = false;
 }
 
+void UsdDevice::addToVolumeList(UsdVolume* volume)
+{
+  auto it = std::find(volumeList.begin(), volumeList.end(), volume);
+  if(it == volumeList.end())
+    volumeList.emplace_back(volume);
+}
+    
+void UsdDevice::removeFromVolumeList(UsdVolume* volume)
+{
+  auto it = std::find(volumeList.begin(), volumeList.end(), volume);
+  if(it == volumeList.end())
+  {
+    *it = volumeList.back();
+    volumeList.pop_back();
+  }  
+}
+
 template<int typeInt>
 void UsdDevice::writeTypeToUsd()
 {
-  for(auto object : commitList)
+  for(auto objCommitPair : commitList)
   {
+    auto object = objCommitPair.first;
+    bool commitData = objCommitPair.second;
+
     if((int)object->getType() == typeInt)
     {
       if(!object->deferCommit(this))
-        object->doCommitWork(this);
+      {
+        bool commitRefs = true;
+        if(commitData)
+          commitRefs = object->doCommitData(this);
+        if(commitRefs)
+          object->doCommitRefs(this);
+      }
       else
       {
         using ObjectType = typename AnariToUsdBridgedObject<typeInt>::Type;

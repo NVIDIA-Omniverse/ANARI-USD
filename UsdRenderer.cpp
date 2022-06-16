@@ -41,9 +41,9 @@ bool UsdRenderer::deferCommit(UsdDevice* device)
   return false;
 }
 
-void UsdRenderer::doCommitWork(UsdDevice* device)
+bool UsdRenderer::doCommitData(UsdDevice* device)
 {
-  
+  return false;
 }
 
 void UsdRenderer::saveUsd()

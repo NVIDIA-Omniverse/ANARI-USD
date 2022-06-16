@@ -34,5 +34,6 @@ class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSa
 
   protected:
     bool deferCommit(UsdDevice* device) override;
-    void doCommitWork(UsdDevice* device) override;
+    bool doCommitData(UsdDevice* device) override;
+    void doCommitRefs(UsdDevice* device) override {}
 };

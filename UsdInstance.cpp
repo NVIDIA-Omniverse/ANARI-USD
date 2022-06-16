@@ -48,6 +48,8 @@ void UsdInstance::filterResetParam(const char *name)
 
 bool UsdInstance::deferCommit(UsdDevice* device)
 {
+  const UsdInstanceData& paramData = getReadParams();
+
   if(UsdObjectNotInitialized<GroupUsdType>(paramData.group))
   {
     return true;
@@ -55,10 +57,10 @@ bool UsdInstance::deferCommit(UsdDevice* device)
   return false;
 }
 
-void UsdInstance::doCommitWork(UsdDevice* device)
+bool UsdInstance::doCommitData(UsdDevice* device)
 {
   if(!usdBridge)
-    return;
+    return false;
 
   const char* instanceName = getName();
 
@@ -68,7 +70,9 @@ void UsdInstance::doCommitWork(UsdDevice* device)
 
   if (paramChanged || isNew)
   {
-    double timeStep = device->getParams().timeStep;
+    const UsdInstanceData& paramData = getReadParams();
+
+    double timeStep = device->getReadParams().timeStep;
     bool groupTimeVarying = paramData.timeVarying & 1;
     bool transformTimeVarying = paramData.timeVarying & (1 << 1);
 
@@ -94,4 +98,6 @@ void UsdInstance::doCommitWork(UsdDevice* device)
 
     paramChanged = false;
   }
+
+  return false;
 }

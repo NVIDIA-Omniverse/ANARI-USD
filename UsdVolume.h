@@ -43,10 +43,12 @@ class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolum
 
   protected:
     bool deferCommit(UsdDevice* device) override;
-    void doCommitWork(UsdDevice* device) override;
+    bool doCommitData(UsdDevice* device) override;
+    void doCommitRefs(UsdDevice* device) override {}
 
     bool CheckTfParams(UsdDevice* device);
     bool UpdateVolume(UsdDevice* device, const char* debugName);
 
     UsdSpatialField* prevField = nullptr;
+    UsdDevice* usdDevice = nullptr;
 };

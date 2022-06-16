@@ -30,6 +30,7 @@ extern "C"
 class UsdDevice;
 class UsdDeviceInternals;
 class UsdBaseObject;
+class UsdVolume;
 
 struct UsdDeviceData
 {
@@ -54,6 +55,8 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
 
     UsdDevice();
     ~UsdDevice();
+
+    bool isInitialized() const { return bridgeInitialized; }
 
     /////////////////////////////////////////////////////////////////////////////
     // Main virtual interface to accepting API calls
@@ -176,9 +179,12 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
 
     bool nameExists(const char* name);
 
-    void addToCommitList(UsdBaseObject* object);
+    void addToCommitList(UsdBaseObject* object, bool commitData);
     void removeFromCommitList(UsdBaseObject* object);
     void flushCommitList();
+
+    void addToVolumeList(UsdVolume* volume);
+    void removeFromVolumeList(UsdVolume* volume);
 
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
@@ -223,7 +229,9 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
     // Using object pointers as basis for deferred commits; another option would be to traverse
     // the bridge's internal cache handles, but a handle may map to multiple objects (with the same name)
     // so that's not 1-1 with the effects of a non-deferred commit order.
-    std::vector<anari::IntrusivePtr<UsdBaseObject>> commitList;
+    using CommitListType = std::pair<anari::IntrusivePtr<UsdBaseObject>,bool>;
+    std::vector<CommitListType> commitList;
+    std::vector<UsdVolume*> volumeList; // Tracks all volumes to auto-commit when child fields have been committed
     bool lockCommitList = false;
 
     ANARIStatusCallback statusFunc = nullptr;

@@ -52,6 +52,8 @@ void UsdGroup::filterResetParam(const char *name)
 
 bool UsdGroup::deferCommit(UsdDevice* device)
 {
+  const UsdGroupData& paramData = getReadParams();
+
   if(UsdObjectNotInitialized<SurfaceUsdType>(paramData.surfaces) || 
     UsdObjectNotInitialized<VolumeUsdType>(paramData.volumes))
   {
@@ -60,10 +62,10 @@ bool UsdGroup::deferCommit(UsdDevice* device)
   return false;
 }
 
-void UsdGroup::doCommitWork(UsdDevice* device)
+bool UsdGroup::doCommitData(UsdDevice* device)
 {
   if(!usdBridge)
-    return;
+    return false;
 
   bool isNew = false;
   if (!usdHandle.value)
@@ -71,6 +73,8 @@ void UsdGroup::doCommitWork(UsdDevice* device)
 
   if (paramChanged || isNew)
   {
+    const UsdGroupData& paramData = getReadParams();
+
     LogInfo logInfo(device, this, ANARI_GROUP, this->getName());
     bool validRefs = 
       AssertArrayType(paramData.surfaces, SurfaceType, logInfo, "UsdGroup commit failed: 'surface' array elements should be of type ANARI_SURFACE") &&
@@ -78,7 +82,7 @@ void UsdGroup::doCommitWork(UsdDevice* device)
 
     if(validRefs)
     {
-      double timeStep = device->getParams().timeStep;
+      double timeStep = device->getReadParams().timeStep;
       bool surfacesTimeVarying = paramData.timeVarying & 1;
       bool volumesTimeVarying = paramData.timeVarying & (1 << 1);
 
@@ -123,4 +127,6 @@ void UsdGroup::doCommitWork(UsdDevice* device)
 
     paramChanged = false;
   }
+
+  return false;
 }

@@ -167,6 +167,7 @@ int main(int argc, const char **argv)
     int doubleNodes = ((timeIdx % 3) == 1);
 
     anariSetParameter(dev, dev, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+    anariCommit(dev, dev);
 
     ANARIWorld world = anariNewWorld(dev);
 
@@ -411,6 +412,7 @@ int main(int argc, const char **argv)
   for (int timeIdx = 0; timeIdx < numTimeSteps/2; ++timeIdx)
   {
     anariSetParameter(dev, dev, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+    anariCommit(dev, dev);
 
     ANARIWorld world = anariNewWorld(dev);
 

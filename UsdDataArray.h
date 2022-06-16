@@ -74,7 +74,8 @@ class UsdDataArray : public UsdBaseObject
 
   protected:
     bool deferCommit(UsdDevice* device) override { return false; }
-    void doCommitWork(UsdDevice* device) override {}
+    bool doCommitData(UsdDevice* device) override { return false; }
+    void doCommitRefs(UsdDevice* device) override {}
 
     void setLayoutAndSize(uint64_t numItems1,
       int64_t byteStride1,

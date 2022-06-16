@@ -46,6 +46,18 @@ protected:
     }
   }
 
+  bool objectMatches(char* src, char* dest)
+  {
+    UsdBaseObject** srcObj = reinterpret_cast<UsdBaseObject**>(src);
+    UsdBaseObject** destObj = reinterpret_cast<UsdBaseObject**>(dest);
+    return *srcObj == *destObj;
+  }
+
+  char* paramAddress(D& paramData, size_t offset)
+  {
+    return reinterpret_cast<char*>(&paramData) + offset;
+  }
+
 public:
 
   typedef UsdParameterizedObject<T, D> ParameterizedClassType;
@@ -60,22 +72,27 @@ public:
   ~UsdParameterizedObject()
   {
     // Make sure the data is automatically decreasing the references
-    // which have been set in setParam
+    // which have been set in setParam (and copied over in transferWriteToReadParams)
     auto it = registeredParams->begin();
     while (it != registeredParams->end())
     {
       ANARIDataType type = it->second.second;
 
-      char* dest = (reinterpret_cast<char*>(&paramData) + it->second.first);
-
       if (isBaseObject(type))
-        safeRefDec(dest);
+      {
+        char* readParam = paramAddress(paramDataSets[paramReadIdx], it->second.first);
+        char* writeParam = paramAddress(paramDataSets[paramWriteIdx], it->second.first);
+
+        safeRefDec(readParam);
+        safeRefDec(writeParam);
+      }
 
       ++it;
     }
   }
 
-  const D& getParams() const { return paramData; }
+  const D& getReadParams() const { return paramDataSets[paramReadIdx]; }
+  D& getWriteParams() { return paramDataSets[paramWriteIdx]; }
 
 protected:
 
@@ -96,7 +113,7 @@ protected:
           || type == ANARI_ARRAY2D
           || type == ANARI_ARRAY3D)))
       {
-        char* dest = (reinterpret_cast<char*>(&paramData) + it->second.first);
+        char* dest = paramAddress(paramDataSets[paramWriteIdx], it->second.first);
         UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
 
         const void* src = rawSrc; //temporary src
@@ -169,10 +186,10 @@ protected:
     if (it != registeredParams->end())
     {
       ANARIDataType type = it->second.second;
-      char* dest = (reinterpret_cast<char*>(&paramData) + it->second.first);
+      char* dest = paramAddress(paramDataSets[paramWriteIdx], it->second.first);
 
       D defaultParamData;
-      char* src = (reinterpret_cast<char*>(&defaultParamData) + it->second.first);
+      char* src = paramAddress(defaultParamData, it->second.first);
 
       if (type == ANARI_BOOL)
       {
@@ -190,6 +207,31 @@ protected:
     }
   }
 
+  void TransferWriteToReadParams()
+  {
+    // Make sure object references are removed for
+    // the overwritten readparams, and increased for the source writeparams (only if different)
+    auto it = registeredParams->begin();
+    while (it != registeredParams->end())
+    {
+      ANARIDataType type = it->second.second;
+
+      char* src = paramAddress(paramDataSets[paramWriteIdx], it->second.first);
+      char* dest = paramAddress(paramDataSets[paramReadIdx], it->second.first);
+
+      if (isBaseObject(type) && !objectMatches(src, dest))
+      {
+        safeRefDec(dest);
+        safeRefInc(src);
+      }
+
+      ++it;
+    }
+
+    // Pod datatype, so directly assign the structs
+    paramDataSets[paramReadIdx] = paramDataSets[paramWriteIdx];
+  }
+
   static ParamContainer* registerParams();
 
   ParamContainer* registeredParams;
@@ -197,7 +239,9 @@ protected:
   typedef T DerivedClassType;
   typedef D DataType;
 
-  D paramData;
+  D paramDataSets[2];
+  constexpr static unsigned int paramReadIdx = 0;
+  constexpr static unsigned int paramWriteIdx = 1;
   bool paramChanged = false;
 
 #ifdef CHECK_MEMLEAKS

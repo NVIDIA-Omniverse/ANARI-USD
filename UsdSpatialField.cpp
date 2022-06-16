@@ -48,36 +48,19 @@ void UsdSpatialField::filterResetParam(const char *name)
   resetParam(name);
 }
 
-void UsdSpatialField::addParent(UsdVolume* volume)
-{
-  anari::IntrusivePtr<UsdVolume> volPtr(volume);
-  auto it = std::find(parents.begin(), parents.end(), volPtr);
-  if(it == parents.end())
-    parents.emplace_back(volPtr);
-}
-    
-void UsdSpatialField::removeParent(UsdVolume* volume)
-{
-  auto it = std::find(parents.begin(), parents.end(), anari::IntrusivePtr<UsdVolume>(volume));
-  if(it != parents.end())
-  {
-    *it = parents.back();
-    parents.pop_back();
-  }
-}
-
 bool UsdSpatialField::deferCommit(UsdDevice* device)
 {
-  // The parent volumes may not yet be known at this commit. To have a list of spatialfields from which to gather
-  // parent volumes, put them in commit list and collect at renderFrame().
-  // (It could also be a separate list, in which case commit can happen immediately, but that doesn't have much of an advantage)
+  // Always defer, to give parent volumes the possibility to detect which of its child fields have been committed,
+  // such that those volumes with committed children are also automatically committed.
   return true; 
 }
 
-void UsdSpatialField::doCommitWork(UsdDevice* device)
+bool UsdSpatialField::doCommitData(UsdDevice* device)
 {
   if(!usdBridge)
-    return;
+    return false;
+
+  const UsdSpatialFieldData& paramData = getReadParams();
 
   const char* debugName = getName();
   LogInfo logInfo(device, this, ANARI_SPATIAL_FIELD, debugName);
@@ -87,17 +70,17 @@ void UsdSpatialField::doCommitWork(UsdDevice* device)
     isNew = usdBridge->CreateSpatialField(debugName, usdHandle);
 
   // Only perform type checks, actual data gets uploaded during UsdVolume::commit()
-  const UsdDataArray* fieldDataArray = this->paramData.data;
+  const UsdDataArray* fieldDataArray = paramData.data;
   if (!fieldDataArray)
   {
     device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
       "UsdSpatialField '%s' commit failed: data missing.", debugName);
-    return;
+    return false;
   }
 
   const UsdDataLayout& dataLayout = fieldDataArray->getLayout();
   if (!AssertNoStride(dataLayout, logInfo, "data"))
-    return;
+    return false;
 
   switch (fieldDataArray->getType())
   {
@@ -115,9 +98,11 @@ void UsdSpatialField::doCommitWork(UsdDevice* device)
   default:
     device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdSpatialField '%s' commit failed: incompatible data type.", debugName);
-    return;
+    return false;
   }
 
   // Make sure that parameters are set a first time
   paramChanged = paramChanged || isNew;
+
+  return false;
 }

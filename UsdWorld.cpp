@@ -47,6 +47,8 @@ void UsdWorld::filterResetParam(const char *name)
 
 bool UsdWorld::deferCommit(UsdDevice* device)
 {
+  const UsdWorldData& paramData = getReadParams();
+
   if(UsdObjectNotInitialized<InstanceUsdType>(paramData.instances))
   {
     return true;
@@ -54,10 +56,10 @@ bool UsdWorld::deferCommit(UsdDevice* device)
   return false;
 }
 
-void UsdWorld::doCommitWork(UsdDevice* device)
+bool UsdWorld::doCommitData(UsdDevice* device)
 {
   if(!usdBridge)
-    return;
+    return false;
 
   const char* debugName = getName();
 
@@ -67,7 +69,9 @@ void UsdWorld::doCommitWork(UsdDevice* device)
 
   if (paramChanged || isNew)
   {
-    double timeStep = device->getParams().timeStep;
+    const UsdWorldData& paramData = getReadParams();
+    double timeStep = device->getReadParams().timeStep;
+
     bool instancesTimeVarying = paramData.timeVarying != 0;
 
     if (paramData.instances)
@@ -103,5 +107,5 @@ void UsdWorld::doCommitWork(UsdDevice* device)
     paramChanged = false;
   }
 
-  usdBridge->SaveScene(); //This needs a better spot.
+  return false;
 }
