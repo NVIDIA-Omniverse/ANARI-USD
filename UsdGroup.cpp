@@ -73,60 +73,65 @@ bool UsdGroup::doCommitData(UsdDevice* device)
 
   if (paramChanged || isNew)
   {
-    const UsdGroupData& paramData = getReadParams();
-
-    LogInfo logInfo(device, this, ANARI_GROUP, this->getName());
-    bool validRefs = 
-      AssertArrayType(paramData.surfaces, SurfaceType, logInfo, "UsdGroup commit failed: 'surface' array elements should be of type ANARI_SURFACE") &&
-      AssertArrayType(paramData.volumes, VolumeType, logInfo, "UsdGroup commit failed: 'volume' array elements should be of type ANARI_VOLUME");
-
-    if(validRefs)
-    {
-      double timeStep = device->getReadParams().timeStep;
-      bool surfacesTimeVarying = paramData.timeVarying & 1;
-      bool volumesTimeVarying = paramData.timeVarying & (1 << 1);
-
-      if (paramData.surfaces)
-      {
-        const ANARISurface* surfaces = reinterpret_cast<const ANARISurface*>(paramData.surfaces->getData());
-
-        uint64_t numModels = paramData.surfaces->getLayout().numItems1;
-        surfaceHandles.resize(numModels);
-        for (uint64_t i = 0; i < numModels; ++i)
-        {
-          const UsdSurface* usdSurface = reinterpret_cast<const UsdSurface*>(surfaces[i]);
-          surfaceHandles[i] = usdSurface->getUsdHandle();
-        }
-
-        usdBridge->SetSurfaceRefs(usdHandle, &surfaceHandles[0], numModels, surfacesTimeVarying, timeStep);
-      }
-      else
-      {
-        usdBridge->DeleteSurfaceRefs(usdHandle, surfacesTimeVarying, timeStep);
-      }
-
-      if (paramData.volumes)
-      {
-        const ANARIVolume* volumes = reinterpret_cast<const ANARIVolume*>(paramData.volumes->getData());
-
-        uint64_t numModels = paramData.volumes->getLayout().numItems1;
-        volumeHandles.resize(numModels);
-        for (uint64_t i = 0; i < numModels; ++i)
-        {
-          const UsdVolume* usdVolume = reinterpret_cast<const UsdVolume*>(volumes[i]);
-          volumeHandles[i] = usdVolume->getUsdHandle();
-        }
-
-        usdBridge->SetVolumeRefs(usdHandle, &volumeHandles[0], numModels, volumesTimeVarying, timeStep);
-      }
-      else
-      {
-        usdBridge->DeleteVolumeRefs(usdHandle, volumesTimeVarying, timeStep);
-      }
-    }
+    doCommitRefs(device); // Perform immediate commit of refs - no params from children required
 
     paramChanged = false;
   }
-
   return false;
+}
+
+
+void UsdGroup::doCommitRefs(UsdDevice* device)
+{
+  const UsdGroupData& paramData = getReadParams();
+
+  LogInfo logInfo(device, this, ANARI_GROUP, this->getName());
+  bool validRefs = 
+    AssertArrayType(paramData.surfaces, SurfaceType, logInfo, "UsdGroup commit failed: 'surface' array elements should be of type ANARI_SURFACE") &&
+    AssertArrayType(paramData.volumes, VolumeType, logInfo, "UsdGroup commit failed: 'volume' array elements should be of type ANARI_VOLUME");
+
+  if(validRefs)
+  {
+    double timeStep = device->getReadParams().timeStep;
+    bool surfacesTimeVarying = paramData.timeVarying & 1;
+    bool volumesTimeVarying = paramData.timeVarying & (1 << 1);
+
+    if (paramData.surfaces)
+    {
+      const ANARISurface* surfaces = reinterpret_cast<const ANARISurface*>(paramData.surfaces->getData());
+
+      uint64_t numModels = paramData.surfaces->getLayout().numItems1;
+      surfaceHandles.resize(numModels);
+      for (uint64_t i = 0; i < numModels; ++i)
+      {
+        const UsdSurface* usdSurface = reinterpret_cast<const UsdSurface*>(surfaces[i]);
+        surfaceHandles[i] = usdSurface->getUsdHandle();
+      }
+
+      usdBridge->SetSurfaceRefs(usdHandle, &surfaceHandles[0], numModels, surfacesTimeVarying, timeStep);
+    }
+    else
+    {
+      usdBridge->DeleteSurfaceRefs(usdHandle, surfacesTimeVarying, timeStep);
+    }
+
+    if (paramData.volumes)
+    {
+      const ANARIVolume* volumes = reinterpret_cast<const ANARIVolume*>(paramData.volumes->getData());
+
+      uint64_t numModels = paramData.volumes->getLayout().numItems1;
+      volumeHandles.resize(numModels);
+      for (uint64_t i = 0; i < numModels; ++i)
+      {
+        const UsdVolume* usdVolume = reinterpret_cast<const UsdVolume*>(volumes[i]);
+        volumeHandles[i] = usdVolume->getUsdHandle();
+      }
+
+      usdBridge->SetVolumeRefs(usdHandle, &volumeHandles[0], numModels, volumesTimeVarying, timeStep);
+    }
+    else
+    {
+      usdBridge->DeleteVolumeRefs(usdHandle, volumesTimeVarying, timeStep);
+    }
+  }
 }

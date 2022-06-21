@@ -37,6 +37,7 @@ namespace
   const char* const geomPrimStagePf = "_Geom";
   const char* const fieldPrimStagePf = "_Field";
   const char* const materialPrimStagePf = "_Material";
+  const char* const samplerPrimStagePf = "_Sampler";
 
   // Postfixes for clip stage names
   const char* const geomClipPf = "_Geom_";
@@ -456,7 +457,14 @@ bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle)
 
   if (!cacheExists)
   {
-    BRIDGE_USDWRITER.InitializeUsdSampler(cacheEntry);
+#ifdef VALUE_CLIP_RETIMING
+    // Create a separate stage to be referenced by the value clips
+    BRIDGE_USDWRITER.OpenPrimStage(name, samplerPrimStagePf, cacheEntry, false);
+    UsdStageRefPtr samplerStage = cacheEntry->PrimStage.second;
+    BRIDGE_USDWRITER.InitializeUsdSampler(samplerStage, cacheEntry->PrimPath, false);
+#endif
+
+    BRIDGE_USDWRITER.InitializeUsdSampler(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, true);
   }
 
   handle.value = cacheEntry;
@@ -605,13 +613,14 @@ void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHand
   UsdBridgePrimCache* materialCache = BRIDGE_CACHE.ConvertToPrimCache(material);
 
   bool timeVarying = false;
+  bool valueClip = true;
   // Remove any dangling references
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(materialCache), materialPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
   // Update the references
-  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, true, true, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the surface.
-  SdfPath refMatPath = BRIDGE_USDWRITER.AddRef(surfaceCache, materialCache, materialPathRp, timeVarying, true, false, nullptr, timeStep, matTimeStep, Internals->RefModCallbacks);
+  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, true, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the surface.
+  SdfPath refMatPath = BRIDGE_USDWRITER.AddRef(surfaceCache, materialCache, materialPathRp, timeVarying, valueClip, false, nullptr, timeStep, matTimeStep, Internals->RefModCallbacks);
 
   // Bind the referencing material to the referencing geom prim (as they are within same scope in this usd prim)
   BRIDGE_USDWRITER.BindMaterialToGeom(refGeomPath, refMatPath);
@@ -630,25 +639,27 @@ void UsdBridge::SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle
   SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, timeVarying, true, false, nullptr, timeStep, fieldTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
 }
 
-void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampler, const char* texfileName, double timeStep)
+void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampler, const char* texfileName, bool texfileTimeVarying, double timeStep, double samplerTimeStep)
 {
   if (material.value == nullptr) return;
 
   UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
   UsdBridgePrimCache* samplerCache = BRIDGE_CACHE.ConvertToPrimCache(sampler);
 
+  // Sampler references cannot be time-varying (connectToSource doesn't allow for that), and are set on the scenestage prim (so they inherit the type of the sampler prim)
+  // However, they do allow value clip retiming.
   bool timeVarying = false;
+  bool valueClip = true;
+  bool clipStages = false;
   BRIDGE_USDWRITER.ManageUnusedRefs(matCache, Internals->ToCacheList(samplerCache), samplerPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
-  // Sampler references cannot be time-varying (connectToSource doesn't allow for that), and are set on the scenestage prim (so they inherit the type of the sampler prim)
-  SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef_NoClip(matCache, samplerCache, samplerPathRp, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
-
+  SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef(matCache, samplerCache, samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerTimeStep, Internals->RefModCallbacks);
 
   // Bind sampler and material
   SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache).first;
 
-  BRIDGE_USDWRITER.BindSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, texfileName);
+  BRIDGE_USDWRITER.BindSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, texfileName, texfileTimeVarying, timeStep); // requires world timestep, see implementation
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -832,10 +843,16 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
   if (sampler.value == nullptr) return;
 
   UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(sampler);
-
   SdfPath& samplerPrimPath = cache->PrimPath;// .AppendPath(SdfPath(samplerAttribPf));
+
+  UsdStageRefPtr samplerStage = BRIDGE_USDWRITER.GetTimeVarStage(cache).first;
   
-  BRIDGE_USDWRITER.UpdateUsdSampler(samplerPrimPath, samplerData, timeStep);
+  BRIDGE_USDWRITER.UpdateUsdSampler(samplerStage, samplerPrimPath, samplerData, timeStep);
+
+#ifdef VALUE_CLIP_RETIMING
+  if(this->EnableSaving)
+    samplerStage->Save();
+#endif
 }
 
 void UsdBridge::SaveScene()

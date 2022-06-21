@@ -92,7 +92,9 @@ bool UsdSampler::doCommitData(UsdDevice* device)
 
     samplerData.TimeVarying = (UsdBridgeSamplerData::DataMemberId)paramData.timeVarying;
 
-    usdBridge->SetSamplerData(usdHandle, samplerData, paramData.timeStep);
+    double worldTimeStep = device->getReadParams().timeStep;
+    double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
+    usdBridge->SetSamplerData(usdHandle, samplerData, dataTimeStep);
 
     paramChanged = false;
   }

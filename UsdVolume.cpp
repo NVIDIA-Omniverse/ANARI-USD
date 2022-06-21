@@ -13,6 +13,7 @@ DEFINE_PARAMETER_MAP(UsdVolume,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
   REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("usd::preclassified", ANARI_BOOL, preClassified)
+  REGISTER_PARAMETER_MACRO("usd::timestep::field", ANARI_FLOAT64, fieldRefTimeStep)
   REGISTER_PARAMETER_MACRO("field", ANARI_SPATIAL_FIELD, field)
   REGISTER_PARAMETER_MACRO("color", ANARI_ARRAY, color)
   REGISTER_PARAMETER_MACRO("opacity", ANARI_ARRAY, opacity)
@@ -161,7 +162,9 @@ bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
   typedef UsdBridgeVolumeData::DataMemberId DMI;
   volumeData.TimeVarying = (DMI)(fieldParams.timeVarying | (paramData.timeVarying << UsdBridgeVolumeData::TFDataStart));
 
-  double fieldTimeStep = fieldParams.timeStep;
+  double worldTimeStep = device->getReadParams().timeStep;
+  double fieldTimeStep = selectRefTime(paramData.fieldRefTimeStep, fieldParams.timeStep, worldTimeStep); // use the link time, as there is no such thing as separate field data
+  
   usdBridge->SetVolumeData(field->getUsdHandle(), volumeData, fieldTimeStep);
 
   return true;
@@ -169,7 +172,7 @@ bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
 
 bool UsdVolume::deferCommit(UsdDevice* device)
 {
-  // The spatial field may not yet be committed, but the volume reads data from its params during commit. So always defer.
+  // The spatial field may not yet have been committed, but the volume reads data from its params during commit. So always defer.
   return true; 
 }
 
@@ -193,10 +196,13 @@ bool UsdVolume::doCommitData(UsdDevice* device)
     // Make sure the references are updated on the Bridge side.
     if (paramData.field)
     {
+      const UsdSpatialFieldData& fieldParams = paramData.field->getReadParams();
+
       usdBridge->SetSpatialFieldRef(usdHandle,
         paramData.field->getUsdHandle(),
         worldTimeStep,
-        paramData.field->getReadParams().timeStep);
+        selectRefTime(paramData.fieldRefTimeStep, fieldParams.timeStep, worldTimeStep)
+        );
     }
     else
     {

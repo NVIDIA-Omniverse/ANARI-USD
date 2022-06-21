@@ -1555,15 +1555,23 @@ UsdShadeOutput UsdBridgeUsdWriter::InitializeMdlShader(UsdStageRefPtr shaderStag
 }
 #endif
 
-void UsdBridgeUsdWriter::InitializeUsdSampler(const UsdBridgePrimCache* cacheEntry)
+void UsdBridgeUsdWriter::InitializeUsdSampler(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, bool uniformPrim)
 {
-  const SdfPath& samplerPrimPath = cacheEntry->PrimPath;// .AppendPath(SdfPath(textureAttribPf));
-  UsdShadeShader textureReader = UsdShadeShader::Define(this->SceneStage, samplerPrimPath);
+  UsdShadeShader textureReader = UsdShadeShader::Define(samplerStage, samplerPrimPath);
   assert(textureReader);
-  textureReader.CreateIdAttr(VtValue(UsdBridgeTokens->UsdUVTexture));
-  textureReader.CreateInput(UsdBridgeTokens->fallback, SdfValueTypeNames->Float4).Set(GfVec4f(1.0f, 0.0f, 0.0f, 1.0f));
-  textureReader.CreateOutput(UsdBridgeTokens->rgb, SdfValueTypeNames->Float3);
-  textureReader.CreateOutput(UsdBridgeTokens->a, SdfValueTypeNames->Float);
+  if(uniformPrim)
+  {
+    textureReader.CreateIdAttr(VtValue(UsdBridgeTokens->UsdUVTexture));
+    textureReader.CreateInput(UsdBridgeTokens->fallback, SdfValueTypeNames->Float4).Set(GfVec4f(1.0f, 0.0f, 0.0f, 1.0f));
+    textureReader.CreateOutput(UsdBridgeTokens->rgb, SdfValueTypeNames->Float3);
+    textureReader.CreateOutput(UsdBridgeTokens->a, SdfValueTypeNames->Float);
+  }
+  else
+  {
+    textureReader.CreateInput(UsdBridgeTokens->file, SdfValueTypeNames->Asset);
+    textureReader.CreateInput(UsdBridgeTokens->WrapS, SdfValueTypeNames->Token);
+    textureReader.CreateInput(UsdBridgeTokens->WrapT, SdfValueTypeNames->Token);
+  }
 }
 
 #ifdef TIME_CLIP_STAGES
@@ -1788,7 +1796,8 @@ void UsdBridgeUsdWriter::BindShaderToMaterial(const UsdShadeMaterial& matPrim, c
     matPrim.CreateSurfaceOutput().ConnectToSource(shadOut);
 }
 
-void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, const char* texFileName)
+void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
+  const char* texFileName, bool texfileTimeVarying, double worldTimeStep)
 {
   if(Settings.EnablePreviewSurfaceShader)
   {
@@ -1824,12 +1833,24 @@ void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, con
 #ifdef SUPPORT_MDL_SHADERS
   if(Settings.EnableMdlShader)
   {
+    // Only uses the uniform prim and worl timestep, as the timevar material subprim is value-clip-referenced 
+    // from the material's parent, and therefore not in world-time. Figuring out material to sampler mapping is not worth the effort 
+    // and would not fix the underlying issue (this has to be part of a separate sampler prim)
+    
+    // Should ideally be connected to the sampler prim's file input, but that isn't supported by Create as of writing.
+
     SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
     UsdShadeShader uniformMdlShad = UsdShadeShader::Get(this->SceneStage, mdlShaderPrimPath);
-    assert(uniformMdlShad);
+    assert(uniformMdlShad); 
+
+    UsdTimeCode timeCode = texfileTimeVarying ? UsdTimeCode(worldTimeStep) : UsdTimeCode::Default();
+
+    UsdShadeInput diffTexInput = uniformMdlShad.CreateInput(UsdBridgeTokens->diffuse_texture, SdfValueTypeNames->Asset);
+    if(!texfileTimeVarying)
+      diffTexInput.GetAttr().Clear();
+    diffTexInput.Set(SdfAssetPath(texFileName), timeCode);
 
     uniformMdlShad.GetInput(UsdBridgeTokens->vertexcolor_coordinate_index).Set(-1);
-    uniformMdlShad.CreateInput(UsdBridgeTokens->diffuse_texture, SdfValueTypeNames->Asset).Set(SdfAssetPath(texFileName));
   }
 #endif
 }
@@ -2950,12 +2971,12 @@ void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr volumeStage, const SdfPa
   Connect->WriteFile(volumeStreamData, volumeStreamDataSize, fullVolPath.c_str());
 }
 
-void UsdBridgeUsdWriter::UpdateUsdSampler(const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep)
+void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep)
 {
   TimeEvaluator<UsdBridgeSamplerData> timeEval(samplerData, timeStep);
   typedef UsdBridgeSamplerData::DataMemberId DMI;
 
-  UsdShadeShader texReaderPrim = UsdShadeShader::Get(this->SceneStage, samplerPrimPath);
+  UsdShadeShader texReaderPrim = UsdShadeShader::Get(samplerStage, samplerPrimPath);
   assert(texReaderPrim);
 
   SdfAssetPath texFile(samplerData.FileName);

@@ -35,5 +35,5 @@ class UsdInstance : public UsdBridgedBaseObject<UsdInstance, UsdInstanceData, Us
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;
-    void doCommitRefs(UsdDevice* device) override {}
+    void doCommitRefs(UsdDevice* device) override;
 };

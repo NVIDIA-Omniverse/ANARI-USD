@@ -15,6 +15,7 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
   REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
   REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
+  REGISTER_PARAMETER_MACRO("usd::timestep::map_kd", ANARI_FLOAT64, diffuseMapTimeStep)
   REGISTER_PARAMETER_MACRO("color", ANARI_FLOAT32_VEC3, diffuse) 
   REGISTER_PARAMETER_MACRO("specular", ANARI_FLOAT32_VEC3, specular)
   REGISTER_PARAMETER_MACRO("emissive", ANARI_FLOAT32_VEC3, emissive)
@@ -68,12 +69,12 @@ void UsdMaterial::filterResetParam(const char *name)
 
 bool UsdMaterial::deferCommit(UsdDevice* device)
 {
-  const UsdMaterialData& paramData = getReadParams();
+  //const UsdMaterialData& paramData = getReadParams();
 
-  if(UsdObjectNotInitialized<SamplerUsdType>(paramData.diffuseMap))
-  {
-    return true;
-  }
+  //if(UsdObjectNotInitialized<SamplerUsdType>(paramData.diffuseMap))
+  //{
+  //  return true;
+  //}
   return false;
 }
 
@@ -90,12 +91,13 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
   {
     const UsdMaterialData& paramData = getReadParams();
 
-    double timeStep = paramData.timeStep;
+    double worldTimeStep = device->getReadParams().timeStep;
+    double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
 
     // Make sure to decouple before setting vertexcolors.
     if (!paramData.diffuseMap)
     {
-      usdBridge->DeleteSamplerRef(usdHandle, timeStep);
+      usdBridge->DeleteSamplerRef(usdHandle, worldTimeStep);
     }
 
     UsdBridgeMaterialData matData;
@@ -112,11 +114,11 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
 
     matData.TimeVarying = (UsdBridgeMaterialData::DataMemberId) paramData.timeVarying;
 
-    usdBridge->SetMaterialData(usdHandle, matData, timeStep);
+    usdBridge->SetMaterialData(usdHandle, matData, dataTimeStep);
 
     paramChanged = false;
 
-    return paramData.diffuseMap;
+    return paramData.diffuseMap; // Only commit refs when material actually contains a texture (filename param from diffusemap is required)
   }
 
   return false;
@@ -129,8 +131,13 @@ void UsdMaterial::doCommitRefs(UsdDevice* device)
   // Diffuse sampler overrides vertex colors (and must always do so at paramchange, due to colors being rebound blindly)
   if (paramData.diffuseMap)
   {
-    double timeStep = paramData.timeStep;
+    double worldTimeStep = device->getReadParams().timeStep;
+    double samplerObjTimeStep = paramData.diffuseMap->getReadParams().timeStep;
+    double samplerRefTime = selectRefTime(paramData.diffuseMapTimeStep, samplerObjTimeStep, worldTimeStep);
+    
     UsdSharedString* fName = paramData.diffuseMap->getReadParams().fileName;
-    usdBridge->SetSamplerRef(usdHandle, paramData.diffuseMap->getUsdHandle(), UsdSharedString::c_str(fName), timeStep);
+    bool fNameTimeVarying = (paramData.diffuseMap->getReadParams().timeVarying & 1);
+
+    usdBridge->SetSamplerRef(usdHandle, paramData.diffuseMap->getUsdHandle(), UsdSharedString::c_str(fName), fNameTimeVarying, worldTimeStep, samplerRefTime);
   }
 }

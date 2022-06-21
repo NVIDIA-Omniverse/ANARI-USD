@@ -17,6 +17,9 @@ struct UsdSurfaceData
 
   UsdGeometry* geometry = nullptr;
   UsdMaterial* material = nullptr;
+  
+  double geometryRefTimeStep = std::numeric_limits<float>::quiet_NaN();
+  double materialRefTimeStep = std::numeric_limits<float>::quiet_NaN();
 };
 
 class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSurfaceHandle>

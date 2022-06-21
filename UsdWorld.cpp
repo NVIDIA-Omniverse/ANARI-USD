@@ -61,51 +61,58 @@ bool UsdWorld::doCommitData(UsdDevice* device)
   if(!usdBridge)
     return false;
 
-  const char* debugName = getName();
+  const char* objName = getName();
 
   bool isNew = false;
   if(!usdHandle.value)
-    isNew = usdBridge->CreateWorld(debugName, usdHandle);
+    isNew = usdBridge->CreateWorld(objName, usdHandle);
 
   if (paramChanged || isNew)
   {
-    const UsdWorldData& paramData = getReadParams();
-    double timeStep = device->getReadParams().timeStep;
-
-    bool instancesTimeVarying = paramData.timeVarying != 0;
-
-    if (paramData.instances)
-    {
-      if (paramData.instances->getType() == InstanceType)
-      {
-        const ANARIInstance* instances = reinterpret_cast<const ANARIInstance*>(paramData.instances->getData());
-
-        uint64_t numInstances = paramData.instances->getLayout().numItems1;
-        instanceHandles.resize(numInstances);
-        for (uint64_t i = 0; i < numInstances; ++i)
-        {
-          const UsdInstance* usdInstance = reinterpret_cast<const UsdInstance*>(instances[i]);
-          instanceHandles[i] = usdInstance->getUsdHandle();
-        }
-
-        if (numInstances)
-          usdBridge->SetInstanceRefs(usdHandle, &instanceHandles[0], numInstances, instancesTimeVarying, timeStep);
-        else
-          usdBridge->DeleteInstanceRefs(usdHandle, instancesTimeVarying, timeStep);
-      }
-      else
-      {
-        device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
-          "UsdWorld '%s' commit failed: 'instance' array elements should be of type ANARI_INSTANCE", debugName);
-      }
-    }
-    else
-    {
-      usdBridge->DeleteInstanceRefs(usdHandle, instancesTimeVarying, timeStep);
-    }
+    doCommitRefs(device); // Perform immediate commit of refs - no params from children required
 
     paramChanged = false;
   }
 
   return false;
+}
+
+void UsdWorld::doCommitRefs(UsdDevice* device)
+{
+  const char* objName = getName();
+
+  const UsdWorldData& paramData = getReadParams();
+  double timeStep = device->getReadParams().timeStep;
+
+  bool instancesTimeVarying = paramData.timeVarying != 0;
+
+  if (paramData.instances)
+  {
+    if (paramData.instances->getType() == InstanceType)
+    {
+      const ANARIInstance* instances = reinterpret_cast<const ANARIInstance*>(paramData.instances->getData());
+
+      uint64_t numInstances = paramData.instances->getLayout().numItems1;
+      instanceHandles.resize(numInstances);
+      for (uint64_t i = 0; i < numInstances; ++i)
+      {
+        const UsdInstance* usdInstance = reinterpret_cast<const UsdInstance*>(instances[i]);
+        instanceHandles[i] = usdInstance->getUsdHandle();
+      }
+
+      if (numInstances)
+        usdBridge->SetInstanceRefs(usdHandle, &instanceHandles[0], numInstances, instancesTimeVarying, timeStep);
+      else
+        usdBridge->DeleteInstanceRefs(usdHandle, instancesTimeVarying, timeStep);
+    }
+    else
+    {
+      device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+        "UsdWorld '%s' commit failed: 'instance' array elements should be of type ANARI_INSTANCE", objName);
+    }
+  }
+  else
+  {
+    usdBridge->DeleteInstanceRefs(usdHandle, instancesTimeVarying, timeStep);
+  }
 }

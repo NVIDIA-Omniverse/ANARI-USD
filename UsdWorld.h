@@ -33,7 +33,7 @@ class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHan
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;
-    void doCommitRefs(UsdDevice* device) override {}
+    void doCommitRefs(UsdDevice* device) override;
 
     std::vector<UsdInstanceHandle> instanceHandles; // for convenience
 };

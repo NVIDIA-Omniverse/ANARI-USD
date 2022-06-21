@@ -110,7 +110,7 @@ public:
 #ifdef SUPPORT_MDL_SHADERS  
   UsdShadeOutput InitializeMdlShader(UsdStageRefPtr shaderStage, const SdfPath& shadPrimPath, bool uniformPrim);
 #endif
-  void InitializeUsdSampler(const UsdBridgePrimCache* cacheEntry);
+  void InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, bool uniformPrim);
 
 #ifdef TIME_CLIP_STAGES
   void CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeMeshData& meshData);
@@ -120,7 +120,8 @@ public:
 
   void BindMaterialToGeom(const SdfPath& refGeomPath, const SdfPath& refMatPath);
   void BindShaderToMaterial(const UsdShadeMaterial& matPrim, const UsdShadeOutput& shadOut, TfToken* renderContext);
-  void BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, const char* texFileName);
+  void BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
+    const char* texFileName, bool texfileTimeVarying, double worldTimeStep);
 
   void UnBindSamplerFromMaterial(const SdfPath& matPrimPath);
 
@@ -134,7 +135,7 @@ public:
   void UpdateMdlShader(UsdStageRefPtr shaderStage, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
 #endif
   void UpdateUsdVolume(UsdStageRefPtr volumeStage, const SdfPath& volPrimPath, const std::string& name, const UsdBridgeVolumeData& volumeData, double timeStep);
-  void UpdateUsdSampler(const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep);
+  void UpdateUsdSampler(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep);
   void UpdateBeginEndTime(double timeStep);
 
   void* LogUserData;

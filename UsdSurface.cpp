@@ -16,6 +16,8 @@ using MaterialUsdType = AnariToUsdBridgedObject<MaterialType>::Type;
 DEFINE_PARAMETER_MAP(UsdSurface,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
+  REGISTER_PARAMETER_MACRO("usd::timestep::geometry", ANARI_FLOAT64, geometryRefTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::timestep::material", ANARI_FLOAT64, materialRefTimeStep)
   REGISTER_PARAMETER_MACRO("geometry", GeometryType, geometry)
   REGISTER_PARAMETER_MACRO("material", MaterialType, material)
 )
@@ -51,12 +53,12 @@ void UsdSurface::filterResetParam(const char *name)
 
 bool UsdSurface::deferCommit(UsdDevice* device)
 {
-  const UsdSurfaceData& paramData = getReadParams();
+  //const UsdSurfaceData& paramData = getReadParams();
 
-  if(UsdObjectNotInitialized<GeometryUsdType>(paramData.geometry) || UsdObjectNotInitialized<MaterialUsdType>(paramData.material))
-  {
-    return true;
-  }
+  //if(UsdObjectNotInitialized<GeometryUsdType>(paramData.geometry) || UsdObjectNotInitialized<MaterialUsdType>(paramData.material))
+  //{
+  //  return true;
+  //}
   return false;
 }
 
@@ -73,7 +75,7 @@ bool UsdSurface::doCommitData(UsdDevice* device)
   {
     paramChanged = false;
 
-    return true;
+    return true; // In this case a doCommitRefs is required, with data (timesteps) from children
   }
 
   return false;
@@ -81,25 +83,33 @@ bool UsdSurface::doCommitData(UsdDevice* device)
 
 void UsdSurface::doCommitRefs(UsdDevice* device)
 {
-  double worldTimeStep = device->getReadParams().timeStep;
-
   const UsdSurfaceData& paramData = getReadParams();
+
+  double worldTimeStep = device->getReadParams().timeStep;
 
   // Make sure the references are updated on the Bridge side.
   if (paramData.geometry && (!device->getReadParams().outputMaterial || paramData.material))
   {
+    double geomObjTimeStep = paramData.geometry->getReadParams().timeStep;
+
     if(device->getReadParams().outputMaterial)
+    {
+      double matObjTimeStep = paramData.material->getReadParams().timeStep;
+
       usdBridge->SetGeometryMaterialRef(usdHandle, 
         paramData.geometry->getUsdHandle(), 
         paramData.material->getUsdHandle(), 
         worldTimeStep,
-        paramData.geometry->getReadParams().timeStep,
-        paramData.material->getReadParams().timeStep);
+        selectRefTime(paramData.geometryRefTimeStep, geomObjTimeStep, worldTimeStep),
+        selectRefTime(paramData.materialRefTimeStep, matObjTimeStep, worldTimeStep)
+        );
+    }
     else
       usdBridge->SetGeometryRef(usdHandle, 
         paramData.geometry->getUsdHandle(), 
         worldTimeStep,
-        paramData.geometry->getReadParams().timeStep); 
+        selectRefTime(paramData.geometryRefTimeStep, geomObjTimeStep, worldTimeStep)
+        ); 
   }
   else
   {

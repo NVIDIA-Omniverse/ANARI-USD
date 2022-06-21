@@ -124,6 +124,18 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
       UsdBaseObject::commit(device);
     }
 
+    double selectObjTime(double objTimeStep, double worldTimeStep)
+    { 
+      return std::isnan(objTimeStep) ? worldTimeStep : objTimeStep;
+    }
+
+    double selectRefTime(double refTimeStep, double objTimeStep, double worldTimeStep)
+    { 
+      return std::isnan(refTimeStep) ? 
+        (std::isnan(objTimeStep) ? 
+          worldTimeStep : objTimeStep) : refTimeStep;
+    }
+
   protected:
     typedef UsdBridgedBaseObject<T,D,H> BridgedBaseObjectType;
 

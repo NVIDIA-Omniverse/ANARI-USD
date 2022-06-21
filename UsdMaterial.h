@@ -4,6 +4,7 @@
 #pragma once
 
 #include "UsdBridgedBaseObject.h"
+#include <limits>
 
 class UsdSampler;
 
@@ -12,7 +13,7 @@ struct UsdMaterialData
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
-  double timeStep = 0.0;
+  double timeStep = std::numeric_limits<float>::quiet_NaN();
   int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0:diffuse, 1:specular, 2:opacity, 3:shininess
 
   float diffuse[3] = { 1.0f, 1.0f, 1.0f };
@@ -25,6 +26,7 @@ struct UsdMaterialData
   float ior = 1.0f;
   bool useVertexColors = false;
   UsdSampler* diffuseMap = nullptr;
+  double diffuseMapTimeStep = std::numeric_limits<float>::quiet_NaN();
 };
 
 class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, UsdMaterialHandle>

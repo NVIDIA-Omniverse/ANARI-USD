@@ -17,6 +17,7 @@ struct UsdVolumeData
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:color, 1:opacity, 2:valueRange (field reference always set over all timesteps)
 
   UsdSpatialField* field = nullptr;
+  double fieldRefTimeStep = std::numeric_limits<float>::quiet_NaN();
 
   bool preClassified = false;
   

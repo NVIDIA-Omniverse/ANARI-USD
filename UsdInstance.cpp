@@ -70,34 +70,39 @@ bool UsdInstance::doCommitData(UsdDevice* device)
 
   if (paramChanged || isNew)
   {
-    const UsdInstanceData& paramData = getReadParams();
-
-    double timeStep = device->getReadParams().timeStep;
-    bool groupTimeVarying = paramData.timeVarying & 1;
-    bool transformTimeVarying = paramData.timeVarying & (1 << 1);
-
-    if (paramData.group)
-    {
-      usdBridge->SetGroupRef(usdHandle, paramData.group->getUsdHandle(), groupTimeVarying, timeStep);
-    }
-    else
-    {
-      usdBridge->DeleteGroupRef(usdHandle, groupTimeVarying, timeStep);
-    }
-
-    {
-      float bridgeTransform[16] = { 0.0f };
-      memcpy(&bridgeTransform[0], &paramData.transform[0], 3 * sizeof(float));
-      memcpy(&bridgeTransform[4], &paramData.transform[3], 3 * sizeof(float));
-      memcpy(&bridgeTransform[8], &paramData.transform[6], 3 * sizeof(float));
-      memcpy(&bridgeTransform[12], &paramData.transform[9], 3 * sizeof(float));
-      bridgeTransform[15] = 1.0f;
-
-      usdBridge->SetInstanceTransform(usdHandle, bridgeTransform, transformTimeVarying, timeStep);
-    }
+    doCommitRefs(device); // Perform immediate commit of refs - no params from children required
 
     paramChanged = false;
   }
 
   return false;
+}
+
+void UsdInstance::doCommitRefs(UsdDevice* device)
+{
+  const UsdInstanceData& paramData = getReadParams();
+
+  double timeStep = device->getReadParams().timeStep;
+  bool groupTimeVarying = paramData.timeVarying & 1;
+  bool transformTimeVarying = paramData.timeVarying & (1 << 1);
+
+  if (paramData.group)
+  {
+    usdBridge->SetGroupRef(usdHandle, paramData.group->getUsdHandle(), groupTimeVarying, timeStep);
+  }
+  else
+  {
+    usdBridge->DeleteGroupRef(usdHandle, groupTimeVarying, timeStep);
+  }
+
+  {
+    float bridgeTransform[16] = { 0.0f };
+    memcpy(&bridgeTransform[0], &paramData.transform[0], 3 * sizeof(float));
+    memcpy(&bridgeTransform[4], &paramData.transform[3], 3 * sizeof(float));
+    memcpy(&bridgeTransform[8], &paramData.transform[6], 3 * sizeof(float));
+    memcpy(&bridgeTransform[12], &paramData.transform[9], 3 * sizeof(float));
+    bridgeTransform[15] = 1.0f;
+
+    usdBridge->SetInstanceTransform(usdHandle, bridgeTransform, transformTimeVarying, timeStep);
+  }
 }

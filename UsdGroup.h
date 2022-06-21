@@ -35,7 +35,7 @@ class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHan
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;
-    void doCommitRefs(UsdDevice* device) override {}
+    void doCommitRefs(UsdDevice* device) override;
 
     std::vector<UsdSurfaceHandle> surfaceHandles; // for convenience
     std::vector<UsdVolumeHandle> volumeHandles; // for convenience

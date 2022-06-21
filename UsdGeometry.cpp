@@ -946,8 +946,9 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeMeshData& meshData)
 
   //meshData.UpdatesToPerform = Still to be implemented
 
-  double timeStep = paramData.timeStep;
-  usdBridge->SetGeometryData(usdHandle, meshData, timeStep);
+  double worldTimeStep = device->getReadParams().timeStep;
+  double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
+  usdBridge->SetGeometryData(usdHandle, meshData, dataTimeStep);
 }
 
 void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeInstancerData& instancerData)
@@ -1127,8 +1128,9 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeInstancerData& inst
     }
   }
 
-  double timeStep = paramData.timeStep;
-  usdBridge->SetGeometryData(usdHandle, instancerData, timeStep);
+  double worldTimeStep = device->getReadParams().timeStep;
+  double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
+  usdBridge->SetGeometryData(usdHandle, instancerData, dataTimeStep);
 }
 
 void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeCurveData& curveData)
@@ -1172,8 +1174,9 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeCurveData& curveDat
     curveData.UniformScale = paramData.radiusConstant;
   }
 
-  double timeStep = paramData.timeStep;
-  usdBridge->SetGeometryData(usdHandle, curveData, timeStep);
+  double worldTimeStep = device->getReadParams().timeStep;
+  double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
+  usdBridge->SetGeometryData(usdHandle, curveData, dataTimeStep);
 }
 
 template<typename UsdGeomType>
