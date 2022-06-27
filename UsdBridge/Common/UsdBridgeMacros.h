@@ -6,6 +6,8 @@
 #define SUPPORT_MDL_SHADERS
 #define USE_USD_GEOM_POINTS
 
+#define OMNIVERSE_CREATE_WORKAROUNDS
+
 // To enable output that usdview can digest (just a single float)
 //#define USDBRIDGE_VOL_FLOAT1_OUTPUT
 

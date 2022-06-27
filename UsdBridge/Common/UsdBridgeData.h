@@ -132,7 +132,7 @@ struct UsdBridgeAttribute
   const void* Data = nullptr;
   UsdBridgeType DataType = UsdBridgeType::UNDEFINED;
   bool PerPrimData = false;
-  uint32_t EltSize;
+  uint32_t EltSize = 0;
 };
 
 struct UsdBridgeMeshData
@@ -293,15 +293,14 @@ struct UsdBridgeCurveData
 
 struct UsdBridgeVolumeData
 {
-  static constexpr int TFDataStart = 4;
+  static constexpr int TFDataStart = 3;
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
-    DATA = (1 << 1),
-    ORIGIN = (1 << 2),
-    CELLDIMENSIONS = (1 << 3),
-    VOL_ALL = (1 << 4) - 1,
-    TFCOLORS = (1 << (TFDataStart+0)),
+    DATA = (1 << 1), // Includes the extent - number of elements per dimension
+    TRANSFORM = (1 << 2),
+    VOL_ALL = (1 << TFDataStart) - 1,
+    TFCOLORS = (1 << (TFDataStart + 0)),
     TFOPACITIES = (1 << (TFDataStart + 1)),
     TFVALUERANGE = (1 << (TFDataStart + 2)),
     ALL = (1 << (TFDataStart + 3)) - 1

@@ -53,8 +53,9 @@ void UsdSurface::filterResetParam(const char *name)
 
 bool UsdSurface::deferCommit(UsdDevice* device)
 {
-  //const UsdSurfaceData& paramData = getReadParams();
+  // Given that all handles/data are used in doCommitRefs, which is always executed deferred, we don't need to check for initialization
 
+  //const UsdSurfaceData& paramData = getReadParams();
   //if(UsdObjectNotInitialized<GeometryUsdType>(paramData.geometry) || UsdObjectNotInitialized<MaterialUsdType>(paramData.material))
   //{
   //  return true;
@@ -75,7 +76,7 @@ bool UsdSurface::doCommitData(UsdDevice* device)
   {
     paramChanged = false;
 
-    return true; // In this case a doCommitRefs is required, with data (timesteps) from children
+    return true; // In this case a doCommitRefs is required, with data (timesteps, handles) from children
   }
 
   return false;

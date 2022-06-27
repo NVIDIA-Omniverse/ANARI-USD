@@ -1194,7 +1194,7 @@ void UsdGeometry::commitTemplate(UsdDevice* device)
   bool isNew = false;
   if (!usdHandle.value)
   {  
-    isNew = usdBridge->CreateGeometry(debugName, geomData, usdHandle);
+    isNew = usdBridge->CreateGeometry(debugName, usdHandle, geomData);
   }
 
   if (paramChanged || isNew)

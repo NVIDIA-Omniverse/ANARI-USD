@@ -33,7 +33,7 @@ namespace
   const char* const materialPathRp = "material"; // created in surfaces parent class
   const char* const samplerPathRp = "samplers"; // created in material parent class (separation from other UsdShader prims in material)
 
-  // Postfixes for prim stage names
+  // Postfixes for prim stage names, also used for manifests
   const char* const geomPrimStagePf = "_Geom";
   const char* const fieldPrimStagePf = "_Field";
   const char* const materialPrimStagePf = "_Material";
@@ -349,7 +349,7 @@ bool UsdBridge::CreateVolume(const char * name, UsdVolumeHandle& handle)
 }
 
 template<typename GeomDataType>
-bool UsdBridge::CreateGeometryTemplate(const char* name, const GeomDataType& geomData, UsdGeometryHandle& handle)
+bool UsdBridge::CreateGeometryTemplate(const char* name, UsdGeometryHandle& handle, const GeomDataType& geomData)
 {
   if (!SessionValid) return false;
 
@@ -360,17 +360,13 @@ bool UsdBridge::CreateGeometryTemplate(const char* name, const GeomDataType& geo
   if (!cacheExists)
   {
 #ifdef VALUE_CLIP_RETIMING
-    BRIDGE_USDWRITER.OpenPrimStage(name, geomPrimStagePf, cacheEntry
+    BRIDGE_USDWRITER.CreateManifestStage(name, geomPrimStagePf, cacheEntry);
+    //BRIDGE_USDWRITER.InitializeUsdGeometryManifest(cacheEntry, geomData);
 
-#ifdef TIME_CLIP_STAGES
-      , true);
-
-    BRIDGE_USDWRITER.CreateUsdGeometryManifest(name, cacheEntry, geomData);
-#else
-      , false);
-
-    UsdStageRefPtr geomStage = cacheEntry->PrimStage.second;
-    BRIDGE_USDWRITER.InitializeUsdGeometry(geomStage, cacheEntry->PrimPath, geomData, false);
+#ifndef TIME_CLIP_STAGES
+    // Default primstage created for clip assetpaths of parents. If this path is not active, individual clip stages are created lazily during data update.
+    UsdStageRefPtr geomPrimStage = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, geomPrimStagePf).second;
+    BRIDGE_USDWRITER.InitializeUsdGeometry(geomPrimStage, cacheEntry->PrimPath, geomData, false);
 #endif
 #endif
 
@@ -381,19 +377,19 @@ bool UsdBridge::CreateGeometryTemplate(const char* name, const GeomDataType& geo
   return PrimIsNew(createResult);
 }
 
-bool UsdBridge::CreateGeometry(const char* name, const UsdBridgeMeshData& meshData, UsdGeometryHandle& handle)
+bool UsdBridge::CreateGeometry(const char* name, UsdGeometryHandle& handle, const UsdBridgeMeshData& meshData)
 {
-  return CreateGeometryTemplate<UsdBridgeMeshData>(name, meshData, handle);
+  return CreateGeometryTemplate<UsdBridgeMeshData>(name, handle, meshData);
 }
 
-bool UsdBridge::CreateGeometry(const char* name, const UsdBridgeInstancerData& instancerData, UsdGeometryHandle& handle)
+bool UsdBridge::CreateGeometry(const char* name, UsdGeometryHandle& handle, const UsdBridgeInstancerData& instancerData)
 {
-  return CreateGeometryTemplate<UsdBridgeInstancerData>(name, instancerData, handle);
+  return CreateGeometryTemplate<UsdBridgeInstancerData>(name, handle, instancerData);
 }
 
-bool UsdBridge::CreateGeometry(const char* name, const UsdBridgeCurveData& curveData, UsdGeometryHandle& handle)
+bool UsdBridge::CreateGeometry(const char* name, UsdGeometryHandle& handle, const UsdBridgeCurveData& curveData)
 {
-  return CreateGeometryTemplate<UsdBridgeCurveData>(name, curveData, handle);
+  return CreateGeometryTemplate<UsdBridgeCurveData>(name, handle, curveData);
 }
 
 bool UsdBridge::CreateSpatialField(const char * name, UsdSpatialFieldHandle& handle)
@@ -407,10 +403,12 @@ bool UsdBridge::CreateSpatialField(const char * name, UsdSpatialFieldHandle& han
   if (!cacheExists)
   {
 #ifdef VALUE_CLIP_RETIMING
-    // Create a separate stage to be referenced by the value clips
-    BRIDGE_USDWRITER.OpenPrimStage(name, fieldPrimStagePf, cacheEntry, false);
-    UsdStageRefPtr volumeStage = cacheEntry->PrimStage.second;
-    BRIDGE_USDWRITER.InitializeUsdVolume(volumeStage, cacheEntry->PrimPath, false);
+    // Create manifest and primstage
+    BRIDGE_USDWRITER.CreateManifestStage(name, fieldPrimStagePf, cacheEntry);
+    //BRIDGE_USDWRITER.InitializeUsdVolumeManifest(cacheEntry);
+
+    UsdStageRefPtr volPrimStage = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, fieldPrimStagePf).second;
+    BRIDGE_USDWRITER.InitializeUsdVolume(volPrimStage, cacheEntry->PrimPath, false);
 #endif   
 
     BRIDGE_USDWRITER.InitializeUsdVolume(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, true);
@@ -434,10 +432,12 @@ bool UsdBridge::CreateMaterial(const char* name, UsdMaterialHandle& handle)
   if (!cacheExists)
   {
 #ifdef VALUE_CLIP_RETIMING
-    // Create a separate stage to be referenced by the value clips
-    BRIDGE_USDWRITER.OpenPrimStage(name, materialPrimStagePf, matCacheEntry, false);
-    UsdStageRefPtr materialStage = matCacheEntry->PrimStage.second;
-    BRIDGE_USDWRITER.InitializeUsdMaterial(materialStage, matCacheEntry->PrimPath, false);
+    // Create manifest and primstage
+    BRIDGE_USDWRITER.CreateManifestStage(name, materialPrimStagePf, matCacheEntry);
+    //BRIDGE_USDWRITER.InitializeUsdMaterialManifest(matCacheEntry);
+
+    UsdStageRefPtr matPrimStage = BRIDGE_USDWRITER.FindOrCreatePrimStage(matCacheEntry, materialPrimStagePf).second;
+    BRIDGE_USDWRITER.InitializeUsdMaterial(matPrimStage, matCacheEntry->PrimPath, false);
 #endif
 
     UsdShadeMaterial matPrim = BRIDGE_USDWRITER.InitializeUsdMaterial(BRIDGE_USDWRITER.GetSceneStage(), matCacheEntry->PrimPath, true);
@@ -458,10 +458,12 @@ bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle)
   if (!cacheExists)
   {
 #ifdef VALUE_CLIP_RETIMING
-    // Create a separate stage to be referenced by the value clips
-    BRIDGE_USDWRITER.OpenPrimStage(name, samplerPrimStagePf, cacheEntry, false);
-    UsdStageRefPtr samplerStage = cacheEntry->PrimStage.second;
-    BRIDGE_USDWRITER.InitializeUsdSampler(samplerStage, cacheEntry->PrimPath, false);
+    // Create manifest and primstage
+    BRIDGE_USDWRITER.CreateManifestStage(name, samplerPrimStagePf, cacheEntry);
+    //BRIDGE_USDWRITER.InitializeUsdSamplerManifest(cacheEntry);
+
+    UsdStageRefPtr samplerPrimStage = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, samplerPrimStagePf).second;
+    BRIDGE_USDWRITER.InitializeUsdSampler(samplerPrimStage, cacheEntry->PrimPath, false);
 #endif
 
     BRIDGE_USDWRITER.InitializeUsdSampler(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, true);
@@ -657,7 +659,7 @@ void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampl
 
   // Bind sampler and material
   SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
-  UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache).first;
+  UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache);
 
   BRIDGE_USDWRITER.BindSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, texfileName, texfileTimeVarying, timeStep); // requires world timestep, see implementation
 
@@ -770,17 +772,19 @@ void UsdBridge::SetGeometryDataTemplate(UsdGeometryHandle geometry, const GeomDa
 
   SdfPath& geomPath = cache->PrimPath;
 
-  std::pair<UsdStageRefPtr, bool> stageCreatePair = BRIDGE_USDWRITER.GetTimeVarStage(cache
+#ifdef VALUE_CLIP_RETIMING
+  if(cache->TimeVarBitsUpdate(geomData.TimeVarying))
+    BRIDGE_USDWRITER.UpdateUsdGeometryManifest(cache, geomData);
+#endif
+
+  UsdStageRefPtr geomStage = BRIDGE_USDWRITER.GetTimeVarStage(cache
 #ifdef TIME_CLIP_STAGES
     , true, geomClipPf, timeStep
+    , [usdWriter=BRIDGE_USDWRITER, geomPath, geomData] (UsdStageRefPtr geomStage) 
+        { usdWriter.InitializeUsdGeometry(geomStage, geomPath, geomData, false); }
 #endif
   );
-  UsdStageRefPtr geomStage = stageCreatePair.first;
-  if (stageCreatePair.second)
-  {
-    BRIDGE_USDWRITER.InitializeUsdGeometry(geomStage, geomPath, geomData, false);
-  }
-
+  
   BRIDGE_USDWRITER.UpdateUsdGeometry(geomStage, geomPath, geomData, timeStep);
 
 #ifdef VALUE_CLIP_RETIMING
@@ -804,13 +808,18 @@ void UsdBridge::SetGeometryData(UsdGeometryHandle geometry, const UsdBridgeCurve
   SetGeometryDataTemplate<UsdBridgeCurveData>(geometry, curveData, timeStep);
 }
 
-void UsdBridge::SetVolumeData(UsdSpatialFieldHandle field, const UsdBridgeVolumeData & volumeData, double timeStep)
+void UsdBridge::SetSpatialFieldData(UsdSpatialFieldHandle field, const UsdBridgeVolumeData& volumeData, double timeStep)
 {
   if (field.value == nullptr) return;
 
   UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(field);
 
-  UsdStageRefPtr volumeStage = BRIDGE_USDWRITER.GetTimeVarStage(cache).first;
+#ifdef VALUE_CLIP_RETIMING
+  if(cache->TimeVarBitsUpdate(volumeData.TimeVarying))
+    BRIDGE_USDWRITER.UpdateUsdVolumeManifest(cache, volumeData);
+#endif
+
+  UsdStageRefPtr volumeStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
 
   // To avoid data duplication when using of clip stages, we need to potentially use the scenestage prim for time-uniform data.
   BRIDGE_USDWRITER.UpdateUsdVolume(volumeStage, cache->PrimPath, cache->Name.GetString(), volumeData, timeStep);
@@ -828,7 +837,12 @@ void UsdBridge::SetMaterialData(UsdMaterialHandle material, const UsdBridgeMater
   UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
   SdfPath& matPrimPath = matCache->PrimPath;
   
-  UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache).first;
+#ifdef VALUE_CLIP_RETIMING
+  if(cache->TimeVarBitsUpdate(matData.TimeVarying))
+    BRIDGE_USDWRITER.UpdateUsdMaterialManifest(cache, matData);
+#endif
+
+  UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache);
 
   BRIDGE_USDWRITER.UpdateUsdMaterial(materialStage, matPrimPath, matData, timeStep);
 
@@ -845,7 +859,12 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
   UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(sampler);
   SdfPath& samplerPrimPath = cache->PrimPath;// .AppendPath(SdfPath(samplerAttribPf));
 
-  UsdStageRefPtr samplerStage = BRIDGE_USDWRITER.GetTimeVarStage(cache).first;
+#ifdef VALUE_CLIP_RETIMING
+  if(cache->TimeVarBitsUpdate(samplerData.TimeVarying))
+    BRIDGE_USDWRITER.UpdateUsdSamplerManifest(cache, samplerData);
+#endif
+
+  UsdStageRefPtr samplerStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
   
   BRIDGE_USDWRITER.UpdateUsdSampler(samplerStage, samplerPrimPath, samplerData, timeStep);
 

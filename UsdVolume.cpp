@@ -165,7 +165,7 @@ bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
   double worldTimeStep = device->getReadParams().timeStep;
   double fieldTimeStep = selectRefTime(paramData.fieldRefTimeStep, fieldParams.timeStep, worldTimeStep); // use the link time, as there is no such thing as separate field data
   
-  usdBridge->SetVolumeData(field->getUsdHandle(), volumeData, fieldTimeStep);
+  usdBridge->SetSpatialFieldData(field->getUsdHandle(), volumeData, fieldTimeStep);
 
   return true;
 }

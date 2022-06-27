@@ -15,8 +15,6 @@ PXR_NAMESPACE_USING_DIRECTIVE
 #include <memory>
 #include <functional>
 
-typedef std::pair<UsdStageRefPtr, bool> StageCreatePair;
-
 //Includes detailed usd translation interface of Usd Bridge
 class UsdBridgeUsdWriter
 {
@@ -45,19 +43,19 @@ public:
 
   bool OpenSceneStage();
   UsdStageRefPtr GetSceneStage();
-  StageCreatePair GetTimeVarStage(UsdBridgePrimCache* cache
+  UsdStageRefPtr GetTimeVarStage(UsdBridgePrimCache* cache
 #ifdef TIME_CLIP_STAGES
-    // If useClipStages, StageCreatePair.second is true when the clipStage is newly created (to signify need for prim initialization)
     , bool useClipStage = false, const char* clipPf = nullptr, double timeStep = 0.0
+    , std::function<void (UsdStageRefPtr)> initFunc = [](UsdStageRefPtr){}
 #endif
     );
 #ifdef VALUE_CLIP_RETIMING
-  void OpenPrimStage(const char* name, const char* primPostfix, UsdBridgePrimCache* cacheEntry, bool isManifest);
-  void SharePrimStage(UsdBridgePrimCache* owningCache, UsdBridgePrimCache* sharingCache);
-  void RemovePrimStage(const UsdBridgePrimCache* cacheEntry);
-#endif
-#ifdef TIME_CLIP_STAGES
-  const UsdStagePair& FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* clipPostfix, double timeStep, bool& exists);
+  void CreateManifestStage(const char* name, const char* primPostfix, UsdBridgePrimCache* cacheEntry);
+  void RemoveManifestAndClipStages(const UsdBridgePrimCache* cacheEntry);
+
+  const UsdStagePair& FindOrCreatePrimStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix);
+  const UsdStagePair& FindOrCreateClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, double timeStep, bool& exists);
+  const UsdStagePair& FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, bool isClip, double timeStep, bool& exists);
 #endif
   void SetSceneGraphRoot(UsdBridgePrimCache* worldCache, const char* name);
   void RemoveSceneGraphRoot(UsdBridgePrimCache* worldCache);
@@ -106,20 +104,25 @@ public:
   UsdPrim InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim);
   UsdPrim InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath& volumePath, bool uniformPrim);
   UsdShadeMaterial InitializeUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim);
-  UsdShadeOutput InitializeUsdShader(UsdStageRefPtr shaderStage, const SdfPath& shadPrimPath, bool uniformPrim);
-#ifdef SUPPORT_MDL_SHADERS  
-  UsdShadeOutput InitializeMdlShader(UsdStageRefPtr shaderStage, const SdfPath& shadPrimPath, bool uniformPrim);
-#endif
-  void InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, bool uniformPrim);
+  UsdPrim InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, bool uniformPrim);
 
-#ifdef TIME_CLIP_STAGES
-  void CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeMeshData& meshData);
-  void CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeInstancerData& instancerData);
-  void CreateUsdGeometryManifest(const char* name, const UsdBridgePrimCache* cacheEntry, const UsdBridgeCurveData& curveData);
+#ifdef VALUE_CLIP_RETIMING
+  //void InitializeUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry);
+  //void InitializeUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry);
+  //void InitializeUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry);
+  //void InitializeUsdVolumeManifest(const UsdBridgePrimCache* cacheEntry);
+  //void InitializeUsdMaterialManifest(const UsdBridgePrimCache* cacheEntry);
+  //void InitializeUsdSamplerManifest(const UsdBridgePrimCache* cacheEntry);
+
+  void UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeMeshData& meshData);
+  void UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeInstancerData& instancerData);
+  void UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeCurveData& curveData);
+  void UpdateUsdVolumeManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeVolumeData& volumeData);
+  void UpdateUsdMaterialManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeMaterialData& matData);
+  void UpdateUsdSamplerManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeSamplerData& samplerData);
 #endif
 
   void BindMaterialToGeom(const SdfPath& refGeomPath, const SdfPath& refMatPath);
-  void BindShaderToMaterial(const UsdShadeMaterial& matPrim, const UsdShadeOutput& shadOut, TfToken* renderContext);
   void BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
     const char* texFileName, bool texfileTimeVarying, double worldTimeStep);
 
@@ -129,13 +132,13 @@ public:
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& meshPath, const UsdBridgeMeshData& geomData, double timeStep);
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& instancerPath, const UsdBridgeInstancerData& geomData, double timeStep);
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& curvePath, const UsdBridgeCurveData& geomData, double timeStep);
-  void UpdateUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
-  void UpdateUsdShader(UsdStageRefPtr shaderStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
+  void UpdateUsdMaterial(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
+  void UpdateUsdShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
 #ifdef SUPPORT_MDL_SHADERS 
-  void UpdateMdlShader(UsdStageRefPtr shaderStage, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
+  void UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
 #endif
-  void UpdateUsdVolume(UsdStageRefPtr volumeStage, const SdfPath& volPrimPath, const std::string& name, const UsdBridgeVolumeData& volumeData, double timeStep);
-  void UpdateUsdSampler(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep);
+  void UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfPath& volPrimPath, const std::string& name, const UsdBridgeVolumeData& volumeData, double timeStep);
+  void UpdateUsdSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep);
   void UpdateBeginEndTime(double timeStep);
 
   void* LogUserData;

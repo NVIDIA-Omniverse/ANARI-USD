@@ -54,12 +54,20 @@ struct UsdBridgePrimCache : public UsdBridgeRefCache
   ResourceCollectFunc ResourceCollect;
 
 #ifdef VALUE_CLIP_RETIMING
-  UsdStagePair PrimStage; // Holds the stage with timevarying data for the prim, or the (init-only) manifest if TIME_CLIP_STAGES and prim supports it (ie. geometry) 
-  bool OwnsPrimStage = true;
-#endif
+  UsdStagePair ManifestStage; // Holds the manifest
+  std::unordered_map<double, UsdStagePair> ClipStages; // Holds the stage(s) to the timevarying data
 
-#ifdef TIME_CLIP_STAGES
-  std::unordered_map<double, UsdStagePair> ClipStages; // Holds the stages to the per-clip data
+  int LastTimeVaryingBits = 0; // Used to detect changes in timevarying status of parameters
+
+  static constexpr double PrimStageTimeCode = 0.0; // Prim stages are stored in ClipStages under specified time code
+  const UsdStagePair& GetPrimStagePair() { return ClipStages.find(PrimStageTimeCode); }
+
+  bool TimeVarBitsUpdate(int newTimeVarBits)
+  {
+    bool hasChanged = (LastTimeVaryingBits != newTimeVarBits);
+    LastTimeVaryingBits = newTimeVarBits;
+    return hasChanged;
+  }
 #endif
 
 #ifndef NDEBUG
