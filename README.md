@@ -36,7 +36,7 @@ Specific ANARI scene object parameters (World, Instancer, Group, Surface, Geomet
 - If ANARI objects of a certain `name` are not referenced from within any committed timestep, their internal data is only cleaned up when calling `anariDeviceSetParam(d, "usd::garbagecollect", ANARI_VOID_POINTER, 0)`. This is adviced after every `anariRenderFrame()` or a subfrequency thereof.
 
 Specific ANARI timed object parameters (Geometry, Material, Spatialfield, Sampler):
-- A `usd::timestep` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`, regardless of the global timestep set for the ANARIDevice object. The effect of setting this parameter is that the parents objects referencing these "timed objects" will keep a USD-based time-mapping per global timestep. This way, a child reference defined at a particular global timestep will point to the data output of the child object at its `usd::timestep`. This parameter is applied like any other parameter during `anariCommit`.
+- A `usd::timestep` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`, regardless of the global timestep set for the ANARIDevice object. The effect of setting this parameter is that the parent objects referencing these "timed objects" will keep a USD-based time-mapping per global timestep. This way, a child reference defined at a particular global timestep will point to the data output of the child object at its `usd::timestep`. This parameter is applied like any other parameter during `anariCommit`.
 
 ### Advanced parameters #
 ANARIDevice object parameters:
@@ -53,7 +53,7 @@ ANARIDevice object parameters:
 
 
 ANARI scene objects:
-- Use individual bits of the `usd::timeVarying` parameter to control which exact ANARI object parameters should vary over time, and which ones should store only one value over all timesteps. Which bit corresponds to which parameter can for the moment only be gathered from the `Usd<objectname>.h` header. This parameter is **immutable**.
+- Use individual bits of the `usd::timeVarying` parameter to control which exact ANARI object parameters should vary over time, and which ones should store only one value over all timesteps. Which bit corresponds to which parameter can for the moment only be gathered from the `Usd<objectname>.h` header. This parameter can be changed at any time and is applied like any other parameter during `anariCommit`.
 
 ### Not supported #
 
