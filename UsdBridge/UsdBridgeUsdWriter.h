@@ -99,12 +99,12 @@ public:
   void ManageUnusedRefs(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const UsdBridgePrimCacheList& newChildren, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
 
   void InitializeUsdTransform(const UsdBridgePrimCache* cacheEntry);
-  UsdPrim InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim);
-  UsdPrim InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeInstancerData& instancerData, bool uniformPrim);
-  UsdPrim InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim);
-  UsdPrim InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath& volumePath, bool uniformPrim);
-  UsdShadeMaterial InitializeUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim);
-  UsdPrim InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, bool uniformPrim);
+  UsdPrim InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim) const;
+  UsdPrim InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeInstancerData& instancerData, bool uniformPrim) const;
+  UsdPrim InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim) const;
+  UsdPrim InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath& volumePath, bool uniformPrim) const;
+  UsdShadeMaterial InitializeUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim) const;
+  UsdPrim InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, bool uniformPrim) const;
 
 #ifdef VALUE_CLIP_RETIMING
   //void InitializeUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry);
@@ -126,6 +126,7 @@ public:
   void BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
     const char* texFileName, bool texfileTimeVarying, double worldTimeStep);
 
+  void UnbindMaterialFromGeom(const SdfPath & refGeomPath);
   void UnBindSamplerFromMaterial(const SdfPath& matPrimPath);
 
   void UpdateUsdTransform(const SdfPath& transPrimPath, float* transform, bool timeVarying, double timeStep);

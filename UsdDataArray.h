@@ -13,13 +13,13 @@ struct UsdDataLayout
   bool isDense() const { return byteStride1 == typeSize && byteStride2 == numItems1*byteStride1 && byteStride3 == numItems2*byteStride2; }
   bool isOneDimensional() const { return numItems2 == 1 && numItems3 == 1; }
 
-  uint64_t typeSize;
-  uint64_t numItems1;
-  int64_t byteStride1;
-  uint64_t numItems2;
-  int64_t byteStride2;
-  uint64_t numItems3;
-  int64_t byteStride3;
+  uint64_t typeSize = 0;
+  uint64_t numItems1 = 0;
+  int64_t byteStride1 = 0;
+  uint64_t numItems2 = 0;
+  int64_t byteStride2 = 0;
+  uint64_t numItems3 = 0;
+  int64_t byteStride3 = 0;
 };
 
 class UsdDataArray : public UsdBaseObject

@@ -451,7 +451,7 @@ namespace
     {
       // Create considers the referenced uniform prims as a stronger opinion than timeVarying clip values.
       // Just remove the referenced uniform opinion altogether.
-      uniformAttrib.ClearAtTime(timeEval.Default());
+      uniformAttrib.ClearAtTime(TimeEvaluator<bool>::DefaultTime);
     }
 #endif
 #else // !VALUE_CLIP_RETIMING
@@ -885,13 +885,13 @@ void UsdBridgeUsdWriter::RemoveManifestAndClipStages(const UsdBridgePrimCache* c
   }
 }
 
-const UsdStagePair& FindOrCreatePrimStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix)
+const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix)
 {
   bool exists;
   return FindOrCreatePrimClipStage(cacheEntry, namePostfix, false, UsdBridgePrimCache::PrimStageTimeCode, exists);
 }
 
-const UsdStagePair& FindOrCreateClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, double timeStep, bool& exists)
+const UsdStagePair& UsdBridgeUsdWriter::FindOrCreateClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, double timeStep, bool& exists)
 {
   return FindOrCreatePrimClipStage(cacheEntry, namePostfix, true, timeStep, exists);
 }
@@ -910,7 +910,7 @@ const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimC
     if(isClip) 
     {
       folder = clipFolder;
-      fullNamePostFix += std::to_string(timeStep); 
+      fullNamePostfix += std::to_string(timeStep); 
     }
     std::string relativeFileName = folder + cacheEntry->Name.GetString() + fullNamePostfix + (binary ? ".usd" : ".usda");
     std::string absoluteFileName = Connect->GetUrl((this->SessionDirectory + relativeFileName).c_str());
@@ -922,7 +922,7 @@ const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimC
     if (exists)
     {
       primClipStage = UsdStage::Open(absoluteFileName); //Could happen if written folder is reused 
-      assert(clipStage->GetPrimAtPath(rootPrimPath));
+      assert(primClipStage->GetPrimAtPath(rootPrimPath));
     }
     else
       primClipStage->DefinePrim(rootPrimPath);
@@ -1103,7 +1103,7 @@ void UsdBridgeUsdWriter::InitializeClipMetaData(const UsdPrim& clipPrim, UsdBrid
     //set interpolatemissingclipvalues?
 
     bool exists;
-    const UsdStagePair& childStagePair = FindOrCreatePrimClipStage(childCache, clipPostfix, childTimeStep, exists);
+    const UsdStagePair& childStagePair = FindOrCreateClipStage(childCache, clipPostfix, childTimeStep, exists);
     assert(exists);
 
     refStagePath = &childStagePair.first;
@@ -1111,7 +1111,7 @@ void UsdBridgeUsdWriter::InitializeClipMetaData(const UsdPrim& clipPrim, UsdBrid
   else
 #endif
   {
-    refStagePath = childCache->GetPrimStagePair().first;
+    refStagePath = &childCache->GetPrimStagePair().first;
   }
 
   clipsApi.SetClipManifestAssetPath(SdfAssetPath(manifestPath));
@@ -1138,7 +1138,7 @@ void UsdBridgeUsdWriter::UpdateClipMetaData(const UsdPrim& clipPrim, UsdBridgePr
   if (clipStages)
   {
     bool exists;
-    const UsdStagePair& childStagePair = FindOrCreatePrimClipStage(childCache, clipPostfix, childTimeStep, exists);
+    const UsdStagePair& childStagePair = FindOrCreateClipStage(childCache, clipPostfix, childTimeStep, exists);
     // At this point, exists should be true, but if clip stage creation failed earlier due to user error, 
     // exists will be false and we'll just link to the empty new stage created by FindOrCreatePrimClipStage()
 
@@ -1889,32 +1889,32 @@ namespace
   }
 }
 
-UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim)
+UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim) const
 {
   return InitializeUsdGeometry_Impl(geometryStage, geomPath, meshData, uniformPrim, Settings);
 }
 
-UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeInstancerData& instancerData, bool uniformPrim)
+UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeInstancerData& instancerData, bool uniformPrim) const
 {
   return InitializeUsdGeometry_Impl(geometryStage, geomPath, instancerData, uniformPrim, Settings);
 }
 
-UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim)
+UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim) const
 {
   return InitializeUsdGeometry_Impl(geometryStage, geomPath, curveData, uniformPrim, Settings);
 }
 
-UsdPrim UsdBridgeUsdWriter::InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath & volumePath, bool uniformPrim)
-{
+UsdPrim UsdBridgeUsdWriter::InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath & volumePath, bool uniformPrim) const
+{ 
   return InitializeUsdVolume_Impl(volumeStage, volumePath, uniformPrim);
 }
 
-UsdShadeMaterial UsdBridgeUsdWriter::InitializeUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim)
+UsdShadeMaterial UsdBridgeUsdWriter::InitializeUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim) const
 {
   return InitializeUsdMaterial_Impl(materialStage, matPrimPath, uniformPrim, Settings);
 }
 
-UsdPrim UsdBridgeUsdWriter::InitializeUsdSampler(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, bool uniformPrim)
+UsdPrim UsdBridgeUsdWriter::InitializeUsdSampler(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, bool uniformPrim) const
 {
   return InitializeUsdSampler_Impl(samplerStage, samplerPrimPath, uniformPrim);
 }
@@ -2083,6 +2083,14 @@ void UsdBridgeUsdWriter::BindMaterialToGeom(const SdfPath & refGeomPath, const S
   UsdShadeMaterialBindingAPI(refGeomPrim).Bind(refMatPrim);
 }
 
+void UsdBridgeUsdWriter::UnbindMaterialFromGeom(const SdfPath & refGeomPath)
+{
+  UsdPrim refGeomPrim = this->SceneStage->GetPrimAtPath(refGeomPath);
+  assert(refGeomPrim);
+
+  UsdShadeMaterialBindingAPI(refGeomPrim).UnbindDirectBinding();
+}
+
 void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
   const char* texFileName, bool texfileTimeVarying, double worldTimeStep)
 {
@@ -2107,14 +2115,15 @@ void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, con
     UsdShadeShader timeVarShad = UsdShadeShader::Get(materialStage, shaderPrimPath);
     assert(timeVarShad);
 
-    //Bind the sampler to the diffuse color of the uniform shader, so remove any existing values from the timeVar prim
-    timeVarShad.GetPrim().RemoveProperty(TfToken("input:diffuseColor"));
-    timeVarShad.GetPrim().RemoveProperty(TfToken("input:specularColor"));
+    //Bind the sampler to the diffuse color of the uniform shader, so remove any existing values from the timeVar prim 
+    //(ideally user sets diffuse and specular to uniform)
+    timeVarShad.GetInput(UsdBridgeTokens->diffuseColor).GetAttr().Clear();
+    timeVarShad.GetInput(UsdBridgeTokens->specularColor).GetAttr().Clear();
 
     UsdShadeOutput refSamplerOutput = refSampler.CreateOutput(UsdBridgeTokens->rgb, SdfValueTypeNames->Color3f);
 
-    uniformShad.CreateInput(UsdBridgeTokens->diffuseColor, SdfValueTypeNames->Color3f).ConnectToSource(refSamplerOutput);
-    uniformShad.CreateInput(UsdBridgeTokens->specularColor, SdfValueTypeNames->Color3f).ConnectToSource(refSamplerOutput);
+    uniformShad.GetInput(UsdBridgeTokens->diffuseColor).ConnectToSource(refSamplerOutput);
+    uniformShad.GetInput(UsdBridgeTokens->specularColor).ConnectToSource(refSamplerOutput);
   }
 
 #ifdef SUPPORT_MDL_SHADERS
@@ -3153,6 +3162,9 @@ void UsdBridgeUsdWriter::UpdateUsdShader(UsdStageRefPtr timeVarStage, const SdfP
   SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->ior, DMI::IOR, matData.Ior);
   SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->emissiveColor, DMI::EMISSIVE, emColor);
 
+  UsdShadeInput uniformDiffInput = uniformShadPrim.GetInput(UsdBridgeTokens->diffuseColor);
+  UsdShadeInput uniformSpecInput = uniformShadPrim.GetInput(UsdBridgeTokens->specularColor);
+
   // Always sets diffuse/specular on one primstage and completely removes it from the other
   if (matData.UseVertexColors)
   {
@@ -3160,20 +3172,26 @@ void UsdBridgeUsdWriter::UpdateUsdShader(UsdStageRefPtr timeVarStage, const SdfP
     UsdShadeShader vertexColorReader = UsdShadeShader::Get(SceneStage, vertexColorReaderPrimPath);
     assert(vertexColorReader);
 
-    timeVarShadPrim.GetPrim().RemoveProperty(TfToken("input:diffuseColor"));
-    timeVarShadPrim.GetPrim().RemoveProperty(TfToken("input:specularColor"));
+    //Bind the vertex color reader to the diffuse/specular color of the uniform shader, so remove any existing values from the timeVar prim 
+    //(ideally user sets diffuse and specular to uniform)
+    timeVarShadPrim.GetInput(UsdBridgeTokens->diffuseColor).GetAttr().Clear();
+    timeVarShadPrim.GetInput(UsdBridgeTokens->specularColor).GetAttr().Clear();
     
     UsdShadeOutput vcReaderOutput = vertexColorReader.CreateOutput(UsdBridgeTokens->result, SdfValueTypeNames->Color3f);
 
-    uniformShadPrim.CreateInput(UsdBridgeTokens->diffuseColor, SdfValueTypeNames->Color3f).ConnectToSource(vcReaderOutput); // make sure to create input, as it may have been removed by other branch (or even the timeVarShadPrim, depending on compile defs)
-    uniformShadPrim.CreateInput(UsdBridgeTokens->specularColor, SdfValueTypeNames->Color3f).ConnectToSource(vcReaderOutput);
+    uniformDiffInput.ConnectToSource(vcReaderOutput); // make sure to create input, as it may have been removed by other branch (or even the timeVarShadPrim, depending on compile defs)
+    uniformSpecInput.ConnectToSource(vcReaderOutput);
   }
   else
   {
-    uniformShadPrim.GetPrim().RemoveProperty(TfToken("input:diffuseColor"));
-    uniformShadPrim.GetPrim().RemoveProperty(TfToken("input:specularColor"));
-    timeVarShadPrim.CreateInput(UsdBridgeTokens->diffuseColor, SdfValueTypeNames->Color3f).Set(difColor, timeEval.Eval(DMI::DIFFUSE));
-    timeVarShadPrim.CreateInput(UsdBridgeTokens->specularColor, SdfValueTypeNames->Color3f).Set(specColor, timeEval.Eval(DMI::SPECULAR));
+    if(uniformDiffInput.HasConnectedSource())
+      uniformDiffInput.DisconnectSource();
+    if(uniformSpecInput.HasConnectedSource())
+      uniformSpecInput.DisconnectSource();
+
+    // Just treat like regular time-varying inputs
+    SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->diffuseColor, DMI::DIFFUSE, difColor);
+    SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->specularColor, DMI::SPECULAR, specColor);
   }
 }
 

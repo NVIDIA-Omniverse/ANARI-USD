@@ -13,9 +13,9 @@ struct UsdFrameData
 {
   UsdWorld* world = nullptr;
   UsdRenderer* renderer = nullptr;
-  int size[2];
-  ANARIDataType color;
-  ANARIDataType depth;
+  int size[2] = {0, 0};
+  ANARIDataType color = ANARI_UNKNOWN;
+  ANARIDataType depth = ANARI_UNKNOWN;
 };
 
 class UsdFrame : public UsdBaseObject, public UsdParameterizedObject<UsdFrame, UsdFrameData>
@@ -37,6 +37,12 @@ class UsdFrame : public UsdBaseObject, public UsdParameterizedObject<UsdFrame, U
       void *mem,
       uint64_t size,
       UsdDevice* device) override;
+
+    virtual void commit(UsdDevice* device) override
+    {
+      TransferWriteToReadParams();
+      UsdBaseObject::commit(device);
+    }
 
     const void* mapBuffer(const char* channel);
     void unmapBuffer(const char* channel);

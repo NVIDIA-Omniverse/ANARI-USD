@@ -166,6 +166,13 @@ protected:
             if(isBaseObject(type))
               safeRefInc(dest);
           }
+
+          // If a string object has been created, decrease its public refcount (1 at creation)
+          if (sharedStr) 
+          {
+            assert(sharedStr->useCount() == 2); // Single public and internal reference
+            sharedStr->refDec();
+          }
         }
 
 #ifdef TIME_BASED_CACHING

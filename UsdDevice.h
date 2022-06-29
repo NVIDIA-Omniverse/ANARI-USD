@@ -180,7 +180,7 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
     bool nameExists(const char* name);
 
     void addToCommitList(UsdBaseObject* object, bool commitData);
-    void removeFromCommitList(UsdBaseObject* object);
+    void clearCommitList();
     void flushCommitList();
 
     void addToVolumeList(UsdVolume* volume);

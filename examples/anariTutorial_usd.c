@@ -24,6 +24,12 @@ const char* texFile = "/home/<username>/models/texture.png"; // Point this to an
 const char* wrapS = "repeat";
 const char* wrapT = "repeat";
 
+typedef struct TestParameters
+{
+  int writeAtCommit;
+  int useVertexColors;
+} TestParameters;
+
 /******************************************************************/
 void statusFunc(void *userData,
   ANARIDevice device,
@@ -54,22 +60,25 @@ void statusFunc(void *userData,
   }
 }
 
-int main(int argc, const char **argv)
+void doTest(TestParameters testParams)
 {
+  printf("\n\n--------------  Starting new test iteration \n\n");
+  printf("Parameters: writeatcommit %d, useVertexColors %d \n", testParams.writeAtCommit, testParams.useVertexColors);
+
   stbi_flip_vertically_on_write(1);
 
   // image size
   int imgSize[2] = { 1024, 768 };
 
   // camera
-  float cam_pos[] = {0.f, 0.f, 0.f};
-  float cam_up[] = {0.f, 1.f, 0.f};
-  float cam_view[] = {0.1f, 0.f, 1.f};
+  float cam_pos[] = { 0.f, 0.f, 0.f };
+  float cam_up[] = { 0.f, 1.f, 0.f };
+  float cam_view[] = { 0.1f, 0.f, 1.f };
 
   float transform[12] = { 3.0f, 0.0f, 0.0f, 0.0f, 3.0f, 0.0f, 0.0f, 0.0f, 3.0f, 2.0f, 3.0f, 4.0f };
 
   // triangle mesh data
-  float vertex[] = {-1.0f,
+  float vertex[] = { -1.0f,
       -1.0f,
       3.0f,
       -1.0f,
@@ -80,7 +89,7 @@ int main(int argc, const char **argv)
       3.0f,
       0.1f,
       0.1f,
-      0.3f};
+      0.3f };
   float normal[] = { 0.0f,
     0.0f,
     1.0f,
@@ -94,7 +103,7 @@ int main(int argc, const char **argv)
     0.0f,
     0.0f
   };
-  float color[] = {0.0f,
+  float color[] = { 0.0f,
       0.0f,
       0.9f,
       1.0f,
@@ -109,7 +118,7 @@ int main(int argc, const char **argv)
       0.0f,
       0.9f,
       0.0f,
-      1.0f};
+      1.0f };
   float texcoord[] = {
       0.0f,
       0.0f,
@@ -123,7 +132,7 @@ int main(int argc, const char **argv)
       2.0f,
       0.3f,
       0.05f };
-  int32_t index[] = {0, 1, 2, 2, 1, 3};
+  int32_t index[] = { 0, 1, 2, 2, 1, 3 };
 
   float kd[] = { 0.0f, 0.0f, 1.0f };
 
@@ -147,7 +156,7 @@ int main(int argc, const char **argv)
   int outputDisplayColors = 1;
   int outputMdlColors = 1;
 
-  int useVertexColors = 1;
+  int useVertexColors = testParams.useVertexColors;
 
   anariSetParameter(dev, dev, "usd::connection.logverbosity", ANARI_INT32, &connLogVerbosity);
 
@@ -162,6 +171,7 @@ int main(int argc, const char **argv)
   anariSetParameter(dev, dev, "usd::output.mdlshader", ANARI_BOOL, &outputMdl);
   anariSetParameter(dev, dev, "usd::output.displaycolors", ANARI_BOOL, &outputDisplayColors);
   anariSetParameter(dev, dev, "usd::output.mdlcolors", ANARI_BOOL, &outputMdlColors);
+  anariSetParameter(dev, dev, "usd::writeatcommit", ANARI_BOOL, &testParams.writeAtCommit);
 
   // commit device
   anariCommit(dev, dev);
@@ -241,6 +251,8 @@ int main(int argc, const char **argv)
     anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
   anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
   anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
+  int materialTimeVarying = 1<<2; // Set emissive to timevarying (should appear in material stage under primstages/)
+  anariSetParameter(dev, mat, "usd::timevarying", ANARI_INT32, &materialTimeVarying);
   anariCommit(dev, mat);
   anariRelease(dev, sampler);
 
@@ -380,6 +392,24 @@ int main(int argc, const char **argv)
   anariUnloadLibrary(lib);
 
   printf("done!\n");
+}
+
+
+int main(int argc, const char **argv)
+{
+  TestParameters testParams;
+
+  testParams.writeAtCommit = 0;
+  testParams.useVertexColors = 0;
+  doTest(testParams);
+
+  testParams.writeAtCommit = 1;
+  testParams.useVertexColors = 0;
+  doTest(testParams);
+
+  testParams.writeAtCommit = 0;
+  testParams.useVertexColors = 1;
+  doTest(testParams);
 
   return 0;
 }

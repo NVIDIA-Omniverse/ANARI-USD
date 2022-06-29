@@ -129,6 +129,8 @@ UsdDevice::UsdDevice()
 
 UsdDevice::~UsdDevice()
 {
+  clearCommitList(); // Make sure no more references are held before cleaning up the device (and checking for memleaks)
+
   //internals->bridge->SaveScene(); //Uncomment to test cleanup of usd files.
 
 #ifdef CHECK_MEMLEAKS
@@ -563,23 +565,16 @@ void UsdDevice::addToCommitList(UsdBaseObject* object, bool commitData)
   }
 }
 
-void UsdDevice::removeFromCommitList(UsdBaseObject* object)
+void UsdDevice::clearCommitList()
 {
-  if(lockCommitList)
+#ifdef CHECK_MEMLEAKS
+  for(auto& commitEntry : commitList)
   {
-    this->reportStatus(object, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, 
-      "Usd device internal error; removeFromCommitList called while list is locked");
+    LogDeallocation(commitEntry.first.ptr);
   }
-  else
-  {
-    auto it = std::find_if(commitList.begin(), commitList.end(), 
-      [&object](const CommitListType& entry) -> bool { return entry.first.ptr == object; });
-    if(it != commitList.end())
-    {
-      *it = commitList.back();
-      commitList.pop_back();
-    }
-  }
+#endif
+
+  commitList.resize(0);
 }
 
 void UsdDevice::flushCommitList()
@@ -625,7 +620,7 @@ void UsdDevice::flushCommitList()
   writeTypeToUsd<(int)ANARI_INSTANCE>();
   writeTypeToUsd<(int)ANARI_WORLD>();
 
-  commitList.resize(0);
+  clearCommitList();
 
   lockCommitList = false;
 }

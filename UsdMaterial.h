@@ -14,7 +14,8 @@ struct UsdMaterialData
   UsdSharedString* usdName = nullptr;
 
   double timeStep = std::numeric_limits<float>::quiet_NaN();
-  int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0:diffuse, 1:specular, 2:opacity, 3:shininess
+  int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0: diffuse, 1: specular, 2: emissive, 
+    // 3: opacity, 4: emissiveintensity, 5: roughness, 6: metallic, 7: ior
 
   float diffuse[3] = { 1.0f, 1.0f, 1.0f };
   float specular[3] = { 1.0f, 1.0f, 1.0f };

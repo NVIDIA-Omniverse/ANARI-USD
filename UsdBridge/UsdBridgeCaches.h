@@ -57,15 +57,22 @@ struct UsdBridgePrimCache : public UsdBridgeRefCache
   UsdStagePair ManifestStage; // Holds the manifest
   std::unordered_map<double, UsdStagePair> ClipStages; // Holds the stage(s) to the timevarying data
 
-  int LastTimeVaryingBits = 0; // Used to detect changes in timevarying status of parameters
+  uint32_t LastTimeVaryingBits = 0; // Used to detect changes in timevarying status of parameters
 
   static constexpr double PrimStageTimeCode = 0.0; // Prim stages are stored in ClipStages under specified time code
-  const UsdStagePair& GetPrimStagePair() { return ClipStages.find(PrimStageTimeCode); }
+  const UsdStagePair& GetPrimStagePair() const
+  { 
+    auto it = ClipStages.find(PrimStageTimeCode);
+    assert(it != ClipStages.end()); 
+    return it->second; 
+  }
 
-  bool TimeVarBitsUpdate(int newTimeVarBits)
+  template<typename DataMemberType>
+  bool TimeVarBitsUpdate(DataMemberType newTimeVarBits)
   {
-    bool hasChanged = (LastTimeVaryingBits != newTimeVarBits);
-    LastTimeVaryingBits = newTimeVarBits;
+    uint32_t newBits = static_cast<uint32_t>(newTimeVarBits);
+    bool hasChanged = (LastTimeVaryingBits != newBits);
+    LastTimeVaryingBits = newBits;
     return hasChanged;
   }
 #endif

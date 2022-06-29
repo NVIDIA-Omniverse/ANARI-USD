@@ -146,7 +146,7 @@ int main(int argc, const char **argv)
     int outputMaterial = 1;
     int createNewSession = (anariPass == 0) ? 1 : 0;
 
-    int useVertexColors = 1;
+    int useVertexColors = (anariPass == 0);
 
     anariSetParameter(dev, dev, "usd::connection.logverbosity", ANARI_INT32, &connLogVerbosity);
 

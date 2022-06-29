@@ -31,6 +31,12 @@ class UsdRenderer : public UsdBaseObject, public UsdParameterizedObject<UsdRende
       uint64_t size,
       UsdDevice* device) override;
 
+    virtual void commit(UsdDevice* device) override
+    {
+      TransferWriteToReadParams();
+      UsdBaseObject::commit(device);
+    }
+
     void saveUsd();
 
   protected:

@@ -604,6 +604,8 @@ void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geome
   bool timeVarying = false;
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, true, true, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks);
+
+  BRIDGE_USDWRITER.UnbindMaterialFromGeom(refGeomPath);
 }
 
 void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep)
@@ -780,8 +782,8 @@ void UsdBridge::SetGeometryDataTemplate(UsdGeometryHandle geometry, const GeomDa
   UsdStageRefPtr geomStage = BRIDGE_USDWRITER.GetTimeVarStage(cache
 #ifdef TIME_CLIP_STAGES
     , true, geomClipPf, timeStep
-    , [usdWriter=BRIDGE_USDWRITER, geomPath, geomData] (UsdStageRefPtr geomStage) 
-        { usdWriter.InitializeUsdGeometry(geomStage, geomPath, geomData, false); }
+    , [usdWriter=&BRIDGE_USDWRITER, &geomPath, &geomData] (UsdStageRefPtr geomStage) 
+        { usdWriter->InitializeUsdGeometry(geomStage, geomPath, geomData, false); }
 #endif
   );
   
@@ -834,15 +836,15 @@ void UsdBridge::SetMaterialData(UsdMaterialHandle material, const UsdBridgeMater
 {
   if (material.value == nullptr) return;
 
-  UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
-  SdfPath& matPrimPath = matCache->PrimPath;
+  UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(material);
+  SdfPath& matPrimPath = cache->PrimPath;
   
 #ifdef VALUE_CLIP_RETIMING
   if(cache->TimeVarBitsUpdate(matData.TimeVarying))
     BRIDGE_USDWRITER.UpdateUsdMaterialManifest(cache, matData);
 #endif
 
-  UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache);
+  UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
 
   BRIDGE_USDWRITER.UpdateUsdMaterial(materialStage, matPrimPath, matData, timeStep);
 

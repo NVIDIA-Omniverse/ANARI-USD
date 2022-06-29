@@ -34,7 +34,7 @@ class UsdBaseObject : public anari::RefCounted
       uint64_t size,
       UsdDevice* device) = 0;
 
-    virtual void commit(UsdDevice* device);
+    virtual void commit(UsdDevice* device) = 0;
 
     ANARIDataType getType() const { return type; }
 
@@ -63,16 +63,18 @@ class UsdRefCountWrapped : public UsdBaseObject
       const char *name,
       ANARIDataType type,
       const void *mem,
-      UsdDevice* device) {}
+      UsdDevice* device) override {}
 
     virtual void filterResetParam(
-      const char *name) {}
+      const char *name) override {}
 
     virtual int getProperty(const char *name,
       ANARIDataType type,
       void *mem,
       uint64_t size,
-      UsdDevice* device) { return 0; }
+      UsdDevice* device) override { return 0; }
+
+    void commit(UsdDevice* device) override {}  
 
     BaseType Data;
 

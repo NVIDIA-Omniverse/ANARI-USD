@@ -27,7 +27,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 
     void formatUsdName()
     {
-      char* name = const_cast<char*>(UsdSharedString::c_str(getReadParams().usdName));
+      char* name = const_cast<char*>(UsdSharedString::c_str(getWriteParams().usdName));
       assert(strlen(name) > 0);
 
       auto letter = [](unsigned c) { return ((c - 'A') < 26) || ((c - 'a') < 26); };
@@ -126,14 +126,22 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 
     double selectObjTime(double objTimeStep, double worldTimeStep)
     { 
-      return std::isnan(objTimeStep) ? worldTimeStep : objTimeStep;
+      return
+#ifdef VALUE_CLIP_RETIMING 
+        !std::isnan(objTimeStep) ? objTimeStep :
+#endif      
+        worldTimeStep;
     }
 
     double selectRefTime(double refTimeStep, double objTimeStep, double worldTimeStep)
     { 
-      return std::isnan(refTimeStep) ? 
-        (std::isnan(objTimeStep) ? 
-          worldTimeStep : objTimeStep) : refTimeStep;
+      return
+  #ifdef VALUE_CLIP_RETIMING  
+        !std::isnan(refTimeStep) ? refTimeStep :
+          (!std::isnan(objTimeStep) ? objTimeStep : worldTimeStep);
+  #else
+        worldTimeStep;
+  #endif
     }
 
   protected:
@@ -153,6 +161,9 @@ inline bool UsdObjectNotInitialized(const UsdBridgedBaseObject<T,D,H>* obj)
 template<class T>
 inline bool UsdObjectNotInitialized(UsdDataArray* objects)
 {
+  if (!objects)
+    return false;
+
   bool notInitialized = false;
   if(anari::isObject(objects->getType()))
   {

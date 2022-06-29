@@ -89,11 +89,11 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
   double worldTimeStep = device->getReadParams().timeStep;
 
   // Make sure the references are updated on the Bridge side.
-  if (paramData.geometry && (!device->getReadParams().outputMaterial || paramData.material))
+  if (paramData.geometry)
   {
     double geomObjTimeStep = paramData.geometry->getReadParams().timeStep;
 
-    if(device->getReadParams().outputMaterial)
+    if(device->getReadParams().outputMaterial && paramData.material)
     {
       double matObjTimeStep = paramData.material->getReadParams().timeStep;
 
@@ -106,18 +106,19 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
         );
     }
     else
-      usdBridge->SetGeometryRef(usdHandle, 
-        paramData.geometry->getUsdHandle(), 
+    {
+      usdBridge->SetGeometryRef(usdHandle,
+        paramData.geometry->getUsdHandle(),
         worldTimeStep,
         selectRefTime(paramData.geometryRefTimeStep, geomObjTimeStep, worldTimeStep)
-        ); 
+      );
+      usdBridge->DeleteMaterialRef(usdHandle, worldTimeStep);
+    }
   }
   else
   {
-    if (!paramData.geometry)
-    {
-      usdBridge->DeleteGeometryRef(usdHandle, worldTimeStep);
-    }
+    usdBridge->DeleteGeometryRef(usdHandle, worldTimeStep);
+
     if (!paramData.material && device->getReadParams().outputMaterial)
     {
       usdBridge->DeleteMaterialRef(usdHandle, worldTimeStep);
