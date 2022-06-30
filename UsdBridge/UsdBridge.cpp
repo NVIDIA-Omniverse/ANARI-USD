@@ -361,7 +361,6 @@ bool UsdBridge::CreateGeometryTemplate(const char* name, UsdGeometryHandle& hand
   {
 #ifdef VALUE_CLIP_RETIMING
     BRIDGE_USDWRITER.CreateManifestStage(name, geomPrimStagePf, cacheEntry);
-    //BRIDGE_USDWRITER.InitializeUsdGeometryManifest(cacheEntry, geomData);
 
 #ifndef TIME_CLIP_STAGES
     // Default primstage created for clip assetpaths of parents. If this path is not active, individual clip stages are created lazily during data update.
@@ -405,7 +404,6 @@ bool UsdBridge::CreateSpatialField(const char * name, UsdSpatialFieldHandle& han
 #ifdef VALUE_CLIP_RETIMING
     // Create manifest and primstage
     BRIDGE_USDWRITER.CreateManifestStage(name, fieldPrimStagePf, cacheEntry);
-    //BRIDGE_USDWRITER.InitializeUsdVolumeManifest(cacheEntry);
 
     UsdStageRefPtr volPrimStage = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, fieldPrimStagePf).second;
     BRIDGE_USDWRITER.InitializeUsdVolume(volPrimStage, cacheEntry->PrimPath, false);
@@ -434,7 +432,6 @@ bool UsdBridge::CreateMaterial(const char* name, UsdMaterialHandle& handle)
 #ifdef VALUE_CLIP_RETIMING
     // Create manifest and primstage
     BRIDGE_USDWRITER.CreateManifestStage(name, materialPrimStagePf, matCacheEntry);
-    //BRIDGE_USDWRITER.InitializeUsdMaterialManifest(matCacheEntry);
 
     UsdStageRefPtr matPrimStage = BRIDGE_USDWRITER.FindOrCreatePrimStage(matCacheEntry, materialPrimStagePf).second;
     BRIDGE_USDWRITER.InitializeUsdMaterial(matPrimStage, matCacheEntry->PrimPath, false);
@@ -460,7 +457,6 @@ bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle)
 #ifdef VALUE_CLIP_RETIMING
     // Create manifest and primstage
     BRIDGE_USDWRITER.CreateManifestStage(name, samplerPrimStagePf, cacheEntry);
-    //BRIDGE_USDWRITER.InitializeUsdSamplerManifest(cacheEntry);
 
     UsdStageRefPtr samplerPrimStage = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, samplerPrimStagePf).second;
     BRIDGE_USDWRITER.InitializeUsdSampler(samplerPrimStage, cacheEntry->PrimPath, false);
