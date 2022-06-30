@@ -76,9 +76,6 @@ public:
   void UpdateClipMetaData(const UsdPrim& clipPrim, UsdBridgePrimCache* childCache, double parentTimeStep, double childTimeStep, bool clipStages, const char* clipPostfix);
 #endif
 
-  SdfPath AddRef_NoClip(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-    bool timeVarying, double parentTimeStep, double childTimeStep,
-    const RefModFuncs& refModCallbacks);
   SdfPath AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, double parentTimeStep, double childTimeStep,
     const RefModFuncs& refModCallbacks);
@@ -89,7 +86,7 @@ public:
   // Timevarying means that the existence of a reference between prim A and B can differ over time, valueClip denotes the addition of clip metadata for re-timing, 
   // and clipStages will carve up the referenced clip asset files into one for each timestep (stages are created as necessary). clipPostFix is irrelevant if !clipStages.
   // Returns the path to the parent's subprim which represents/holds the reference to the child's main class prim.
-  SdfPath AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
+  SdfPath AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, bool valueClip, bool clipStages, const char* clipPostFix,
     double parentTimeStep, double childTimeStep,
     const RefModFuncs& refModCallbacks);
@@ -168,7 +165,6 @@ protected:
   UsdStageRefPtr SceneStage;
   bool EnableSaving = true;
   std::string SceneFileName;
-  std::string RelativeSceneFile; // relative from Asset Folders
   std::string SessionDirectory;
   std::string RootName;
   std::string RootClassName;

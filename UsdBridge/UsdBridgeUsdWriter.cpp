@@ -775,7 +775,6 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
 
   std::string SceneFile = (binary ? "FullScene.usd" : "FullScene.usda");
   this->SceneFileName = this->SessionDirectory + SceneFile;
-  this->RelativeSceneFile = "../" + SceneFile;
 
   const char* absSceneFile = Connect->GetUrl(this->SceneFileName.c_str());
   if (!this->SceneStage && !Settings.CreateNewSession)
@@ -940,7 +939,7 @@ void UsdBridgeUsdWriter::SetSceneGraphRoot(UsdBridgePrimCache* worldCache, const
 
   UsdPrim sceneGraphPrim = this->SceneStage->DefinePrim(sceneGraphPath);
   assert(sceneGraphPrim);
-  sceneGraphPrim.GetReferences().AddReference("", worldCache->PrimPath); //local and one-one, so no difference between ref or inherit
+  sceneGraphPrim.GetReferences().AddInternalReference(worldCache->PrimPath); //local and one-one, so no difference between ref or inherit
 }
 
 void UsdBridgeUsdWriter::RemoveSceneGraphRoot(UsdBridgePrimCache* worldCache)
@@ -1226,14 +1225,7 @@ SdfPath UsdBridgeUsdWriter::AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBr
   bool timeVarying, double parentTimeStep, double childTimeStep,
   const RefModFuncs& refModCallbacks)
 {
-  return AddRef_Impl(SceneStage, parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, childTimeStep, refModCallbacks);
-}
-
-SdfPath UsdBridgeUsdWriter::AddRef_NoClip(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-  bool timeVarying, double parentTimeStep, double childTimeStep,
-  const RefModFuncs& refModCallbacks)
-{
-  return AddRef_Impl(stage, parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, childTimeStep, refModCallbacks);
+  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, childTimeStep, refModCallbacks);
 }
 
 SdfPath UsdBridgeUsdWriter::AddRef(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
@@ -1242,10 +1234,10 @@ SdfPath UsdBridgeUsdWriter::AddRef(UsdBridgePrimCache* parentCache, UsdBridgePri
   const RefModFuncs& refModCallbacks)
 {
   // Value clip-enabled references have to be defined on the scenestage, as usd does not re-time recursively.
-  return AddRef_Impl(SceneStage, parentCache, childCache, refPathExt, timeVarying, valueClip, clipStages, clipPostfix, parentTimeStep, childTimeStep, refModCallbacks);
+  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, valueClip, clipStages, clipPostfix, parentTimeStep, childTimeStep, refModCallbacks);
 }
 
-SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
+SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
   bool timeVarying, // Timevarying existence of the reference itself
   bool valueClip,   // Retiming through a value clip
   bool clipStages,  // Separate stages for separate time slots (can only exist in usd if valueClip enabled)
@@ -1259,11 +1251,11 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePri
     childBasePath = parentCache->PrimPath.AppendPath(SdfPath(refPathExt));
   
   SdfPath referencingPrimPath = childBasePath.AppendPath(childCache->Name);
-  UsdPrim referencingPrim = parentStage->GetPrimAtPath(referencingPrimPath);
+  UsdPrim referencingPrim = SceneStage->GetPrimAtPath(referencingPrimPath);
 
   if (!referencingPrim)
   {
-    referencingPrim = parentStage->DefinePrim(referencingPrimPath);
+    referencingPrim = SceneStage->DefinePrim(referencingPrimPath);
     assert(referencingPrim);
 
 #ifdef VALUE_CLIP_RETIMING
@@ -1274,17 +1266,14 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePri
     {
       UsdReferences references = referencingPrim.GetReferences(); //references or inherits?
       references.ClearReferences();
-      if (parentStage != SceneStage)
-        references.AddReference(RelativeSceneFile, childCache->PrimPath);
-      else
-        references.AddInternalReference(childCache->PrimPath);
+      references.AddInternalReference(childCache->PrimPath);
       //referencingPrim.SetInstanceable(true);
     }
 
 #ifdef TIME_BASED_CACHING
     // If time domain of the stage extends beyond timestep in either direction, set visibility false for extremes.
     if (timeVarying)
-      InitializePrimVisibility(parentStage, referencingPrimPath, parentTimeCode);
+      InitializePrimVisibility(SceneStage, referencingPrimPath, parentTimeCode);
 #endif
 
     refModCallbacks.AtNewRef(parentCache, childCache);
@@ -1293,7 +1282,7 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdStageRefPtr parentStage, UsdBridgePri
   {
 #ifdef TIME_BASED_CACHING
     if (timeVarying)
-      SetPrimVisibility(parentStage, referencingPrimPath, parentTimeCode, true);
+      SetPrimVisibility(SceneStage, referencingPrimPath, parentTimeCode, true);
 
 #ifdef VALUE_CLIP_RETIMING
     // Cliptimes are added as additional info, not actively removed (visibility values remain leading in defining existing relationships over timesteps)
