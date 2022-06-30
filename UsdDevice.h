@@ -182,6 +182,7 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
     void addToCommitList(UsdBaseObject* object, bool commitData);
     void clearCommitList();
     void flushCommitList();
+    bool isFlushingCommitList() const { return lockCommitList; }
 
     void addToVolumeList(UsdVolume* volume);
     void removeFromVolumeList(UsdVolume* volume);

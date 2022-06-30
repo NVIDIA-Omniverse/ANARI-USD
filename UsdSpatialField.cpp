@@ -50,9 +50,9 @@ void UsdSpatialField::filterResetParam(const char *name)
 
 bool UsdSpatialField::deferCommit(UsdDevice* device)
 {
-  // Always defer, to give parent volumes the possibility to detect which of its child fields have been committed,
+  // Always defer until flushing of commit list, to give parent volumes the possibility to detect which of its child fields have been committed,
   // such that those volumes with committed children are also automatically committed.
-  return true; 
+  return !device->isFlushingCommitList();
 }
 
 bool UsdSpatialField::doCommitData(UsdDevice* device)

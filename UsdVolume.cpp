@@ -172,8 +172,8 @@ bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
 
 bool UsdVolume::deferCommit(UsdDevice* device)
 {
-  // The spatial field may not yet have been committed, but the volume reads data from its params during commit. So always defer.
-  return true; 
+  // The spatial field may not yet have been committed, but the volume reads data from its params during commit. So always defer until flushing of commit list.
+  return !device->isFlushingCommitList();
 }
 
 bool UsdVolume::doCommitData(UsdDevice* device)
