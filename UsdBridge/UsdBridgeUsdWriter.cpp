@@ -479,13 +479,13 @@ namespace
     {
       if(settings.EnableDisplayColors)
       {
-        primvarApi.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray, UsdGeomTokens->vertex);
+        primvarApi.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray);
       }
   #ifdef SUPPORT_MDL_SHADERS
       if(settings.EnableMdlColors)
       {
-        primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
-        primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+        primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray);
+        primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray);
       }
   #endif
     }
@@ -517,7 +517,7 @@ namespace
     }
 
     if (timeVarChecked /*&& (UsdGeomDataHasTexCoords(geomData) || settings.EnableMdlColors)*/)
-      primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray, UsdGeomTokens->vertex);
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray);
     else if (timeEval)
       primvarApi.RemovePrimvar(UsdBridgeTokens->st);
   }
@@ -544,8 +544,7 @@ namespace
       if(timeVarChecked)
       {
         SdfValueTypeName primvarType = GetPrimvarArrayType(attrib.DataType);
-        TfToken attribInterpolation = attrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
-        primvarApi.CreatePrimvar(AttribIndexToToken(attribIndex), primvarType, attribInterpolation);
+        primvarApi.CreatePrimvar(AttribIndexToToken(attribIndex), primvarType);
       }
       else if(timeEval)
       {
@@ -1581,9 +1580,6 @@ namespace
     UsdGeomMesh geomMesh = GetOrDefinePrim<UsdGeomMesh>(geometryStage, geomPath);
     
     InitializeUsdGeometryTimeVar(geomMesh, meshData, settings, timeEval);
-
-    if(!timeEval)
-      geomMesh.SetNormalsInterpolation(UsdGeomTokens->vertex); // Always start out with some interpolation
 
     if (uniformPrim)
     {
