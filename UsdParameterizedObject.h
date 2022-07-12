@@ -11,7 +11,7 @@
 #include <vector>
 #include "UsdAnari.h"
 #include "UsdBaseObject.h"
-#include "anari/detail/IntrusivePtr.h"
+#include "anari/backend/utilities/IntrusivePtr.h"
 #include "anari/type_utility.h"
 #include "anari/anari_cpp/Traits.h"
 
@@ -125,7 +125,7 @@ protected:
         {
           bool* destBool_p = reinterpret_cast<bool*>(dest);
           bool srcBool = *(reinterpret_cast<const uint32_t*>(src));
-          
+
           contentUpdate =  (*destBool_p != srcBool);
 
           *destBool_p = srcBool;
@@ -135,8 +135,8 @@ protected:
           UsdSharedString* sharedStr = nullptr;
           if (type == ANARI_STRING)
           {
-            // Wrap strings to make them refcounted, 
-            // from that point they are considered normal UsdBaseObjects. 
+            // Wrap strings to make them refcounted,
+            // from that point they are considered normal UsdBaseObjects.
             UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*baseObj);
             const char* srcCstr = reinterpret_cast<const char*>(src);
 
@@ -150,8 +150,8 @@ protected:
 
 #ifdef CHECK_MEMLEAKS
               allocDevice->LogAllocation(sharedStr);
-#endif    
-            }        
+#endif
+            }
           }
           else
             contentUpdate = bool(memcmp(dest, src, numBytes));
@@ -168,7 +168,7 @@ protected:
           }
 
           // If a string object has been created, decrease its public refcount (1 at creation)
-          if (sharedStr) 
+          if (sharedStr)
           {
             assert(sharedStr->useCount() == 2); // Single public and internal reference
             sharedStr->refDec();

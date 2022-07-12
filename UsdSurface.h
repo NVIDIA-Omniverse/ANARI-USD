@@ -5,6 +5,8 @@
 
 #include "UsdBridgedBaseObject.h"
 
+#include <limits>
+
 class UsdGeometry;
 class UsdMaterial;
 
@@ -17,7 +19,7 @@ struct UsdSurfaceData
 
   UsdGeometry* geometry = nullptr;
   UsdMaterial* material = nullptr;
-  
+
   double geometryRefTimeStep = std::numeric_limits<float>::quiet_NaN();
   double materialRefTimeStep = std::numeric_limits<float>::quiet_NaN();
 };
@@ -27,7 +29,7 @@ class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSu
   public:
     UsdSurface(const char* name, UsdBridge* bridge, UsdDevice* device);
     ~UsdSurface();
-  
+
     void filterSetParam(const char *name,
       ANARIDataType type,
       const void *mem,

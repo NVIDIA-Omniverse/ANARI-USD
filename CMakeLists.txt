@@ -40,7 +40,7 @@ if (EXISTS "${ANARI_ROOT_DIR}/release")
 endif()
 
 # Search in config mode
-find_package(anari 0.1.0 REQUIRED
+find_package(anari 0.2.0 REQUIRED
   PATHS ${ANARI_ROOT_DIR}
 )
 
@@ -56,7 +56,7 @@ if(USD_DEVICE_TIME_BASED_OUTPUT)
     option(USD_DEVICE_CLIP_STAGE_OUTPUT "Separate clip stages for each timestep for selected objects, resulting in a single USD file per timestep" ON)
     if(USD_DEVICE_CLIP_STAGE_OUTPUT)
       list(APPEND USD_DEVICE_TIME_DEFS -DTIME_CLIP_STAGES)
-    endif() 
+    endif()
   endif()
 endif()
 

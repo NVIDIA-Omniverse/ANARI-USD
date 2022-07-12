@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "anari/detail/Device.h"
-#include "anari/detail/Library.h"
+#include "anari/backend/DeviceImpl.h"
+#include "anari/backend/LibraryImpl.h"
 #include "UsdParameterizedObject.h"
 
 #include <vector>
@@ -49,11 +49,12 @@ struct UsdDeviceData
   bool outputMdlShader = true;
 };
 
-class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameterizedObject<UsdDevice, UsdDeviceData>
+class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParameterizedObject<UsdDevice, UsdDeviceData>
 {
   public:
 
     UsdDevice();
+    UsdDevice(ANARILibrary library);
     ~UsdDevice();
 
     bool isInitialized() const { return bridgeInitialized; }
@@ -62,40 +63,27 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
     // Main virtual interface to accepting API calls
     /////////////////////////////////////////////////////////////////////////////
 
-    // Device API ///////////////////////////////////////////////////////////////
-
-    int deviceImplements(const char *extension) override;
-
-    void deviceCommit() override;
-
-    void deviceRetain() override;
-
-    void deviceRelease() override;
-
-    void deviceSetParameter(const char *id, ANARIDataType type, const void *mem) override;
-
-    void deviceUnsetParameter(const char *id) override;
-
     // Data Arrays //////////////////////////////////////////////////////////////
-    ANARIArray1D newArray1D(void *appMemory,
+
+    ANARIArray1D newArray1D(const void *appMemory,
       ANARIMemoryDeleter deleter,
-      void *userdata,
+      const void *userdata,
       ANARIDataType,
       uint64_t numItems1,
       uint64_t byteStride1) override;
 
-    ANARIArray2D newArray2D(void *appMemory,
+    ANARIArray2D newArray2D(const void *appMemory,
       ANARIMemoryDeleter deleter,
-      void *userdata,
+      const void *userdata,
       ANARIDataType,
       uint64_t numItems1,
       uint64_t numItems2,
       uint64_t byteStride1,
       uint64_t byteStride2) override;
 
-    ANARIArray3D newArray3D(void *appMemory,
+    ANARIArray3D newArray3D(const void *appMemory,
       ANARIMemoryDeleter deleter,
-      void *userdata,
+      const void *userdata,
       ANARIDataType,
       uint64_t numItems1,
       uint64_t numItems2,
@@ -144,7 +132,7 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
 
     void unsetParameter(ANARIObject object, const char *name) override;
 
-    void commit(ANARIObject object) override;
+    void commitParameters(ANARIObject object) override;
 
     void release(ANARIObject _obj) override;
     void retain(ANARIObject _obj) override;
@@ -162,8 +150,11 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
 
     ANARIFrame newFrame() override;
 
-    const void *frameBufferMap(
-      ANARIFrame fb, const char *channel) override;
+    const void *frameBufferMap(ANARIFrame fb,
+        const char *channel,
+        uint32_t *width,
+        uint32_t *height,
+        ANARIDataType *pixelType) override;
 
     void frameBufferUnmap(ANARIFrame fb, const char *channel) override;
 
@@ -206,12 +197,18 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
       const char *format,
       va_list& arglist);
 
-  protected:
+  private:
+    void deviceCommit();
+    void deviceRetain();
+    void deviceRelease();
+    void deviceSetParameter(const char *id, ANARIDataType type, const void *mem);
+    void deviceUnsetParameter(const char *id);
+
     const char* makeUniqueName(const char* name);
 
-    ANARIArray CreateDataArray(void *appMemory,
+    ANARIArray CreateDataArray(const void *appMemory,
       ANARIMemoryDeleter deleter,
-      void *userData,
+      const void *userData,
       ANARIDataType dataType,
       uint64_t numItems1,
       int64_t byteStride1,
@@ -219,7 +216,7 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
       int64_t byteStride2,
       uint64_t numItems3,
       int64_t byteStride3);
-    
+
     template<int typeInt>
     void writeTypeToUsd();
 
@@ -236,9 +233,9 @@ class UsdDevice : public anari::Device, anari::RefCounted, public UsdParameteriz
     bool lockCommitList = false;
 
     ANARIStatusCallback statusFunc = nullptr;
-    void* statusUserData = nullptr;
+    const void* statusUserData = nullptr;
     ANARIStatusCallback userSetStatusFunc = nullptr;
-    void* userSetStatusUserData = nullptr;
+    const void* userSetStatusUserData = nullptr;
     std::vector<char> lastStatusMessage;
 };
 

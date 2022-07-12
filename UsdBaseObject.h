@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "anari/detail/IntrusivePtr.h"
+#include "anari/backend/utilities/IntrusivePtr.h"
 #include "UsdCommonMacros.h"
 #include "UsdAnari.h"
 
@@ -41,7 +41,7 @@ class UsdBaseObject : public anari::RefCounted
   protected:
     virtual bool deferCommit(UsdDevice* device) = 0;  // Returns whether data commit has to be deferred
     virtual bool doCommitData(UsdDevice* device) = 0; // Data commit, execution can be immediate, returns whether doCommitRefs has to be performed
-    virtual void doCommitRefs(UsdDevice* device) = 0; // For updates with dependencies on referenced object's data, is always executed deferred 
+    virtual void doCommitRefs(UsdDevice* device) = 0; // For updates with dependencies on referenced object's data, is always executed deferred
 
     ANARIDataType type;
 
@@ -74,13 +74,13 @@ class UsdRefCountWrapped : public UsdBaseObject
       uint64_t size,
       UsdDevice* device) override { return 0; }
 
-    void commit(UsdDevice* device) override {}  
+    void commit(UsdDevice* device) override {}
 
     BaseType Data;
 
   protected:
     virtual bool deferCommit(UsdDevice* device) { return false; }
-    virtual bool doCommitData(UsdDevice* device) { return false; } 
+    virtual bool doCommitData(UsdDevice* device) { return false; }
     virtual void doCommitRefs(UsdDevice* device) {}
 };
 

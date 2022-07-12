@@ -6,6 +6,10 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 #include "UsdBridgeCaches.h"
 
+#ifdef VALUE_CLIP_RETIMING
+constexpr double UsdBridgePrimCache::PrimStageTimeCode;
+#endif
+
 UsdBridgePrimCacheManager::ConstPrimCacheIterator UsdBridgePrimCacheManager::FindPrimCache(const UsdBridgeHandle& handle) const
 {
   ConstPrimCacheIterator it = std::find_if(
@@ -41,9 +45,9 @@ void UsdBridgePrimCacheManager::AddChild(UsdBridgePrimCache* parent, UsdBridgePr
 void UsdBridgePrimCacheManager::RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
 {
   auto it = std::find(parent->Children.begin(), parent->Children.end(), child);
-  // Allow for find to fail; in the case where the bridge is recreated and destroyed, 
-  // a child prim exists which doesn't have a ref in the cache. 
-  if(it != parent->Children.end()) 
+  // Allow for find to fail; in the case where the bridge is recreated and destroyed,
+  // a child prim exists which doesn't have a ref in the cache.
+  if(it != parent->Children.end())
   {
     child->DecRef();
     *it = parent->Children.back();
@@ -68,7 +72,7 @@ void UsdBridgePrimCacheManager::RemoveUnreferencedChildTree(UsdBridgePrimCache* 
 void UsdBridgePrimCacheManager::RemoveUnreferencedPrimCaches(AtRemoveFunc atRemove)
 {
   // First recursively remove all the child references for unreferenced prims
-  // Can only be performed at garbage collect. 
+  // Can only be performed at garbage collect.
   // If this is done during RemoveChild, an unreferenced parent cannot subsequently be revived with an AddChild.
   PrimCacheContainer::iterator it = UsdPrimCaches.begin();
   while (it != UsdPrimCaches.end())

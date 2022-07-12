@@ -5,6 +5,8 @@
 
 #include "UsdBridgedBaseObject.h"
 
+#include <limits>
+
 class UsdSpatialField;
 class UsdDevice;
 class UsdDataArray;
@@ -20,9 +22,9 @@ struct UsdVolumeData
   double fieldRefTimeStep = std::numeric_limits<float>::quiet_NaN();
 
   bool preClassified = false;
-  
+
   //TF params
-  const UsdDataArray* color = nullptr; 
+  const UsdDataArray* color = nullptr;
   const UsdDataArray* opacity = nullptr;
   float valueRange[2] = { 0.0f, 1.0f };
   float densityScale = 1.0f;
@@ -33,7 +35,7 @@ class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolum
   public:
     UsdVolume(const char* name, UsdBridge* bridge, UsdDevice* device);
     ~UsdVolume();
-  
+
     void filterSetParam(const char *name,
       ANARIDataType type,
       const void *mem,

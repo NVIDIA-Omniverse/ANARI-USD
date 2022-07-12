@@ -25,9 +25,9 @@ struct UsdDataLayout
 class UsdDataArray : public UsdBaseObject
 {
   public:
-    UsdDataArray(void *appMemory,
+    UsdDataArray(const void *appMemory,
       ANARIMemoryDeleter deleter,
-      void *userData,
+      const void *userData,
       ANARIDataType dataType,
       uint64_t numItems1,
       int64_t byteStride1,
@@ -92,22 +92,22 @@ class UsdDataArray : public UsdBaseObject
     // Private memory management
     void allocPrivateData();
     void freePrivateData(bool mappedCopy = false);
-    void freePublicData(void* appMemory);
+    void freePublicData(const void* appMemory);
     void publicToPrivateData();
 
     // Mapped memory management
     void CreateMappedObjectCopy();
     void TransferAndRemoveMappedObjectCopy();
 
-    void* data = nullptr;
+    const void* data = nullptr;
     ANARIMemoryDeleter dataDeleter = nullptr;
-    void* deleterUserData = nullptr;
+    const void* deleterUserData = nullptr;
     ANARIDataType type;
     UsdDataLayout layout;
     size_t dataSizeInBytes;
     bool isPrivate;
 
-    void* mappedObjectCopy;
+    const void* mappedObjectCopy;
 
 #ifdef CHECK_MEMLEAKS
     UsdDevice* allocDevice;

@@ -32,10 +32,10 @@ static char deviceName[] = "usd";
 #endif
 
 extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_NEW_DEVICE(
-    usd, _subtype)
+    usd, library, _subtype)
 {
   if (!std::strcmp(_subtype, "default") || !std::strcmp(_subtype, "usd"))
-    return (ANARIDevice) new UsdDevice();
+    return (ANARIDevice) new UsdDevice(library);
   return nullptr;
 }
 
@@ -127,6 +127,10 @@ UsdDevice::UsdDevice()
   : internals(std::make_unique<UsdDeviceInternals>())
 {}
 
+UsdDevice::UsdDevice(ANARILibrary library)
+  : DeviceImpl(library), internals(std::make_unique<UsdDeviceInternals>())
+{}
+
 UsdDevice::~UsdDevice()
 {
   clearCommitList(); // Make sure no more references are held before cleaning up the device (and checking for memleaks)
@@ -137,7 +141,7 @@ UsdDevice::~UsdDevice()
   if(!allocatedObjects.empty())
   {
     std::stringstream errstream;
-    errstream << "USD Device memleak reported for: "; 
+    errstream << "USD Device memleak reported for: ";
     for(auto ptr : allocatedObjects)
       errstream << "0x" << std::hex << ptr << " of type " << std::dec << ptr->getType() << "; ";
 
@@ -220,7 +224,7 @@ void UsdDevice::deviceSetParameter(
     if(type == ANARI_VOID_POINTER)
       internals->externalSceneStage = const_cast<void *>(mem);
   }
-  else if (std::strcmp(id, "usd::enablesaving") == 0) 
+  else if (std::strcmp(id, "usd::enablesaving") == 0)
   {
     if(type == ANARI_BOOL)
     {
@@ -258,11 +262,6 @@ void UsdDevice::deviceUnsetParameter(const char * id)
   {
     resetParam(id);
   }
-}
-
-int UsdDevice::deviceImplements(const char *)
-{
-  return 0;
 }
 
 void UsdDevice::deviceCommit()
@@ -318,9 +317,9 @@ void UsdDevice::deviceRelease()
   this->refDec();
 }
 
-ANARIArray UsdDevice::CreateDataArray(void *appMemory,
+ANARIArray UsdDevice::CreateDataArray(const void *appMemory,
   ANARIMemoryDeleter deleter,
-  void *userData,
+  const void *userData,
   ANARIDataType dataType,
   uint64_t numItems1,
   int64_t byteStride1,
@@ -351,9 +350,9 @@ ANARIArray UsdDevice::CreateDataArray(void *appMemory,
   }
 }
 
-ANARIArray1D UsdDevice::newArray1D(void *appMemory,
+ANARIArray1D UsdDevice::newArray1D(const void *appMemory,
   ANARIMemoryDeleter deleter,
-  void *userData,
+  const void *userData,
   ANARIDataType type,
   uint64_t numItems,
   uint64_t byteStride)
@@ -362,9 +361,9 @@ ANARIArray1D UsdDevice::newArray1D(void *appMemory,
     type, numItems, byteStride, 1, 0, 1, 0);
 }
 
-ANARIArray2D UsdDevice::newArray2D(void *appMemory,
+ANARIArray2D UsdDevice::newArray2D(const void *appMemory,
   ANARIMemoryDeleter deleter,
-  void *userData,
+  const void *userData,
   ANARIDataType type,
   uint64_t numItems1,
   uint64_t numItems2,
@@ -375,9 +374,9 @@ ANARIArray2D UsdDevice::newArray2D(void *appMemory,
     type, numItems1, byteStride1, numItems2, byteStride2, 1, 0);
 }
 
-ANARIArray3D UsdDevice::newArray3D(void *appMemory,
+ANARIArray3D UsdDevice::newArray3D(const void *appMemory,
   ANARIMemoryDeleter deleter,
-  void *userData,
+  const void *userData,
   ANARIDataType type,
   uint64_t numItems1,
   uint64_t numItems2,
@@ -512,8 +511,8 @@ ANARIRenderer UsdDevice::newRenderer(const char *type)
 void UsdDevice::renderFrame(ANARIFrame frame)
 {
   // Always commit device changes if not initialized, otherwise no conversion can be performed.
-  if(!isInitialized()) 
-    deviceCommit(); 
+  if(!isInitialized())
+    deviceCommit();
 
   flushCommitList();
 
@@ -553,12 +552,12 @@ void UsdDevice::addToCommitList(UsdBaseObject* object, bool commitData)
 
   if(lockCommitList)
   {
-    this->reportStatus(object, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, 
+    this->reportStatus(object, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
       "Usd device internal error; addToCommitList called while list is locked");
   }
   else
   {
-    auto it = std::find_if(commitList.begin(), commitList.end(), 
+    auto it = std::find_if(commitList.begin(), commitList.end(),
       [&object](const CommitListType& entry) -> bool { return entry.first.ptr == object; });
     if(it == commitList.end())
       commitList.emplace_back(CommitListType(object, commitData));
@@ -579,7 +578,7 @@ void UsdDevice::clearCommitList()
 
 void UsdDevice::flushCommitList()
 {
-  // Automatically commit volumes which are not committed yet, 
+  // Automatically commit volumes which are not committed yet,
   // but for which their (writedata) spatial field is in commitlist.
   for(UsdVolume* volume : volumeList)
   {
@@ -587,11 +586,11 @@ void UsdDevice::flushCommitList()
     if(writeParams.field)
     {
       //volume not in commitlist
-      auto volEntry = std::find_if(commitList.begin(), commitList.end(), 
+      auto volEntry = std::find_if(commitList.begin(), commitList.end(),
         [&volume](const CommitListType& entry) -> bool { return entry.first.ptr == volume; });
       if(volEntry == commitList.end())
       {
-        auto fieldEntry = std::find_if(commitList.begin(), commitList.end(), 
+        auto fieldEntry = std::find_if(commitList.begin(), commitList.end(),
           [&writeParams](const CommitListType& entry) -> bool { return entry.first.ptr == writeParams.field; });
 
         // spatialfield from writeparams is in commit list
@@ -606,7 +605,7 @@ void UsdDevice::flushCommitList()
   lockCommitList = true;
 
   writeTypeToUsd<(int)ANARI_SAMPLER>();
-  
+
   writeTypeToUsd<(int)ANARI_SPATIAL_FIELD>();
   writeTypeToUsd<(int)ANARI_GEOMETRY>();
   writeTypeToUsd<(int)ANARI_LIGHT>();
@@ -631,7 +630,7 @@ void UsdDevice::addToVolumeList(UsdVolume* volume)
   if(it == volumeList.end())
     volumeList.emplace_back(volume);
 }
-    
+
 void UsdDevice::removeFromVolumeList(UsdVolume* volume)
 {
   auto it = std::find(volumeList.begin(), volumeList.end(), volume);
@@ -639,7 +638,7 @@ void UsdDevice::removeFromVolumeList(UsdVolume* volume)
   {
     *it = volumeList.back();
     volumeList.pop_back();
-  }  
+  }
 }
 
 template<int typeInt>
@@ -665,7 +664,7 @@ void UsdDevice::writeTypeToUsd()
         using ObjectType = typename AnariToUsdBridgedObject<typeInt>::Type;
         ObjectType* typedObj = reinterpret_cast<ObjectType*>(object.ptr);
 
-        this->reportStatus(object.ptr, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, 
+        this->reportStatus(object.ptr, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
           "User forgot to at least once commit an ANARI child object of parent object '%s'", typedObj->getName());
       }
     }
@@ -703,10 +702,14 @@ ANARIFrame UsdDevice::newFrame()
 }
 
 const void * UsdDevice::frameBufferMap(
-  ANARIFrame fb, const char *channel)
+  ANARIFrame fb,
+  const char *channel,
+  uint32_t *width,
+  uint32_t *height,
+  ANARIDataType *pixelType)
 {
   if (fb)
-    return ((UsdFrame*)fb)->mapBuffer(channel);
+    return ((UsdFrame*)fb)->mapBuffer(channel, width, height, pixelType);
   return nullptr;
 }
 
@@ -721,46 +724,59 @@ void UsdDevice::setParameter(ANARIObject object,
   ANARIDataType type,
   const void *mem)
 {
-  if (object)
+  if (handleIsDevice(object)) {
+    deviceSetParameter(name, type, mem);
+    return;
+  } else if (object)
     ((UsdBaseObject*)object)->filterSetParam(name, type, mem, this);
 }
 
 void UsdDevice::unsetParameter(ANARIObject object, const char * name)
 {
-  if (object)
+  if (handleIsDevice(object))
+    deviceUnsetParameter(name);
+  else if (object)
     ((UsdBaseObject*)object)->filterResetParam(name);
 }
 
 void UsdDevice::release(ANARIObject object)
 {
+  if (object == nullptr)
+    return;
+  else if (handleIsDevice(object)) {
+    deviceRelease();
+    return;
+  }
+
   UsdBaseObject* baseObject = (UsdBaseObject*)object;
 
-  if (baseObject)
-  {
-    bool privatizeArray = baseObject->getType() == ANARI_ARRAY
-      && baseObject->useCount(anari::RefType::INTERNAL) > 0
-      && baseObject->useCount(anari::RefType::PUBLIC) == 1;
+  bool privatizeArray = baseObject->getType() == ANARI_ARRAY
+    && baseObject->useCount(anari::RefType::INTERNAL) > 0
+    && baseObject->useCount(anari::RefType::PUBLIC) == 1;
 
 #ifdef CHECK_MEMLEAKS
     LogDeallocation(baseObject);
 #endif
-    if (baseObject)
-      baseObject->refDec(anari::RefType::PUBLIC);
+  if (baseObject)
+    baseObject->refDec(anari::RefType::PUBLIC);
 
-    if (privatizeArray)
-      ((UsdDataArray*)baseObject)->privatize();
-  }
+  if (privatizeArray)
+    ((UsdDataArray*)baseObject)->privatize();
 }
 
 void UsdDevice::retain(ANARIObject object)
 {
-  if (object)
+  if (handleIsDevice(object))
+    deviceRetain();
+  else if (object)
     ((UsdBaseObject*)object)->refInc(anari::RefType::PUBLIC);
 }
 
-void UsdDevice::commit(ANARIObject object)
+void UsdDevice::commitParameters(ANARIObject object)
 {
-  if(object)
+  if (handleIsDevice(object))
+    deviceCommit();
+  else if(object)
     ((UsdBaseObject*)object)->commit(this);
 }
 
@@ -778,7 +794,7 @@ void UsdDevice::LogDeallocation(const UsdBaseObject* ptr)
     if(it == allocatedObjects.end())
     {
       std::stringstream errstream;
-      errstream << "USD Device release of nonexisting or already released/deleted object: 0x" << std::hex << ptr; 
+      errstream << "USD Device release of nonexisting or already released/deleted object: 0x" << std::hex << ptr;
 
       reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_FATAL_ERROR, ANARI_STATUS_INVALID_OPERATION, errstream.str().c_str());
     }
