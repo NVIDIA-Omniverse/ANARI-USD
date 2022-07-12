@@ -5,6 +5,8 @@
 
 #include "UsdParameterizedObject.h"
 
+#include <cmath>
+
 class UsdBridge;
 class UsdDevice;
 
@@ -23,11 +25,11 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 
     H getUsdHandle() const { return usdHandle; }
 
-    const char* getName() const { return getReadParams().usdName ? getReadParams().usdName->c_str() : uniqueName; }
+    const char* getName() const { return this->getReadParams().usdName ? this->getReadParams().usdName->c_str() : uniqueName; }
 
     void formatUsdName()
     {
-      char* name = const_cast<char*>(UsdSharedString::c_str(getWriteParams().usdName));
+      char* name = const_cast<char*>(UsdSharedString::c_str(this->getWriteParams().usdName));
       assert(strlen(name) > 0);
 
       auto letter = [](unsigned c) { return ((c - 'A') < 26) || ((c - 'a') < 26); };
@@ -37,7 +39,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
       unsigned x = *name;
       if (!letter(x) && !under(x)) { *name = '_'; }
       x = *(++name);
-      while (x != '\0') 
+      while (x != '\0')
       {
         if(!letter(x) && !number(x) && !under(x))
           *name = '_';
@@ -75,7 +77,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
             "%s parameter '%s' cannot be set, only read with getProperty().", getName(), "usd::name");
           return false;
         }
-      } 
+      }
       return true;
     }
 
@@ -87,14 +89,14 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
     {
       if (type == ANARI_STRING && strcmp(name, "usd::name") == 0)
       {
-        snprintf((char*)mem, size, "%s", UsdSharedString::c_str(getReadParams().usdName));
+        snprintf((char*)mem, size, "%s", UsdSharedString::c_str(this->getReadParams().usdName));
         return 1;
       }
       else if (type == ANARI_UINT64 && strcmp(name, "usd::name.size") == 0)
       {
         if (Assert64bitStringLengthProperty(size, LogInfo(device, this, ANARI_OBJECT, this->getName()), "usd::name.size"))
         {
-          uint64_t nameLen = getReadParams().usdName ? strlen(getReadParams().usdName->c_str())+1 : 0;
+          uint64_t nameLen = this->getReadParams().usdName ? strlen(this->getReadParams().usdName->c_str())+1 : 0;
           memcpy(mem, &nameLen, size);
         }
         return 1;
@@ -120,23 +122,23 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 
     virtual void commit(UsdDevice* device) override
     {
-      TransferWriteToReadParams();
+      this->TransferWriteToReadParams();
       UsdBaseObject::commit(device);
     }
 
     double selectObjTime(double objTimeStep, double worldTimeStep)
-    { 
+    {
       return
-#ifdef VALUE_CLIP_RETIMING 
+#ifdef VALUE_CLIP_RETIMING
         !std::isnan(objTimeStep) ? objTimeStep :
-#endif      
+#endif
         worldTimeStep;
     }
 
     double selectRefTime(double refTimeStep, double objTimeStep, double worldTimeStep)
-    { 
+    {
       return
-  #ifdef VALUE_CLIP_RETIMING  
+  #ifdef VALUE_CLIP_RETIMING
         !std::isnan(refTimeStep) ? refTimeStep :
           (!std::isnan(objTimeStep) ? objTimeStep : worldTimeStep);
   #else

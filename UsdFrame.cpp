@@ -54,20 +54,33 @@ bool UsdFrame::doCommitData(UsdDevice* device)
   return false;
 }
 
-const void* UsdFrame::mapBuffer(const char *channel)
+const void* UsdFrame::mapBuffer(const char *channel,
+  uint32_t *width,
+  uint32_t *height,
+  ANARIDataType *pixelType)
 {
   const UsdFrameData& paramData = getReadParams();
+
+  *width = paramData.size[0];
+  *height = paramData.size[1];
+  *pixelType = ANARI_UNKNOWN;
 
   if (strcmp(channel, "color") == 0)
   {
     mappedColorMem = ReserveBuffer(paramData.color);
+    *pixelType = paramData.color;
     return mappedColorMem;
   }
   else if (strcmp(channel, "depth") == 0)
   {
     mappedDepthMem = ReserveBuffer(paramData.depth);
+    *pixelType = paramData.depth;
     return mappedDepthMem;
   }
+
+  *width = 0;
+  *height = 0;
+
   return nullptr;
 }
 

@@ -31,7 +31,7 @@ typedef struct TestParameters
 } TestParameters;
 
 /******************************************************************/
-void statusFunc(void *userData,
+void statusFunc(const void *userData,
   ANARIDevice device,
   ANARIObject source,
   ANARIDataType sourceType,
@@ -58,6 +58,21 @@ void statusFunc(void *userData,
   else if (severity == ANARI_SEVERITY_DEBUG) {
     fprintf(stderr, "[DEBUG] %s\n", message);
   }
+}
+
+void writePNG(const char *fileName, ANARIDevice d, ANARIFrame frame)
+{
+  uint32_t size[2] = {0, 0};
+  ANARIDataType type = ANARI_UNKNOWN;
+  uint32_t *pixel =
+      (uint32_t *)anariMapFrame(d, frame, "color", &size[0], &size[1], &type);
+
+  if (type == ANARI_UFIXED8_RGBA_SRGB)
+    stbi_write_png(fileName, size[0], size[1], 4, pixel, 4 * size[0]);
+  else
+    printf("Incorrectly returned color buffer pixel type, image not saved.\n");
+
+  anariUnmapFrame(d, frame, "color");
 }
 
 void doTest(TestParameters testParams)
@@ -144,7 +159,7 @@ void doTest(TestParameters testParams)
 
   if (!dev) {
     printf("\n\nERROR: could not load device '%s'\n", "usd");
-    return 1;
+    return;
   }
 
   int outputBinary = 0;
@@ -174,7 +189,7 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, dev, "usd::writeatcommit", ANARI_BOOL, &testParams.writeAtCommit);
 
   // commit device
-  anariCommit(dev, dev);
+  anariCommitParameters(dev, dev);
 
   printf("done!\n");
   printf("setting up camera...");
@@ -186,7 +201,7 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, camera, "position", ANARI_FLOAT32_VEC3, cam_pos);
   anariSetParameter(dev, camera, "direction", ANARI_FLOAT32_VEC3, cam_view);
   anariSetParameter(dev, camera, "up", ANARI_FLOAT32_VEC3, cam_up);
-  anariCommit(dev, camera); // commit each object to indicate mods are done
+  anariCommitParameters(dev, camera); // commit each object to indicate mods are done
 
   printf("done!\n");
   printf("setting up scene...");
@@ -198,12 +213,12 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, mesh, "name", ANARI_STRING, "tutorialMesh");
 
   ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
-  anariCommit(dev, array);
+  anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "vertex.position", ANARI_ARRAY, &array);
   anariRelease(dev, array); // we are done using this handle
 
   array = anariNewArray1D(dev, normal, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
-  anariCommit(dev, array);
+  anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "vertex.normal", ANARI_ARRAY, &array);
   anariRelease(dev, array);
 
@@ -211,27 +226,27 @@ void doTest(TestParameters testParams)
   if (useVertexColors)
   {
     array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4, 0);
-    anariCommit(dev, array);
+    anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "vertex.color", ANARI_ARRAY, &array);
     anariRelease(dev, array);
   }
 
   array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
-  anariCommit(dev, array);
+  anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
   anariRelease(dev, array);
 
   //array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4, 0);
-  //anariCommit(dev, array);
+  //anariCommitParameters(dev, array);
   //anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
   //anariRelease(dev, array);
 
   array = anariNewArray1D(dev, index, 0, 0, ANARI_UINT32_VEC3, 2, 0);
-  anariCommit(dev, array);
+  anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "primitive.index", ANARI_ARRAY, &array);
   anariRelease(dev, array);
 
-  anariCommit(dev, mesh);
+  anariCommitParameters(dev, mesh);
 
   // Create a sampler
   ANARISampler sampler = anariNewSampler(dev, "texture2d");
@@ -239,7 +254,7 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
   anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
   anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
-  anariCommit(dev, sampler);
+  anariCommitParameters(dev, sampler);
 
   // Create a material
   ANARIMaterial mat = anariNewMaterial(dev, "matte");
@@ -253,7 +268,7 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
   int materialTimeVarying = 1<<2; // Set emissive to timevarying (should appear in material stage under primstages/)
   anariSetParameter(dev, mat, "usd::timevarying", ANARI_INT32, &materialTimeVarying);
-  anariCommit(dev, mat);
+  anariCommitParameters(dev, mat);
   anariRelease(dev, sampler);
 
   // put the mesh into a surface
@@ -261,7 +276,7 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, surface, "name", ANARI_STRING, "tutorialSurface");
   anariSetParameter(dev, surface, "geometry", ANARI_GEOMETRY, &mesh);
   anariSetParameter(dev, surface, "material", ANARI_MATERIAL, &mat);
-  anariCommit(dev, surface);
+  anariCommitParameters(dev, surface);
   anariRelease(dev, mesh);
   anariRelease(dev, mat);
 
@@ -269,9 +284,9 @@ void doTest(TestParameters testParams)
   ANARIGroup group = anariNewGroup(dev);
   anariSetParameter(dev, group, "name", ANARI_STRING, "tutorialGroup");
   array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1, 0);
-  anariCommit(dev, array);
+  anariCommitParameters(dev, array);
   anariSetParameter(dev, group, "surface", ANARI_ARRAY, &array);
-  anariCommit(dev, group);
+  anariCommitParameters(dev, group);
   anariRelease(dev, surface);
   anariRelease(dev, array);
 
@@ -285,24 +300,24 @@ void doTest(TestParameters testParams)
   // create and setup light for Ambient Occlusion
   ANARILight light = anariNewLight(dev, "ambient");
   anariSetParameter(dev, light, "name", ANARI_STRING, "tutorialLight");
-  anariCommit(dev, light);
+  anariCommitParameters(dev, light);
   array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1, 0);
-  anariCommit(dev, array);
+  anariCommitParameters(dev, array);
   anariSetParameter(dev, world, "light", ANARI_ARRAY, &array);
   anariRelease(dev, light);
   anariRelease(dev, array);
 
-  anariCommit(dev, instance);
+  anariCommitParameters(dev, instance);
 
   // put the instance in the world
   anariSetParameter(dev, world, "name", ANARI_STRING, "tutorialWorld");
   array = anariNewArray1D(dev, &instance, 0, 0, ANARI_INSTANCE, 1, 0);
-  anariCommit(dev, array);
+  anariCommitParameters(dev, array);
   anariSetParameter(dev, world, "instance", ANARI_ARRAY, &array);
   anariRelease(dev, instance);
   anariRelease(dev, array);
 
-  anariCommit(dev, world);
+  anariCommitParameters(dev, world);
 
   printf("done!\n");
 
@@ -336,7 +351,7 @@ void doTest(TestParameters testParams)
 // complete setup of renderer
   float bgColor[4] = { 1.f, 1.f, 1.f, 1.f }; // white
   anariSetParameter(dev, renderer, "backgroundColor", ANARI_FLOAT32_VEC4, bgColor);
-  anariCommit(dev, renderer);
+  anariCommitParameters(dev, renderer);
 
   // create and setup frame
   ANARIFrame frame = anariNewFrame(dev);
@@ -350,7 +365,7 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, frame, "camera", ANARI_CAMERA, &camera);
   anariSetParameter(dev, frame, "world", ANARI_WORLD, &world);
 
-  anariCommit(dev, frame);
+  anariCommitParameters(dev, frame);
 
   printf("rendering initial frame to firstFrame.png...");
 
@@ -359,9 +374,7 @@ void doTest(TestParameters testParams)
   anariFrameReady(dev, frame, ANARI_WAIT);
 
   // access frame and write its content as PNG file
-  const uint32_t *fb = (uint32_t *)anariMapFrame(dev, frame, "color");
-  stbi_write_png("firstFrame.png", imgSize[0], imgSize[1], 4, fb, 4 * imgSize[0]);
-  anariUnmapFrame(dev, frame, "color");
+  writePNG("firstFrame.png", dev, frame);
 
   printf("done!\n");
   printf("rendering 10 accumulated frames to accumulatedFrame.png...");
@@ -373,10 +386,7 @@ void doTest(TestParameters testParams)
     anariFrameReady(dev, frame, ANARI_WAIT);
   }
 
-  fb = (uint32_t *)anariMapFrame(dev, frame, "color");
-  stbi_write_png(
-    "accumulatedFrame.png", imgSize[0], imgSize[1], 4, fb, 4 * imgSize[0]);
-  anariUnmapFrame(dev, frame, "color");
+  writePNG("accumulatedFrame.png", dev, frame);
 
   printf("done!\n");
   printf("\ncleaning up objects...");

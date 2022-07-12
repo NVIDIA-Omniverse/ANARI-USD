@@ -8,9 +8,9 @@
 
 #define TO_OBJ_PTR reinterpret_cast<const ANARIObject*>
 
-UsdDataArray::UsdDataArray(void *appMemory,
+UsdDataArray::UsdDataArray(const void *appMemory,
   ANARIMemoryDeleter deleter,
-  void *userData,
+  const void *userData,
   ANARIDataType dataType,
   uint64_t numItems1,
   int64_t byteStride1,
@@ -110,7 +110,7 @@ void * UsdDataArray::map(UsdDevice * device)
     CreateMappedObjectCopy();
   }
 
-  return data;
+  return const_cast<void *>(data);
 }
 
 void UsdDataArray::unmap(UsdDevice * device)
@@ -198,14 +198,14 @@ void UsdDataArray::allocPrivateData()
 
 void UsdDataArray::freePrivateData(bool mappedCopy)
 {
-  void*& memToFree = mappedCopy ? mappedObjectCopy : data;
+  const void*& memToFree = mappedCopy ? mappedObjectCopy : data;
 
   // Deallocate owned memory
   delete[](char*)memToFree;
   memToFree = nullptr;
 }
 
-void UsdDataArray::freePublicData(void* appMemory)
+void UsdDataArray::freePublicData(const void* appMemory)
 {
   if (dataDeleter)
   {
@@ -217,10 +217,10 @@ void UsdDataArray::freePublicData(void* appMemory)
 void UsdDataArray::publicToPrivateData()
 {
   // Alloc private dest, copy appMemory src to it
-  void* appMemory = data;
+  const void* appMemory = data;
   allocPrivateData();
 
-  std::memcpy(data, appMemory, dataSizeInBytes); // In case of object array, Refcount 'transfers' to the copy (splits off user-managed public refcount)
+  std::memcpy(const_cast<void *>(data), appMemory, dataSizeInBytes); // In case of object array, Refcount 'transfers' to the copy (splits off user-managed public refcount)
 
   // Delete appMemory if appropriate
   freePublicData(appMemory);
@@ -234,7 +234,7 @@ void UsdDataArray::CreateMappedObjectCopy()
   allocPrivateData();
 
   // Transfer contents over to new memory, keep old one for managing references later on.
-  std::memcpy(data, mappedObjectCopy, dataSizeInBytes);
+  std::memcpy(const_cast<void *>(data), mappedObjectCopy, dataSizeInBytes);
 }
 
 void UsdDataArray::TransferAndRemoveMappedObjectCopy()

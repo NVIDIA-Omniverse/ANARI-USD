@@ -44,7 +44,10 @@ class UsdFrame : public UsdBaseObject, public UsdParameterizedObject<UsdFrame, U
       UsdBaseObject::commit(device);
     }
 
-    const void* mapBuffer(const char* channel);
+    const void* mapBuffer(const char* channel,
+      uint32_t *width,
+      uint32_t *height,
+      ANARIDataType *pixelType);
     void unmapBuffer(const char* channel);
 
     UsdRenderer* getRenderer();

@@ -23,7 +23,7 @@ typedef std::vector<UsdBridgePrimCache*> UsdBridgePrimCacheList;
 struct UsdBridgeRefCache
 {
 public:
-  friend class UsdBridgePrimCacheManager; 
+  friend class UsdBridgePrimCacheManager;
 
 protected:
   void IncRef() { ++RefCount; }
@@ -32,9 +32,9 @@ protected:
   unsigned int RefCount = 0;
   std::vector<UsdBridgePrimCache*> Children;
 #ifdef TIME_BASED_CACHING
-  //Could also contain a mapping from child to an array of (parentTime,childTime) 
+  //Could also contain a mapping from child to an array of (parentTime,childTime)
   //This would allow single timesteps to be removed in case of unused/replaced references at a parentTime (instead of removal of child if visible), without breaking garbage collection.
-  //Additionally, a refcount per timestep would help to perform garbage collection of individual child clip stages/files, 
+  //Additionally, a refcount per timestep would help to perform garbage collection of individual child clip stages/files,
   //when no parent references that particular childTime anymore (due to removal/replacing with refs to other children, or replacement with different childTimes for the same child).
 #endif
 };
@@ -45,7 +45,7 @@ struct UsdBridgePrimCache : public UsdBridgeRefCache
   UsdBridgePrimCache(const SdfPath& pp, const SdfPath& nm, ResourceCollectFunc cf)
     : PrimPath(pp), Name(nm), ResourceCollect(cf)
 #ifndef NDEBUG
-    , Debug_Name(nm.GetString()) 
+    , Debug_Name(nm.GetString())
 #endif
   {}
 
@@ -61,10 +61,10 @@ struct UsdBridgePrimCache : public UsdBridgeRefCache
 
   static constexpr double PrimStageTimeCode = 0.0; // Prim stages are stored in ClipStages under specified time code
   const UsdStagePair& GetPrimStagePair() const
-  { 
+  {
     auto it = ClipStages.find(PrimStageTimeCode);
-    assert(it != ClipStages.end()); 
-    return it->second; 
+    assert(it != ClipStages.end());
+    return it->second;
   }
 
   template<typename DataMemberType>
