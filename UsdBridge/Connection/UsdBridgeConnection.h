@@ -7,8 +7,6 @@
 #include "UsdBridgeData.h"
 
 #include <string>
-#include <fstream>
-#include <sstream>
 
 class UsdBridgeRemoteConnectionInternals;
 
@@ -37,9 +35,6 @@ public:
   virtual bool RemoveFolder(const char* dirName) const = 0;
   virtual bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary = true) const = 0;
   virtual bool RemoveFile(const char* filePath) const = 0;
-
-  virtual std::ostream* GetStream(const char* filePath, bool binary = true) = 0;
-  virtual void FlushStream() = 0;
 
   virtual bool ProcessUpdates() = 0;
 
@@ -74,14 +69,9 @@ public:
   bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary = true) const override;
   bool RemoveFile(const char* filePath) const override;
 
-  std::ostream* GetStream(const char* filePath, bool binary = true) override;
-  void FlushStream() override;
-
   bool ProcessUpdates() override;
 
 protected:
-
-  std::fstream LocalStream;
 };
 
 class UsdBridgeRemoteConnection : public UsdBridgeConnection
@@ -103,9 +93,6 @@ public:
   bool RemoveFolder(const char* dirName) const override;
   bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary = true) const override;
   bool RemoveFile(const char* filePath) const override;
-
-  std::ostream* GetStream(const char* filePath, bool binary = true) override;
-  void FlushStream() override;
 
   bool ProcessUpdates() override;
 
@@ -145,14 +132,9 @@ public:
   bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary = true) const override;
   bool RemoveFile(const char* filePath) const override;
 
-  std::ostream* GetStream(const char* filePath, bool binary = true) override;
-  void FlushStream() override;
-
   bool ProcessUpdates() override;
 
 protected:
-
-  std::stringstream DummyStream;
 };
 
 

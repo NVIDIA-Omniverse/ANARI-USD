@@ -236,18 +236,18 @@ if (USD_DEVICE_USE_OPENVDB)
     set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
   endif()
 
-  install(TARGETS ${PROJECT_NAME}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-
-  ## Install optional pdbs
-  ## install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
-
-  # No dependency install required; all dynamic dependencies should be shared with USD and therefore installed in the parent-level cmake,
-  # and if not, make sure they are static to avoid problems with versioning.
-
 endif()
+
+install(TARGETS ${PROJECT_NAME}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+## Install optional pdbs
+## install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
+
+# No dependency install required; all dynamic dependencies should be shared with USD and therefore installed in the parent-level cmake,
+# and if not, make sure they are static to avoid problems with versioning.
 
 message( "-------------------- End UsdBridgeVolume CmakeLists.txt ----------------------------------------")

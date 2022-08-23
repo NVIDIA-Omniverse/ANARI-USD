@@ -4,6 +4,7 @@
 #include "UsdBridgeConnection.h"
 
 #include <fstream>
+#include <sstream>
 #include <atomic>
 #include <thread>
 #include <condition_variable>
@@ -559,17 +560,6 @@ bool UsdBridgeRemoteConnection::RemoveFile(const char* filePath) const
   return context.result == eOmniClientResult_Ok || context.result == eOmniClientResult_OkLatest;
 }
 
-std::ostream * UsdBridgeRemoteConnection::GetStream(const char * filePath, bool binary)
-{
-  return Internals->ResetStream(filePath, binary);
-}
-
-void UsdBridgeRemoteConnection::FlushStream()
-{
-  std::string data = Internals->RemoteStream.str();// Invokes an extra copy, remove once omniverse supports streaming
-  WriteFile(data.c_str(), data.length(), Internals->StreamFilePath, Internals->StreamIsBinary);
-}
-
 bool UsdBridgeRemoteConnection::ProcessUpdates()
 {
   omniUsdLiveProcess();
@@ -643,15 +633,6 @@ bool UsdBridgeRemoteConnection::WriteFile(const char* data, size_t dataSize, con
 bool UsdBridgeRemoteConnection::RemoveFile(const char* filePath) const
 {
   return UsdBridgeConnection::RemoveFile(filePath);
-}
-
-std::ostream * UsdBridgeRemoteConnection::GetStream(const char * filePath, bool binary)
-{
-  return Internals->ResetStream(filePath, binary);
-}
-
-void UsdBridgeRemoteConnection::FlushStream()
-{
 }
 
 bool UsdBridgeRemoteConnection::ProcessUpdates()
@@ -754,28 +735,6 @@ bool UsdBridgeLocalConnection::RemoveFile(const char* filePath) const
   return UsdBridgeConnection::RemoveFile(filePath);
 }
 
-std::ostream * UsdBridgeLocalConnection::GetStream(const char* filePath, bool binary)
-{
-  if (LocalStream.is_open())
-    LocalStream.close();
-
-  LocalStream.open(Settings.WorkingDirectory + filePath,
-    std::ios_base::out
-    | std::ios_base::trunc
-    | (binary ? std::ios_base::binary : std::ios_base::out));
-
-  if (!LocalStream.is_open())
-    return nullptr;
-
-  return &LocalStream;
-}
-
-void UsdBridgeLocalConnection::FlushStream()
-{
-  if (LocalStream.is_open())
-    LocalStream.close();
-}
-
 bool UsdBridgeLocalConnection::ProcessUpdates()
 {
   UsdBridgeConnection::ProcessUpdates();
@@ -837,16 +796,6 @@ bool UsdBridgeVoidConnection::WriteFile(const char* data, size_t dataSize, const
 bool UsdBridgeVoidConnection::RemoveFile(const char* filePath) const
 {
   return true;
-}
-
-std::ostream * UsdBridgeVoidConnection::GetStream(const char* filePath, bool binary)
-{
-  DummyStream.clear();
-  return &DummyStream;
-}
-
-void UsdBridgeVoidConnection::FlushStream()
-{
 }
 
 bool UsdBridgeVoidConnection::ProcessUpdates()
