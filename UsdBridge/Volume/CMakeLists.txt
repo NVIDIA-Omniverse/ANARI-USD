@@ -1,3 +1,5 @@
+message( "-------------------- Begin UsdBridgeVolume CmakeLists.txt ----------------------------------------")
+
 # FindBlosc.cmake is broken on windows for static dependencies
 macro(fix_blosc_dependency)
   if(WIN32 AND BLOSC_USE_STATIC_LIBS)
@@ -15,13 +17,15 @@ macro(fix_blosc_dependency)
   endif()
 endmacro()
 
-message( "-------------------- Begin UsdBridgeVolume CmakeLists.txt ----------------------------------------")
+project(UsdBridge_Volume)
+add_library(${PROJECT_NAME} SHARED)
+
+if(NOT CMAKE_BUILD_TYPE) # Otherwise IlmBase::Half does not find debug/release libraries
+  message(FATAL_ERROR "A CMAKE_BUILD_TYPE has to be chosen for correct dependency resolution of OmniConnect_Volume")
+endif()
 
 option(USD_DEVICE_USE_OPENVDB "Enable OpenVDB support for USD device" OFF)
 
-project(UsdBridge_Volume)
-
-add_library(${PROJECT_NAME} SHARED)
 target_sources(${PROJECT_NAME}
   PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/../Common/UsdBridgeUtils.cpp
