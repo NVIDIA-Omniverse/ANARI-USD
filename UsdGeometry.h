@@ -51,7 +51,8 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
   protected:
     enum GeomType
     {
-      GEOM_TRIANGLE = 0,
+      GEOM_UNKNOWN = 0,
+      GEOM_TRIANGLE,
       GEOM_QUAD,
       GEOM_SPHERE,
       GEOM_CYLINDER,
@@ -117,7 +118,7 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
 
     void assignTempDataToAttributes(bool perPrimInterpolation);
 
-    GeomType geomType;
+    GeomType geomType = GEOM_UNKNOWN;
 
     std::unique_ptr<TempArrays> tempArrays;
 

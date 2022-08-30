@@ -101,7 +101,7 @@ public:
   UsdPrim InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim) const;
   UsdPrim InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath& volumePath, bool uniformPrim) const;
   UsdShadeMaterial InitializeUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim) const;
-  UsdPrim InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, bool uniformPrim) const;
+  UsdPrim InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, UsdBridgeSamplerData::SamplerType type, bool uniformPrim) const;
 
 #ifdef VALUE_CLIP_RETIMING
   //void InitializeUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry);

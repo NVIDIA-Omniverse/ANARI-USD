@@ -16,12 +16,22 @@ struct UsdSamplerData
   UsdSharedString* fileName = nullptr;
   UsdSharedString* wrapS = nullptr;
   UsdSharedString* wrapT = nullptr;
+  UsdSharedString* wrapR = nullptr;
 };
 
 class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSamplerHandle>
 {
+  protected:
+    enum SamplerType
+    {
+      SAMPLER_UNKNOWN = 0,
+      SAMPLER_1D,
+      SAMPLER_2D,
+      SAMPLER_3D
+    };
+
   public:
-    UsdSampler(const char* name, UsdBridge* bridge);
+    UsdSampler(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device);
     ~UsdSampler();
 
     void filterSetParam(const char *name,
@@ -36,4 +46,7 @@ class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSa
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;
     void doCommitRefs(UsdDevice* device) override {}
+
+    SamplerType samplerType = SAMPLER_UNKNOWN;
+
 };

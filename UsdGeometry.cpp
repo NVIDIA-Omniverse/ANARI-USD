@@ -1220,7 +1220,7 @@ bool UsdGeometry::deferCommit(UsdDevice* device)
 
 bool UsdGeometry::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge)
+  if(!usdBridge || geomType == GEOM_UNKNOWN)
     return false;
 
   switch (geomType)

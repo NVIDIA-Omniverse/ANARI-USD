@@ -360,13 +360,21 @@ struct UsdBridgeMaterialData
 
 struct UsdBridgeSamplerData
 {
+  enum class SamplerType : uint32_t
+  {
+    SAMPLER_1D = 0,
+    SAMPLER_2D,
+    SAMPLER_3D
+  };
+
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
     FILENAME = (1 << 0),
     WRAPS = (1 << 1),
     WRAPT = (1 << 2),
-    ALL = (1 << 3) - 1
+    WRAPR = (1 << 3),
+    ALL = (1 << 4) - 1
   };
   DataMemberId TimeVarying = DataMemberId::NONE;
 
@@ -378,9 +386,12 @@ struct UsdBridgeSamplerData
     MIRROR
   };
 
-  const char* FileName;
-  WrapMode WrapS;
-  WrapMode WrapT;
+  SamplerType Type = SamplerType::SAMPLER_1D;
+
+  const char* FileName = nullptr;
+  WrapMode WrapS = WrapMode::BLACK;
+  WrapMode WrapT = WrapMode::BLACK;
+  WrapMode WrapR = WrapMode::BLACK;
 };
 
 template<class TEnum>

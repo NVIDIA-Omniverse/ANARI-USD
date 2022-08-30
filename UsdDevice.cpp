@@ -402,7 +402,7 @@ void UsdDevice::unmapArray(ANARIArray array)
 ANARISampler UsdDevice::newSampler(const char *type)
 {
   const char* name = makeUniqueName("Sampler");
-  UsdSampler* object = new UsdSampler(name, internals->bridge.get());
+  UsdSampler* object = new UsdSampler(name, type, internals->bridge.get(), this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif

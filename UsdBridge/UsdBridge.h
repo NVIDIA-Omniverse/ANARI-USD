@@ -33,7 +33,7 @@ class UsdBridge
     bool CreateGeometry(const char* name, UsdGeometryHandle& handle, const UsdBridgeCurveData& curveData);
     bool CreateSpatialField(const char* name, UsdSpatialFieldHandle& handle);
     bool CreateMaterial(const char* name, UsdMaterialHandle& handle);
-    bool CreateSampler(const char* name, UsdSamplerHandle& handle);
+    bool CreateSampler(const char* name, UsdSamplerHandle& handle, UsdBridgeSamplerData::SamplerType type);
   
     void DeleteWorld(UsdWorldHandle handle);
     void DeleteInstance(UsdInstanceHandle handle);

@@ -89,6 +89,7 @@ TF_DEFINE_PRIVATE_TOKENS(
   (file)
   (WrapS)
   (WrapT)
+  (WrapR)
   (black)
   (clamp)
   (repeat)
@@ -1742,13 +1743,16 @@ namespace
   }
 #endif
 
-  void InitializeUsdSamplerTimeVar(UsdShadeShader& sampler, const TimeEvaluator<UsdBridgeSamplerData>* timeEval = nullptr)
+  void InitializeUsdSamplerTimeVar(UsdShadeShader& sampler, UsdBridgeSamplerData::SamplerType type, const TimeEvaluator<UsdBridgeSamplerData>* timeEval = nullptr)
   {
     typedef UsdBridgeSamplerData::DataMemberId DMI;
 
     CreateShaderInput(sampler, timeEval, DMI::FILENAME, UsdBridgeTokens->file, "inputs:file", SdfValueTypeNames->Asset);
     CreateShaderInput(sampler, timeEval, DMI::WRAPS, UsdBridgeTokens->WrapS, "inputs:WrapS", SdfValueTypeNames->Token);
-    CreateShaderInput(sampler, timeEval, DMI::WRAPT, UsdBridgeTokens->WrapT, "inputs:WrapT", SdfValueTypeNames->Token);
+    if((uint32_t)type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_2D)
+      CreateShaderInput(sampler, timeEval, DMI::WRAPT, UsdBridgeTokens->WrapT, "inputs:WrapT", SdfValueTypeNames->Token);
+    if((uint32_t)type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_3D)
+      CreateShaderInput(sampler, timeEval, DMI::WRAPR, UsdBridgeTokens->WrapR, "inputs:WrapR", SdfValueTypeNames->Token);
   }
     
   UsdShadeOutput InitializeUsdShader(UsdStageRefPtr shaderStage, const SdfPath& shadPrimPath, bool uniformPrim
@@ -1854,7 +1858,7 @@ namespace
     return matPrim;
   }
 
-  UsdPrim InitializeUsdSampler_Impl(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, bool uniformPrim,
+  UsdPrim InitializeUsdSampler_Impl(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, UsdBridgeSamplerData::SamplerType type, bool uniformPrim,
     const TimeEvaluator<UsdBridgeSamplerData>* timeEval = nullptr)
   {
     UsdShadeShader sampler = GetOrDefinePrim<UsdShadeShader>(samplerStage, samplerPrimPath);
@@ -1868,7 +1872,7 @@ namespace
       sampler.CreateOutput(UsdBridgeTokens->a, SdfValueTypeNames->Float);
     }
 
-    InitializeUsdSamplerTimeVar(sampler, timeEval);
+    InitializeUsdSamplerTimeVar(sampler, type, timeEval);
 
     return sampler.GetPrim();
   }
@@ -1899,9 +1903,9 @@ UsdShadeMaterial UsdBridgeUsdWriter::InitializeUsdMaterial(UsdStageRefPtr materi
   return InitializeUsdMaterial_Impl(materialStage, matPrimPath, uniformPrim, Settings);
 }
 
-UsdPrim UsdBridgeUsdWriter::InitializeUsdSampler(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, bool uniformPrim) const
+UsdPrim UsdBridgeUsdWriter::InitializeUsdSampler(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, UsdBridgeSamplerData::SamplerType type, bool uniformPrim) const
 {
-  return InitializeUsdSampler_Impl(samplerStage, samplerPrimPath, uniformPrim);
+  return InitializeUsdSampler_Impl(samplerStage, samplerPrimPath, type, uniformPrim);
 }
 
 #ifdef VALUE_CLIP_RETIMING
@@ -1958,7 +1962,7 @@ void UsdBridgeUsdWriter::UpdateUsdMaterialManifest(const UsdBridgePrimCache* cac
 void UsdBridgeUsdWriter::UpdateUsdSamplerManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeSamplerData& samplerData)
 {
   TimeEvaluator<UsdBridgeSamplerData> timeEval(samplerData);
-  InitializeUsdSampler_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, 
+  InitializeUsdSampler_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, samplerData.Type,
     false, &timeEval);
 
   if(this->EnableSaving)
@@ -3242,7 +3246,10 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, const Sdf
   SdfAssetPath texFile(samplerData.FileName);
   SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->file, DMI::FILENAME, texFile);
   SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapS, DMI::WRAPS, TextureWrapToken(samplerData.WrapS));
-  SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapT, DMI::WRAPT, TextureWrapToken(samplerData.WrapT));
+  if((uint32_t)samplerData.Type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_2D)
+    SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapT, DMI::WRAPT, TextureWrapToken(samplerData.WrapT));
+  if((uint32_t)samplerData.Type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_3D)
+    SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapR, DMI::WRAPR, TextureWrapToken(samplerData.WrapR));
 }
 
 void UsdBridgeUsdWriter::UpdateBeginEndTime(double timeStep)

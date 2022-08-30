@@ -12,8 +12,10 @@ DEFINE_PARAMETER_MAP(UsdSampler,
   REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
   REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("filename", ANARI_STRING, fileName)
+  REGISTER_PARAMETER_MACRO("wrapMode", ANARI_STRING, wrapS)
   REGISTER_PARAMETER_MACRO("wrapMode1", ANARI_STRING, wrapS)
   REGISTER_PARAMETER_MACRO("wrapMode2", ANARI_STRING, wrapT)
+  REGISTER_PARAMETER_MACRO("wrapMode3", ANARI_STRING, wrapR)
 )
 
 namespace
@@ -40,9 +42,17 @@ namespace
   }
 }
 
-UsdSampler::UsdSampler(const char* name, UsdBridge* bridge)
+UsdSampler::UsdSampler(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_SAMPLER, name, bridge)
 {
+  if (strcmp(type, "sphere") == 0)
+    samplerType = SAMPLER_1D;
+  else if (strcmp(type, "cylinder") == 0)
+    samplerType = SAMPLER_2D;
+  else if (strcmp(type, "cone") == 0)
+    samplerType = SAMPLER_3D;
+  else
+    device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "USdSampler '%s' construction failed: type %s not supported", getName(), name);
 }
 
 UsdSampler::~UsdSampler()
@@ -74,21 +84,33 @@ bool UsdSampler::deferCommit(UsdDevice* device)
 
 bool UsdSampler::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge || !device->getReadParams().outputMaterial)
+  if(!usdBridge || 
+    !device->getReadParams().outputMaterial ||
+    samplerType == SAMPLER_UNKNOWN)
     return false;
 
   const UsdSamplerData& paramData = getReadParams();
 
+  UsdBridgeSamplerData::SamplerType type = 
+    (samplerType == SAMPLER_1D ? UsdBridgeSamplerData::SamplerType::SAMPLER_1D : 
+      (samplerType == SAMPLER_2D ? UsdBridgeSamplerData::SamplerType::SAMPLER_2D :
+        UsdBridgeSamplerData::SamplerType::SAMPLER_3D
+        )
+      );
+
   bool isNew = false;
   if (!usdHandle.value)
-    isNew = usdBridge->CreateSampler(getName(), usdHandle);
+    isNew = usdBridge->CreateSampler(getName(), usdHandle, type);
 
   if (paramChanged || isNew)
   {
     UsdBridgeSamplerData samplerData;
+    samplerData.Type = type;
+  
     samplerData.FileName = UsdSharedString::c_str(paramData.fileName);
     samplerData.WrapS = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapS));
     samplerData.WrapT = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapT));
+    samplerData.WrapR = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapR));
 
     samplerData.TimeVarying = (UsdBridgeSamplerData::DataMemberId)paramData.timeVarying;
 

@@ -444,7 +444,7 @@ bool UsdBridge::CreateMaterial(const char* name, UsdMaterialHandle& handle)
   return PrimIsNew(createResult);
 }
 
-bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle)
+bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle, UsdBridgeSamplerData::SamplerType type)
 {
   if (!SessionValid) return false;
 
@@ -459,10 +459,10 @@ bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle)
     BRIDGE_USDWRITER.CreateManifestStage(name, samplerPrimStagePf, cacheEntry);
 
     UsdStageRefPtr samplerPrimStage = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, samplerPrimStagePf).second;
-    BRIDGE_USDWRITER.InitializeUsdSampler(samplerPrimStage, cacheEntry->PrimPath, false);
+    BRIDGE_USDWRITER.InitializeUsdSampler(samplerPrimStage, cacheEntry->PrimPath, type, false);
 #endif
 
-    BRIDGE_USDWRITER.InitializeUsdSampler(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, true);
+    BRIDGE_USDWRITER.InitializeUsdSampler(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, type, true);
   }
 
   handle.value = cacheEntry;
