@@ -107,7 +107,7 @@ void UsdWorld::doCommitRefs(UsdDevice* device)
     }
     else
     {
-      device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+      device->reportStatus(this, ANARI_WORLD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
         "UsdWorld '%s' commit failed: 'instance' array elements should be of type ANARI_INSTANCE", objName);
     }
   }

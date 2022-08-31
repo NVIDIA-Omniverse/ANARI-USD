@@ -552,7 +552,7 @@ void UsdDevice::addToCommitList(UsdBaseObject* object, bool commitData)
 
   if(lockCommitList)
   {
-    this->reportStatus(object, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
+    this->reportStatus(object, object->getType(), ANARI_SEVERITY_FATAL_ERROR, ANARI_STATUS_INVALID_OPERATION,
       "Usd device internal error; addToCommitList called while list is locked");
   }
   else

@@ -66,7 +66,7 @@ bool UsdVolume::CheckTfParams(UsdDevice* device)
   const UsdDataArray* tfColor = paramData.color;
   if (paramData.color == nullptr)
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction color array not set.", debugName);
     return false;
   }
@@ -74,35 +74,35 @@ bool UsdVolume::CheckTfParams(UsdDevice* device)
   const UsdDataArray* tfOpacity = paramData.opacity;
   if (tfOpacity == nullptr)
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction opacity not set.", debugName);
     return false;
   }
 
   if (!AssertOneDimensional(tfColor->getLayout(), logInfo, "tfColor"))
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction color array not one-dimensional.", debugName);
     return false;
   }
 
   if (!AssertOneDimensional(tfOpacity->getLayout(), logInfo, "tfOpacity"))
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction opacity array not one-dimensional.", debugName);
     return false;
   }
 
   if (tfColor->getType() != ANARI_FLOAT32_VEC3)
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction color array needs to be of type vec3f.", debugName);
     return false;
   }
 
   if (tfOpacity->getType() != ANARI_FLOAT32)
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction opacity array needs to be of type float.", debugName);
     return false;
   }
@@ -224,7 +224,7 @@ bool UsdVolume::doCommitData(UsdDevice* device)
     }
     else
     {
-      device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+      device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
         "UsdVolume '%s' commit failed: field reference missing.", debugName);
     }
   }
