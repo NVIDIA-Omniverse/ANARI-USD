@@ -48,14 +48,14 @@ public:
     , bool useClipStage = false, const char* clipPf = nullptr, double timeStep = 0.0
     , std::function<void (UsdStageRefPtr)> initFunc = [](UsdStageRefPtr){}
 #endif
-    );
+    ) const;
 #ifdef VALUE_CLIP_RETIMING
   void CreateManifestStage(const char* name, const char* primPostfix, UsdBridgePrimCache* cacheEntry);
   void RemoveManifestAndClipStages(const UsdBridgePrimCache* cacheEntry);
 
-  const UsdStagePair& FindOrCreatePrimStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix);
-  const UsdStagePair& FindOrCreateClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, double timeStep, bool& exists);
-  const UsdStagePair& FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, bool isClip, double timeStep, bool& exists);
+  const UsdStagePair& FindOrCreatePrimStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix) const;
+  const UsdStagePair& FindOrCreateClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, double timeStep, bool& exists) const;
+  const UsdStagePair& FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, bool isClip, double timeStep, bool& exists) const;
 #endif
   void SetSceneGraphRoot(UsdBridgePrimCache* worldCache, const char* name);
   void RemoveSceneGraphRoot(UsdBridgePrimCache* worldCache);
@@ -121,7 +121,7 @@ public:
 
   void BindMaterialToGeom(const SdfPath& refGeomPath, const SdfPath& refMatPath);
   void BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
-    const char* texFileName, bool texfileTimeVarying, double worldTimeStep);
+    const std::string& samplerPrimName, const char* samplerImageUrl, bool samplerImageTimeVarying, double worldTimeStep, double samplerTimeStep);
 
   void UnbindMaterialFromGeom(const SdfPath & refGeomPath);
   void UnBindSamplerFromMaterial(const SdfPath& matPrimPath);
@@ -135,15 +135,17 @@ public:
 #ifdef SUPPORT_MDL_SHADERS 
   void UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
 #endif
-  void UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfPath& volPrimPath, const std::string& name, const UsdBridgeVolumeData& volumeData, double timeStep);
-  void UpdateUsdSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep);
+  void UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfPath& volPrimPath, const UsdBridgeVolumeData& volumeData, double timeStep, UsdBridgePrimCache* cacheEntry);
+  void UpdateUsdSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry);
   void UpdateBeginEndTime(double timeStep);
 
   void* LogUserData;
   UsdBridgeLogCallback LogCallback;
 
-  friend void ResourceCollectVolume(const UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter);
-  friend void ResourceCollectSampler(const UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& sceneStage);
+  friend void ResourceCollectVolume(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter);
+  friend void ResourceCollectSampler(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter);
+  friend void RemoveResourceFiles(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter, 
+    const char* resourceFolder, const char* extension);
 
   VtIntArray TempIndexArray;
   VtVec3fArray TempScalesArray;
@@ -180,7 +182,7 @@ protected:
 };
 
 
-void ResourceCollectVolume(const UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter);
-void ResourceCollectSampler(const UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter);
+void ResourceCollectVolume(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter);
+void ResourceCollectSampler(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter);
 
 #endif

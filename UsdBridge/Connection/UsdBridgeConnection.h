@@ -31,10 +31,10 @@ public:
 
   virtual int MaxSessionNr() const = 0;
 
-  virtual bool CreateFolder(const char* dirName, bool mayExist) const = 0;
-  virtual bool RemoveFolder(const char* dirName) const = 0;
-  virtual bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary = true) const = 0;
-  virtual bool RemoveFile(const char* filePath) const = 0;
+  virtual bool CreateFolder(const char* dirName, bool isRelative, bool mayExist) const = 0;
+  virtual bool RemoveFolder(const char* dirName, bool isRelative) const = 0;
+  virtual bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool isRelative, bool binary = true) const = 0;
+  virtual bool RemoveFile(const char* filePath, bool isRelative) const = 0;
 
   virtual bool ProcessUpdates() = 0;
 
@@ -64,10 +64,10 @@ public:
 
   int MaxSessionNr() const override;
 
-  bool CreateFolder(const char* dirName, bool mayExist) const override;
-  bool RemoveFolder(const char* dirName) const override;
-  bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary = true) const override;
-  bool RemoveFile(const char* filePath) const override;
+  bool CreateFolder(const char* dirName, bool isRelative, bool mayExist) const override;
+  bool RemoveFolder(const char* dirName, bool isRelative) const override;
+  bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool isRelative, bool binary = true) const override;
+  bool RemoveFile(const char* filePath, bool isRelative) const override;
 
   bool ProcessUpdates() override;
 
@@ -89,10 +89,10 @@ public:
 
   int MaxSessionNr() const override;
 
-  bool CreateFolder(const char* dirName, bool mayExist) const override;
-  bool RemoveFolder(const char* dirName) const override;
-  bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary = true) const override;
-  bool RemoveFile(const char* filePath) const override;
+  bool CreateFolder(const char* dirName, bool isRelative, bool mayExist) const override;
+  bool RemoveFolder(const char* dirName, bool isRelative) const override;
+  bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool isRelative, bool binary = true) const override;
+  bool RemoveFile(const char* filePath, bool isRelative) const override;
 
   bool ProcessUpdates() override;
 
@@ -127,10 +127,10 @@ public:
 
   int MaxSessionNr() const override;
 
-  bool CreateFolder(const char* dirName, bool mayExist) const override;
-  bool RemoveFolder(const char* dirName) const override;
-  bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary = true) const override;
-  bool RemoveFile(const char* filePath) const override;
+  bool CreateFolder(const char* dirName, bool isRelative, bool mayExist) const override;
+  bool RemoveFolder(const char* dirName, bool isRelative) const override;
+  bool WriteFile(const char* data, size_t dataSize, const char* filePath, bool isRelative, bool binary = true) const override;
+  bool RemoveFile(const char* filePath, bool isRelative) const override;
 
   bool ProcessUpdates() override;
 

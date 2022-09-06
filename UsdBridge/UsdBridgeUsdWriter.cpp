@@ -119,7 +119,7 @@ namespace
   const char* const clipFolder = "clips/";
   const char* const primStageFolder = "primstages/";
   const char* const mdlFolder = "mdls/";
-  const char* const texFolder = "textures/";
+  const char* const imgFolder = "images/";
   const char* const volFolder = "volumes/";
 
   // Postfixes for auto generated usd subprims
@@ -128,6 +128,10 @@ namespace
   const char* const shaderPrimPf = "shader";
   const char* const mdlShaderPrimPf = "mdlshader";
   const char* const openVDBPrimPf = "ovdbfield";
+
+  // Extensions
+  const char* const imageExtension = ".png";
+  const char* const vdbExtension = ".vdb";
 
   TfToken GetTokenFromFieldType(UsdBridgeVolumeFieldType fieldType)
   {
@@ -158,6 +162,22 @@ namespace
       default: attribToken = TfToken((std::string("attribute")+std::to_string(attribIndex)).c_str()); break;
     } 
     return attribToken;
+  }
+
+  std::string GetResourceFileName(const std::string& basePath, double timeStep, const char* fileExtension)
+  {
+    std::string generatedFileName(basePath);
+#ifdef TIME_BASED_CACHING
+    generatedFileName += "_" + std::to_string(timeStep);
+#endif
+    generatedFileName += fileExtension; 
+
+    return generatedFileName;
+  }
+
+  std::string GetResourceFileName(const char* folderName, const std::string& objectName, double timeStep, const char* fileExtension)
+  {
+    return GetResourceFileName(folderName + objectName, timeStep, fileExtension);
   }
 
   bool UsesUsdGeomPoints(const UsdBridgeInstancerData& geomData)
@@ -662,27 +682,27 @@ bool UsdBridgeUsdWriter::CreateDirectories()
 {
   bool valid = true;
 
-  valid = Connect->CreateFolder("", true);
+  valid = Connect->CreateFolder("", true, true);
 
-  //Connect->RemoveFolder(SessionDirectory.c_str());
+  //Connect->RemoveFolder(SessionDirectory.c_str(), true);
   bool folderMayExist = !Settings.CreateNewSession;
   
-  valid = valid && Connect->CreateFolder(SessionDirectory.c_str(), folderMayExist);
+  valid = valid && Connect->CreateFolder(SessionDirectory.c_str(), true, folderMayExist);
 
 #ifdef VALUE_CLIP_RETIMING
-  valid = valid && Connect->CreateFolder((SessionDirectory + manifestFolder).c_str(), folderMayExist);
-  valid = valid && Connect->CreateFolder((SessionDirectory + primStageFolder).c_str(), folderMayExist);
+  valid = valid && Connect->CreateFolder((SessionDirectory + manifestFolder).c_str(), true, folderMayExist);
+  valid = valid && Connect->CreateFolder((SessionDirectory + primStageFolder).c_str(), true, folderMayExist);
 #endif
 #ifdef TIME_CLIP_STAGES
-  valid = valid && Connect->CreateFolder((SessionDirectory + clipFolder).c_str(), folderMayExist);
+  valid = valid && Connect->CreateFolder((SessionDirectory + clipFolder).c_str(), true, folderMayExist);
 #endif
 #ifdef SUPPORT_MDL_SHADERS
   if(Settings.EnableMdlShader)
   {
-    valid = valid && Connect->CreateFolder((SessionDirectory + mdlFolder).c_str(), folderMayExist);
+    valid = valid && Connect->CreateFolder((SessionDirectory + mdlFolder).c_str(), true, folderMayExist);
   }
 #endif
-  valid = valid && Connect->CreateFolder((SessionDirectory + volFolder).c_str(), folderMayExist);
+  valid = valid && Connect->CreateFolder((SessionDirectory + volFolder).c_str(), true, folderMayExist);
 
   if (!valid)
   {
@@ -702,7 +722,7 @@ void WriteMdlFromStrings(const char* string0, const char* string1, const char* f
   std::memcpy(Mdl_Contents, string0, strLen0);
   std::memcpy(Mdl_Contents + strLen0, string1, strLen1);
 
-  Connect->WriteFile(Mdl_Contents, totalStrLen, fileName, false);
+  Connect->WriteFile(Mdl_Contents, totalStrLen, fileName, true, false);
 
   delete[] Mdl_Contents;
 }
@@ -825,7 +845,7 @@ UsdStageRefPtr UsdBridgeUsdWriter::GetTimeVarStage(UsdBridgePrimCache* cache
   , bool useClipStage, const char* clipPf, double timeStep
   , std::function<void (UsdStageRefPtr)> initFunc
 #endif
-  )
+  ) const
 {
 #ifdef VALUE_CLIP_RETIMING
 #ifdef TIME_CLIP_STAGES
@@ -875,27 +895,27 @@ void UsdBridgeUsdWriter::RemoveManifestAndClipStages(const UsdBridgePrimCache* c
 
   // Remove ManifestStage file itself
   assert(!cacheEntry->ManifestStage.first.empty());
-  Connect->RemoveFile((SessionDirectory + cacheEntry->ManifestStage.first).c_str());
+  Connect->RemoveFile((SessionDirectory + cacheEntry->ManifestStage.first).c_str(), true);
 
   // remove all clipstage files
   for (auto& x : cacheEntry->ClipStages)
   {
-    Connect->RemoveFile((SessionDirectory + x.second.first).c_str());
+    Connect->RemoveFile((SessionDirectory + x.second.first).c_str(), true);
   }
 }
 
-const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix)
+const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix) const
 {
   bool exists;
   return FindOrCreatePrimClipStage(cacheEntry, namePostfix, false, UsdBridgePrimCache::PrimStageTimeCode, exists);
 }
 
-const UsdStagePair& UsdBridgeUsdWriter::FindOrCreateClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, double timeStep, bool& exists)
+const UsdStagePair& UsdBridgeUsdWriter::FindOrCreateClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, double timeStep, bool& exists) const
 {
   return FindOrCreatePrimClipStage(cacheEntry, namePostfix, true, timeStep, exists);
 }
 
-const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, bool isClip, double timeStep, bool& exists)
+const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, bool isClip, double timeStep, bool& exists) const
 {
   exists = true;
   bool binary = this->Settings.BinaryOutput;
@@ -1094,7 +1114,7 @@ void UsdBridgeUsdWriter::InitializeClipMetaData(const UsdPrim& clipPrim, UsdBrid
 
   clipsApi.SetClipPrimPath(childCache->PrimPath.GetString());
 
-  const std::string manifestPath = childCache->ManifestStage.first;
+  const std::string& manifestPath = childCache->ManifestStage.first;
   const std::string* refStagePath;
 #ifdef TIME_CLIP_STAGES
   if (clipStages)
@@ -1991,7 +2011,7 @@ void UsdBridgeUsdWriter::UnbindMaterialFromGeom(const SdfPath & refGeomPath)
 }
 
 void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
-  const char* texFileName, bool texfileTimeVarying, double worldTimeStep)
+  const std::string& samplerPrimName, const char* samplerImageUrl, bool samplerImageTimeVarying, double worldTimeStep, double samplerTimeStep)
 {
   if(Settings.EnablePreviewSurfaceShader)
   {
@@ -2028,6 +2048,13 @@ void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, con
 #ifdef SUPPORT_MDL_SHADERS
   if(Settings.EnableMdlShader)
   {
+    // If no url available, use generated filename using data from the referenced sampler
+    const char* imgFileName = samplerImageUrl;
+    std::string generatedFileName = GetResourceFileName(imgFolder, samplerPrimName, samplerTimeStep, imageExtension);
+
+    if(!imgFileName)
+      imgFileName = generatedFileName.c_str();
+
     // Only uses the uniform prim and world timestep, as the timevar material subprim is value-clip-referenced 
     // from the material's parent, and therefore not in world-time. Figuring out material to sampler mapping is not worth the effort 
     // and would not fix the underlying issue (this has to be part of a separate sampler prim)
@@ -2038,12 +2065,12 @@ void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, con
     UsdShadeShader uniformMdlShad = UsdShadeShader::Get(this->SceneStage, mdlShaderPrimPath);
     assert(uniformMdlShad); 
 
-    UsdTimeCode timeCode = texfileTimeVarying ? UsdTimeCode(worldTimeStep) : UsdTimeCode::Default();
+    UsdTimeCode timeCode = samplerImageTimeVarying ? UsdTimeCode(worldTimeStep) : UsdTimeCode::Default();
 
     UsdShadeInput diffTexInput = uniformMdlShad.CreateInput(UsdBridgeTokens->diffuse_texture, SdfValueTypeNames->Asset);
-    if(!texfileTimeVarying)
+    if(!samplerImageTimeVarying)
       diffTexInput.GetAttr().Clear();
-    diffTexInput.Set(SdfAssetPath(texFileName), timeCode);
+    diffTexInput.Set(SdfAssetPath(imgFileName), timeCode);
 
     uniformMdlShad.GetInput(UsdBridgeTokens->vertexcolor_coordinate_index).Set(-1);
   }
@@ -3196,7 +3223,7 @@ namespace
   }
 }
 
-void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfPath& volPrimPath, const std::string& name, const UsdBridgeVolumeData& volumeData, double timeStep)
+void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfPath& volPrimPath, const UsdBridgeVolumeData& volumeData, double timeStep, UsdBridgePrimCache* cacheEntry)
 {
   // Get the volume and ovdb field prims
   UsdVolVolume uniformVolume = UsdVolVolume::Get(SceneStage, volPrimPath);
@@ -3212,11 +3239,7 @@ void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfP
   assert(timeVarField);
 
   // Set the file path reference in usd
-  std::string relVolPath(std::string(volFolder) + name);
-#ifdef TIME_BASED_CACHING
-  relVolPath += "_" + std::to_string(timeStep);
-#endif
-  relVolPath += ".vdb";
+  std::string relVolPath = GetResourceFileName(volFolder, cacheEntry->Name.GetString(), timeStep, vdbExtension);
 
   UpdateUsdVolumeAttributes(uniformVolume, timeVarVolume, uniformField, timeVarField, volumeData, timeStep, relVolPath);
 
@@ -3229,10 +3252,12 @@ void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfP
   // Flush stream out to storage
   const char* volumeStreamData; size_t volumeStreamDataSize;
   VolumeWriter->GetSerializedVolumeData(volumeStreamData, volumeStreamDataSize);
-  Connect->WriteFile(volumeStreamData, volumeStreamDataSize, fullVolPath.c_str());
+  Connect->WriteFile(volumeStreamData, volumeStreamDataSize, fullVolPath.c_str(), true);
+  // Record file write for timestep
+  cacheEntry->AddResourceTimeStep(timeStep);
 }
 
-void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep)
+void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry)
 {
   TimeEvaluator<UsdBridgeSamplerData> timeEval(samplerData, timeStep);
   typedef UsdBridgeSamplerData::DataMemberId DMI;
@@ -3243,13 +3268,28 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, const Sdf
   UsdShadeShader timeVarSamplerPrim = UsdShadeShader::Get(timeVarStage, samplerPrimPath);
   assert(timeVarSamplerPrim);
 
-  SdfAssetPath texFile(samplerData.FileName);
+  const char* imgFileName = samplerData.ImageUrl;
+  // Generate an image url
+  std::string generatedFileName = GetResourceFileName(imgFolder, cacheEntry->Name.GetString(), timeStep, imageExtension);
+
+  if(!samplerData.ImageUrl)
+  {
+    imgFileName = generatedFileName.c_str();
+
+    // If data array available, upload as image to texFile
+
+    // Record file write for timestep
+    cacheEntry->AddResourceTimeStep(timeStep);
+  }
+
+  SdfAssetPath texFile(imgFileName);
   SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->file, DMI::FILENAME, texFile);
   SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapS, DMI::WRAPS, TextureWrapToken(samplerData.WrapS));
   if((uint32_t)samplerData.Type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_2D)
     SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapT, DMI::WRAPT, TextureWrapToken(samplerData.WrapT));
   if((uint32_t)samplerData.Type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_3D)
     SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapR, DMI::WRAPR, TextureWrapToken(samplerData.WrapR));
+
 }
 
 void UsdBridgeUsdWriter::UpdateBeginEndTime(double timeStep)
@@ -3266,41 +3306,47 @@ void UsdBridgeUsdWriter::UpdateBeginEndTime(double timeStep)
   }
 }
 
-void ResourceCollectVolume(const UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter)
+void RemoveResourceFiles(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter, 
+  const char* resourceFolder, const char* fileExtension)
 {
-#ifdef VALUE_CLIP_RETIMING
-  const UsdStageRefPtr& volumeStage = cache->GetPrimStagePair().second;
-#else
-  const UsdStageRefPtr& volumeStage = usdWriter.SceneStage;
-#endif
-
-  const SdfPath& volPrimPath = cache->PrimPath;
   const std::string& name = cache->Name.GetString();
 
-  UsdVolVolume volume = UsdVolVolume::Get(volumeStage, volPrimPath);
-  assert(volume);
+  // Directly from usd is inaccurate, as timesteps may have been cleared without file removal
+  //// Assuming prim without clip stages.
+  //const UsdStageRefPtr volumeStage = usdWriter.GetTimeVarStage(cache);
+  //const UsdStageRefPtr volumeStage = usdWriter.GetTimeVarStage(cache);
+  //const SdfPath& volPrimPath = cache->PrimPath;
+  //
+  //UsdVolVolume volume = UsdVolVolume::Get(volumeStage, volPrimPath);
+  //assert(volume);
+  //
+  //SdfPath ovdbFieldPath = volPrimPath.AppendPath(SdfPath(openVDBPrimPf));
+  //UsdVolOpenVDBAsset ovdbField = UsdVolOpenVDBAsset::Get(volumeStage, ovdbFieldPath);
+  //
+  //UsdAttribute fileAttr = ovdbField.GetFilePathAttr();
+  //
+  //std::vector<double> fileTimes;
+  //fileAttr.GetTimeSamples(&fileTimes);
 
-  SdfPath ovdbFieldPath = volPrimPath.AppendPath(SdfPath(openVDBPrimPf));
-  UsdVolOpenVDBAsset ovdbField = UsdVolOpenVDBAsset::Get(volumeStage, ovdbFieldPath);
+  assert(cache->ResourceTimes);
+  std::vector<double>& fileTimes = *(cache->ResourceTimes);
 
-  UsdAttribute fileAttr = ovdbField.GetFilePathAttr();
-
-  std::vector<double> fileTimes;
-  fileAttr.GetTimeSamples(&fileTimes);
-
+  std::string basePath = usdWriter.SessionDirectory + std::string(resourceFolder) + name;
   for (double timeStep : fileTimes)
   {
-    std::string volFileName(usdWriter.SessionDirectory + std::string(volFolder) + name);
-#ifdef TIME_BASED_CACHING
-    volFileName += "_" + std::to_string(timeStep);
-#endif
-    volFileName += ".vdb";
+    std::string volFileName = GetResourceFileName(basePath, timeStep, fileExtension);
 
-    usdWriter.Connect->RemoveFile(volFileName.c_str());
+    usdWriter.Connect->RemoveFile(volFileName.c_str(), true);
   }
+  fileTimes.resize(0);
 }
 
-void ResourceCollectSampler(const UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& sceneStage)
+void ResourceCollectVolume(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter)
 {
+  RemoveResourceFiles(cache, usdWriter, volFolder, vdbExtension);
+}
 
+void ResourceCollectSampler(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter)
+{
+  RemoveResourceFiles(cache, usdWriter, imgFolder, imageExtension);
 }

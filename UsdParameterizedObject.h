@@ -175,11 +175,14 @@ protected:
           }
         }
 
+        if(!strcmp(name, "usd::timestep")) // Allow for re-use of object as reference at different timestep, without triggering a full re-commit of the referenced object
+        {
 #ifdef TIME_BASED_CACHING
-        paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
+          paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
 #else
-        paramChanged = paramChanged || contentUpdate;
+          paramChanged = paramChanged || contentUpdate;
 #endif
+        }
       }
       else
         reportStatusThroughDevice(LogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
@@ -210,7 +213,10 @@ protected:
         std::memcpy(dest, src, AnariTypeSize(type));
       }
 
-      paramChanged = true;
+      if(!strcmp(name, "usd::timestep")) 
+      {
+        paramChanged = true;
+      }
     }
   }
 

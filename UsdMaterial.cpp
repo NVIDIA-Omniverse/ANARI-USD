@@ -135,9 +135,18 @@ void UsdMaterial::doCommitRefs(UsdDevice* device)
     double samplerObjTimeStep = paramData.diffuseMap->getReadParams().timeStep;
     double samplerRefTime = selectRefTime(paramData.diffuseMapTimeStep, samplerObjTimeStep, worldTimeStep);
     
-    UsdSharedString* fName = paramData.diffuseMap->getReadParams().fileName;
+    // Reading child (sampler) data in the material has the consequence that the sampler's parameters as they were last committed are in effect "part of" the material parameter set, at this point of commit. 
+    // So in case a sampler at a particular timestep is referenced from a material at two different world timesteps 
+    // - ie. for this world timestep, a particular timestep of an image already committed and subsequently referenced at some other previous world timestep is reused - 
+    // the user needs to make sure that not only the timestep is set correctly on the sampler for the commit (which is by itself lightweight, as it does not trigger a full commit), 
+    // but also that the parameters read here have been re-set on the sampler to the values belonging to the referenced timestep, as if there is no USD representation of a sampler object. 
+    // Setting those parameters will in turn trigger a full commit of the sampler object, which is in theory inefficient.
+    // However, in case of a sampler this is not a problem in practice; data transfer is only a concern when the filename is *not* set, at which point a relative file corresponding
+    // to the sampler timestep will be automatically chosen and set for the material, without the sampler object requiring any updates. 
+    // In case a filename *is* set, only the filename is used and no data transfer/file io operations are performed.
+    UsdSharedString* imageUrl = paramData.diffuseMap->getReadParams().imageUrl;
     bool fNameTimeVarying = (paramData.diffuseMap->getReadParams().timeVarying & 1);
 
-    usdBridge->SetSamplerRef(usdHandle, paramData.diffuseMap->getUsdHandle(), UsdSharedString::c_str(fName), fNameTimeVarying, worldTimeStep, samplerRefTime);
+    usdBridge->SetSamplerRef(usdHandle, paramData.diffuseMap->getUsdHandle(), UsdSharedString::c_str(imageUrl), fNameTimeVarying, worldTimeStep, samplerRefTime);
   }
 }

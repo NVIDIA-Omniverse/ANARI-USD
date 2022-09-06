@@ -6,6 +6,8 @@
 
 #include <string>
 #include <map>
+#include <vector>
+#include <memory>
 
 #include "UsdBridgeData.h"
 
@@ -15,7 +17,7 @@ class UsdBridgePrimCacheManager;
 
 typedef std::pair<std::string, UsdStageRefPtr> UsdStagePair; //Stage ptr and filename
 typedef std::pair<std::pair<bool,bool>, UsdBridgePrimCache*> BoolEntryPair; // Prim exists in stage, prim exists in cache, result cache entry ptr
-typedef void (*ResourceCollectFunc)(const UsdBridgePrimCache*, const UsdBridgeUsdWriter&);
+typedef void (*ResourceCollectFunc)(UsdBridgePrimCache*, const UsdBridgeUsdWriter&);
 typedef std::function<void(UsdBridgePrimCache*)> AtRemoveFunc;
 typedef std::vector<UsdBridgePrimCache*> UsdBridgePrimCacheList;
 
@@ -47,11 +49,27 @@ struct UsdBridgePrimCache : public UsdBridgeRefCache
 #ifndef NDEBUG
     , Debug_Name(nm.GetString())
 #endif
-  {}
+  {
+    if(cf)
+    {
+      ResourceTimes = std::make_unique<std::vector<double>>();
+    }
+  }
 
   SdfPath PrimPath;
   SdfPath Name;
   ResourceCollectFunc ResourceCollect;
+  std::unique_ptr<std::vector<double>> ResourceTimes;
+
+  void AddResourceTimeStep(double timeStep)
+  {
+    assert(ResourceTimes);
+#ifndef TIME_BASED_CACHING
+    timeStep = 0.0; // Just record whether there is a resource or not
+#endif
+    if(std::find(ResourceTimes->begin(), ResourceTimes->end(), timeStep) == ResourceTimes->end())
+      ResourceTimes->push_back(timeStep);
+  }
 
 #ifdef VALUE_CLIP_RETIMING
   UsdStagePair ManifestStage; // Holds the manifest

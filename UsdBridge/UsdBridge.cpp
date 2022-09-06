@@ -639,7 +639,7 @@ void UsdBridge::SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle
   SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, timeVarying, true, false, nullptr, timeStep, fieldTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
 }
 
-void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampler, const char* texfileName, bool texfileTimeVarying, double timeStep, double samplerTimeStep)
+void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampler, const char* samplerImageUrl, bool samplerImageTimeVarying, double timeStep, double samplerTimeStep)
 {
   if (material.value == nullptr) return;
 
@@ -659,7 +659,7 @@ void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampl
   SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache);
 
-  BRIDGE_USDWRITER.BindSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, texfileName, texfileTimeVarying, timeStep); // requires world timestep, see implementation
+  BRIDGE_USDWRITER.BindSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, samplerCache->Name.GetString(), samplerImageUrl, samplerImageTimeVarying, timeStep, samplerTimeStep); // requires world timestep, see implementation
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -820,7 +820,7 @@ void UsdBridge::SetSpatialFieldData(UsdSpatialFieldHandle field, const UsdBridge
   UsdStageRefPtr volumeStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
 
   // To avoid data duplication when using of clip stages, we need to potentially use the scenestage prim for time-uniform data.
-  BRIDGE_USDWRITER.UpdateUsdVolume(volumeStage, cache->PrimPath, cache->Name.GetString(), volumeData, timeStep);
+  BRIDGE_USDWRITER.UpdateUsdVolume(volumeStage, cache->PrimPath, volumeData, timeStep, cache);
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -864,7 +864,7 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
 
   UsdStageRefPtr samplerStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
   
-  BRIDGE_USDWRITER.UpdateUsdSampler(samplerStage, samplerPrimPath, samplerData, timeStep);
+  BRIDGE_USDWRITER.UpdateUsdSampler(samplerStage, samplerPrimPath, samplerData, timeStep, cache);
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)

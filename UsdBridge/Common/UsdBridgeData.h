@@ -388,7 +388,9 @@ struct UsdBridgeSamplerData
 
   SamplerType Type = SamplerType::SAMPLER_1D;
 
-  const char* FileName = nullptr;
+  const char* ImageUrl = nullptr;
+  bool RelativeUrl = true; // Relative to the session dir
+
   WrapMode WrapS = WrapMode::BLACK;
   WrapMode WrapT = WrapMode::BLACK;
   WrapMode WrapR = WrapMode::BLACK;

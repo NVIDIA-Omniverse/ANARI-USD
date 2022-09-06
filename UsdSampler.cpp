@@ -11,7 +11,7 @@ DEFINE_PARAMETER_MAP(UsdSampler,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
   REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
   REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
-  REGISTER_PARAMETER_MACRO("filename", ANARI_STRING, fileName)
+  REGISTER_PARAMETER_MACRO("usd::imageurl", ANARI_STRING, imageUrl)
   REGISTER_PARAMETER_MACRO("wrapMode", ANARI_STRING, wrapS)
   REGISTER_PARAMETER_MACRO("wrapMode1", ANARI_STRING, wrapS)
   REGISTER_PARAMETER_MACRO("wrapMode2", ANARI_STRING, wrapT)
@@ -52,7 +52,7 @@ UsdSampler::UsdSampler(const char* name, const char* type, UsdBridge* bridge, Us
   else if (strcmp(type, "cone") == 0)
     samplerType = SAMPLER_3D;
   else
-    device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "USdSampler '%s' construction failed: type %s not supported", getName(), name);
+    device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdSampler '%s' construction failed: type %s not supported", getName(), name);
 }
 
 UsdSampler::~UsdSampler()
@@ -107,7 +107,11 @@ bool UsdSampler::doCommitData(UsdDevice* device)
     UsdBridgeSamplerData samplerData;
     samplerData.Type = type;
   
-    samplerData.FileName = UsdSharedString::c_str(paramData.fileName);
+    if(paramData.imageUrl)
+    {
+      samplerData.ImageUrl = UsdSharedString::c_str(paramData.imageUrl);
+    }
+
     samplerData.WrapS = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapS));
     samplerData.WrapT = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapT));
     samplerData.WrapR = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapR));

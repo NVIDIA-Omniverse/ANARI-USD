@@ -13,7 +13,9 @@ struct UsdSamplerData
   double timeStep = 0.0;
   int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0:fileName, 1:wrapS, 2:wrapT
 
-  UsdSharedString* fileName = nullptr;
+  const UsdDataArray* imageData = nullptr;
+
+  UsdSharedString* imageUrl = nullptr;
   UsdSharedString* wrapS = nullptr;
   UsdSharedString* wrapT = nullptr;
   UsdSharedString* wrapR = nullptr;
