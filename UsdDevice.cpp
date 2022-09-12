@@ -266,7 +266,7 @@ void UsdDevice::deviceUnsetParameter(const char * id)
 
 void UsdDevice::deviceCommit()
 {
-  TransferWriteToReadParams();
+  transferWriteToReadParams();
 
   const UsdDeviceData& paramData = getReadParams();
 

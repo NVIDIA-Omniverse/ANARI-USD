@@ -15,28 +15,48 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
   REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
   REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
-  REGISTER_PARAMETER_MACRO("usd::timestep::map_kd", ANARI_FLOAT64, diffuseMapTimeStep)
-  REGISTER_PARAMETER_MACRO("color", ANARI_FLOAT32_VEC3, diffuse) 
+  REGISTER_PARAMETER_MACRO("usd::timestep::color", ANARI_FLOAT64, colorSamplerTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::timestep::opacity", ANARI_FLOAT64, opacitySamplerTimeStep)
+  REGISTER_PARAMETER_MULTITYPE_MACRO("color", ANARI_FLOAT32_VEC3, SamplerType, ANARI_STRING, color)
+  REGISTER_PARAMETER_MULTITYPE_MACRO("opacity", ANARI_FLOAT32, SamplerType, ANARI_STRING, opacity)
   REGISTER_PARAMETER_MACRO("specular", ANARI_FLOAT32_VEC3, specular)
   REGISTER_PARAMETER_MACRO("emissive", ANARI_FLOAT32_VEC3, emissive)
   REGISTER_PARAMETER_MACRO("shininess", ANARI_FLOAT32, shininess)
-  REGISTER_PARAMETER_MACRO("opacity", ANARI_FLOAT32, opacity)
   REGISTER_PARAMETER_MACRO("emissiveintensity", ANARI_FLOAT32, emissiveIntensity)
   REGISTER_PARAMETER_MACRO("metallic", ANARI_FLOAT32, metallic)
-  REGISTER_PARAMETER_MACRO("ior", ANARI_FLOAT32, ior)
-  REGISTER_PARAMETER_MACRO("usevertexcolors", ANARI_BOOL, useVertexColors)
-  REGISTER_PARAMETER_MACRO("map_kd", SamplerType, diffuseMap)
+  REGISTER_PARAMETER_MACRO("ior", ANARI_FLOAT32, ior) 
 )
+
+namespace
+{
+  template<typename T0, typename T1, typename T2>
+  void SetMultiTypeMatParam(UsdMaterialData& materialData, const UsdMultiTypeParameter<T0, T1, T2>& param)
+  {
+    
+  }
+}
 
 UsdMaterial::UsdMaterial(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_MATERIAL, name, bridge)
 {
   if (!std::strcmp(type, "matte"))
   {
+    IsPbr = false;
     IsTranslucent = false;
   }
   else if (!std::strcmp(type, "transparentMatte"))
   {
+    IsPbr = false;
+    IsTranslucent = true;
+  }
+  if (!std::strcmp(type, "pbr"))
+  {
+    IsPbr = true;
+    IsTranslucent = false;
+  }
+  else if (!std::strcmp(type, "transparentPbr"))
+  {
+    IsPbr = true;
     IsTranslucent = true;
   }
   else
@@ -71,7 +91,7 @@ bool UsdMaterial::deferCommit(UsdDevice* device)
 {
   //const UsdMaterialData& paramData = getReadParams();
 
-  //if(UsdObjectNotInitialized<SamplerUsdType>(paramData.diffuseMap))
+  //if(UsdObjectNotInitialized<SamplerUsdType>(paramData.color.type == SamplerType))
   //{
   //  return true;
   //}
@@ -95,22 +115,29 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
     double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
 
     // Make sure to decouple before setting vertexcolors.
-    if (!paramData.diffuseMap)
+    if (!paramData.color.type == SamplerType)
     {
       usdBridge->DeleteSamplerRef(usdHandle, worldTimeStep);
     }
 
     UsdBridgeMaterialData matData;
-    memcpy(matData.Diffuse, paramData.diffuse, sizeof(matData.Diffuse));
+    matData.HasTranslucency = IsTranslucent;
+    matData.IsPbr = IsPbr;
+
+    paramData.color.Get(matData.Diffuse);
+    UsdSharedString* vertexColorSource = nullptr;
+    matData.VertexColorSource = paramData.color.Get(vertexColorSource) ? vertexColorSource->c_str() : nullptr;
+
+    paramData.opacity.Get(matData.Opacity);
+    UsdSharedString* vertexOpacitySource = nullptr;
+    matData.VertexOpacitySource = paramData.opacity.Get(vertexOpacitySource) ? vertexOpacitySource->c_str() : nullptr;
+    
     memcpy(matData.Specular, paramData.specular, sizeof(matData.Specular));
     memcpy(matData.Emissive, paramData.emissive, sizeof(matData.Emissive));
-    matData.Opacity = paramData.opacity;
     matData.EmissiveIntensity = paramData.emissiveIntensity;
     matData.Roughness = 1.0f - paramData.shininess;
     matData.Metallic = paramData.metallic;
     matData.Ior = paramData.ior;
-    matData.UseVertexColors = paramData.useVertexColors;
-    matData.HasTranslucency = IsTranslucent;
 
     matData.TimeVarying = (UsdBridgeMaterialData::DataMemberId) paramData.timeVarying;
 
@@ -118,7 +145,7 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
 
     paramChanged = false;
 
-    return paramData.diffuseMap; // Only commit refs when material actually contains a texture (filename param from diffusemap is required)
+    return paramData.color.type == SamplerType; // Only commit refs when material actually contains a texture (filename param from diffusemap is required)
   }
 
   return false;
@@ -129,11 +156,12 @@ void UsdMaterial::doCommitRefs(UsdDevice* device)
   const UsdMaterialData& paramData = getReadParams();
 
   // Diffuse sampler overrides vertex colors (and must always do so at paramchange, due to colors being rebound blindly)
-  if (paramData.diffuseMap)
+  UsdSampler* colorSampler = nullptr;
+  if (paramData.color.Get(colorSampler))
   {
     double worldTimeStep = device->getReadParams().timeStep;
-    double samplerObjTimeStep = paramData.diffuseMap->getReadParams().timeStep;
-    double samplerRefTime = selectRefTime(paramData.diffuseMapTimeStep, samplerObjTimeStep, worldTimeStep);
+    double samplerObjTimeStep = colorSampler->getReadParams().timeStep;
+    double samplerRefTime = selectRefTime(paramData.colorSamplerTimeStep, samplerObjTimeStep, worldTimeStep);
     
     // Reading child (sampler) data in the material has the consequence that the sampler's parameters as they were last committed are in effect "part of" the material parameter set, at this point of commit. 
     // So in case a sampler at a particular timestep is referenced from a material at two different world timesteps 
@@ -144,9 +172,9 @@ void UsdMaterial::doCommitRefs(UsdDevice* device)
     // However, in case of a sampler this is not a problem in practice; data transfer is only a concern when the filename is *not* set, at which point a relative file corresponding
     // to the sampler timestep will be automatically chosen and set for the material, without the sampler object requiring any updates. 
     // In case a filename *is* set, only the filename is used and no data transfer/file io operations are performed.
-    UsdSharedString* imageUrl = paramData.diffuseMap->getReadParams().imageUrl;
-    bool fNameTimeVarying = (paramData.diffuseMap->getReadParams().timeVarying & 1);
+    UsdSharedString* imageUrl = colorSampler->getReadParams().imageUrl;
+    bool fNameTimeVarying = (colorSampler->getReadParams().timeVarying & 1);
 
-    usdBridge->SetSamplerRef(usdHandle, paramData.diffuseMap->getUsdHandle(), UsdSharedString::c_str(imageUrl), fNameTimeVarying, worldTimeStep, samplerRefTime);
+    usdBridge->SetSamplerRef(usdHandle, colorSampler->getUsdHandle(), UsdSharedString::c_str(imageUrl), fNameTimeVarying, worldTimeStep, samplerRefTime);
   }
 }

@@ -11,9 +11,9 @@
 #include <vector>
 #include "UsdAnari.h"
 #include "UsdBaseObject.h"
+#include "UsdMultiTypeParameter.h"
 #include "anari/backend/utilities/IntrusivePtr.h"
 #include "anari/type_utility.h"
-#include "anari/anari_cpp/Traits.h"
 
 class UsdDevice;
 class UsdBridge;
@@ -23,19 +23,49 @@ class UsdBridge;
 template<class T, class D>
 class UsdParameterizedObject
 {
+public:
+  struct UsdAnariDataTypeStore
+  {
+    ANARIDataType type0 = ANARI_UNKNOWN;
+    ANARIDataType type1 = ANARI_UNKNOWN;
+    ANARIDataType type2 = ANARI_UNKNOWN;
+
+    ANARIDataType singleType() const { return type0; }
+    bool isMultiType() const { return type1 != ANARI_UNKNOWN; }
+    bool typeMatches(ANARIDataType inType)  const
+    { 
+      return inType == type0 || 
+        (isMultiType() && (inType == type1 || inType == type2));
+    }
+  };
+
+  struct ParamTypeInfo
+  {
+    size_t dataOffset;  // offset of data, within paramDataSet D
+    size_t typeOffset;  // offset of type, from data
+    size_t size;        // Total size of data+type
+    UsdAnariDataTypeStore types;
+  };
+
+  using ParameterizedClassType = UsdParameterizedObject<T, D>;
+  using ParamContainer = std::map<std::string, ParamTypeInfo>;
+
 protected:
+  UsdBaseObject** ptrToBaseObjectPtr(char* address) { return reinterpret_cast<UsdBaseObject**>(address); }
+  ANARIDataType* toAnariDataTypePtr(char* address) { return reinterpret_cast<ANARIDataType*>(address); }
+
   bool isBaseObject(ANARIDataType type) const { return anari::isObject(type) || type == ANARI_STRING; }
 
   void safeRefInc(char* paramPtr) // Pointer to the parameter address which holds a UsdBaseObject*
   {
-    UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(paramPtr);
+    UsdBaseObject** baseObj = ptrToBaseObjectPtr(paramPtr);
     if (*baseObj)
       (*baseObj)->refInc(anari::RefType::INTERNAL);
   }
 
   void safeRefDec(char* paramPtr) // Pointer to the parameter address which holds a UsdBaseObject*
   {
-    UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(paramPtr);
+    UsdBaseObject** baseObj = ptrToBaseObjectPtr(paramPtr);
     if (*baseObj)
     {
 #ifdef CHECK_MEMLEAKS
@@ -46,23 +76,33 @@ protected:
     }
   }
 
-  bool objectMatches(char* src, char* dest)
+  char* paramAddress(D& paramData, const ParamTypeInfo& typeInfo)
   {
-    UsdBaseObject** srcObj = reinterpret_cast<UsdBaseObject**>(src);
-    UsdBaseObject** destObj = reinterpret_cast<UsdBaseObject**>(dest);
-    return *srcObj == *destObj;
+    return reinterpret_cast<char*>(&paramData) + typeInfo.dataOffset;
   }
 
-  char* paramAddress(D& paramData, size_t offset)
+  ANARIDataType paramType(char* paramAddress, const ParamTypeInfo& typeInfo)
   {
-    return reinterpret_cast<char*>(&paramData) + offset;
+    if(typeInfo.types.isMultiType())
+      return *toAnariDataTypePtr(paramAddress + typeInfo.typeOffset);
+    else
+      return typeInfo.types.singleType();
+  }
+
+  void setMultiParamType(char* paramAddress, const ParamTypeInfo& typeInfo, ANARIDataType newType)
+  {
+    if(typeInfo.types.isMultiType())
+      *toAnariDataTypePtr(paramAddress + typeInfo.typeOffset) = newType;
+  }
+
+  void getParamTypeAndAddress(D& paramData, const ParamTypeInfo& typeInfo, 
+        ANARIDataType& returnType, char*& returnAddress)
+  {
+    returnAddress = paramAddress(paramData, typeInfo);
+    returnType = paramType(returnAddress, typeInfo);
   }
 
 public:
-
-  typedef UsdParameterizedObject<T, D> ParameterizedClassType;
-  typedef std::map<std::string, std::pair<size_t, ANARIDataType>> ParamContainer;
-
   UsdParameterizedObject()
   {
     static ParamContainer* reg = ParameterizedClassType::registerParams();
@@ -71,21 +111,26 @@ public:
 
   ~UsdParameterizedObject()
   {
-    // Make sure the data is automatically decreasing the references
-    // which have been set in setParam (and copied over in transferWriteToReadParams)
+    // Manually decrease the references on all objects in the read and writeparam datasets
+    // (since the pointers are relinquished)
     auto it = registeredParams->begin();
     while (it != registeredParams->end())
     {
-      ANARIDataType type = it->second.second;
+      const ParamTypeInfo& typeInfo = it->second;
 
-      if (isBaseObject(type))
-      {
-        char* readParam = paramAddress(paramDataSets[paramReadIdx], it->second.first);
-        char* writeParam = paramAddress(paramDataSets[paramWriteIdx], it->second.first);
+      ANARIDataType readParamType, writeParamType;
+      char* readParamAddress = nullptr;
+      char* writeParamAddress = nullptr;
 
-        safeRefDec(readParam);
-        safeRefDec(writeParam);
-      }
+      getParamTypeAndAddress(paramDataSets[paramReadIdx], typeInfo, 
+        readParamType, readParamAddress);
+      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo, 
+        writeParamType, writeParamAddress);
+
+      if(isBaseObject(readParamType))
+        safeRefDec(readParamAddress);
+      if(isBaseObject(writeParamType))
+        safeRefDec(writeParamAddress);
 
       ++it;
     }
@@ -96,75 +141,89 @@ public:
 
 protected:
 
-  void setParam(const char* name, ANARIDataType type, const void* rawSrc, UsdDevice* device)
+  void setParam(const char* name, ANARIDataType srcType, const void* rawSrc, UsdDevice* device)
   {
 #ifdef CHECK_MEMLEAKS
     allocDevice = device;
 #endif
 
+    if(srcType == ANARI_UNKNOWN)
+    {
+      reportStatusThroughDevice(LogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+          "Attempting to set param %s with type %s", name, AnariTypeToString(srcType));
+      return;
+    }
+    else if( srcType == ANARI_ARRAY1D
+      || srcType == ANARI_ARRAY2D
+      || srcType == ANARI_ARRAY3D)
+    {
+      // Flatten the source type in case of array
+      srcType = ANARI_ARRAY;
+    }
+
     // Check if name registered
     ParamContainer::iterator it = registeredParams->find(name);
     if (it != registeredParams->end())
     {
+      const ParamTypeInfo& typeInfo = it->second;
+
       // Check if type matches
-      if (type == it->second.second ||
-        (it->second.second == ANARI_ARRAY
-        && ( type == ANARI_ARRAY1D
-          || type == ANARI_ARRAY2D
-          || type == ANARI_ARRAY3D)))
+      if (typeInfo.types.typeMatches(srcType))
       {
-        char* dest = paramAddress(paramDataSets[paramWriteIdx], it->second.first);
-        UsdBaseObject** baseObj = reinterpret_cast<UsdBaseObject**>(dest);
+        ANARIDataType destType;
+        char* destAddress = nullptr;
+        getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo, 
+          destType, destAddress);
 
-        const void* src = rawSrc; //temporary src
-        size_t numBytes = AnariTypeSize(type);
+        const void* srcAddress = rawSrc; //temporary src
+        size_t numBytes = AnariTypeSize(srcType); // Size is determined purely by source data
 
-        bool contentUpdate = true;
+        bool contentUpdate = srcType != destType; // Always do a content update if types differ (in case of multitype params)
 
-        if (type == ANARI_BOOL)
+        // Update data for all the different types
+        if (srcType == ANARI_BOOL)
         {
-          bool* destBool_p = reinterpret_cast<bool*>(dest);
-          bool srcBool = *(reinterpret_cast<const uint32_t*>(src));
+          bool* destBool_p = reinterpret_cast<bool*>(destAddress);
+          bool srcBool = *(reinterpret_cast<const uint32_t*>(srcAddress));
 
-          contentUpdate =  (*destBool_p != srcBool);
+          contentUpdate = contentUpdate || (*destBool_p != srcBool);
 
           *destBool_p = srcBool;
         }
         else
         {
           UsdSharedString* sharedStr = nullptr;
-          if (type == ANARI_STRING)
+          if (srcType == ANARI_STRING)
           {
             // Wrap strings to make them refcounted,
             // from that point they are considered normal UsdBaseObjects.
-            UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*baseObj);
-            const char* srcCstr = reinterpret_cast<const char*>(src);
+            UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*ptrToBaseObjectPtr(destAddress));
+            const char* srcCstr = reinterpret_cast<const char*>(srcAddress);
 
-            contentUpdate = !destStr || std::strcmp(destStr->c_str(), srcCstr) != 0;
+            contentUpdate = contentUpdate || !destStr || std::strcmp(destStr->c_str(), srcCstr) != 0; // Note that execution of strcmp => (srcType == destType) 
 
             if(contentUpdate)
             {
-              sharedStr = new UsdSharedString(srcCstr);
+              sharedStr = new UsdSharedString(srcCstr); // Remember to refdec
               numBytes = sizeof(void*);
-              src = &sharedStr;
-
+              srcAddress = &sharedStr;
 #ifdef CHECK_MEMLEAKS
               allocDevice->LogAllocation(sharedStr);
 #endif
             }
           }
           else
-            contentUpdate = bool(memcmp(dest, src, numBytes));
+            contentUpdate = contentUpdate || bool(memcmp(destAddress, srcAddress, numBytes));
 
           if(contentUpdate)
           {
-            if(isBaseObject(type))
-              safeRefDec(dest);
+            if(isBaseObject(destType))
+              safeRefDec(destAddress);
 
-            std::memcpy(dest, src, numBytes);
+            std::memcpy(destAddress, srcAddress, numBytes);
 
-            if(isBaseObject(type))
-              safeRefInc(dest);
+            if(isBaseObject(srcType))
+              safeRefInc(destAddress);
           }
 
           // If a string object has been created, decrease its public refcount (1 at creation)
@@ -174,6 +233,10 @@ protected:
             sharedStr->refDec();
           }
         }
+
+        // Update the type for multitype params (so far only data has been updated)
+        if(contentUpdate)
+          setMultiParamType(destAddress, typeInfo, srcType);
 
         if(!strcmp(name, "usd::timestep")) // Allow for re-use of object as reference at different timestep, without triggering a full re-commit of the referenced object
         {
@@ -186,7 +249,7 @@ protected:
       }
       else
         reportStatusThroughDevice(LogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
-          "Param %s should be of type %s", name, AnariTypeToString(it->second.second));
+          "Param %s is not of an accepted type. For example, use %s instead.", name, AnariTypeToString(typeInfo.types.type0));
     }
   }
 
@@ -195,23 +258,25 @@ protected:
     ParamContainer::iterator it = registeredParams->find(name);
     if (it != registeredParams->end())
     {
-      ANARIDataType type = it->second.second;
-      char* dest = paramAddress(paramDataSets[paramWriteIdx], it->second.first);
+      const ParamTypeInfo& typeInfo = it->second;
+      size_t paramSize = typeInfo.size;
 
+      // Copy to existing write param location
+      ANARIDataType destType;
+      char* destAddress = nullptr;
+      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo, 
+        destType, destAddress);
+
+      // Create temporary default-constructed parameter set and find source param address ((multi-)type is of no concern) 
       D defaultParamData;
-      char* src = paramAddress(defaultParamData, it->second.first);
+      char* srcAddress = paramAddress(defaultParamData, typeInfo);
 
-      if (type == ANARI_BOOL)
-      {
-        *(reinterpret_cast<bool*>(dest)) = *(reinterpret_cast<const bool*>(src));
-      }
-      else
-      {
-        if(isBaseObject(type))
-          safeRefDec(dest);
+      // Make sure to dec existing ptr, as it will be relinquished
+      if(isBaseObject(destType))
+        safeRefDec(destAddress);
 
-        std::memcpy(dest, src, AnariTypeSize(type));
-      }
+      // Just replace contents of the whole parameter structure, single or multiparam
+      std::memcpy(destAddress, srcAddress, paramSize);
 
       if(!strcmp(name, "usd::timestep")) 
       {
@@ -220,23 +285,29 @@ protected:
     }
   }
 
-  void TransferWriteToReadParams()
+  void transferWriteToReadParams()
   {
     // Make sure object references are removed for
-    // the overwritten readparams, and increased for the source writeparams (only if different)
+    // the overwritten readparams, and increased for the source writeparams
     auto it = registeredParams->begin();
     while (it != registeredParams->end())
     {
-      ANARIDataType type = it->second.second;
+      const ParamTypeInfo& typeInfo = it->second;
 
-      char* src = paramAddress(paramDataSets[paramWriteIdx], it->second.first);
-      char* dest = paramAddress(paramDataSets[paramReadIdx], it->second.first);
+      ANARIDataType srcType, destType;
+      char* srcAddress = nullptr;
+      char* destAddress = nullptr;
 
-      if (isBaseObject(type) && !objectMatches(src, dest))
-      {
-        safeRefDec(dest);
-        safeRefInc(src);
-      }
+      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo, 
+        srcType, srcAddress);
+      getParamTypeAndAddress(paramDataSets[paramReadIdx], typeInfo, 
+        destType, destAddress);
+
+      // First inc, then dec (in case of src and dest being the same)
+      if (isBaseObject(srcType))
+        safeRefInc(srcAddress);
+      if (isBaseObject(destType))
+        safeRefDec(destAddress);
 
       ++it;
     }
@@ -265,20 +336,34 @@ protected:
 #define DEFINE_PARAMETER_MAP(DefClass, Params) template<> UsdParameterizedObject<DefClass,DefClass::DataType>::ParamContainer* UsdParameterizedObject<DefClass,DefClass::DataType>::registerParams() { static ParamContainer registeredParams; Params return &registeredParams; }
 
 #define REGISTER_PARAMETER_MACRO(ParamName, ParamType, ParamData) \
-  registeredParams.emplace( \
-    ParamName, \
-    std::make_pair<size_t, ANARIDataType>(offsetof(DataType, ParamData), ParamType) \
-  );
+  registeredParams.emplace( std::make_pair<std::string, ParamTypeInfo>( \
+    std::string(ParamName), \
+    {offsetof(DataType, ParamData), 0, sizeof(DataType::ParamData), {ParamType, ANARI_UNKNOWN, ANARI_UNKNOWN}} \
+  ));
+
+#define REGISTER_PARAMETER_MULTITYPE_MACRO(ParamName, ParamType0, ParamType1, ParamType2, ParamData) \
+  { \
+    static_assert(ParamType0 == decltype(DataType::ParamData)::AnariType0, "MultiTypeParams registration: ParamType0 doesn't match AnariType0"); \
+    static_assert(ParamType1 == decltype(DataType::ParamData)::AnariType1, "MultiTypeParams registration: ParamType1 doesn't match AnariType1"); \
+    static_assert(ParamType2 == decltype(DataType::ParamData)::AnariType2, "MultiTypeParams registration: ParamType2 doesn't match AnariType2"); \
+    size_t dataOffset = offsetof(DataType, ParamData); \
+    size_t typeOffset = offsetof(DataType, ParamData.type); \
+    registeredParams.emplace( std::make_pair<std::string, ParamTypeInfo>( \
+      std::string(ParamName), \
+      {dataOffset, typeOffset - dataOffset, sizeof(DataType::ParamData), {ParamType0, ParamType1, ParamType2}} \
+    )); \
+  }
 
 #define REGISTER_PARAMETER_ARRAY_MACRO(ParamName, ParamType, ParamData, NumEntries) \
-  { size_t offset0 = offsetof(DataType, ParamData[0]); \
+  { \
+    size_t offset0 = offsetof(DataType, ParamData[0]); \
     size_t offset1 = offsetof(DataType, ParamData[1]); \
+    size_t paramSize = offset1-offset0; \
     for(int i = 0; i < NumEntries; ++i) \
     { \
-      std::string ParamNameWithIndex = ParamName + std::to_string(i); \
-      registeredParams.emplace( \
-        ParamNameWithIndex, \
-        std::make_pair<size_t, ANARIDataType>(offset0+(offset1-offset0)*i, ParamType) \
-      ); \
+      registeredParams.emplace( std::make_pair<std::string, ParamTypeInfo>( \
+        ParamName + std::to_string(i), \
+        {offset0+paramSize*i, 0, paramSize, {ParamType, ANARI_UNKNOWN, ANARI_UNKNOWN}} \
+      )); \
     } \
   }

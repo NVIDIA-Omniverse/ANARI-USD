@@ -3074,7 +3074,7 @@ void UsdBridgeUsdWriter::UpdateUsdShader(UsdStageRefPtr timeVarStage, const SdfP
   UsdShadeShader timeVarShadPrim = UsdShadeShader::Get(timeVarStage, shadPrimPath);
   assert(timeVarShadPrim);
 
-  GfVec3f difColor(matData.Diffuse);
+  GfVec3f difColor(matData.Diffuse.data);
   GfVec3f specColor(matData.Specular); // Not sure yet how to incorporate the specular color, it doesn't directly map to usd specularColor
   GfVec3f emColor(matData.Emissive);
   emColor *= matData.EmissiveIntensity;
@@ -3092,7 +3092,7 @@ void UsdBridgeUsdWriter::UpdateUsdShader(UsdStageRefPtr timeVarStage, const SdfP
   UsdShadeInput uniformSpecInput = uniformShadPrim.GetInput(UsdBridgeTokens->specularColor);
 
   // Always sets diffuse/specular on one primstage and completely removes it from the other
-  if (matData.UseVertexColors)
+  if (matData.VertexColorSource != 0)
   {
     SdfPath vertexColorReaderPrimPath = matPrimPath.AppendPath(SdfPath(vertexColorReaderPrimPf));
     UsdShadeShader vertexColorReader = UsdShadeShader::Get(SceneStage, vertexColorReaderPrimPath);
@@ -3133,11 +3133,11 @@ void UsdBridgeUsdWriter::UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfP
   UsdShadeShader timeVarShadPrim = UsdShadeShader::Get(timeVarStage, shadPrimPath);
   assert(timeVarShadPrim);
 
-  GfVec3f difColor(matData.Diffuse);
+  GfVec3f difColor(matData.Diffuse.data);
   GfVec3f specColor(matData.Specular); // Not sure yet how to incorporate the specular color, no mdl parameter available.
   GfVec3f emColor(matData.Emissive);
 
-  uniformShadPrim.GetInput(UsdBridgeTokens->vertexcolor_coordinate_index).Set(matData.UseVertexColors ? 1 : -1);
+  uniformShadPrim.GetInput(UsdBridgeTokens->vertexcolor_coordinate_index).Set(matData.VertexColorSource ? 1 : -1);
 
   // Only set values on either timevar or uniform prim
   SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->diffuse_color_constant, DMI::DIFFUSE, difColor);

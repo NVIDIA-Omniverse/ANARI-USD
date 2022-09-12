@@ -5,6 +5,7 @@
 #define UsdBridgeData_h
 
 #include "UsdBridgeMacros.h"
+#include "UsdBridgeNumerics.h"
 
 #include <cstddef>
 #include <functional>
@@ -335,9 +336,9 @@ struct UsdBridgeMaterialData
   {
     NONE = 0,
     DIFFUSE = (1 << 0), 
-    SPECULAR = (1 << 1),
-    EMISSIVE = (1 << 2),
-    OPACITY = (1 << 3),
+    OPACITY = (1 << 1),
+    SPECULAR = (1 << 2),
+    EMISSIVE = (1 << 3),
     EMISSIVEINTENSITY = (1 << 4),
     ROUGHNESS = (1 << 5),
     METALLIC = (1 << 6),
@@ -346,16 +347,19 @@ struct UsdBridgeMaterialData
   };
   DataMemberId TimeVarying = DataMemberId::NONE;
 
-  float Diffuse[3] = { 1.0f };
+  bool HasTranslucency = false;
+  bool IsPbr = true;
+
+  UsdFloat3 Diffuse= { 1.0f };
   float Specular[3] = { 1.0f };
   float Emissive[3] = { 1.0f };
   float Opacity = 1.0f;
-  bool HasTranslucency = false;
   float EmissiveIntensity = 0.0f;
   float Roughness = 0.5f;
   float Metallic = -1.0;
   float Ior = 1.0f;
-  bool UseVertexColors = false;
+  const char* VertexColorSource = nullptr;
+  const char* VertexOpacitySource = nullptr;
 };
 
 struct UsdBridgeSamplerData

@@ -4,8 +4,9 @@
 #pragma once
 
 #include "UsdBridgeData.h"
-#include "anari/anari_enums.h"
 #include "UsdCommonMacros.h"
+#include "anari/anari_enums.h"
+#include "anari/anari_cpp/Traits.h"
 
 class UsdDevice;
 class UsdDataArray;
@@ -21,7 +22,15 @@ class UsdSampler;
 class UsdSpatialField;
 class UsdVolume;
 class UsdWorld;
+class UsdSharedString;
 struct UsdDataLayout;
+
+namespace anari
+{
+  ANARI_TYPEFOR_SPECIALIZATION(UsdFloat3, ANARI_FLOAT32_VEC3);
+  ANARI_TYPEFOR_SPECIALIZATION(UsdSampler*, ANARI_SAMPLER);
+  ANARI_TYPEFOR_SPECIALIZATION(UsdSharedString*, ANARI_STRING);
+}
 
 struct LogInfo
 {

@@ -122,7 +122,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 
     virtual void commit(UsdDevice* device) override
     {
-      this->TransferWriteToReadParams();
+      this->transferWriteToReadParams();
       UsdBaseObject::commit(device);
     }
 

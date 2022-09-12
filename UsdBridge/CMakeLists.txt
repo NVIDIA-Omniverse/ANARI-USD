@@ -101,6 +101,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeCaches.h
   UsdBridgeUsdWriter.h
   Common/UsdBridgeData.h
+  Common/UsdBridgeNumerics.h
   Common/UsdBridgeUtils.h
   Common/UsdBridgeMacros.h
   usd.h

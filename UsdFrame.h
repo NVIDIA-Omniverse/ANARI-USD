@@ -40,7 +40,7 @@ class UsdFrame : public UsdBaseObject, public UsdParameterizedObject<UsdFrame, U
 
     virtual void commit(UsdDevice* device) override
     {
-      TransferWriteToReadParams();
+      transferWriteToReadParams();
       UsdBaseObject::commit(device);
     }
 
