@@ -103,6 +103,7 @@ set(USDModule_SOURCES
 set(USDModule_HEADERS
   UsdCommonMacros.h
   UsdAnari.h
+  UsdDeviceUtils.h
   UsdMultiTypeParameter.h
   UsdParameterizedObject.h
   UsdDevice.h

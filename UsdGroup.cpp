@@ -85,7 +85,7 @@ void UsdGroup::doCommitRefs(UsdDevice* device)
 {
   const UsdGroupData& paramData = getReadParams();
 
-  LogInfo logInfo(device, this, ANARI_GROUP, this->getName());
+  UsdLogInfo logInfo(device, this, ANARI_GROUP, this->getName());
   bool validRefs = 
     AssertArrayType(paramData.surfaces, SurfaceType, logInfo, "UsdGroup commit failed: 'surface' array elements should be of type ANARI_SURFACE") &&
     AssertArrayType(paramData.volumes, VolumeType, logInfo, "UsdGroup commit failed: 'volume' array elements should be of type ANARI_VOLUME");

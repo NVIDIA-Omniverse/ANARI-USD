@@ -135,6 +135,8 @@ UsdDevice::~UsdDevice()
 {
   clearCommitList(); // Make sure no more references are held before cleaning up the device (and checking for memleaks)
 
+  clearSharedStringList(); // Do the same for shared string references
+
   //internals->bridge->SaveScene(); //Uncomment to test cleanup of usd files.
 
 #ifdef CHECK_MEMLEAKS
@@ -516,6 +518,8 @@ void UsdDevice::renderFrame(ANARIFrame frame)
 
   flushCommitList();
 
+  internals->bridge->ResetResourceUpdateState(); // Reset the modified flags for committed shared resources
+
   UsdRenderer* ren = ((UsdFrame*)frame)->getRenderer();
   if(ren)
     ren->saveUsd();
@@ -629,6 +633,16 @@ void UsdDevice::addToVolumeList(UsdVolume* volume)
   auto it = std::find(volumeList.begin(), volumeList.end(), volume);
   if(it == volumeList.end())
     volumeList.emplace_back(volume);
+}
+
+void UsdDevice::addToSharedStringList(UsdSharedString* string)
+{
+  sharedStringList.push_back(anari::IntrusivePtr<UsdSharedString>(string));
+}
+
+void UsdDevice::clearSharedStringList()
+{
+  sharedStringList.resize(0);
 }
 
 void UsdDevice::removeFromVolumeList(UsdVolume* volume)

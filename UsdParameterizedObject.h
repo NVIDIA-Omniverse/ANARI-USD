@@ -102,6 +102,27 @@ protected:
     returnType = paramType(returnAddress, typeInfo);
   }
 
+  // Convenience function for usd-compatible parameters
+  void formatUsdName(UsdSharedString* nameStr)
+  {
+    char* name = const_cast<char*>(UsdSharedString::c_str(nameStr));
+    assert(strlen(name) > 0);
+
+    auto letter = [](unsigned c) { return ((c - 'A') < 26) || ((c - 'a') < 26); };
+    auto number = [](unsigned c) { return (c - '0') < 10; };
+    auto under = [](unsigned c) { return c == '_'; };
+
+    unsigned x = *name;
+    if (!letter(x) && !under(x)) { *name = '_'; }
+    x = *(++name);
+    while (x != '\0')
+    {
+      if(!letter(x) && !number(x) && !under(x))
+        *name = '_';
+      x = *(++name);
+    };
+  }
+
 public:
   UsdParameterizedObject()
   {
@@ -149,7 +170,7 @@ protected:
 
     if(srcType == ANARI_UNKNOWN)
     {
-      reportStatusThroughDevice(LogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+      reportStatusThroughDevice(UsdLogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
           "Attempting to set param %s with type %s", name, AnariTypeToString(srcType));
       return;
     }
@@ -248,7 +269,7 @@ protected:
         }
       }
       else
-        reportStatusThroughDevice(LogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+        reportStatusThroughDevice(UsdLogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
           "Param %s is not of an accepted type. For example, use %s instead.", name, AnariTypeToString(typeInfo.types.type0));
     }
   }

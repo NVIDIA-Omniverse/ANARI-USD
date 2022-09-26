@@ -63,7 +63,7 @@ bool UsdSpatialField::doCommitData(UsdDevice* device)
   const UsdSpatialFieldData& paramData = getReadParams();
 
   const char* debugName = getName();
-  LogInfo logInfo(device, this, ANARI_SPATIAL_FIELD, debugName);
+  UsdLogInfo logInfo(device, this, ANARI_SPATIAL_FIELD, debugName);
 
   bool isNew = false;
   if(!usdHandle.value)

@@ -17,35 +17,40 @@
     std::string logString = logStream.str(); \
     obj->LogCallback(level, obj->LogUserData, logString.c_str()); } 
 
+#define ATTRIB_TOKEN_SEQ \
+  (faceVertexCounts) \
+  (faceVertexIndices) \
+  (points) \
+  (positions) \
+  (normals) \
+  (st) \
+  (st1) \
+  (st2) \
+  (attribute0) \
+  (attribute1) \
+  (attribute2) \
+  (attribute3) \
+  (displayColor) \
+  (ids) \
+  (widths) \
+  (protoIndices) \
+  (orientations) \
+  (scales) \
+  (velocities) \
+  (angularVelocities) \
+  (invisibleIds) \
+  (curveVertexCounts)
+
 TF_DEFINE_PRIVATE_TOKENS(
   UsdBridgeTokens,
+  
   (Root)
-
   (extent)
-  (faceVertexCounts)
-  (faceVertexIndices)
-  (points)
-  (positions)
-  (normals)
-  (st)
-  (st1)
-  (st2)
-  (attribute0)
-  (attribute1)
-  (attribute2)
-  (attribute3)
   (result)
-  (displayColor)
-  (ids)
-  (widths)
-  (protoIndices)
-  (orientations)
-  (scales)
-  (velocities)
-  (angularVelocities)
-  (invisibleIds)
-  (curveVertexCounts)
   (filePath)
+
+  // Attributes 
+  ATTRIB_TOKEN_SEQ
 
   // For usd preview surface
   (UsdPreviewSurface)
@@ -59,8 +64,9 @@ TF_DEFINE_PRIVATE_TOKENS(
   (emissiveColor)
   (surface)
   (varname)
-  ((PrimStId, "UsdPrimvarReader_float2"))
-  ((PrimDisplayColorId, "UsdPrimvarReader_float3"))
+  ((PrimVarReader_Float, "UsdPrimvarReader_float"))
+  ((PrimVarReader_Float2, "UsdPrimvarReader_float2"))
+  ((PrimVarReader_Float3, "UsdPrimvarReader_float3"))
 
   // Volumes
   (density)
@@ -84,6 +90,8 @@ TF_DEFINE_PRIVATE_TOKENS(
   // Texture/Sampler
   (UsdUVTexture)
   (fallback)
+  (r)
+  (rg)
   (rgb)
   (a)
   (file)
@@ -95,6 +103,39 @@ TF_DEFINE_PRIVATE_TOKENS(
   (repeat)
   (mirror)
 );
+
+namespace
+{
+  struct QualifiedTokenCollection
+  {
+    TfToken roughness = TfToken("inputs:roughness", TfToken::Immortal);
+    TfToken opacity = TfToken("inputs:opacity", TfToken::Immortal);
+    TfToken metallic = TfToken("inputs:metallic", TfToken::Immortal);
+    TfToken ior = TfToken("inputs:ior", TfToken::Immortal);
+    TfToken diffuseColor = TfToken("inputs:diffuseColor", TfToken::Immortal);
+    TfToken specularColor = TfToken("inputs:specularColor", TfToken::Immortal);
+    TfToken emissiveColor = TfToken("inputs:emissiveColor", TfToken::Immortal);
+
+    TfToken reflection_roughness_constant = TfToken("inputs:reflection_roughness_constant", TfToken::Immortal);
+    TfToken opacity_constant = TfToken("inputs:opacity_constant", TfToken::Immortal);
+    TfToken metallic_constant = TfToken("inputs:metallic_constant", TfToken::Immortal);
+    TfToken ior_constant = TfToken("inputs:ior_constant");
+    TfToken diffuse_color_constant = TfToken("inputs:diffuse_color_constant", TfToken::Immortal);
+    TfToken emissive_color = TfToken("inputs:emissive_color", TfToken::Immortal);
+    TfToken emissive_intensity = TfToken("inputs:emissive_intensity", TfToken::Immortal);
+    TfToken enable_emission = TfToken("inputs:enable_emission", TfToken::Immortal);
+    TfToken diffuse_texture = TfToken("inputs:diffuse_texture", TfToken::Immortal);
+
+    TfToken file = TfToken("inputs:file", TfToken::Immortal);
+    TfToken WrapS = TfToken("inputs:WrapS", TfToken::Immortal);
+    TfToken WrapT = TfToken("inputs:WrapT", TfToken::Immortal);
+    TfToken WrapR = TfToken("inputs:WrapR", TfToken::Immortal);
+    TfToken varname = TfToken("inputs:varname", TfToken::Immortal);
+  };
+}
+TfStaticData<QualifiedTokenCollection> QualifiedTokens;
+
+#include "UsdBridgeUsdWriterConvenience.h"
 
 template<typename UsdGeomType>
 UsdAttribute UsdGeomGetPointsAttribute(UsdGeomType& usdGeom) { return UsdAttribute(); }
@@ -111,7 +152,6 @@ UsdAttribute UsdGeomGetPointsAttribute(UsdGeomBasisCurves& usdGeom) { return usd
 template<>
 UsdAttribute UsdGeomGetPointsAttribute(UsdGeomPointInstancer& usdGeom) { return usdGeom.GetPositionsAttr(); }
 
-
 namespace
 {
   // Folder names
@@ -124,7 +164,6 @@ namespace
 
   // Postfixes for auto generated usd subprims
   const char* const texCoordReaderPrimPf = "texcoordreader";
-  const char* const vertexColorReaderPrimPf = "vertexcolorreader";
   const char* const shaderPrimPf = "shader";
   const char* const mdlShaderPrimPf = "mdlshader";
   const char* const openVDBPrimPf = "ovdbfield";
@@ -132,499 +171,6 @@ namespace
   // Extensions
   const char* const imageExtension = ".png";
   const char* const vdbExtension = ".vdb";
-
-  TfToken GetTokenFromFieldType(UsdBridgeVolumeFieldType fieldType)
-  {
-    TfToken token = UsdBridgeTokens->density;
-    switch (fieldType)
-    {
-    case UsdBridgeVolumeFieldType::DENSITY:
-      token = UsdBridgeTokens->density;
-      break;
-    case UsdBridgeVolumeFieldType::COLOR:
-      token = UsdBridgeTokens->color;
-      break;
-    default:
-      break;
-    };
-    return token;
-  }
-
-  TfToken AttribIndexToToken(uint32_t attribIndex)
-  {
-    TfToken attribToken;
-    switch(attribIndex)
-    {
-      case 0: attribToken = UsdBridgeTokens->attribute0; break;
-      case 1: attribToken = UsdBridgeTokens->attribute1; break;
-      case 2: attribToken = UsdBridgeTokens->attribute2; break;
-      case 3: attribToken = UsdBridgeTokens->attribute3; break;
-      default: attribToken = TfToken((std::string("attribute")+std::to_string(attribIndex)).c_str()); break;
-    } 
-    return attribToken;
-  }
-
-  std::string GetResourceFileName(const std::string& basePath, double timeStep, const char* fileExtension)
-  {
-    std::string generatedFileName(basePath);
-#ifdef TIME_BASED_CACHING
-    generatedFileName += "_" + std::to_string(timeStep);
-#endif
-    generatedFileName += fileExtension; 
-
-    return generatedFileName;
-  }
-
-  std::string GetResourceFileName(const char* folderName, const std::string& objectName, double timeStep, const char* fileExtension)
-  {
-    return GetResourceFileName(folderName + objectName, timeStep, fileExtension);
-  }
-
-  bool UsesUsdGeomPoints(const UsdBridgeInstancerData& geomData)
-  {
-    assert(geomData.NumShapes == 1); // Only single shapes supported
-    bool simpleSphereInstancer = geomData.Shapes[0] == UsdBridgeInstancerData::SHAPE_SPHERE;
-    return !geomData.UsePointInstancer && simpleSphereInstancer;
-  }
-
-  template<typename GeomDataType>
-  bool UsdGeomDataHasTexCoords(const GeomDataType& geomData)
-  {
-    return geomData.Attributes != nullptr &&
-      geomData.Attributes[0].Data != nullptr &&
-      ( 
-        geomData.Attributes[0].DataType == UsdBridgeType::FLOAT2 ||
-        geomData.Attributes[0].DataType == UsdBridgeType::DOUBLE2
-      );
-  }
-
-  void BlockFieldRelationships(UsdVolVolume& volume, UsdBridgeVolumeFieldType* exception = nullptr)
-  {
-    UsdBridgeVolumeFieldType fieldTypes[] = {
-      UsdBridgeVolumeFieldType::DENSITY,
-      UsdBridgeVolumeFieldType::COLOR
-    };
-    for (int i = 0; i < sizeof(fieldTypes) / sizeof(UsdBridgeVolumeFieldType); ++i)
-    {
-      if (exception && fieldTypes[i] == *exception)
-        continue;
-      TfToken fieldToken = GetTokenFromFieldType(fieldTypes[i]);
-      if (volume.HasFieldRelationship(fieldToken))
-        volume.BlockFieldRelationship(fieldToken);
-    }
-  }
-
-  template<class T>
-  class TimeEvaluator
-  {
-  public:
-    TimeEvaluator(const T& data, double timeStep)
-      : Data(data)
-      , TimeCode(timeStep)
-    {
-    }
-
-    TimeEvaluator(const T& data)
-      : Data(data)
-    {
-    }
-
-    const UsdTimeCode& Eval(typename T::DataMemberId member) const
-    {
-#ifdef TIME_BASED_CACHING
-      if ((Data.TimeVarying & member) != T::DataMemberId::NONE)
-        return TimeCode;
-      else
-#endif
-      return DefaultTime;
-    }
-
-    bool IsTimeVarying(typename T::DataMemberId member) const
-    {
-#ifdef TIME_BASED_CACHING
-      return ((Data.TimeVarying & member) != T::DataMemberId::NONE);
-#else
-      return false;
-#endif
-    }
-
-    UsdTimeCode Default() const { return DefaultTime; }
-
-    const T& Data;
-    const UsdTimeCode TimeCode;
-    static const UsdTimeCode DefaultTime;
-  };
-
-  template<class T>
-  const UsdTimeCode TimeEvaluator<T>::DefaultTime = UsdTimeCode::Default();
-
-  template<>
-  class TimeEvaluator<bool>
-  {
-  public:
-    TimeEvaluator(bool timeVarying, double timeStep)
-      : TimeVarying(timeVarying)
-      , TimeCode(timeStep)
-    {
-
-    }
-
-    const UsdTimeCode& Eval() const
-    {
-#ifdef TIME_BASED_CACHING
-      if (TimeVarying)
-        return TimeCode;
-      else
-#endif
-      return DefaultTime;
-    }
-
-    UsdTimeCode Default() const { return DefaultTime; }
-
-    const bool TimeVarying;
-    const UsdTimeCode TimeCode;
-    static const UsdTimeCode DefaultTime;
-  };
-
-  const UsdTimeCode TimeEvaluator<bool>::DefaultTime = UsdTimeCode::Default();
-
-  size_t FindLength(std::stringstream& strStream)
-  {
-    strStream.seekg(0, std::ios::end);
-    size_t contentSize = strStream.tellg();
-    strStream.seekg(0, std::ios::beg);
-    return contentSize;
-  }
-
-  void FormatDirName(std::string& dirName)
-  {
-    if (dirName.length() > 0)
-    {
-      if (dirName.back() != '/' && dirName.back() != '\\')
-        dirName.append("/");
-    }
-  }
-
-  template<class T>
-  T GetOrDefinePrim(const UsdStageRefPtr& stage, const SdfPath& path)
-  {
-    T prim = T::Get(stage, path);
-    if (!prim)
-      prim = T::Define(stage, path);
-    assert(prim);
-
-    return prim;
-  }
-
-  template<class ArrayType>
-  void AssignArrayToPrimvar(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    using ElementType = typename ArrayType::ElementType;
-    ElementType* typedData = (ElementType*)data;
-    usdArray->assign(typedData, typedData + numElements);
-
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  template<class ArrayType>
-  void AssignArrayToPrimvarFlatten(const void* data, UsdBridgeType dataType, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    int elementMultiplier = (int)dataType / UsdBridgeNumFundamentalTypes;
-    size_t numFlattenedElements = numElements * elementMultiplier;
-
-    AssignArrayToPrimvar<ArrayType>(data, numFlattenedElements, primvar, timeCode, usdArray);
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarConvert(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    using ElementType = typename ArrayType::ElementType;
-    EltType* typedData = (EltType*)data;
-
-    usdArray->resize(numElements);
-    for (int i = 0; i < numElements; ++i)
-    {
-      (*usdArray)[i] = ElementType(typedData[i]);
-    }
-
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarConvertFlatten(const void* data, UsdBridgeType dataType, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    int elementMultiplier = (int)dataType / UsdBridgeNumFundamentalTypes;
-    size_t numFlattenedElements = numElements * elementMultiplier;
-
-    AssignArrayToPrimvarConvert<ArrayType, EltType>(data, numFlattenedElements, primvar, timeCode, usdArray);
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarReduced(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    using ElementType = typename ArrayType::ElementType;
-    EltType* typedData = (EltType*)data;
-
-    usdArray->resize(numElements);
-    for (int i = 0; i < numElements; ++i)
-    {
-      for (int j = 0; j < ElementType::dimension; ++j)
-        (*usdArray)[i][j] = typedData[i][j];
-    }
-
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  TfToken TextureWrapToken(UsdBridgeSamplerData::WrapMode wrapMode)
-  {
-    TfToken result = UsdBridgeTokens->black;
-    switch (wrapMode)
-    {
-    case UsdBridgeSamplerData::WrapMode::CLAMP:
-      result = UsdBridgeTokens->clamp;
-      break;
-    case UsdBridgeSamplerData::WrapMode::REPEAT:
-      result = UsdBridgeTokens->repeat;
-      break;
-    case UsdBridgeSamplerData::WrapMode::MIRROR:
-      result = UsdBridgeTokens->mirror;
-      break;
-    default:
-      break;
-    }
-    return result;
-  }
-
-  SdfValueTypeName GetPrimvarArrayType(UsdBridgeType eltType)
-  {
-    assert(eltType != UsdBridgeType::UNDEFINED);
-
-    SdfValueTypeName result = SdfValueTypeNames->UCharArray;
-
-    switch (eltType)
-    {
-      case UsdBridgeType::UCHAR: 
-      case UsdBridgeType::CHAR: { break;}
-      case UsdBridgeType::USHORT: { result = SdfValueTypeNames->UIntArray; break; }
-      case UsdBridgeType::SHORT: { result = SdfValueTypeNames->IntArray; break; }
-      case UsdBridgeType::UINT: { result = SdfValueTypeNames->UIntArray; break; }
-      case UsdBridgeType::INT: { result = SdfValueTypeNames->IntArray; break; }
-      case UsdBridgeType::LONG: { result = SdfValueTypeNames->Int64Array; break; }
-      case UsdBridgeType::ULONG: { result = SdfValueTypeNames->UInt64Array; break; }
-      case UsdBridgeType::HALF: { result = SdfValueTypeNames->HalfArray; break; }
-      case UsdBridgeType::FLOAT: { result = SdfValueTypeNames->FloatArray; break; }
-      case UsdBridgeType::DOUBLE: { result = SdfValueTypeNames->DoubleArray; break; }
-
-      case UsdBridgeType::INT2: { result = SdfValueTypeNames->Int2Array; break; }
-      case UsdBridgeType::HALF2: { result = SdfValueTypeNames->Half2Array; break; }
-      case UsdBridgeType::FLOAT2: { result = SdfValueTypeNames->Float2Array; break; }
-      case UsdBridgeType::DOUBLE2: { result = SdfValueTypeNames->Double2Array; break; }
-
-      case UsdBridgeType::INT3: { result = SdfValueTypeNames->Int3Array; break; }
-      case UsdBridgeType::HALF3: { result = SdfValueTypeNames->Half3Array; break; }
-      case UsdBridgeType::FLOAT3: { result = SdfValueTypeNames->Float3Array; break; }
-      case UsdBridgeType::DOUBLE3: { result = SdfValueTypeNames->Double3Array; break; }
-
-      case UsdBridgeType::INT4: { result = SdfValueTypeNames->Int4Array; break; }
-      case UsdBridgeType::HALF4: { result = SdfValueTypeNames->Half4Array; break; }
-      case UsdBridgeType::FLOAT4: { result = SdfValueTypeNames->Float4Array; break; }
-      case UsdBridgeType::DOUBLE4: { result = SdfValueTypeNames->Double4Array; break; }
-
-      case UsdBridgeType::UCHAR2:
-      case UsdBridgeType::UCHAR3: 
-      case UsdBridgeType::UCHAR4: { result = SdfValueTypeNames->UCharArray; break; }
-      case UsdBridgeType::CHAR2:
-      case UsdBridgeType::CHAR3: 
-      case UsdBridgeType::CHAR4: { result = SdfValueTypeNames->UCharArray; break; }
-      case UsdBridgeType::USHORT2:
-      case UsdBridgeType::USHORT3:
-      case UsdBridgeType::USHORT4: { result = SdfValueTypeNames->UIntArray; break; }
-      case UsdBridgeType::SHORT2:
-      case UsdBridgeType::SHORT3: 
-      case UsdBridgeType::SHORT4: { result = SdfValueTypeNames->IntArray; break; }
-      case UsdBridgeType::UINT2:
-      case UsdBridgeType::UINT3: 
-      case UsdBridgeType::UINT4: { result = SdfValueTypeNames->UIntArray; break; }
-      case UsdBridgeType::LONG2:
-      case UsdBridgeType::LONG3: 
-      case UsdBridgeType::LONG4: { result = SdfValueTypeNames->Int64Array; break; }
-      case UsdBridgeType::ULONG2:
-      case UsdBridgeType::ULONG3: 
-      case UsdBridgeType::ULONG4: { result = SdfValueTypeNames->UInt64Array; break; }
-
-      default: assert(false); break;
-    };
-
-    return result;
-  }
-
-  void ClearAttributes(const UsdAttribute& uniformAttrib, const UsdAttribute& timeVarAttrib, bool timeVaryingUpdate)
-  {
-#ifdef TIME_BASED_CACHING
-#ifdef VALUE_CLIP_RETIMING
-    // Step could be performed to keep timeVar stage more in sync, but removal of attrib from manifest makes this superfluous
-    //if (!timeVaryingUpdate && timeVarGeom)
-    //{
-    //  timeVarAttrib.ClearAtTime(timeEval.TimeCode);
-    //}
-#ifdef OMNIVERSE_CREATE_WORKAROUNDS
-    if(timeVaryingUpdate && uniformAttrib)
-    {
-      // Create considers the referenced uniform prims as a stronger opinion than timeVarying clip values.
-      // Just remove the referenced uniform opinion altogether.
-      uniformAttrib.ClearAtTime(TimeEvaluator<bool>::DefaultTime);
-    }
-#endif
-#else // !VALUE_CLIP_RETIMING
-    // Uniform and timeVar geoms are the same. In case of uniform values, make sure the timesamples are cleared out.
-    if(!timeVaryingUpdate && timeVarAttrib)
-    {
-      timeVarAttrib.Clear();
-    }
-#endif
-#endif
-  }
-
-  template<typename GeomDataType>
-  void CreateUsdGeomColorPrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const UsdBridgeSettings& settings, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
-  {
-    using DMI = typename GeomDataType::DataMemberId;
-
-    bool timeVarChecked = true;
-    if(timeEval)
-    {
-      timeVarChecked = timeEval->IsTimeVarying(DMI::COLORS);
-    }
-
-    if (timeVarChecked)
-    {
-      if(settings.EnableDisplayColors)
-      {
-        primvarApi.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray);
-      }
-  #ifdef SUPPORT_MDL_SHADERS
-      if(settings.EnableMdlColors)
-      {
-        primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray);
-        primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray);
-      }
-  #endif
-    }
-    else
-    {
-      if(settings.EnableDisplayColors)
-      {
-        primvarApi.RemovePrimvar(UsdBridgeTokens->displayColor);
-      }
-  #ifdef SUPPORT_MDL_SHADERS
-      if(settings.EnableMdlColors)
-      {
-        primvarApi.RemovePrimvar(UsdBridgeTokens->st1);
-        primvarApi.RemovePrimvar(UsdBridgeTokens->st2);
-      }
-  #endif
-    }
-  }
-
-  template<typename GeomDataType>
-  void CreateUsdGeomTexturePrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const UsdBridgeSettings& settings, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
-  {
-    using DMI = typename GeomDataType::DataMemberId;
-
-    bool timeVarChecked = true;
-    if(timeEval)
-    {
-      timeVarChecked = timeEval->IsTimeVarying(DMI::ATTRIBUTE0);
-    }
-
-    if (timeVarChecked /*&& (UsdGeomDataHasTexCoords(geomData) || settings.EnableMdlColors)*/)
-      primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray);
-    else if (timeEval)
-      primvarApi.RemovePrimvar(UsdBridgeTokens->st);
-  }
-
-  template<typename GeomDataType>
-  void CreateUsdGeomAttributePrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
-  {
-    using DMI = typename GeomDataType::DataMemberId;
-
-    //bool hasTexCoords = UsdGeomDataHasTexCoords(geomData);
-    //if(hasTexCoords && timeEval)
-    //    primvarApi.RemovePrimvar(AttribIndexToToken(0));
-
-    for(uint32_t attribIndex = /*hasTexCoords ? 1 :*/ 0; attribIndex < geomData.NumAttributes; ++attribIndex)
-    {
-      bool timeVarChecked = true;
-      if(timeEval)
-      {
-        DMI attributeId = DMI::ATTRIBUTE0 + attribIndex;
-        timeVarChecked = timeEval->IsTimeVarying(attributeId);
-      }
-
-      const UsdBridgeAttribute& attrib = geomData.Attributes[attribIndex];
-      if(timeVarChecked)
-      {
-        SdfValueTypeName primvarType = GetPrimvarArrayType(attrib.DataType);
-        primvarApi.CreatePrimvar(AttribIndexToToken(attribIndex), primvarType);
-      }
-      else if(timeEval)
-      {
-        primvarApi.RemovePrimvar(AttribIndexToToken(attribIndex));
-      }
-    }
-  }
-
-  template<typename GeomDataType>
-  void CreateShaderInput(UsdShadeShader shader, const TimeEvaluator<GeomDataType>* timeEval, typename GeomDataType::DataMemberId dataMemberId, 
-    const TfToken& inputToken, const char* inputTokenName, const SdfValueTypeName& valueType)
-  {
-    if(!timeEval || timeEval->IsTimeVarying(dataMemberId))
-      shader.CreateInput(inputToken, valueType);
-    else
-      shader.GetPrim().RemoveProperty(TfToken(inputTokenName));
-  }
-
-  template<typename ValueType, typename GeomDataType>
-  void SetShaderInput(UsdShadeShader uniformShadPrim, UsdShadeShader timeVarShadPrim, const TimeEvaluator<GeomDataType>& timeEval, 
-    const TfToken& inputToken, typename GeomDataType::DataMemberId dataMemberId, ValueType value)
-  {
-    using DMI = typename GeomDataType::DataMemberId;
-
-    bool timeVaryingUpdate = timeEval.IsTimeVarying(dataMemberId);
-    UsdShadeInput timeVarInput = timeVarShadPrim.GetInput(inputToken);
-    UsdShadeInput uniformInput = uniformShadPrim.GetInput(inputToken);
-
-    ClearAttributes(uniformInput.GetAttr(), timeVarInput.GetAttr(), timeVaryingUpdate);
-
-    if(timeVaryingUpdate)
-      timeVarInput.Set(value, timeEval.Eval(dataMemberId));
-    else
-      uniformInput.Set(value, timeEval.Eval(dataMemberId));
-  }
-
-  template<typename NormalsType>
-  void ConvertNormalsToQuaternions(VtQuathArray& quaternions, const void* normals, uint64_t numVertices)
-  {
-    GfVec3f from(0.0f, 0.0f, 1.0f);
-    NormalsType* norms = (NormalsType*)(normals);
-    for (int i = 0; i < numVertices; ++i)
-    {
-      GfVec3f to((float)(norms[i * 3]), (float)(norms[i * 3 + 1]), (float)(norms[i * 3 + 2]));
-      GfRotation rot(from, to);
-      const GfQuaternion& quat = rot.GetQuaternion();
-      quaternions[i] = GfQuath((float)(quat.GetReal()), GfVec3h(quat.GetImaginary()));
-    }
-  }
-
-  template<typename OutputArrayType, typename InputEltType>
-  void ExpandToVec3(OutputArrayType& output, const void* input, uint64_t numElements)
-  {
-    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(input);
-    for (int i = 0; i < numElements; ++i)
-    {
-      output[i] = typename OutputArrayType::ElementType(typedInput[i], typedInput[i], typedInput[i]);
-    }
-  }
 }
 
 #define ASSIGN_ARRAY_TO_PRIMVAR_MACRO(ArrayType) \
@@ -643,11 +189,16 @@ namespace
   AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &customArray)
 #define ASSIGN_ARRAY_TO_PRIMVAR_MACRO_EXPAND3(ArrayType, EltType, tempArray) \
   tempArray.resize(arrayNumElements); ExpandToVec3<ArrayType, EltType>(tempArray, arrayData, arrayNumElements); arrayPrimvar.Set(tempArray, timeCode);
+  
+#define ATTRIB_TOKENS_ADD(r, data, elem) AttributeTokens.push_back(UsdBridgeTokens->elem);
 
 UsdBridgeUsdWriter::UsdBridgeUsdWriter(const UsdBridgeSettings& settings)
   : Settings(settings)
   , VolumeWriter(Create_VolumeWriter(), std::mem_fn(&UsdBridgeVolumeWriterI::Release))
 {
+  // Initialize AttributeTokens with common known attribute names
+  BOOST_PP_SEQ_FOR_EACH(ATTRIB_TOKENS_ADD, ~, ATTRIB_TOKEN_SEQ)
+
   if(Settings.HostName)
     ConnectionSettings.HostName = Settings.HostName;
   if(Settings.OutputPath)
@@ -713,18 +264,21 @@ bool UsdBridgeUsdWriter::CreateDirectories()
 }
 
 #ifdef SUPPORT_MDL_SHADERS 
-void WriteMdlFromStrings(const char* string0, const char* string1, const char* fileName, const UsdBridgeConnection* Connect)
+namespace
 {
-  size_t strLen0 = std::strlen(string0);
-  size_t strLen1 = std::strlen(string1);
-  size_t totalStrLen = strLen0 + strLen1;
-  char* Mdl_Contents = new char[totalStrLen];
-  std::memcpy(Mdl_Contents, string0, strLen0);
-  std::memcpy(Mdl_Contents + strLen0, string1, strLen1);
+  void WriteMdlFromStrings(const char* string0, const char* string1, const char* fileName, const UsdBridgeConnection* Connect)
+  {
+    size_t strLen0 = std::strlen(string0);
+    size_t strLen1 = std::strlen(string1);
+    size_t totalStrLen = strLen0 + strLen1;
+    char* Mdl_Contents = new char[totalStrLen];
+    std::memcpy(Mdl_Contents, string0, strLen0);
+    std::memcpy(Mdl_Contents + strLen0, string1, strLen1);
 
-  Connect->WriteFile(Mdl_Contents, totalStrLen, fileName, true, false);
+    Connect->WriteFile(Mdl_Contents, totalStrLen, fileName, true, false);
 
-  delete[] Mdl_Contents;
+    delete[] Mdl_Contents;
+  }
 }
 
 bool UsdBridgeUsdWriter::CreateMdlFiles()
@@ -793,8 +347,8 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
 {
   bool binary = this->Settings.BinaryOutput;
 
-  std::string SceneFile = (binary ? "FullScene.usd" : "FullScene.usda");
-  this->SceneFileName = this->SessionDirectory + SceneFile;
+  this->SceneFileName = this->SessionDirectory; 
+  this->SceneFileName += (binary ? "FullScene.usd" : "FullScene.usda");
 
   const char* absSceneFile = Connect->GetUrl(this->SceneFileName.c_str());
   if (!this->SceneStage && !Settings.CreateNewSession)
@@ -970,10 +524,32 @@ void UsdBridgeUsdWriter::RemoveSceneGraphRoot(UsdBridgePrimCache* worldCache)
   this->SceneStage->RemovePrim(sceneGraphPath);
 }
 
-const std::string & UsdBridgeUsdWriter::CreatePrimName(const char * name, const char * category)
+const std::string& UsdBridgeUsdWriter::CreatePrimName(const char * name, const char * category)
 {
-  this->TempNameStr = this->RootClassName + "/" + category + "/" + name;
+  (this->TempNameStr = this->RootClassName).append("/").append(category).append("/").append(name);
   return this->TempNameStr;
+}
+
+const std::string& UsdBridgeUsdWriter::GetResourceFileName(const std::string& basePath, double timeStep, const char* fileExtension)
+{
+  this->TempNameStr = basePath;
+#ifdef TIME_BASED_CACHING
+  this->TempNameStr += "_";
+  this->TempNameStr += std::to_string(timeStep);
+#endif
+  this->TempNameStr += fileExtension; 
+
+  return this->TempNameStr;
+}
+
+const std::string& UsdBridgeUsdWriter::GetResourceFileName(const char* folderName, const std::string& objectName, double timeStep, const char* fileExtension)
+{
+  return GetResourceFileName(folderName + objectName, timeStep, fileExtension);
+}
+
+const std::string& UsdBridgeUsdWriter::GetResourceFileName(const char* folderName, const char* optionalObjectName, const std::string& defaultObjectName, double timeStep, const char* fileExtension)
+{
+  return GetResourceFileName(folderName, (optionalObjectName ? std::string(optionalObjectName) : defaultObjectName), timeStep, fileExtension);
 }
 
 bool UsdBridgeUsdWriter::CreatePrim(const SdfPath& path)
@@ -1408,6 +984,120 @@ void UsdBridgeUsdWriter::InitializeUsdTransform(const UsdBridgePrimCache* cacheE
 
 namespace
 {
+  void ClearAttributes(const UsdAttribute& uniformAttrib, const UsdAttribute& timeVarAttrib, bool timeVaryingUpdate)
+  {
+#ifdef TIME_BASED_CACHING
+#ifdef VALUE_CLIP_RETIMING
+    // Step could be performed to keep timeVar stage more in sync, but removal of attrib from manifest makes this superfluous
+    //if (!timeVaryingUpdate && timeVarGeom)
+    //{
+    //  timeVarAttrib.ClearAtTime(timeEval.TimeCode);
+    //}
+#ifdef OMNIVERSE_CREATE_WORKAROUNDS
+    if(timeVaryingUpdate && uniformAttrib)
+    {
+      // Create considers the referenced uniform prims as a stronger opinion than timeVarying clip values.
+      // Just remove the referenced uniform opinion altogether.
+      uniformAttrib.ClearAtTime(TimeEvaluator<bool>::DefaultTime);
+    }
+#endif
+#else // !VALUE_CLIP_RETIMING
+    // Uniform and timeVar geoms are the same. In case of uniform values, make sure the timesamples are cleared out.
+    if(!timeVaryingUpdate && timeVarAttrib)
+    {
+      timeVarAttrib.Clear();
+    }
+#endif
+#endif
+  }
+
+  template<typename GeomDataType>
+  void CreateUsdGeomColorPrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const UsdBridgeSettings& settings, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
+  {
+    using DMI = typename GeomDataType::DataMemberId;
+
+    bool timeVarChecked = true;
+    if(timeEval)
+    {
+      timeVarChecked = timeEval->IsTimeVarying(DMI::COLORS);
+    }
+
+    if (timeVarChecked)
+    {
+      if(settings.EnableDisplayColors)
+      {
+        primvarApi.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray);
+      }
+  #ifdef SUPPORT_MDL_SHADERS
+      if(settings.EnableMdlColors)
+      {
+        primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray);
+        primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray);
+      }
+  #endif
+    }
+    else
+    {
+      if(settings.EnableDisplayColors)
+      {
+        primvarApi.RemovePrimvar(UsdBridgeTokens->displayColor);
+      }
+  #ifdef SUPPORT_MDL_SHADERS
+      if(settings.EnableMdlColors)
+      {
+        primvarApi.RemovePrimvar(UsdBridgeTokens->st1);
+        primvarApi.RemovePrimvar(UsdBridgeTokens->st2);
+      }
+  #endif
+    }
+  }
+
+  template<typename GeomDataType>
+  void CreateUsdGeomTexturePrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const UsdBridgeSettings& settings, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
+  {
+#ifdef SUPPORT_MDL_SHADERS
+    using DMI = typename GeomDataType::DataMemberId;
+
+    bool timeVarChecked = true;
+    if(timeEval)
+    {
+      timeVarChecked = timeEval->IsTimeVarying(DMI::ATTRIBUTE0);
+    }
+
+    if (timeVarChecked)
+      primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray);
+    else if (timeEval)
+      primvarApi.RemovePrimvar(UsdBridgeTokens->st);
+#endif
+  }
+
+  template<typename GeomDataType>
+  void CreateUsdGeomAttributePrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
+  {
+    using DMI = typename GeomDataType::DataMemberId;
+
+    for(uint32_t attribIndex = 0; attribIndex < geomData.NumAttributes; ++attribIndex)
+    {
+      bool timeVarChecked = true;
+      if(timeEval)
+      {
+        DMI attributeId = DMI::ATTRIBUTE0 + attribIndex;
+        timeVarChecked = timeEval->IsTimeVarying(attributeId);
+      }
+
+      const UsdBridgeAttribute& attrib = geomData.Attributes[attribIndex];
+      if(timeVarChecked)
+      {
+        SdfValueTypeName primvarType = GetPrimvarArrayType(attrib.DataType);
+        primvarApi.CreatePrimvar(AttribIndexToToken(attribIndex), primvarType);
+      }
+      else if(timeEval)
+      {
+        primvarApi.RemovePrimvar(AttribIndexToToken(attribIndex));
+      }
+    }
+  }
+
   void InitializeUsdGeometryTimeVar(UsdGeomMesh& meshGeom, const UsdBridgeMeshData& meshData, const UsdBridgeSettings& settings, 
     const TimeEvaluator<UsdBridgeMeshData>* timeEval = nullptr)
   {
@@ -1734,17 +1424,146 @@ namespace
     return volume.GetPrim();
   } 
 
+  template<typename GeomDataType>
+  void CreateShaderInput(UsdShadeShader& shader, const TimeEvaluator<GeomDataType>* timeEval, typename GeomDataType::DataMemberId dataMemberId, 
+    const TfToken& inputToken, const TfToken& qualifiedInputToken, const SdfValueTypeName& valueType)
+  {
+    if(!timeEval || timeEval->IsTimeVarying(dataMemberId))
+      shader.CreateInput(inputToken, valueType);
+    else
+      shader.GetPrim().RemoveProperty(qualifiedInputToken);
+  }
+
+  template<typename ValueType, typename GeomDataType>
+  void SetShaderInput(UsdShadeShader& uniformShadPrim, UsdShadeShader& timeVarShadPrim, const TimeEvaluator<GeomDataType>& timeEval, 
+    const TfToken& inputToken, typename GeomDataType::DataMemberId dataMemberId, ValueType value)
+  {
+    using DMI = typename GeomDataType::DataMemberId;
+
+    bool timeVaryingUpdate = timeEval.IsTimeVarying(dataMemberId);
+
+    UsdShadeInput timeVarInput, uniformInput;
+    UsdAttribute uniformAttrib, timeVarAttrib;
+    if(timeVarShadPrim) // Allow for non-existing prims (based on timeVaryingUpdate)
+    {
+      timeVarInput = timeVarShadPrim.GetInput(inputToken);
+      timeVarAttrib = timeVarInput.GetAttr();
+    }
+    if(uniformShadPrim)
+    {
+      uniformInput = uniformShadPrim.GetInput(inputToken);
+      uniformAttrib = uniformInput.GetAttr();
+    }
+
+    // Clear the attributes that are not set (based on timeVaryingUpdate)
+    ClearAttributes(uniformAttrib, timeVarAttrib, timeVaryingUpdate);
+
+    // Set the input that requires an update
+    if(timeVaryingUpdate)
+      timeVarInput.Set(value, timeEval.Eval(dataMemberId));
+    else
+      uniformInput.Set(value, timeEval.Eval(dataMemberId));
+  }
+
+  UsdShadeShader InitializeUsdAttributeReader_Impl(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim,
+    UsdBridgeMaterialData::DataMemberId dataMemberId, const TimeEvaluator<UsdBridgeMaterialData>* timeEval = nullptr)
+  {
+    using DMI = UsdBridgeMaterialData::DataMemberId;
+
+    // Create a vertexcolorreader
+    SdfPath attributeReaderPath = matPrimPath.AppendPath(GetAttributeReaderPathPf(dataMemberId));
+    UsdShadeShader attributeReader = UsdShadeShader::Get(materialStage, attributeReaderPath);
+
+    // Allow for uniform and timevar prims to return already existing prim without triggering re-initialization
+    // manifest <==> timeEval, and will always take this branch
+    if(!attributeReader || timeEval) 
+    {
+      if(!attributeReader)
+        attributeReader = UsdShadeShader::Define(materialStage, attributeReaderPath);
+
+      if(uniformPrim) // Implies !timeEval, so initialize
+      {
+        attributeReader.CreateIdAttr(VtValue(GetAttributeReaderId(dataMemberId)));
+        attributeReader.CreateOutput(UsdBridgeTokens->result, GetShaderNodeOutputType(dataMemberId));
+      }
+
+      // Create attribute reader varname, and if timeEval (manifest), can also remove the input
+      CreateShaderInput(attributeReader, timeEval, dataMemberId, UsdBridgeTokens->varname, QualifiedTokens->varname, SdfValueTypeNames->Token);
+    }
+
+    return attributeReader;
+  }
+
+
+  void GetOrCreateAttributeReaders(UsdStageRefPtr sceneStage, UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, UsdBridgeMaterialData::DataMemberId dataMemberId,
+    UsdShadeShader& uniformReaderPrim, UsdShadeShader& timeVarReaderPrim)
+  {
+    uniformReaderPrim = InitializeUsdAttributeReader_Impl(sceneStage, matPrimPath, true, dataMemberId, nullptr);
+    if(timeVarStage && (timeVarStage != sceneStage))
+      timeVarReaderPrim = InitializeUsdAttributeReader_Impl(timeVarStage, matPrimPath, false, dataMemberId, nullptr);
+  }
+
+  template<typename InputValueType, typename ValueType, typename GeomDataType>
+  void UpdateUsdShaderInput(UsdBridgeUsdWriter* writer, UsdStageRefPtr sceneStage, UsdStageRefPtr timeVarStage, 
+    UsdShadeShader& uniformShadPrim, UsdShadeShader& timeVarShadPrim, const SdfPath& matPrimPath, const TimeEvaluator<GeomDataType>& timeEval,
+    UsdBridgeMaterialData::DataMemberId dataMemberId, const TfToken& inputToken, 
+    const UsdBridgeMaterialData::MaterialInput<InputValueType>& param, const ValueType& inputValue)
+  {
+    UsdShadeInput uniformDiffInput = uniformShadPrim.GetInput(inputToken);
+
+    if (param.SrcAttrib != nullptr)
+    {
+      bool isTimeVarying = timeEval.IsTimeVarying(dataMemberId);
+      
+      // Create attribute reader(s) to connect to the material shader input
+      UsdShadeShader uniformReaderPrim, timeVarReaderPrim;
+      GetOrCreateAttributeReaders(sceneStage,
+        isTimeVarying ? timeVarStage : sceneStage, // Skip creation of the timevar reader if it's not used anyway
+        matPrimPath, dataMemberId, uniformReaderPrim, timeVarReaderPrim);
+      assert(uniformReaderPrim);
+      assert(!isTimeVarying || timeVarReaderPrim);
+
+      // Set the correct attribute token for the reader varname
+      SetShaderInput(uniformReaderPrim, timeVarReaderPrim, timeEval, UsdBridgeTokens->varname, dataMemberId, writer->AttributeNameToken(param.SrcAttrib));
+
+      // Connect the reader to the material shader input
+      timeVarShadPrim.GetInput(inputToken).GetAttr().Clear(); // Clear timevar data written earlier, will be replaced by connection
+      
+      UsdShadeOutput attribReaderOutput = uniformReaderPrim.GetOutput(UsdBridgeTokens->result);
+      uniformDiffInput.ConnectToSource(attribReaderOutput); // Can only connect to uniform shader, as connections cannot be timevarying
+    }
+    else if(!param.Sampler)
+    {
+      if(uniformDiffInput.HasConnectedSource())
+        uniformDiffInput.DisconnectSource();
+
+      // Just treat like regular time-varying inputs
+      SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, inputToken, dataMemberId, inputValue);
+    }
+  }
+
+  // Convenience for when param.Value is simply the intended value to be set
+  template<typename InputValueType, typename GeomDataType>
+  void UpdateUsdShaderInput(UsdBridgeUsdWriter* writer, UsdStageRefPtr sceneStage, UsdStageRefPtr timeVarStage, 
+    UsdShadeShader& uniformShadPrim, UsdShadeShader& timeVarShadPrim, const SdfPath& matPrimPath, const TimeEvaluator<GeomDataType>& timeEval,
+    UsdBridgeMaterialData::DataMemberId dataMemberId, const TfToken& inputToken, 
+    const UsdBridgeMaterialData::MaterialInput<InputValueType>& param)
+  {
+    UpdateUsdShaderInput(writer, sceneStage, timeVarStage, uniformShadPrim, timeVarShadPrim, matPrimPath, timeEval, 
+      dataMemberId, inputToken, param, param.Value);
+  }
+
   void InitializeUsdShaderTimeVar(UsdShadeShader& shader, const TimeEvaluator<UsdBridgeMaterialData>* timeEval = nullptr)
   {
     typedef UsdBridgeMaterialData::DataMemberId DMI;
 
-    CreateShaderInput(shader, timeEval, DMI::ROUGHNESS, UsdBridgeTokens->roughness, "inputs:roughness", SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::OPACITY, UsdBridgeTokens->opacity, "inputs:opacity", SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::METALLIC, UsdBridgeTokens->metallic, "inputs:metallic", SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::IOR, UsdBridgeTokens->ior, "inputs:ior", SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::DIFFUSE, UsdBridgeTokens->diffuseColor, "inputs:diffuseColor", SdfValueTypeNames->Color3f);
-    CreateShaderInput(shader, timeEval, DMI::SPECULAR, UsdBridgeTokens->specularColor, "inputs:specularColor", SdfValueTypeNames->Color3f);
-    CreateShaderInput(shader, timeEval, DMI::EMISSIVE, UsdBridgeTokens->emissiveColor, "inputs:emissiveColor", SdfValueTypeNames->Color3f);
+    CreateShaderInput(shader, timeEval, DMI::ROUGHNESS, UsdBridgeTokens->roughness, QualifiedTokens->roughness, SdfValueTypeNames->Float);
+    CreateShaderInput(shader, timeEval, DMI::OPACITY, UsdBridgeTokens->opacity, QualifiedTokens->opacity, SdfValueTypeNames->Float);
+    CreateShaderInput(shader, timeEval, DMI::METALLIC, UsdBridgeTokens->metallic, QualifiedTokens->metallic, SdfValueTypeNames->Float);
+    CreateShaderInput(shader, timeEval, DMI::IOR, UsdBridgeTokens->ior, QualifiedTokens->ior, SdfValueTypeNames->Float);
+    CreateShaderInput(shader, timeEval, DMI::DIFFUSE, UsdBridgeTokens->diffuseColor, QualifiedTokens->diffuseColor, SdfValueTypeNames->Color3f);
+    CreateShaderInput(shader, timeEval, DMI::SPECULAR, UsdBridgeTokens->specularColor, QualifiedTokens->specularColor, SdfValueTypeNames->Color3f);
+    CreateShaderInput(shader, timeEval, DMI::EMISSIVE, UsdBridgeTokens->emissiveColor, QualifiedTokens->emissiveColor, SdfValueTypeNames->Color3f);
   }
 
 #ifdef SUPPORT_MDL_SHADERS  
@@ -1752,27 +1571,29 @@ namespace
   {
     typedef UsdBridgeMaterialData::DataMemberId DMI;
 
-    CreateShaderInput(shader, timeEval, DMI::ROUGHNESS, UsdBridgeTokens->reflection_roughness_constant, "inputs:reflection_roughness_constant", SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::OPACITY, UsdBridgeTokens->opacity_constant, "inputs:opacity_constant", SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::METALLIC, UsdBridgeTokens->metallic_constant, "inputs:metallic_constant", SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::IOR, UsdBridgeTokens->ior_constant, "inputs:ior_constant", SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::DIFFUSE, UsdBridgeTokens->diffuse_color_constant, "inputs:diffuse_color_constant", SdfValueTypeNames->Color3f);
-    CreateShaderInput(shader, timeEval, DMI::EMISSIVE, UsdBridgeTokens->emissive_color, "inputs:emissive_color", SdfValueTypeNames->Color3f);
-    CreateShaderInput(shader, timeEval, DMI::EMISSIVEINTENSITY, UsdBridgeTokens->emissive_intensity, "inputs:emissive_intensity", SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::EMISSIVEINTENSITY, UsdBridgeTokens->enable_emission, "inputs:enable_emission", SdfValueTypeNames->Bool);
+    CreateShaderInput(shader, timeEval, DMI::ROUGHNESS, UsdBridgeTokens->reflection_roughness_constant, QualifiedTokens->reflection_roughness_constant, SdfValueTypeNames->Float);
+    CreateShaderInput(shader, timeEval, DMI::OPACITY, UsdBridgeTokens->opacity_constant, QualifiedTokens->opacity_constant, SdfValueTypeNames->Float);
+    CreateShaderInput(shader, timeEval, DMI::METALLIC, UsdBridgeTokens->metallic_constant, QualifiedTokens->metallic_constant, SdfValueTypeNames->Float);
+    CreateShaderInput(shader, timeEval, DMI::IOR, UsdBridgeTokens->ior_constant, QualifiedTokens->ior_constant, SdfValueTypeNames->Float);
+    CreateShaderInput(shader, timeEval, DMI::DIFFUSE, UsdBridgeTokens->diffuse_color_constant, QualifiedTokens->diffuse_color_constant, SdfValueTypeNames->Color3f);
+    CreateShaderInput(shader, timeEval, DMI::EMISSIVE, UsdBridgeTokens->emissive_color, QualifiedTokens->emissive_color, SdfValueTypeNames->Color3f);
+    CreateShaderInput(shader, timeEval, DMI::EMISSIVEINTENSITY, UsdBridgeTokens->emissive_intensity, QualifiedTokens->emissive_intensity, SdfValueTypeNames->Float);
+    CreateShaderInput(shader, timeEval, DMI::EMISSIVEINTENSITY, UsdBridgeTokens->enable_emission, QualifiedTokens->enable_emission, SdfValueTypeNames->Bool);
   }
 #endif
 
-  void InitializeUsdSamplerTimeVar(UsdShadeShader& sampler, UsdBridgeSamplerData::SamplerType type, const TimeEvaluator<UsdBridgeSamplerData>* timeEval = nullptr)
+  void InitializeUsdSamplerTimeVar(UsdShadeShader& sampler, UsdShadeShader& texCoordReader, UsdBridgeSamplerData::SamplerType type, const TimeEvaluator<UsdBridgeSamplerData>* timeEval = nullptr)
   {
     typedef UsdBridgeSamplerData::DataMemberId DMI;
 
-    CreateShaderInput(sampler, timeEval, DMI::FILENAME, UsdBridgeTokens->file, "inputs:file", SdfValueTypeNames->Asset);
-    CreateShaderInput(sampler, timeEval, DMI::WRAPS, UsdBridgeTokens->WrapS, "inputs:WrapS", SdfValueTypeNames->Token);
+    CreateShaderInput(sampler, timeEval, DMI::DATA, UsdBridgeTokens->file, QualifiedTokens->file, SdfValueTypeNames->Asset);
+    CreateShaderInput(sampler, timeEval, DMI::WRAPS, UsdBridgeTokens->WrapS, QualifiedTokens->WrapS, SdfValueTypeNames->Token);
     if((uint32_t)type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_2D)
-      CreateShaderInput(sampler, timeEval, DMI::WRAPT, UsdBridgeTokens->WrapT, "inputs:WrapT", SdfValueTypeNames->Token);
+      CreateShaderInput(sampler, timeEval, DMI::WRAPT, UsdBridgeTokens->WrapT, QualifiedTokens->WrapT, SdfValueTypeNames->Token);
     if((uint32_t)type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_3D)
-      CreateShaderInput(sampler, timeEval, DMI::WRAPR, UsdBridgeTokens->WrapR, "inputs:WrapR", SdfValueTypeNames->Token);
+      CreateShaderInput(sampler, timeEval, DMI::WRAPR, UsdBridgeTokens->WrapR, QualifiedTokens->WrapR, SdfValueTypeNames->Token);
+
+    CreateShaderInput(texCoordReader, timeEval, DMI::INATTRIBUTE, UsdBridgeTokens->varname, QualifiedTokens->varname, SdfValueTypeNames->Token);
   }
     
   UsdShadeOutput InitializeUsdShader(UsdStageRefPtr shaderStage, const SdfPath& shadPrimPath, bool uniformPrim
@@ -1838,23 +1659,6 @@ namespace
 
     if(settings.EnablePreviewSurfaceShader)
     {
-      if (uniformPrim)
-      {
-        // Create a standard texture coordinate reader
-        SdfPath texCoordReaderPrimPath = matPrimPath.AppendPath(SdfPath(texCoordReaderPrimPf));
-        UsdShadeShader texCoordReader = UsdShadeShader::Define(materialStage, texCoordReaderPrimPath);
-        assert(texCoordReader);
-        texCoordReader.CreateIdAttr(VtValue(UsdBridgeTokens->PrimStId));
-        texCoordReader.CreateInput(UsdBridgeTokens->varname, SdfValueTypeNames->Token).Set(UsdBridgeTokens->st);
-
-        // Create a vertexcolorreader
-        SdfPath vertexColorReaderPrimPath = matPrimPath.AppendPath(SdfPath(vertexColorReaderPrimPf));
-        UsdShadeShader vertexColorReader = UsdShadeShader::Define(materialStage, vertexColorReaderPrimPath);
-        assert(vertexColorReader);
-        vertexColorReader.CreateIdAttr(VtValue(UsdBridgeTokens->PrimDisplayColorId));
-        vertexColorReader.CreateInput(UsdBridgeTokens->varname, SdfValueTypeNames->Token).Set(UsdBridgeTokens->displayColor);
-      }
-
       // Create a shader
       SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
       UsdShadeOutput shaderOutput = InitializeUsdShader(materialStage, shaderPrimPath, uniformPrim, timeEval);
@@ -1878,21 +1682,75 @@ namespace
     return matPrim;
   }
 
+  #define INITIALIZE_USD_ATTRIBUTE_READER_MACRO(srcAttrib, dmi) \
+    if(srcAttrib) InitializeUsdAttributeReader_Impl(materialStage, matPrimPath, false, dmi, timeEval);
+
+  void InitializeUsdAttributeReaders_Impl(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const UsdBridgeSettings& settings,
+    const UsdBridgeMaterialData& matData, const TimeEvaluator<UsdBridgeMaterialData>* timeEval)
+  {
+    using DMI = UsdBridgeMaterialData::DataMemberId;
+
+    // So far, only used for manifest, so no uniform path required. 
+    // Uniform and timevar attrib readers are created on demand per-attribute in GetOrCreateAttributeReaders().
+
+    if(settings.EnablePreviewSurfaceShader)
+    {
+      INITIALIZE_USD_ATTRIBUTE_READER_MACRO(matData.Diffuse.SrcAttrib, DMI::DIFFUSE);
+      INITIALIZE_USD_ATTRIBUTE_READER_MACRO(matData.Opacity.SrcAttrib, DMI::OPACITY);
+      INITIALIZE_USD_ATTRIBUTE_READER_MACRO(matData.Specular.SrcAttrib, DMI::SPECULAR);
+      INITIALIZE_USD_ATTRIBUTE_READER_MACRO(matData.Emissive.SrcAttrib, DMI::EMISSIVE);
+      INITIALIZE_USD_ATTRIBUTE_READER_MACRO(matData.EmissiveIntensity.SrcAttrib, DMI::EMISSIVEINTENSITY);
+      INITIALIZE_USD_ATTRIBUTE_READER_MACRO(matData.Roughness.SrcAttrib, DMI::ROUGHNESS);
+      INITIALIZE_USD_ATTRIBUTE_READER_MACRO(matData.Metallic.SrcAttrib, DMI::METALLIC);
+      INITIALIZE_USD_ATTRIBUTE_READER_MACRO(matData.Ior.SrcAttrib, DMI::IOR);
+    }
+  }
+
   UsdPrim InitializeUsdSampler_Impl(UsdStageRefPtr samplerStage, const SdfPath& samplerPrimPath, UsdBridgeSamplerData::SamplerType type, bool uniformPrim,
     const TimeEvaluator<UsdBridgeSamplerData>* timeEval = nullptr)
   {
     UsdShadeShader sampler = GetOrDefinePrim<UsdShadeShader>(samplerStage, samplerPrimPath);
     assert(sampler);
 
+    SdfPath texCoordReaderPrimPath = samplerPrimPath.AppendPath(SdfPath(texCoordReaderPrimPf));
+    UsdShadeShader texCoordReader = UsdShadeShader::Define(samplerStage, texCoordReaderPrimPath);
+    assert(texCoordReader);
+
     if(uniformPrim)
     {
+      // USD does not yet allow for anything but 2D coords, but let's try anyway
+      TfToken idAttrib;
+      SdfValueTypeName valueType;
+      if(type == UsdBridgeSamplerData::SamplerType::SAMPLER_1D)
+      {
+        idAttrib = UsdBridgeTokens->PrimVarReader_Float;
+        valueType = SdfValueTypeNames->Float;
+      }
+      else if (type == UsdBridgeSamplerData::SamplerType::SAMPLER_2D)
+      {
+        idAttrib = UsdBridgeTokens->PrimVarReader_Float2;
+        valueType = SdfValueTypeNames->Float2;
+      }
+      else
+      {
+        idAttrib = UsdBridgeTokens->PrimVarReader_Float3;
+        valueType = SdfValueTypeNames->Float3;
+      }
+
+      texCoordReader.CreateIdAttr(VtValue(idAttrib));
+      UsdShadeOutput tcOutput = texCoordReader.CreateOutput(UsdBridgeTokens->result, valueType);
+
       sampler.CreateIdAttr(VtValue(UsdBridgeTokens->UsdUVTexture));
       sampler.CreateInput(UsdBridgeTokens->fallback, SdfValueTypeNames->Float4).Set(GfVec4f(1.0f, 0.0f, 0.0f, 1.0f));
-      sampler.CreateOutput(UsdBridgeTokens->rgb, SdfValueTypeNames->Float3);
+      
+      sampler.CreateOutput(UsdBridgeTokens->rgb, SdfValueTypeNames->Float3); // Input images with less components are automatically expanded, see usd docs
       sampler.CreateOutput(UsdBridgeTokens->a, SdfValueTypeNames->Float);
+
+      // Bind the texcoord reader's output to the sampler's st input
+      sampler.CreateInput(UsdBridgeTokens->st, valueType).ConnectToSource(tcOutput);
     }
 
-    InitializeUsdSamplerTimeVar(sampler, type, timeEval);
+    InitializeUsdSamplerTimeVar(sampler, texCoordReader, type, timeEval);
 
     return sampler.GetPrim();
   }
@@ -1975,6 +1833,9 @@ void UsdBridgeUsdWriter::UpdateUsdMaterialManifest(const UsdBridgePrimCache* cac
   InitializeUsdMaterial_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, false, 
     Settings, &timeEval);
 
+  InitializeUsdAttributeReaders_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, 
+    Settings, matData, &timeEval);
+
   if(this->EnableSaving)
     cacheEntry->ManifestStage.second->Save();
 }
@@ -2010,21 +1871,17 @@ void UsdBridgeUsdWriter::UnbindMaterialFromGeom(const SdfPath & refGeomPath)
   UsdShadeMaterialBindingAPI(refGeomPrim).UnbindDirectBinding();
 }
 
-void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
-  const std::string& samplerPrimName, const char* samplerImageUrl, bool samplerImageTimeVarying, double worldTimeStep, double samplerTimeStep)
+void UsdBridgeUsdWriter::ConnectSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
+  const std::string& samplerPrimName, const UsdSamplerRefData& samplerRefData, double worldTimeStep)
 {
+  using DMI = UsdBridgeMaterialData::DataMemberId;
+
+  // Essentially, this is an extension of UpdateUsdShaderInput() for the case of param.Sampler
   if(Settings.EnablePreviewSurfaceShader)
   {
-    // Find the coordinate reader using the material path
-    SdfPath coordReaderPath = matPrimPath.AppendPath(SdfPath(texCoordReaderPrimPf));
-    UsdShadeShader coordReaderPrim = UsdShadeShader::Get(this->SceneStage, coordReaderPath);
-    assert(coordReaderPrim);
-
-    // Bind the coordinate reader's output to the sampler's st input
+    // Referenced sampler prim
     UsdShadeShader refSampler = UsdShadeShader::Get(this->SceneStage, refSamplerPrimPath); // type inherited from sampler prim (in AddRef)
     assert(refSampler);
-    UsdShadeOutput tcReaderOutput = coordReaderPrim.CreateOutput(UsdBridgeTokens->result, SdfValueTypeNames->Float2);
-    refSampler.CreateInput(UsdBridgeTokens->st, SdfValueTypeNames->Float2).ConnectToSource(tcReaderOutput);
 
     // Get shader prims
     SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
@@ -2035,22 +1892,37 @@ void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, con
     assert(timeVarShad);
 
     //Bind the sampler to the diffuse color of the uniform shader, so remove any existing values from the timeVar prim 
-    //(ideally user sets diffuse and specular to uniform)
-    timeVarShad.GetInput(UsdBridgeTokens->diffuseColor).GetAttr().Clear();
-    timeVarShad.GetInput(UsdBridgeTokens->specularColor).GetAttr().Clear();
+    DMI samplerDMI = samplerRefData.DataMemberId;
+    const TfToken& inputToken = GetMaterialShaderInputToken(samplerDMI);
+    timeVarShad.GetInput(inputToken).GetAttr().Clear();
 
-    UsdShadeOutput refSamplerOutput = refSampler.CreateOutput(UsdBridgeTokens->rgb, SdfValueTypeNames->Color3f);
+    // Connect refSampler output to uniformShad input
+    const TfToken& outputToken = GetSamplerOutputColorToken(samplerRefData.ImageNumComponents);
+    UsdShadeOutput refSamplerOutput = refSampler.GetOutput(outputToken);
+    assert(refSamplerOutput);
 
-    uniformShad.GetInput(UsdBridgeTokens->diffuseColor).ConnectToSource(refSamplerOutput);
-    uniformShad.GetInput(UsdBridgeTokens->specularColor).ConnectToSource(refSamplerOutput);
+    uniformShad.GetInput(inputToken).ConnectToSource(refSamplerOutput);
+
+    // Specialcase opacity as fourth channel of diffuse
+    bool affectsOpacity = (samplerDMI == DMI::DIFFUSE && samplerRefData.ImageNumComponents == 4);
+    if(affectsOpacity)
+    {
+      const TfToken& opacityToken = GetMaterialShaderInputToken(DMI::OPACITY);
+      timeVarShad.GetInput(opacityToken).GetAttr().Clear();
+
+      UsdShadeOutput refSamplerAlphaOutput = refSampler.GetOutput(UsdBridgeTokens->a);
+      assert(refSamplerAlphaOutput);
+
+      uniformShad.GetInput(opacityToken).ConnectToSource(refSamplerAlphaOutput);
+    }
   }
 
 #ifdef SUPPORT_MDL_SHADERS
   if(Settings.EnableMdlShader)
   {
     // If no url available, use generated filename using data from the referenced sampler
-    const char* imgFileName = samplerImageUrl;
-    std::string generatedFileName = GetResourceFileName(imgFolder, samplerPrimName, samplerTimeStep, imageExtension);
+    const char* imgFileName = samplerRefData.ImageUrl;
+    const std::string& generatedFileName = GetResourceFileName(imgFolder, samplerRefData.ImageName, samplerPrimName, samplerRefData.TimeStep, imageExtension);
 
     if(!imgFileName)
       imgFileName = generatedFileName.c_str();
@@ -2065,44 +1937,14 @@ void UsdBridgeUsdWriter::BindSamplerToMaterial(UsdStageRefPtr materialStage, con
     UsdShadeShader uniformMdlShad = UsdShadeShader::Get(this->SceneStage, mdlShaderPrimPath);
     assert(uniformMdlShad); 
 
-    UsdTimeCode timeCode = samplerImageTimeVarying ? UsdTimeCode(worldTimeStep) : UsdTimeCode::Default();
+    UsdTimeCode timeCode = samplerRefData.ImageTimeVarying ? UsdTimeCode(worldTimeStep) : UsdTimeCode::Default(); // For worldTimeStep see commentary above
 
     UsdShadeInput diffTexInput = uniformMdlShad.CreateInput(UsdBridgeTokens->diffuse_texture, SdfValueTypeNames->Asset);
-    if(!samplerImageTimeVarying)
+    if(!samplerRefData.ImageTimeVarying)
       diffTexInput.GetAttr().Clear();
     diffTexInput.Set(SdfAssetPath(imgFileName), timeCode);
 
     uniformMdlShad.GetInput(UsdBridgeTokens->vertexcolor_coordinate_index).Set(-1);
-  }
-#endif
-}
-
-void UsdBridgeUsdWriter::UnBindSamplerFromMaterial(const SdfPath& matPrimPath)
-{
-  if(Settings.EnablePreviewSurfaceShader)
-  {
-    SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(shaderPrimPf));
-
-    // Disconnect the sampler from the shader
-    UsdShadeShader uniformShad = UsdShadeShader::Get(this->SceneStage, shaderPrimPath);
-    assert(uniformShad);
-
-    UsdShadeInput diffuseInput = uniformShad.GetInput(UsdBridgeTokens->diffuseColor);
-    if (diffuseInput && diffuseInput.HasConnectedSource())
-      diffuseInput.DisconnectSource();
-    UsdShadeInput specularInput = uniformShad.GetInput(UsdBridgeTokens->specularColor);
-    if (specularInput && specularInput.HasConnectedSource())
-      specularInput.DisconnectSource();
-  }
-
-#ifdef SUPPORT_MDL_SHADERS
-  if(Settings.EnableMdlShader)
-  {
-    SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(mdlShaderPrimPf));
-    UsdShadeShader uniformMdlShad = UsdShadeShader::Get(this->SceneStage, mdlShaderPrimPath);
-    assert(uniformMdlShad);
-
-    uniformMdlShad.GetPrim().RemoveProperty(TfToken("inputs:diffuse_texture"));
   }
 #endif
 }
@@ -2335,6 +2177,7 @@ template<typename UsdGeomType, typename GeomDataType>
 void UpdateUsdGeomTexCoords(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomType& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
   UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
 {
+#ifdef SUPPORT_MDL_SHADERS
   using DMI = typename GeomDataType::DataMemberId;
   bool performsUpdate = updateEval.PerformsUpdate(DMI::ATTRIBUTE0);
   bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::ATTRIBUTE0);
@@ -2375,6 +2218,7 @@ void UpdateUsdGeomTexCoords(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& time
       texcoordPrimvar.Set(SdfValueBlock(), timeCode);
     }
   }
+#endif
 }
 
 template<typename UsdGeomType, typename GeomDataType>
@@ -2431,7 +2275,7 @@ template<typename UsdGeomType, typename GeomDataType>
 void UpdateUsdGeomAttributes(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomType& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
   UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
 {
-  uint32_t startIdx = UsdGeomDataHasTexCoords(geomData) ? 1 : 0;
+  uint32_t startIdx = 0;
   for(uint32_t attribIndex = startIdx; attribIndex < geomData.NumAttributes; ++attribIndex)
   {
     const UsdBridgeAttribute& attrib = geomData.Attributes[attribIndex];
@@ -3063,6 +2907,9 @@ void UsdBridgeUsdWriter::UpdateUsdMaterial(UsdStageRefPtr timeVarStage, const Sd
 #endif
 }
 
+#define UPDATE_USD_SHADER_INPUT_MACRO(...) \
+  UpdateUsdShaderInput(this, SceneStage, timeVarStage, uniformShadPrim, timeVarShadPrim, matPrimPath, timeEval, __VA_ARGS__)
+
 void UsdBridgeUsdWriter::UpdateUsdShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep)
 {
   TimeEvaluator<UsdBridgeMaterialData> timeEval(matData, timeStep);
@@ -3074,51 +2921,21 @@ void UsdBridgeUsdWriter::UpdateUsdShader(UsdStageRefPtr timeVarStage, const SdfP
   UsdShadeShader timeVarShadPrim = UsdShadeShader::Get(timeVarStage, shadPrimPath);
   assert(timeVarShadPrim);
 
-  GfVec3f difColor(matData.Diffuse.data);
-  GfVec3f specColor(matData.Specular); // Not sure yet how to incorporate the specular color, it doesn't directly map to usd specularColor
-  GfVec3f emColor(matData.Emissive);
-  emColor *= matData.EmissiveIntensity;
+  GfVec3f difColor(GetValuePtr(matData.Diffuse));
+  GfVec3f specColor(GetValuePtr(matData.Specular)); // Not sure yet how to incorporate the specular color, it doesn't directly map to usd specularColor
+  GfVec3f emColor(GetValuePtr(matData.Emissive));
+  emColor *= matData.EmissiveIntensity.Value; // This multiplication won't translate to vcr/sampler usage (same as the shininess->roughness transformation)
 
-  uniformShadPrim.GetInput(UsdBridgeTokens->useSpecularWorkflow).Set(matData.Metallic >= 0.0 ? 0 : 1);
+  uniformShadPrim.GetInput(UsdBridgeTokens->useSpecularWorkflow).Set(
+    (matData.Metallic.Value >= 0.0 || matData.Metallic.SrcAttrib || matData.Metallic.Sampler) ? 0 : 1);
 
-  // Only set values on either timevar or uniform prim
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->roughness, DMI::ROUGHNESS, matData.Roughness);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->opacity, DMI::OPACITY, matData.Opacity);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->metallic, DMI::METALLIC, matData.Metallic);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->ior, DMI::IOR, matData.Ior);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->emissiveColor, DMI::EMISSIVE, emColor);
-
-  UsdShadeInput uniformDiffInput = uniformShadPrim.GetInput(UsdBridgeTokens->diffuseColor);
-  UsdShadeInput uniformSpecInput = uniformShadPrim.GetInput(UsdBridgeTokens->specularColor);
-
-  // Always sets diffuse/specular on one primstage and completely removes it from the other
-  if (matData.VertexColorSource != 0)
-  {
-    SdfPath vertexColorReaderPrimPath = matPrimPath.AppendPath(SdfPath(vertexColorReaderPrimPf));
-    UsdShadeShader vertexColorReader = UsdShadeShader::Get(SceneStage, vertexColorReaderPrimPath);
-    assert(vertexColorReader);
-
-    //Bind the vertex color reader to the diffuse/specular color of the uniform shader, so remove any existing values from the timeVar prim 
-    //(ideally user sets diffuse and specular to uniform)
-    timeVarShadPrim.GetInput(UsdBridgeTokens->diffuseColor).GetAttr().Clear();
-    timeVarShadPrim.GetInput(UsdBridgeTokens->specularColor).GetAttr().Clear();
-    
-    UsdShadeOutput vcReaderOutput = vertexColorReader.CreateOutput(UsdBridgeTokens->result, SdfValueTypeNames->Color3f);
-
-    uniformDiffInput.ConnectToSource(vcReaderOutput); // make sure to create input, as it may have been removed by other branch (or even the timeVarShadPrim, depending on compile defs)
-    uniformSpecInput.ConnectToSource(vcReaderOutput);
-  }
-  else
-  {
-    if(uniformDiffInput.HasConnectedSource())
-      uniformDiffInput.DisconnectSource();
-    if(uniformSpecInput.HasConnectedSource())
-      uniformSpecInput.DisconnectSource();
-
-    // Just treat like regular time-varying inputs
-    SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->diffuseColor, DMI::DIFFUSE, difColor);
-    SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->specularColor, DMI::SPECULAR, specColor);
-  }
+  UPDATE_USD_SHADER_INPUT_MACRO(DMI::DIFFUSE, UsdBridgeTokens->diffuseColor, matData.Diffuse, difColor);
+  UPDATE_USD_SHADER_INPUT_MACRO(DMI::SPECULAR, UsdBridgeTokens->specularColor, matData.Specular, specColor);
+  UPDATE_USD_SHADER_INPUT_MACRO(DMI::EMISSIVE, UsdBridgeTokens->emissiveColor, matData.Emissive, emColor);
+  UPDATE_USD_SHADER_INPUT_MACRO(DMI::ROUGHNESS, UsdBridgeTokens->roughness, matData.Roughness);
+  UPDATE_USD_SHADER_INPUT_MACRO(DMI::OPACITY, UsdBridgeTokens->opacity, matData.Opacity);
+  UPDATE_USD_SHADER_INPUT_MACRO(DMI::METALLIC, UsdBridgeTokens->metallic, matData.Metallic);
+  UPDATE_USD_SHADER_INPUT_MACRO(DMI::IOR, UsdBridgeTokens->ior, matData.Ior);
 }
 
 #ifdef SUPPORT_MDL_SHADERS 
@@ -3133,26 +2950,29 @@ void UsdBridgeUsdWriter::UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfP
   UsdShadeShader timeVarShadPrim = UsdShadeShader::Get(timeVarStage, shadPrimPath);
   assert(timeVarShadPrim);
 
-  GfVec3f difColor(matData.Diffuse.data);
-  GfVec3f specColor(matData.Specular); // Not sure yet how to incorporate the specular color, no mdl parameter available.
-  GfVec3f emColor(matData.Emissive);
+  GfVec3f difColor(GetValuePtr(matData.Diffuse));
+  GfVec3f specColor(GetValuePtr(matData.Specular)); // Not sure yet how to incorporate the specular color, no mdl parameter available.
+  GfVec3f emColor(GetValuePtr(matData.Emissive));
 
-  uniformShadPrim.GetInput(UsdBridgeTokens->vertexcolor_coordinate_index).Set(matData.VertexColorSource ? 1 : -1);
+  uniformShadPrim.GetInput(UsdBridgeTokens->vertexcolor_coordinate_index).Set(matData.Diffuse.SrcAttrib ? 1 : -1);
 
   // Only set values on either timevar or uniform prim
   SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->diffuse_color_constant, DMI::DIFFUSE, difColor);
   SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->emissive_color, DMI::EMISSIVE, emColor);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->emissive_intensity, DMI::EMISSIVEINTENSITY, matData.EmissiveIntensity);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->opacity_constant, DMI::OPACITY, matData.Opacity);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->reflection_roughness_constant, DMI::ROUGHNESS, matData.Roughness);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->metallic_constant, DMI::METALLIC, matData.Metallic);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->ior_constant, DMI::IOR, matData.Ior);
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->enable_emission, DMI::EMISSIVEINTENSITY, matData.EmissiveIntensity > 0);
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->emissive_intensity, DMI::EMISSIVEINTENSITY, matData.EmissiveIntensity.Value);
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->opacity_constant, DMI::OPACITY, matData.Opacity.Value);
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->reflection_roughness_constant, DMI::ROUGHNESS, matData.Roughness.Value);
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->metallic_constant, DMI::METALLIC, matData.Metallic.Value);
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->ior_constant, DMI::IOR, matData.Ior.Value);
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->enable_emission, DMI::EMISSIVEINTENSITY, matData.EmissiveIntensity.Value > 0);
 
   if (!matData.HasTranslucency)
     uniformShadPrim.SetSourceAsset(this->MdlOpaqueRelFilePath, UsdBridgeTokens->mdl);
   else
     uniformShadPrim.SetSourceAsset(this->MdlTranslucentRelFilePath, UsdBridgeTokens->mdl);
+
+  if(!matData.Diffuse.Sampler)
+    uniformShadPrim.GetPrim().RemoveProperty(QualifiedTokens->diffuse_texture);
 }
 #endif
 
@@ -3239,12 +3059,12 @@ void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfP
   assert(timeVarField);
 
   // Set the file path reference in usd
-  std::string relVolPath = GetResourceFileName(volFolder, cacheEntry->Name.GetString(), timeStep, vdbExtension);
+  const std::string& relVolPath = GetResourceFileName(volFolder, cacheEntry->Name.GetString(), timeStep, vdbExtension);
 
   UpdateUsdVolumeAttributes(uniformVolume, timeVarVolume, uniformField, timeVarField, volumeData, timeStep, relVolPath);
 
-  // Output stream path
-  std::string fullVolPath(SessionDirectory + relVolPath);
+  // Output stream path (relative from connection working dir)
+  std::string wdRelVolPath(SessionDirectory + relVolPath);
 
   // Write VDB data to stream
   VolumeWriter->ToVDB(volumeData);
@@ -3252,9 +3072,9 @@ void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfP
   // Flush stream out to storage
   const char* volumeStreamData; size_t volumeStreamDataSize;
   VolumeWriter->GetSerializedVolumeData(volumeStreamData, volumeStreamDataSize);
-  Connect->WriteFile(volumeStreamData, volumeStreamDataSize, fullVolPath.c_str(), true);
+  Connect->WriteFile(volumeStreamData, volumeStreamDataSize, wdRelVolPath.c_str(), true);
   // Record file write for timestep
-  cacheEntry->AddResourceTimeStep(timeStep);
+  cacheEntry->AddResourceKey(UsdBridgeResourceKey(nullptr, timeStep));
 }
 
 void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry)
@@ -3262,34 +3082,136 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, const Sdf
   TimeEvaluator<UsdBridgeSamplerData> timeEval(samplerData, timeStep);
   typedef UsdBridgeSamplerData::DataMemberId DMI;
 
+  // Collect the various prims
+  SdfPath tcReaderPrimPath = samplerPrimPath.AppendPath(SdfPath(texCoordReaderPrimPf));
+
+  UsdShadeShader uniformTcReaderPrim = UsdShadeShader::Get(SceneStage, tcReaderPrimPath);
+  assert(uniformTcReaderPrim);
+
+  UsdShadeShader timeVarTcReaderPrim = UsdShadeShader::Get(timeVarStage, tcReaderPrimPath);
+  assert(timeVarTcReaderPrim);
+
   UsdShadeShader uniformSamplerPrim = UsdShadeShader::Get(SceneStage, samplerPrimPath);
   assert(uniformSamplerPrim);
 
   UsdShadeShader timeVarSamplerPrim = UsdShadeShader::Get(timeVarStage, samplerPrimPath);
   assert(timeVarSamplerPrim);
 
-  const char* imgFileName = samplerData.ImageUrl;
   // Generate an image url
-  std::string generatedFileName = GetResourceFileName(imgFolder, cacheEntry->Name.GetString(), timeStep, imageExtension);
+  const std::string& defaultName = cacheEntry->Name.GetString();
+  const std::string& generatedFileName = GetResourceFileName(imgFolder, samplerData.ImageName, defaultName, timeStep, imageExtension);
 
-  if(!samplerData.ImageUrl)
+  const char* imgFileName = samplerData.ImageUrl;
+  bool writeFile = false;
+  if(!imgFileName)
   {
     imgFileName = generatedFileName.c_str();
-
-    // If data array available, upload as image to texFile
-
-    // Record file write for timestep
-    cacheEntry->AddResourceTimeStep(timeStep);
+    writeFile = true;
   }
 
+  // Set all the inputs
   SdfAssetPath texFile(imgFileName);
-  SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->file, DMI::FILENAME, texFile);
+  SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->file, DMI::DATA, texFile);
   SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapS, DMI::WRAPS, TextureWrapToken(samplerData.WrapS));
   if((uint32_t)samplerData.Type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_2D)
     SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapT, DMI::WRAPT, TextureWrapToken(samplerData.WrapT));
   if((uint32_t)samplerData.Type >= (uint32_t)UsdBridgeSamplerData::SamplerType::SAMPLER_3D)
     SetShaderInput(uniformSamplerPrim, timeVarSamplerPrim, timeEval, UsdBridgeTokens->WrapR, DMI::WRAPR, TextureWrapToken(samplerData.WrapR));
 
+  // Check whether the output type is still correct
+  size_t numComponents = samplerData.ImageNumComponents;
+  const TfToken& outputToken = GetSamplerOutputColorToken(numComponents);
+  if(!uniformSamplerPrim.GetOutput(outputToken))
+  {
+    // As the previous output type isn't cached, just remove everything:
+    uniformSamplerPrim.GetPrim().RemoveProperty(UsdBridgeTokens->r);
+    uniformSamplerPrim.GetPrim().RemoveProperty(UsdBridgeTokens->rg);
+    uniformSamplerPrim.GetPrim().RemoveProperty(UsdBridgeTokens->rgb);
+
+    uniformSamplerPrim.CreateOutput(outputToken, GetSamplerOutputColorType(numComponents));
+  }
+  
+  SetShaderInput(uniformTcReaderPrim, timeVarTcReaderPrim, timeEval, UsdBridgeTokens->varname, DMI::INATTRIBUTE, AttributeNameToken(samplerData.InAttribute));
+
+  // Update resources
+  if(writeFile)
+  {
+    // Create a resource reference representing the file write
+    const char* resourceName = samplerData.ImageName ? samplerData.ImageName : defaultName.c_str();
+    UsdBridgeResourceKey key(resourceName, timeStep);
+    bool newEntry = cacheEntry->AddResourceKey(key);
+
+    bool isSharedResource = samplerData.ImageName;
+    if(newEntry && isSharedResource)
+      AddSharedResourceRef(key);
+
+    // Upload as image to texFile (in case this hasn't yet been performed)
+    assert(samplerData.Data);
+    if(!isSharedResource || !IsSharedResourceModified(key))
+    {
+      const char* imageData = nullptr;
+      size_t imageSize = 0;  
+
+      // Filename, relative from connection working dir
+      std::string wdRelFilename(SessionDirectory + imgFileName);
+      Connect->WriteFile(imageData, imageSize, wdRelFilename.c_str(), true);
+    }
+  }
+}
+
+void UsdBridgeUsdWriter::UpdateAttributeReader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, MaterialDMI dataMemberId, const char* newName, double timeStep, MaterialDMI timeVarying)
+{
+  // Time eval with dummy data
+  UsdBridgeMaterialData materialData;
+  materialData.TimeVarying = timeVarying;
+
+  TimeEvaluator<UsdBridgeMaterialData> timeEval(materialData, timeStep);
+  typedef MaterialDMI DMI;
+
+  if(dataMemberId == DMI::EMISSIVEINTENSITY)
+    return; // Emissive intensity is not represented as a shader input in the USD preview surface model
+
+  // Collect the various prims
+  SdfPath attributeReaderPath = matPrimPath.AppendPath(GetAttributeReaderPathPf(dataMemberId));
+
+  UsdShadeShader uniformAttribReader = UsdShadeShader::Get(SceneStage, attributeReaderPath);
+  if(!uniformAttribReader)
+  {
+    UsdBridgeLogMacro(this, UsdBridgeLogLevel::ERR, "In UsdBridgeUsdWriter::UpdateAttributeReader(): requesting an attribute reader that hasn't been created during fixup of name token.");
+    return;
+  }
+
+  UsdShadeShader timeVarAttribReader;
+  if(timeEval.IsTimeVarying(dataMemberId))
+  {
+    timeVarAttribReader = UsdShadeShader::Get(timeVarStage, attributeReaderPath);
+    assert(timeVarAttribReader);
+  }
+
+  // Set the new Inattribute
+  SetShaderInput(uniformAttribReader, timeVarAttribReader, timeEval, UsdBridgeTokens->varname, dataMemberId, AttributeNameToken(newName));
+}
+
+void UsdBridgeUsdWriter::UpdateInAttribute(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const char* newName, double timeStep, SamplerDMI timeVarying)
+{
+  // Time eval with dummy data
+  UsdBridgeSamplerData samplerData;
+  samplerData.TimeVarying = timeVarying;
+
+  TimeEvaluator<UsdBridgeSamplerData> timeEval(samplerData, timeStep);
+  typedef SamplerDMI DMI;
+
+  // Collect the various prims
+  SdfPath tcReaderPrimPath = samplerPrimPath.AppendPath(SdfPath(texCoordReaderPrimPf));
+
+  UsdShadeShader uniformTcReaderPrim = UsdShadeShader::Get(SceneStage, tcReaderPrimPath);
+  assert(uniformTcReaderPrim);
+
+  UsdShadeShader timeVarTcReaderPrim = UsdShadeShader::Get(timeVarStage, tcReaderPrimPath);
+  assert(timeVarTcReaderPrim);
+
+  // Set the new Inattribute
+  SetShaderInput(uniformTcReaderPrim, timeVarTcReaderPrim, timeEval, UsdBridgeTokens->varname, DMI::INATTRIBUTE, AttributeNameToken(newName));
 }
 
 void UsdBridgeUsdWriter::UpdateBeginEndTime(double timeStep)
@@ -3306,11 +3228,79 @@ void UsdBridgeUsdWriter::UpdateBeginEndTime(double timeStep)
   }
 }
 
-void RemoveResourceFiles(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter, 
+TfToken& UsdBridgeUsdWriter::AttributeNameToken(const char* attribName)
+{
+  int i = 0;
+  for(; i < AttributeTokens.size(); ++i)
+  {
+    if(AttributeTokens[i] == attribName) // Overloaded == operator on TfToken
+      break;
+  }
+  if(i == AttributeTokens.size())
+    AttributeTokens.emplace_back(TfToken(attribName));
+  return AttributeTokens[i];
+}
+
+void UsdBridgeUsdWriter::AddSharedResourceRef(const UsdBridgeResourceKey& key)
+{
+  bool found = false;
+  for(auto& entry : SharedResourceCache)
+  {
+    if(entry.first == key)
+    {
+      ++entry.second.first;
+      found = true;
+    }
+  }
+  if(!found)
+    SharedResourceCache.push_back(SharedResourceKV(key, SharedResourceValue(1, false)));
+}
+
+bool UsdBridgeUsdWriter::RemoveSharedResourceRef(const UsdBridgeResourceKey& key)
+{
+  bool removed = false;
+  SharedResourceContainer::iterator it = SharedResourceCache.begin();
+  while(it != SharedResourceCache.end())
+  {
+    if(it->first == key)
+      --it->second.first;
+
+    if(it->second.first == 0)
+    {
+      it = SharedResourceCache.erase(it);
+      removed = true;
+    }
+    else
+      ++it;
+  }
+  return removed;
+}
+
+bool UsdBridgeUsdWriter::IsSharedResourceModified(const UsdBridgeResourceKey& key)
+{
+  bool modified = false;
+  for(auto& entry : SharedResourceCache)
+  {
+    if(entry.first == key)
+    {
+      modified = entry.second.second;
+      entry.second.second = true;
+    }
+  }
+  return modified;
+}
+
+void UsdBridgeUsdWriter::ResetSharedResourceModified()
+{
+  for(auto& entry : SharedResourceCache)
+  {
+    entry.second.second = false;
+  }
+}
+
+void RemoveResourceFiles(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter, 
   const char* resourceFolder, const char* fileExtension)
 {
-  const std::string& name = cache->Name.GetString();
-
   // Directly from usd is inaccurate, as timesteps may have been cleared without file removal
   //// Assuming prim without clip stages.
   //const UsdStageRefPtr volumeStage = usdWriter.GetTimeVarStage(cache);
@@ -3328,25 +3318,37 @@ void RemoveResourceFiles(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& us
   //std::vector<double> fileTimes;
   //fileAttr.GetTimeSamples(&fileTimes);
 
-  assert(cache->ResourceTimes);
-  std::vector<double>& fileTimes = *(cache->ResourceTimes);
+  assert(cache->ResourceKeys);
+  UsdBridgePrimCache::ResourceContainer& keys = *(cache->ResourceKeys);
 
-  std::string basePath = usdWriter.SessionDirectory + std::string(resourceFolder) + name;
-  for (double timeStep : fileTimes)
+  std::string basePath = usdWriter.SessionDirectory; basePath.append(resourceFolder);
+  for (const UsdBridgeResourceKey& key : keys)
   {
-    std::string volFileName = GetResourceFileName(basePath, timeStep, fileExtension);
+    bool removeFile = true;
+    if(key.name)
+      removeFile = usdWriter.RemoveSharedResourceRef(key);
 
-    usdWriter.Connect->RemoveFile(volFileName.c_str(), true);
+    if(removeFile)
+    {
+      double timeStep = 
+#ifdef TIME_BASED_CACHING
+        key.timeStep;
+#else
+        0.0;
+#endif
+      const std::string& volFileName = usdWriter.GetResourceFileName(basePath.c_str(), key.name, timeStep, fileExtension);
+      usdWriter.Connect->RemoveFile(volFileName.c_str(), true);
+    }
   }
-  fileTimes.resize(0);
+  keys.resize(0);
 }
 
-void ResourceCollectVolume(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter)
+void ResourceCollectVolume(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter)
 {
   RemoveResourceFiles(cache, usdWriter, volFolder, vdbExtension);
 }
 
-void ResourceCollectSampler(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter)
+void ResourceCollectSampler(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter)
 {
   RemoveResourceFiles(cache, usdWriter, imgFolder, imageExtension);
 }

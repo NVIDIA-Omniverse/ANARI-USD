@@ -17,10 +17,37 @@ class UsdBridgePrimCacheManager;
 
 typedef std::pair<std::string, UsdStageRefPtr> UsdStagePair; //Stage ptr and filename
 typedef std::pair<std::pair<bool,bool>, UsdBridgePrimCache*> BoolEntryPair; // Prim exists in stage, prim exists in cache, result cache entry ptr
-typedef void (*ResourceCollectFunc)(UsdBridgePrimCache*, const UsdBridgeUsdWriter&);
+typedef void (*ResourceCollectFunc)(UsdBridgePrimCache*, UsdBridgeUsdWriter&);
 typedef std::function<void(UsdBridgePrimCache*)> AtRemoveFunc;
 typedef std::vector<UsdBridgePrimCache*> UsdBridgePrimCacheList;
 
+struct UsdBridgeResourceKey
+{ 
+  UsdBridgeResourceKey() = default;
+  ~UsdBridgeResourceKey() = default;
+  UsdBridgeResourceKey(const UsdBridgeResourceKey& key) = default;
+  UsdBridgeResourceKey(const char* n, double t)
+  {
+    name = n;
+#ifdef TIME_BASED_CACHING
+    timeStep = t;
+#endif    
+  }
+
+  const char* name;
+#ifdef TIME_BASED_CACHING
+  double timeStep;  
+#endif
+
+  bool operator==(const UsdBridgeResourceKey& rhs) const
+  {
+    return ( name ? (rhs.name ? !std::strcmp(name, rhs.name) 
+#ifdef TIME_BASED_CACHING
+      && timeStep == rhs.timeStep
+#endif
+      : false ) : !rhs.name);
+  }
+};
 
 struct UsdBridgeRefCache
 {
@@ -43,6 +70,8 @@ protected:
 
 struct UsdBridgePrimCache : public UsdBridgeRefCache
 {
+  using ResourceContainer = std::vector<UsdBridgeResourceKey>;
+
   //Constructors
   UsdBridgePrimCache(const SdfPath& pp, const SdfPath& nm, ResourceCollectFunc cf)
     : PrimPath(pp), Name(nm), ResourceCollect(cf)
@@ -52,23 +81,22 @@ struct UsdBridgePrimCache : public UsdBridgeRefCache
   {
     if(cf)
     {
-      ResourceTimes = std::make_unique<std::vector<double>>();
+      ResourceKeys = std::make_unique<ResourceContainer>();
     }
   }
 
   SdfPath PrimPath;
   SdfPath Name;
   ResourceCollectFunc ResourceCollect;
-  std::unique_ptr<std::vector<double>> ResourceTimes;
+  std::unique_ptr<ResourceContainer> ResourceKeys; // Referenced resources
 
-  void AddResourceTimeStep(double timeStep)
+  bool AddResourceKey(UsdBridgeResourceKey key) // copy by value
   {
-    assert(ResourceTimes);
-#ifndef TIME_BASED_CACHING
-    timeStep = 0.0; // Just record whether there is a resource or not
-#endif
-    if(std::find(ResourceTimes->begin(), ResourceTimes->end(), timeStep) == ResourceTimes->end())
-      ResourceTimes->push_back(timeStep);
+    assert(ResourceKeys);
+    bool newEntry = std::find(ResourceKeys->begin(), ResourceKeys->end(), key) == ResourceKeys->end();
+    if(newEntry)
+      ResourceKeys->push_back(key);
+    return newEntry;
   }
 
 #ifdef VALUE_CLIP_RETIMING

@@ -9,7 +9,8 @@
 
 struct UsdFloat3
 {
-  float data[3];
+  using DataType = float;
+  DataType Data[3];
 };
 
 

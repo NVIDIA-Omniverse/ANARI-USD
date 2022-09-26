@@ -332,6 +332,14 @@ struct UsdBridgeVolumeData
 
 struct UsdBridgeMaterialData
 {
+  template<typename ValueType>
+  struct MaterialInput
+  {
+    ValueType Value;
+    const char* SrcAttrib;
+    bool Sampler; // Only denote whether a sampler is attached
+  };
+
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
@@ -350,17 +358,21 @@ struct UsdBridgeMaterialData
   bool HasTranslucency = false;
   bool IsPbr = true;
 
-  UsdFloat3 Diffuse= { 1.0f };
-  float Specular[3] = { 1.0f };
-  float Emissive[3] = { 1.0f };
-  float Opacity = 1.0f;
-  float EmissiveIntensity = 0.0f;
-  float Roughness = 0.5f;
-  float Metallic = -1.0;
-  float Ior = 1.0f;
-  const char* VertexColorSource = nullptr;
-  const char* VertexOpacitySource = nullptr;
+  MaterialInput<UsdFloat3> Diffuse = {{ 1.0f }, nullptr};
+  MaterialInput<UsdFloat3> Specular = {{ 1.0f }, nullptr};
+  MaterialInput<UsdFloat3> Emissive = {{ 1.0f }, nullptr};
+  MaterialInput<float> Opacity = {1.0f, nullptr};
+  MaterialInput<float> EmissiveIntensity = {0.0f, nullptr};
+  MaterialInput<float> Roughness = {0.5f, nullptr};
+  MaterialInput<float> Metallic = {-1.0, nullptr};
+  MaterialInput<float> Ior = {1.0f, nullptr};
 };
+
+template<typename ValueType>
+const typename ValueType::DataType* GetValuePtr(const UsdBridgeMaterialData::MaterialInput<ValueType>& input)
+{
+  return input.Value.Data;
+}
 
 struct UsdBridgeSamplerData
 {
@@ -374,11 +386,12 @@ struct UsdBridgeSamplerData
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
-    FILENAME = (1 << 0),
-    WRAPS = (1 << 1),
-    WRAPT = (1 << 2),
-    WRAPR = (1 << 3),
-    ALL = (1 << 4) - 1
+    INATTRIBUTE = (1 << 0),
+    DATA = (1 << 1), // Refers to: data(-type), image name/url
+    WRAPS = (1 << 2),
+    WRAPT = (1 << 3),
+    WRAPR = (1 << 4),
+    ALL = (1 << 5) - 1
   };
   DataMemberId TimeVarying = DataMemberId::NONE;
 
@@ -392,12 +405,28 @@ struct UsdBridgeSamplerData
 
   SamplerType Type = SamplerType::SAMPLER_1D;
 
+  const char* InAttribute = nullptr;
+
   const char* ImageUrl = nullptr;
-  bool RelativeUrl = true; // Relative to the session dir
+  const char* ImageName = nullptr;
+  size_t ImageNumComponents = 4;
+
+  const void* Data = nullptr;
+  UsdBridgeType DataType = UsdBridgeType::UNDEFINED;
 
   WrapMode WrapS = WrapMode::BLACK;
   WrapMode WrapT = WrapMode::BLACK;
   WrapMode WrapR = WrapMode::BLACK;
+};
+
+struct UsdSamplerRefData
+{
+  const char* ImageUrl; 
+  const char* ImageName; 
+  size_t ImageNumComponents;
+  bool ImageTimeVarying;
+  double TimeStep;
+  UsdBridgeMaterialData::DataMemberId DataMemberId; // Material input parameter to connect to
 };
 
 template<class TEnum>

@@ -60,7 +60,7 @@ bool UsdVolume::CheckTfParams(UsdDevice* device)
 
   const char* debugName = getName();
 
-  LogInfo logInfo(device, this, ANARI_VOLUME, debugName);
+  UsdLogInfo logInfo(device, this, ANARI_VOLUME, debugName);
 
   // Only perform data(type) checks, data upload along with field in UsdVolume::commit()
   const UsdDataArray* tfColor = paramData.color;

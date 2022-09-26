@@ -447,6 +447,32 @@ const char* AnariTypeToString(ANARIDataType anariType)
   return typeString;
 }
 
+const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo)
+{
+  if(!strcmp(param, "worldPosition") 
+  || !strcmp(param, "worldNormal"))
+  {
+    reportStatusThroughDevice(logInfo, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+      "UsdSampler '%s' inAttribute %s not supported, use inTransform parameter on object-space attribute instead.", logInfo.sourceName, param);
+  }
+  if(!strcmp(param, "objectPosition"))
+  {
+    if(perInstance)
+      return "positions";
+    else
+      return "points";
+  }
+  else if(!strcmp(param, "objectNormal"))
+  {
+    return "normals";
+  }
+  //else if(!strncmp(param, "attribute", 9))
+  //{
+  //  return param;
+  //}
+  return param; // The generic case just returns the param itself
+}
+
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level)
 {
   ANARIStatusSeverity severity = ANARI_SEVERITY_INFO;
@@ -460,15 +486,16 @@ ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level)
   return severity;
 }
 
-void reportStatusThroughDevice(const LogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
+void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
   const char *format, const char* firstArg, const char* secondArg)
 {
-  logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, severity, statusCode, format, firstArg, secondArg);
+  if(logInfo.device)
+    logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, severity, statusCode, format, firstArg, secondArg);
 }
 
-bool Assert64bitStringLengthProperty(uint64_t size, const LogInfo& logInfo, const char* name)
+bool Assert64bitStringLengthProperty(uint64_t size, const UsdLogInfo& logInfo, const char* name)
 {
-  if (size != sizeof(uint64_t))
+  if (size != sizeof(uint64_t) && logInfo.device)
   {
     logInfo.device->reportStatus(logInfo.source, ANARI_OBJECT, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "On object '%s', getProperty() on %s, size parameter differs from sizeof(uint64_t)", logInfo.sourceName, name);
@@ -477,9 +504,9 @@ bool Assert64bitStringLengthProperty(uint64_t size, const LogInfo& logInfo, cons
   return true;
 }
 
-bool AssertOneDimensional(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName)
+bool AssertOneDimensional(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName)
 {
-  if (!layout.isOneDimensional())
+  if (!layout.isOneDimensional() && logInfo.device)
   {
     logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "On object '%s', '%s' array has to be 1-dimensional.", logInfo.sourceName, arrayName);
     return false;
@@ -487,9 +514,9 @@ bool AssertOneDimensional(const UsdDataLayout& layout, const LogInfo& logInfo, c
   return true;
 }
 
-bool AssertNoStride(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName)
+bool AssertNoStride(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName)
 {
-  if (!layout.isDense())
+  if (!layout.isDense() && logInfo.device)
   {
     logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "On object '%s', '%s' layout strides should all be 0.", logInfo.sourceName, arrayName);
     return false;
@@ -497,9 +524,9 @@ bool AssertNoStride(const UsdDataLayout& layout, const LogInfo& logInfo, const c
   return true;
 }
 
-bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const LogInfo& logInfo, const char* errorMessage)
+bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const UsdLogInfo& logInfo, const char* errorMessage)
 {
-  if (dataArray && dataArray->getType() != dataType)
+  if (dataArray && dataArray->getType() != dataType && logInfo.device)
   {
     logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "On object '%s', '%s'", logInfo.sourceName, errorMessage);
     return false;

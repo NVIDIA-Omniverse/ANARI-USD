@@ -88,6 +88,13 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
       AttributeDataArraysType AttributeDataArrays;
     };
 
+    bool isInstanced() const 
+    { 
+      return type == GEOM_SPHERE 
+        || type == GEOM_CONE 
+        || type == GEOM_CYLINDER; 
+    }
+
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;

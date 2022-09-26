@@ -32,9 +32,9 @@ namespace anari
   ANARI_TYPEFOR_SPECIALIZATION(UsdSharedString*, ANARI_STRING);
 }
 
-struct LogInfo
+struct UsdLogInfo
 {
-  LogInfo(UsdDevice* dev, void* src, ANARIDataType srcType, const char* srcName)
+  UsdLogInfo(UsdDevice* dev, void* src, ANARIDataType srcType, const char* srcName)
     : device(dev)
     , source(src)
     , sourceType(srcType)
@@ -51,15 +51,16 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType);
 UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType);
 size_t AnariTypeSize(ANARIDataType anariType);
 const char* AnariTypeToString(ANARIDataType anariType);
+const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo);
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level);
 
-void reportStatusThroughDevice(const LogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
+void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
   const char *format, const char* firstArg, const char* secondArg); // In case #include <UsdDevice.h> is undesired
 
-bool Assert64bitStringLengthProperty(uint64_t size, const LogInfo& logInfo, const char* propName);
-bool AssertOneDimensional(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName);
-bool AssertNoStride(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName);
-bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const LogInfo& logInfo, const char* errorMessage);
+bool Assert64bitStringLengthProperty(uint64_t size, const UsdLogInfo& logInfo, const char* propName);
+bool AssertOneDimensional(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName);
+bool AssertNoStride(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName);
+bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const UsdLogInfo& logInfo, const char* errorMessage);
 
 
 // Template definitions

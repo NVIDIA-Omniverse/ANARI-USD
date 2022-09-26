@@ -34,7 +34,6 @@ class UsdRenderer : public UsdBaseObject, public UsdParameterizedObject<UsdRende
     virtual void commit(UsdDevice* device) override
     {
       transferWriteToReadParams();
-      UsdBaseObject::commit(device);
     }
 
     void saveUsd();

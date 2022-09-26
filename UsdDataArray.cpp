@@ -6,6 +6,11 @@
 #include "UsdAnari.h"
 #include "anari/type_utility.h"
 
+DEFINE_PARAMETER_MAP(UsdDataArray,
+  REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
+  REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
+)
+
 #define TO_OBJ_PTR reinterpret_cast<const ANARIObject*>
 
 UsdDataArray::UsdDataArray(const void *appMemory,
@@ -78,6 +83,23 @@ void UsdDataArray::filterSetParam(const char *name,
   const void *mem,
   UsdDevice* device)
 {
+  if(std::strcmp(name, "name") == 0)
+  {
+    const char* srcCstr = reinterpret_cast<const char*>(mem);
+    
+    if(srcCstr != 0 && strlen(srcCstr) > 0)
+    {
+      setParam(name, type, mem, device);
+      setParam("usd::name", type, mem, device);
+      formatUsdName(getWriteParams().usdName);
+
+      //Name is kept for the lifetime of the device (to allow using pointer for shared resource caching)
+      device->addToSharedStringList(getWriteParams().usdName); 
+    }
+    else
+      device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+        "UsdDataArray name parameter set failed: name of zero length.");
+  }
 }
 
 void UsdDataArray::filterResetParam(
@@ -98,6 +120,8 @@ int UsdDataArray::getProperty(const char * name, ANARIDataType type, void * mem,
 
 void UsdDataArray::commit(UsdDevice* device)
 {
+  transferWriteToReadParams();
+
   if (anari::isObject(type) && (layout.numItems2 != 1 || layout.numItems3 != 1))
     device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdDataArray only supports one-dimensional ANARI_OBJECT arrays");

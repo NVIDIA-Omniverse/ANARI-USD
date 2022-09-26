@@ -178,6 +178,11 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
     void addToVolumeList(UsdVolume* volume);
     void removeFromVolumeList(UsdVolume* volume);
 
+    // Allows for selected strings to persist, 
+    // so their pointers can be cached beyond their containing objects' lifetimes
+    void addToSharedStringList(UsdSharedString* sharedString); 
+    void clearSharedStringList();
+
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
     void LogAllocation(const UsdBaseObject* ptr);
@@ -231,6 +236,8 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
     std::vector<CommitListType> commitList;
     std::vector<UsdVolume*> volumeList; // Tracks all volumes to auto-commit when child fields have been committed
     bool lockCommitList = false;
+
+    std::vector<anari::IntrusivePtr<UsdSharedString>> sharedStringList;
 
     ANARIStatusCallback statusFunc = nullptr;
     const void* statusUserData = nullptr;

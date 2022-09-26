@@ -743,7 +743,7 @@ bool UsdGeometry::checkArrayConstraints(const UsdDataArray* vertexArray, const U
 {
   const UsdGeometryData& paramData = getReadParams();
 
-  LogInfo logInfo(device, this, ANARI_GEOMETRY, debugName);
+  UsdLogInfo logInfo(device, this, ANARI_GEOMETRY, debugName);
 
   const UsdDataArray* vertices = paramData.vertexPositions;
   const UsdDataLayout& vertLayout = vertices->getLayout();

@@ -104,6 +104,8 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
         selectRefTime(paramData.geometryRefTimeStep, geomObjTimeStep, worldTimeStep),
         selectRefTime(paramData.materialRefTimeStep, matObjTimeStep, worldTimeStep)
         );
+
+      paramData.material->setPerInstance(paramData.geometry->isInstanced(), device); // Make sure the material/samplers know whether they are bound to per-instance geometry (has an effect on source primvar names)
     }
     else
     {

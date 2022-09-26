@@ -639,27 +639,30 @@ void UsdBridge::SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle
   SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, timeVarying, true, false, nullptr, timeStep, fieldTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
 }
 
-void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampler, const char* samplerImageUrl, bool samplerImageTimeVarying, double timeStep, double samplerTimeStep)
+void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandle* samplers, const UsdSamplerRefData* samplerRefData, size_t numSamplers, double timeStep)
 {
   if (material.value == nullptr) return;
 
   UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
-  UsdBridgePrimCache* samplerCache = BRIDGE_CACHE.ConvertToPrimCache(sampler);
+  const UsdBridgePrimCacheList& samplerCaches = Internals->ExtractPrimCaches<UsdSamplerHandle>(samplers, numSamplers);
 
   // Sampler references cannot be time-varying (connectToSource doesn't allow for that), and are set on the scenestage prim (so they inherit the type of the sampler prim)
   // However, they do allow value clip retiming.
   bool timeVarying = false;
   bool valueClip = true;
   bool clipStages = false;
-  BRIDGE_USDWRITER.ManageUnusedRefs(matCache, Internals->ToCacheList(samplerCache), samplerPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-
-  SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef(matCache, samplerCache, samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerTimeStep, Internals->RefModCallbacks);
+  BRIDGE_USDWRITER.ManageUnusedRefs(matCache, samplerCaches, samplerPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
   // Bind sampler and material
   SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache);
 
-  BRIDGE_USDWRITER.BindSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, samplerCache->Name.GetString(), samplerImageUrl, samplerImageTimeVarying, timeStep, samplerTimeStep); // requires world timestep, see implementation
+  for (uint64_t i = 0; i < numSamplers; ++i)
+  {
+    SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef(matCache, samplerCaches[i], samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerRefData[i].TimeStep, Internals->RefModCallbacks);
+
+    BRIDGE_USDWRITER.ConnectSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, samplerCaches[i]->Name.GetString(), samplerRefData[i], timeStep); // requires world timestep, see implementation
+  }
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -730,14 +733,11 @@ void UsdBridge::DeleteMaterialRef(UsdSurfaceHandle surface, double timeStep)
   BRIDGE_USDWRITER.RemoveAllRefs(surfaceCache, materialPathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 }
 
-void UsdBridge::DeleteSamplerRef(UsdMaterialHandle material, double timeStep)
+void UsdBridge::DeleteSamplerRefs(UsdMaterialHandle material, double timeStep)
 {
   if (material.value == nullptr) return;
 
   UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
-  const SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
-
-  BRIDGE_USDWRITER.UnBindSamplerFromMaterial(matPrimPath);
 
   // Remove the sampler reference from the material node
   BRIDGE_USDWRITER.RemoveAllRefs(matCache, samplerPathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
@@ -872,12 +872,54 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
 #endif
 }
 
+void UsdBridge::ChangeMaterialInputSourceNames(UsdMaterialHandle material, const MaterialInputSourceName* inputNames, size_t numInputNames, double timeStep, MaterialDMI timeVarying)
+{
+  if (material.value == nullptr) return;
+
+  UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(material);
+  SdfPath& matPrimPath = cache->PrimPath;// .AppendPath(SdfPath(samplerAttribPf));
+
+  UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
+
+  for(int i = 0; i < numInputNames; ++i)
+    BRIDGE_USDWRITER.UpdateAttributeReader(materialStage, matPrimPath, inputNames[i].second, inputNames[i].first, timeStep, timeVarying);
+
+#ifdef VALUE_CLIP_RETIMING
+  if(this->EnableSaving)
+    materialStage->Save();
+#endif
+}
+
+void UsdBridge::ChangeInAttribute(UsdSamplerHandle sampler, const char* newName, double timeStep, SamplerDMI timeVarying)
+{
+  if (sampler.value == nullptr) return;
+
+  UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(sampler);
+  SdfPath& samplerPrimPath = cache->PrimPath;// .AppendPath(SdfPath(samplerAttribPf));
+
+  UsdStageRefPtr samplerStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
+  
+  BRIDGE_USDWRITER.UpdateInAttribute(samplerStage, samplerPrimPath, newName, timeStep, timeVarying);
+
+#ifdef VALUE_CLIP_RETIMING
+  if(this->EnableSaving)
+    samplerStage->Save();
+#endif
+}
+
 void UsdBridge::SaveScene()
 {
   if (!SessionValid) return;
 
   if(this->EnableSaving)
     BRIDGE_USDWRITER.GetSceneStage()->Save();
+}
+
+void UsdBridge::ResetResourceUpdateState()
+{
+  if (!SessionValid) return;
+
+  BRIDGE_USDWRITER.ResetSharedResourceModified();
 }
 
 void UsdBridge::GarbageCollect()

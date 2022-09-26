@@ -4,6 +4,7 @@
 #pragma once
 
 #include "UsdBaseObject.h"
+#include "UsdParameterizedObject.h"
 #include "anari/anari_enums.h"
 
 class UsdDevice;
@@ -22,7 +23,14 @@ struct UsdDataLayout
   int64_t byteStride3 = 0;
 };
 
-class UsdDataArray : public UsdBaseObject
+struct UsdDataArrayParams
+{
+  // Even though we are not dealing with a usd-backed object, the data array can still have an identifying name
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
+};
+
+class UsdDataArray : public UsdBaseObject, public UsdParameterizedObject<UsdDataArray, UsdDataArrayParams>
 {
   public:
     UsdDataArray(const void *appMemory,
@@ -65,6 +73,8 @@ class UsdDataArray : public UsdBaseObject
     void unmap(UsdDevice* device);
 
     void privatize();
+
+    const UsdSharedString* getName() const { return getReadParams().usdName; }
 
     const void* getData() const { return data; }
     ANARIDataType getType() const { return type; }
