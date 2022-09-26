@@ -97,10 +97,14 @@ set(USDBRIDGE_SOURCES
   Common/UsdBridgeUtils.cpp
   UsdBridgeCaches.cpp
   UsdBridgeUsdWriter.cpp
+  UsdBridgeUsdWriter_Geometry.cpp
+  UsdBridgeUsdWriter_Material.cpp
+  UsdBridgeUsdWriter_Volume.cpp
+  UsdBridgeTimeEvaluator.cpp
   UsdBridge.h
   UsdBridgeCaches.h
   UsdBridgeUsdWriter.h
-  UsdBridgeUsdWriterConvenience.h
+  UsdBridgeUsdWriter_Common.h
   UsdBridgeTimeEvaluator.h
   Common/UsdBridgeData.h
   Common/UsdBridgeNumerics.h

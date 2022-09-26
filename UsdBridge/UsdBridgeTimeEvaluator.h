@@ -78,6 +78,4 @@ public:
   static const UsdTimeCode DefaultTime;
 };
 
-const UsdTimeCode UsdBridgeTimeEvaluator<bool>::DefaultTime = UsdTimeCode::Default();
-
 #endif

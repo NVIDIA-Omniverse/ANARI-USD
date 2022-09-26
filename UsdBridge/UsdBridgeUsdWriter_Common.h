@@ -7,8 +7,141 @@
 #include "UsdBridgeTimeEvaluator.h"
 #include "UsdBridgeData.h"
 
+#include <string>
+#include <sstream>
+
 template<typename T>
 using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
+
+#define UsdBridgeLogMacro(obj, level, message) \
+  { std::stringstream logStream; \
+    logStream << message; \
+    std::string logString = logStream.str(); \
+    obj->LogCallback(level, obj->LogUserData, logString.c_str()); } 
+
+#define MISC_TOKEN_SEQ \
+  (Root) \
+  (extent)
+
+#define ATTRIB_TOKEN_SEQ \
+  (faceVertexCounts) \
+  (faceVertexIndices) \
+  (points) \
+  (positions) \
+  (normals) \
+  (st) \
+  (st1) \
+  (st2) \
+  (attribute0) \
+  (attribute1) \
+  (attribute2) \
+  (attribute3) \
+  (displayColor) \
+  (ids) \
+  (widths) \
+  (protoIndices) \
+  (orientations) \
+  (scales) \
+  (velocities) \
+  (angularVelocities) \
+  (invisibleIds) \
+  (curveVertexCounts)
+
+#define USDPREVSURF_TOKEN_SEQ \
+  (UsdPreviewSurface) \
+  (useSpecularWorkflow) \
+  (result) \
+  (roughness) \
+  (opacity) \
+  (metallic) \
+  (ior) \
+  (diffuseColor) \
+  (specularColor) \
+  (emissiveColor) \
+  (surface) \
+  (varname) \
+  ((PrimVarReader_Float, "UsdPrimvarReader_float")) \
+  ((PrimVarReader_Float2, "UsdPrimvarReader_float2")) \
+  ((PrimVarReader_Float3, "UsdPrimvarReader_float3"))
+
+#define VOLUME_TOKEN_SEQ \
+  (density) \
+  (color) \
+  (filePath)
+
+#define MDL_TOKEN_SEQ \
+  (sourceAsset) \
+  (PBR_Base) \
+  (mdl) \
+  (vertexcolor_coordinate_index) \
+  (diffuse_color_constant) \
+  (emissive_color) \
+  (emissive_intensity) \
+  (enable_emission) \
+  (opacity_constant) \
+  (reflection_roughness_constant) \
+  (metallic_constant) \
+  (ior_constant) \
+  (diffuse_texture)
+
+#define SAMPLER_TOKEN_SEQ \
+  (UsdUVTexture) \
+  (fallback) \
+  (r) \
+  (rg) \
+  (rgb) \
+  (a) \
+  (file) \
+  (WrapS) \
+  (WrapT) \
+  (WrapR) \
+  (black) \
+  (clamp) \
+  (repeat) \
+  (mirror)
+
+TF_DECLARE_PUBLIC_TOKENS(
+  UsdBridgeTokens,
+
+  ATTRIB_TOKEN_SEQ
+  USDPREVSURF_TOKEN_SEQ
+  VOLUME_TOKEN_SEQ
+  MDL_TOKEN_SEQ
+  SAMPLER_TOKEN_SEQ
+  MISC_TOKEN_SEQ
+);
+
+namespace constring
+{
+  // Default names
+  extern const char* const sessionPf;
+  extern const char* const rootClassName;
+  extern const char* const rootPrimName;
+
+  // Folder names
+  extern const char* const manifestFolder;
+  extern const char* const clipFolder;
+  extern const char* const primStageFolder;
+  extern const char* const mdlFolder;
+  extern const char* const imgFolder;
+  extern const char* const volFolder;
+
+  // Postfixes for auto generated usd subprims
+  extern const char* const texCoordReaderPrimPf;
+  extern const char* const shaderPrimPf;
+  extern const char* const mdlShaderPrimPf;
+  extern const char* const openVDBPrimPf;
+
+  // Extensions
+  extern const char* const imageExtension;
+  extern const char* const vdbExtension;
+
+  // Files
+  extern const char* const opaqueMaterialFile;
+  extern const char* const transparentMaterialFile;
+  extern const char* const fullSceneNameBin;
+  extern const char* const fullSceneNameAscii;
+}
 
 namespace
 {
@@ -290,22 +423,6 @@ namespace
     return SdfValueTypeNames->Float3;
   }
 
-  void BlockFieldRelationships(UsdVolVolume& volume, UsdBridgeVolumeFieldType* exception = nullptr)
-  {
-    UsdBridgeVolumeFieldType fieldTypes[] = {
-      UsdBridgeVolumeFieldType::DENSITY,
-      UsdBridgeVolumeFieldType::COLOR
-    };
-    for (int i = 0; i < sizeof(fieldTypes) / sizeof(UsdBridgeVolumeFieldType); ++i)
-    {
-      if (exception && fieldTypes[i] == *exception)
-        continue;
-      TfToken fieldToken = VolumeFieldTypeToken(fieldTypes[i]);
-      if (volume.HasFieldRelationship(fieldToken))
-        volume.BlockFieldRelationship(fieldToken);
-    }
-  }
-
   template<typename OutputArrayType, typename InputEltType>
   void ExpandToVec3(OutputArrayType& output, const void* input, uint64_t numElements)
   {
@@ -327,64 +444,33 @@ namespace
     return prim;
   }
 
-  template<class ArrayType>
-  void AssignArrayToPrimvar(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
+  void ClearAttributes(const UsdAttribute& uniformAttrib, const UsdAttribute& timeVarAttrib, bool timeVaryingUpdate)
   {
-    using ElementType = typename ArrayType::ElementType;
-    ElementType* typedData = (ElementType*)data;
-    usdArray->assign(typedData, typedData + numElements);
-
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  template<class ArrayType>
-  void AssignArrayToPrimvarFlatten(const void* data, UsdBridgeType dataType, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    int elementMultiplier = (int)dataType / UsdBridgeNumFundamentalTypes;
-    size_t numFlattenedElements = numElements * elementMultiplier;
-
-    AssignArrayToPrimvar<ArrayType>(data, numFlattenedElements, primvar, timeCode, usdArray);
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarConvert(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    using ElementType = typename ArrayType::ElementType;
-    EltType* typedData = (EltType*)data;
-
-    usdArray->resize(numElements);
-    for (int i = 0; i < numElements; ++i)
+#ifdef TIME_BASED_CACHING
+#ifdef VALUE_CLIP_RETIMING
+    // Step could be performed to keep timeVar stage more in sync, but removal of attrib from manifest makes this superfluous
+    //if (!timeVaryingUpdate && timeVarGeom)
+    //{
+    //  timeVarAttrib.ClearAtTime(timeEval.TimeCode);
+    //}
+#ifdef OMNIVERSE_CREATE_WORKAROUNDS
+    if(timeVaryingUpdate && uniformAttrib)
     {
-      (*usdArray)[i] = ElementType(typedData[i]);
+      // Create considers the referenced uniform prims as a stronger opinion than timeVarying clip values.
+      // Just remove the referenced uniform opinion altogether.
+      uniformAttrib.ClearAtTime(TimeEvaluator<bool>::DefaultTime);
     }
-
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarConvertFlatten(const void* data, UsdBridgeType dataType, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    int elementMultiplier = (int)dataType / UsdBridgeNumFundamentalTypes;
-    size_t numFlattenedElements = numElements * elementMultiplier;
-
-    AssignArrayToPrimvarConvert<ArrayType, EltType>(data, numFlattenedElements, primvar, timeCode, usdArray);
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarReduced(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    using ElementType = typename ArrayType::ElementType;
-    EltType* typedData = (EltType*)data;
-
-    usdArray->resize(numElements);
-    for (int i = 0; i < numElements; ++i)
+#endif
+#else // !VALUE_CLIP_RETIMING
+    // Uniform and timeVar geoms are the same. In case of uniform values, make sure the timesamples are cleared out.
+    if(!timeVaryingUpdate && timeVarAttrib)
     {
-      for (int j = 0; j < ElementType::dimension; ++j)
-        (*usdArray)[i][j] = typedData[i][j];
+      timeVarAttrib.Clear();
     }
-
-    primvar.Set(*usdArray, timeCode);
+#endif
+#endif
   }
 }
+
 
 #endif
