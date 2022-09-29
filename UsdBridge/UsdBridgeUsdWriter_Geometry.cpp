@@ -174,13 +174,11 @@ namespace
       {
         primvarApi.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray);
       }
-  #ifdef SUPPORT_MDL_SHADERS
       if(settings.EnableMdlColors)
       {
         primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray);
         primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray);
       }
-  #endif
     }
     else
     {
@@ -188,20 +186,17 @@ namespace
       {
         primvarApi.RemovePrimvar(UsdBridgeTokens->displayColor);
       }
-  #ifdef SUPPORT_MDL_SHADERS
       if(settings.EnableMdlColors)
       {
         primvarApi.RemovePrimvar(UsdBridgeTokens->st1);
         primvarApi.RemovePrimvar(UsdBridgeTokens->st2);
       }
-  #endif
     }
   }
 
   template<typename GeomDataType>
   void CreateUsdGeomTexturePrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const UsdBridgeSettings& settings, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
   {
-#ifdef SUPPORT_MDL_SHADERS
     using DMI = typename GeomDataType::DataMemberId;
 
     bool timeVarChecked = true;
@@ -214,7 +209,6 @@ namespace
       primvarApi.CreatePrimvar(UsdBridgeTokens->st, SdfValueTypeNames->TexCoord2fArray);
     else if (timeEval)
       primvarApi.RemovePrimvar(UsdBridgeTokens->st);
-#endif
   }
 
   template<typename GeomDataType>
@@ -529,8 +523,8 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::POINTS);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::POINTS);
 
-    ClearAttributes(UsdGeomGetPointsAttribute(uniformGeom), UsdGeomGetPointsAttribute(timeVarGeom), timeVaryingUpdate);
-    ClearAttributes(uniformGeom.GetExtentAttr(), timeVarGeom.GetExtentAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(UsdGeomGetPointsAttribute(uniformGeom), UsdGeomGetPointsAttribute(timeVarGeom), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetExtentAttr(), timeVarGeom.GetExtentAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -579,8 +573,8 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::INDICES);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::INDICES);
 
-    ClearAttributes(uniformGeom.GetFaceVertexIndicesAttr(), timeVarGeom.GetFaceVertexIndicesAttr(), timeVaryingUpdate);
-    ClearAttributes(uniformGeom.GetFaceVertexCountsAttr(), timeVarGeom.GetFaceVertexCountsAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetFaceVertexIndicesAttr(), timeVarGeom.GetFaceVertexIndicesAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetFaceVertexCountsAttr(), timeVarGeom.GetFaceVertexCountsAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -633,7 +627,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::NORMALS);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::NORMALS);
 
-    ClearAttributes(uniformGeom.GetNormalsAttr(), timeVarGeom.GetNormalsAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetNormalsAttr(), timeVarGeom.GetNormalsAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -669,7 +663,6 @@ namespace
   void UpdateUsdGeomTexCoords(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomType& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
     UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
   {
-  #ifdef SUPPORT_MDL_SHADERS
     using DMI = typename GeomDataType::DataMemberId;
     bool performsUpdate = updateEval.PerformsUpdate(DMI::ATTRIBUTE0);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::ATTRIBUTE0);
@@ -677,7 +670,7 @@ namespace
     UsdGeomPrimvar uniformPrimvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->st);
     UsdGeomPrimvar timeVarPrimvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->st);
 
-    ClearAttributes(uniformPrimvar.GetAttr(), timeVarPrimvar.GetAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformPrimvar.GetAttr(), timeVarPrimvar.GetAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -710,7 +703,6 @@ namespace
         texcoordPrimvar.Set(SdfValueBlock(), timeCode);
       }
     }
-  #endif
   }
 
   template<typename UsdGeomType, typename GeomDataType>
@@ -729,7 +721,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(attributeId);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(attributeId);
 
-    ClearAttributes(uniformPrimvar.GetAttr(), timeVarPrimvar.GetAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformPrimvar.GetAttr(), timeVarPrimvar.GetAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -785,34 +777,28 @@ namespace
 
     UsdGeomPrimvar uniformDispPrimvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->displayColor);
     UsdGeomPrimvar timeVarDispPrimvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->displayColor);
-  #ifdef SUPPORT_MDL_SHADERS
     UsdGeomPrimvar uniformSt1Primvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->st1);
     UsdGeomPrimvar timeVarSt1Primvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->st1);
     UsdGeomPrimvar uniformSt2Primvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->st2);
     UsdGeomPrimvar timeVarSt2Primvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->st2);
-  #endif
 
     if(writer->Settings.EnableDisplayColors)
     {
-      ClearAttributes(uniformDispPrimvar.GetAttr(), timeVarDispPrimvar.GetAttr(), timeVaryingUpdate);
+      ClearUsdAttributes(uniformDispPrimvar.GetAttr(), timeVarDispPrimvar.GetAttr(), timeVaryingUpdate);
     }
-  #ifdef SUPPORT_MDL_SHADERS
     if (writer->Settings.EnableMdlColors)
     {
-      ClearAttributes(uniformSt1Primvar.GetAttr(), timeVarSt1Primvar.GetAttr(), timeVaryingUpdate);
-      ClearAttributes(uniformSt2Primvar.GetAttr(), timeVarSt2Primvar.GetAttr(), timeVaryingUpdate);
+      ClearUsdAttributes(uniformSt1Primvar.GetAttr(), timeVarSt1Primvar.GetAttr(), timeVaryingUpdate);
+      ClearUsdAttributes(uniformSt2Primvar.GetAttr(), timeVarSt2Primvar.GetAttr(), timeVaryingUpdate);
     }
-  #endif
 
     if (performsUpdate)
     {
       UsdTimeCode timeCode = timeEval.Eval(DMI::COLORS);
 
       UsdGeomPrimvar colorPrimvar = timeVaryingUpdate ? timeVarDispPrimvar : uniformDispPrimvar;
-  #ifdef SUPPORT_MDL_SHADERS
       UsdGeomPrimvar vc0Primvar = timeVaryingUpdate ? timeVarSt1Primvar : uniformSt1Primvar;
       UsdGeomPrimvar vc1Primvar = timeVaryingUpdate ? timeVarSt2Primvar : uniformSt2Primvar;
-  #endif
 
       if (geomData.Colors != nullptr)
       {
@@ -844,7 +830,6 @@ namespace
             geomData.ColorsType == UsdBridgeType::DOUBLE3 || geomData.ColorsType == UsdBridgeType::DOUBLE4);
         }
 
-  #ifdef SUPPORT_MDL_SHADERS
         if (typeSupported && writer->Settings.EnableMdlColors)
         {
           assert(vc0Primvar);
@@ -896,7 +881,6 @@ namespace
           uniformSt1Primvar.SetInterpolation(colorInterpolation);
           uniformSt2Primvar.SetInterpolation(colorInterpolation);
         }
-  #endif
       }
       else
       {
@@ -904,13 +888,11 @@ namespace
         {
           colorPrimvar.GetAttr().Set(SdfValueBlock(), timeCode);
         }
-  #ifdef SUPPORT_MDL_SHADERS
         if (writer->Settings.EnableMdlColors)
         {
           vc0Primvar.GetAttr().Set(SdfValueBlock(), timeCode);
           vc1Primvar.GetAttr().Set(SdfValueBlock(), timeCode);
         }
-  #endif
       }
     }
   }
@@ -924,7 +906,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::INSTANCEIDS);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::INSTANCEIDS);
 
-    ClearAttributes(uniformGeom.GetIdsAttr(), timeVarGeom.GetIdsAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetIdsAttr(), timeVarGeom.GetIdsAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -962,7 +944,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::SCALES);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::SCALES);
 
-    ClearAttributes(uniformGeom.GetWidthsAttr(), timeVarGeom.GetWidthsAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetWidthsAttr(), timeVarGeom.GetWidthsAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -999,7 +981,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::SCALES);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::SCALES);
 
-    ClearAttributes(uniformGeom.GetScalesAttr(), timeVarGeom.GetScalesAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetScalesAttr(), timeVarGeom.GetScalesAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -1040,7 +1022,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::ORIENTATIONS);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::ORIENTATIONS);
 
-    ClearAttributes(uniformGeom.GetNormalsAttr(), timeVarGeom.GetNormalsAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetNormalsAttr(), timeVarGeom.GetNormalsAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -1079,7 +1061,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::ORIENTATIONS);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::ORIENTATIONS);
 
-    ClearAttributes(uniformGeom.GetOrientationsAttr(), timeVarGeom.GetOrientationsAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetOrientationsAttr(), timeVarGeom.GetOrientationsAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -1143,7 +1125,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::LINEARVELOCITIES);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::LINEARVELOCITIES);
 
-    ClearAttributes(uniformGeom.GetVelocitiesAttr(), timeVarGeom.GetVelocitiesAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetVelocitiesAttr(), timeVarGeom.GetVelocitiesAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -1176,7 +1158,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::ANGULARVELOCITIES);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::ANGULARVELOCITIES);
 
-    ClearAttributes(uniformGeom.GetAngularVelocitiesAttr(), timeVarGeom.GetAngularVelocitiesAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetAngularVelocitiesAttr(), timeVarGeom.GetAngularVelocitiesAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -1209,7 +1191,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::INVISIBLEIDS);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::INVISIBLEIDS);
 
-    ClearAttributes(uniformGeom.GetInvisibleIdsAttr(), timeVarGeom.GetInvisibleIdsAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetInvisibleIdsAttr(), timeVarGeom.GetInvisibleIdsAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
@@ -1249,7 +1231,7 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::CURVELENGTHS);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::CURVELENGTHS);
 
-    ClearAttributes(uniformGeom.GetCurveVertexCountsAttr(), timeVarGeom.GetCurveVertexCountsAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformGeom.GetCurveVertexCountsAttr(), timeVarGeom.GetCurveVertexCountsAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {

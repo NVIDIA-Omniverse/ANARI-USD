@@ -12,9 +12,8 @@ TF_DEFINE_PUBLIC_TOKENS(
 
   ATTRIB_TOKEN_SEQ
   USDPREVSURF_TOKEN_SEQ
-  VOLUME_TOKEN_SEQ
   MDL_TOKEN_SEQ
-  SAMPLER_TOKEN_SEQ
+  VOLUME_TOKEN_SEQ
   MISC_TOKEN_SEQ
 );
 
@@ -27,23 +26,31 @@ namespace constring
   const char* const manifestFolder = "manifests/";
   const char* const clipFolder = "clips/";
   const char* const primStageFolder = "primstages/";
-  const char* const mdlFolder = "mdls/";
   const char* const imgFolder = "images/";
   const char* const volFolder = "volumes/";
 
   const char* const texCoordReaderPrimPf = "texcoordreader";
-  const char* const shaderPrimPf = "shader";
+  const char* const psShaderPrimPf = "psshader";
   const char* const mdlShaderPrimPf = "mdlshader";
+  const char* const psSamplerPrimPf = "pssampler";
+  const char* const mdlSamplerPrimPf = "mdlsampler";
   const char* const openVDBPrimPf = "ovdbfield";
 
   const char* const imageExtension = ".png";
   const char* const vdbExtension = ".vdb";
 
-  const char* const opaqueMaterialFile = "PBR_Opaque.mdl";
-  const char* const transparentMaterialFile = "PBR_Transparent.mdl";
   const char* const fullSceneNameBin = "FullScene.usd";
   const char* const fullSceneNameAscii = "FullScene.usda";
 
+  const char* const mdlShaderAssetName = "OmniPBR.mdl";
+  const char* const mdlSupportAssetName = "nvidia/support_definitions.mdl";
+
+#ifdef CUSTOM_PBR_MDL
+  const char* const mdlFolder = "mdls/";
+
+  const char* const opaqueMaterialFile = "PBR_Opaque.mdl";
+  const char* const transparentMaterialFile = "PBR_Transparent.mdl";
+#endif
 }
   
 #define ATTRIB_TOKENS_ADD(r, data, elem) AttributeTokens.push_back(UsdBridgeTokens->elem);
@@ -103,7 +110,7 @@ bool UsdBridgeUsdWriter::CreateDirectories()
 #ifdef TIME_CLIP_STAGES
   valid = valid && Connect->CreateFolder((SessionDirectory + constring::clipFolder).c_str(), true, folderMayExist);
 #endif
-#ifdef SUPPORT_MDL_SHADERS
+#ifdef CUSTOM_PBR_MDL
   if(Settings.EnableMdlShader)
   {
     valid = valid && Connect->CreateFolder((SessionDirectory + constring::mdlFolder).c_str(), true, folderMayExist);
@@ -119,7 +126,7 @@ bool UsdBridgeUsdWriter::CreateDirectories()
   return valid;
 }
 
-#ifdef SUPPORT_MDL_SHADERS 
+#ifdef CUSTOM_PBR_MDL
 namespace
 {
   void WriteMdlFromStrings(const char* string0, const char* string1, const char* fileName, const UsdBridgeConnection* Connect)
@@ -183,7 +190,7 @@ bool UsdBridgeUsdWriter::InitializeSession()
 
   valid = valid && VolumeWriter->Initialize(this->LogCallback, this->LogUserData);
 
-#ifdef SUPPORT_MDL_SHADERS 
+#ifdef CUSTOM_PBR_MDL
   if(Settings.EnableMdlShader)
   {
     valid = valid && CreateMdlFiles();

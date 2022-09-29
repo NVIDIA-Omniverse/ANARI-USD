@@ -121,10 +121,8 @@ struct UsdBridgeSettings
   // Output settings
   bool EnablePreviewSurfaceShader;
   bool EnableDisplayColors;
-#ifdef SUPPORT_MDL_SHADERS
   bool EnableMdlShader;
   bool EnableMdlColors;
-#endif
 };
 
 // Generic attribute definition
@@ -345,13 +343,12 @@ struct UsdBridgeMaterialData
     NONE = 0,
     DIFFUSE = (1 << 0), 
     OPACITY = (1 << 1),
-    SPECULAR = (1 << 2),
-    EMISSIVE = (1 << 3),
-    EMISSIVEINTENSITY = (1 << 4),
-    ROUGHNESS = (1 << 5),
-    METALLIC = (1 << 6),
-    IOR = (1 << 7),
-    ALL = (1 << 8) - 1
+    EMISSIVECOLOR = (1 << 2),
+    EMISSIVEINTENSITY = (1 << 3),
+    ROUGHNESS = (1 << 4),
+    METALLIC = (1 << 5),
+    IOR = (1 << 6),
+    ALL = (1 << 7) - 1
   };
   DataMemberId TimeVarying = DataMemberId::NONE;
 
@@ -359,7 +356,6 @@ struct UsdBridgeMaterialData
   bool IsPbr = true;
 
   MaterialInput<UsdFloat3> Diffuse = {{ 1.0f }, nullptr};
-  MaterialInput<UsdFloat3> Specular = {{ 1.0f }, nullptr};
   MaterialInput<UsdFloat3> Emissive = {{ 1.0f }, nullptr};
   MaterialInput<float> Opacity = {1.0f, nullptr};
   MaterialInput<float> EmissiveIntensity = {0.0f, nullptr};
@@ -421,10 +417,7 @@ struct UsdBridgeSamplerData
 
 struct UsdSamplerRefData
 {
-  const char* ImageUrl; 
-  const char* ImageName; 
   size_t ImageNumComponents;
-  bool ImageTimeVarying;
   double TimeStep;
   UsdBridgeMaterialData::DataMemberId DataMemberId; // Material input parameter to connect to
 };

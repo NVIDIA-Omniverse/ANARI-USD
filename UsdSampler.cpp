@@ -93,7 +93,6 @@ void UsdSampler::setPerInstance(bool enable, UsdDevice* device)
     if(inAttribName && !strcmp(inAttribName, "objectPosition"))
     {
       // In case of a per-instance specific attribute name, there can be only one change of the attribute name.
-      // Otherwise there is a risk of the material 
       UsdLogInfo logInfo(device, this, ANARI_SAMPLER, getName());
       if(instanceAttributeAttached)
       {
@@ -146,7 +145,8 @@ bool UsdSampler::doCommitData(UsdDevice* device)
 
   if (paramChanged || isNew)
   {
-    if (paramData.inAttribute && (paramData.imageUrl || paramData.imageData))
+    if (paramData.inAttribute && (std::strlen(UsdSharedString::c_str(paramData.inAttribute)) > 0) 
+      && (paramData.imageUrl || paramData.imageData))
     {
       UsdLogInfo logInfo(device, this, ANARI_SAMPLER, getName());
 

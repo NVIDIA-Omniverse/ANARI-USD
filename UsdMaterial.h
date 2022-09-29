@@ -20,26 +20,24 @@ struct UsdMaterialData
 
   double timeStep = std::numeric_limits<float>::quiet_NaN();
   int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0: color, 1: opacity, 2: specular, 
-    // 3: emissive, 4: emissiveintensity, 5: roughness, 6: metallic, 7: ior
+    // 3: emissive, 4: specularfactor, 5: emissivefactor, 6: roughness, 7: metallic, 8: ior
 
   // Standard parameters
   UsdMaterialMultiTypeParameter<UsdFloat3> color = {{ 1.0f, 1.0f, 1.0f }, ANARI_FLOAT32_VEC3};
   UsdMaterialMultiTypeParameter<float> opacity = {0.0f, ANARI_FLOAT32};
 
   // Possible PBR parameters
-  UsdMaterialMultiTypeParameter<UsdFloat3> specular = {{ 1.0f, 1.0f, 1.0f }, ANARI_FLOAT32_VEC3};
-  UsdMaterialMultiTypeParameter<UsdFloat3> emissive = {{ 1.0f, 1.0f, 1.0f }, ANARI_FLOAT32_VEC3};
+  UsdMaterialMultiTypeParameter<UsdFloat3> emissiveColor = {{ 1.0f, 1.0f, 1.0f }, ANARI_FLOAT32_VEC3};
   UsdMaterialMultiTypeParameter<float> emissiveIntensity = {0.0f, ANARI_FLOAT32};
-  UsdMaterialMultiTypeParameter<float> shininess = {0.5f, ANARI_FLOAT32};
-  UsdMaterialMultiTypeParameter<float> metallic = {-1.0f, ANARI_FLOAT32};
+  UsdMaterialMultiTypeParameter<float> roughness = {0.5f, ANARI_FLOAT32};
+  UsdMaterialMultiTypeParameter<float> metallic = {0.0f, ANARI_FLOAT32};
   UsdMaterialMultiTypeParameter<float> ior = {1.0f, ANARI_FLOAT32};
 
   double colorSamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
   double opacitySamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
-  double specularSamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
   double emissiveSamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
   double emissiveIntensitySamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
-  double shininessSamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
+  double roughnessSamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
   double metallicSamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
   double iorSamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
 };

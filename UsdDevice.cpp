@@ -71,10 +71,8 @@ public:
       deviceParams.outputBinary,
       deviceParams.outputPreviewSurfaceShader,
       deviceParams.outputDisplayColors,
-#ifdef SUPPORT_MDL_SHADERS
       deviceParams.outputMdlShader,
       deviceParams.outputMdlColors
-#endif
     };
 
     bridge = std::make_unique<UsdBridge>(bridgeSettings);

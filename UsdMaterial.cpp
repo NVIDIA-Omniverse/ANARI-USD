@@ -18,18 +18,16 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
   REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("usd::timestep::color", ANARI_FLOAT64, colorSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::timestep::opacity", ANARI_FLOAT64, opacitySamplerTimeStep)
-  REGISTER_PARAMETER_MACRO("usd::timestep::specular", ANARI_FLOAT64, specularSamplerTimeStep)
-  REGISTER_PARAMETER_MACRO("usd::timestep::emissive", ANARI_FLOAT64, emissiveSamplerTimeStep)
-  REGISTER_PARAMETER_MACRO("usd::timestep::emissiveintensity", ANARI_FLOAT64, emissiveIntensitySamplerTimeStep)
-  REGISTER_PARAMETER_MACRO("usd::timestep::shininess", ANARI_FLOAT64, shininessSamplerTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::timestep::emissiveColor", ANARI_FLOAT64, emissiveSamplerTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::timestep::emissiveIntensity", ANARI_FLOAT64, emissiveIntensitySamplerTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::timestep::roughness", ANARI_FLOAT64, roughnessSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::timestep::metallic", ANARI_FLOAT64, metallicSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::timestep::ior", ANARI_FLOAT64, iorSamplerTimeStep)
   REGISTER_PARAMETER_MULTITYPE_MACRO("color", ANARI_FLOAT32_VEC3, SamplerType, ANARI_STRING, color)
   REGISTER_PARAMETER_MULTITYPE_MACRO("opacity", ANARI_FLOAT32, SamplerType, ANARI_STRING, opacity)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("specular", ANARI_FLOAT32_VEC3, SamplerType, ANARI_STRING, specular)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("emissive", ANARI_FLOAT32_VEC3, SamplerType, ANARI_STRING, emissive)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("shininess", ANARI_FLOAT32, SamplerType, ANARI_STRING, shininess)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("emissiveintensity", ANARI_FLOAT32, SamplerType, ANARI_STRING, emissiveIntensity)
+  REGISTER_PARAMETER_MULTITYPE_MACRO("emissiveColor", ANARI_FLOAT32_VEC3, SamplerType, ANARI_STRING, emissiveColor)
+  REGISTER_PARAMETER_MULTITYPE_MACRO("emissiveIntensity", ANARI_FLOAT32, SamplerType, ANARI_STRING, emissiveIntensity)
+  REGISTER_PARAMETER_MULTITYPE_MACRO("roughness", ANARI_FLOAT32, SamplerType, ANARI_STRING, roughness)
   REGISTER_PARAMETER_MULTITYPE_MACRO("metallic", ANARI_FLOAT32, SamplerType, ANARI_STRING, metallic)
   REGISTER_PARAMETER_MULTITYPE_MACRO("ior", ANARI_FLOAT32, SamplerType, ANARI_STRING, ior) 
 )
@@ -150,7 +148,7 @@ bool UsdMaterial::getSamplerRefData(UsdMaterialMultiTypeParameter<ValueType> par
       imageName = UsdSharedString::c_str(samplerParamData.imageData->getName());
       imageNumComponents = anari::componentsOf(samplerParamData.imageData->getType());
     }
-    UsdSamplerRefData samplerRefData = {imageUrl, imageName, imageNumComponents, fNameTimeVarying, samplerRefTime, dataMemberId};
+    UsdSamplerRefData samplerRefData = {imageNumComponents, samplerRefTime, dataMemberId};
 
     samplerHandles.push_back(sampler->getUsdHandle());
     samplerRefDatas.push_back(samplerRefData);
@@ -191,10 +189,9 @@ void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
     bool hasPositionAttrib = 
       getMaterialInputSourceName(paramData.color, DMI::DIFFUSE, device, logInfo) ||
       getMaterialInputSourceName(paramData.opacity, DMI::OPACITY, device, logInfo) ||
-      getMaterialInputSourceName(paramData.specular, DMI::SPECULAR, device, logInfo) ||
-      getMaterialInputSourceName(paramData.emissive, DMI::EMISSIVE, device, logInfo) ||
+      getMaterialInputSourceName(paramData.emissiveColor, DMI::EMISSIVECOLOR, device, logInfo) ||
       getMaterialInputSourceName(paramData.emissiveIntensity, DMI::EMISSIVEINTENSITY, device, logInfo) ||
-      getMaterialInputSourceName(paramData.shininess, DMI::ROUGHNESS, device, logInfo) ||
+      getMaterialInputSourceName(paramData.roughness, DMI::ROUGHNESS, device, logInfo) ||
       getMaterialInputSourceName(paramData.metallic, DMI::METALLIC, device, logInfo) ||
       getMaterialInputSourceName(paramData.ior, DMI::IOR, device, logInfo);
 
@@ -252,11 +249,9 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
     
     assignParameterToMaterialInput(paramData.color, matData.Diffuse, logInfo);
     assignParameterToMaterialInput(paramData.opacity, matData.Opacity, logInfo);
-    assignParameterToMaterialInput(paramData.specular, matData.Specular, logInfo);
-    assignParameterToMaterialInput(paramData.emissive, matData.Emissive, logInfo);
+    assignParameterToMaterialInput(paramData.emissiveColor, matData.Emissive, logInfo);
     assignParameterToMaterialInput(paramData.emissiveIntensity, matData.EmissiveIntensity, logInfo);
-    assignParameterToMaterialInput(paramData.shininess, matData.Roughness, logInfo);
-    matData.Roughness.Value = 1.0 - matData.Roughness.Value; // Still wrong if instead a source attribute or sampler is used
+    assignParameterToMaterialInput(paramData.roughness, matData.Roughness, logInfo);
     assignParameterToMaterialInput(paramData.metallic, matData.Metallic, logInfo);
     assignParameterToMaterialInput(paramData.ior, matData.Ior, logInfo);
 
@@ -285,10 +280,9 @@ void UsdMaterial::doCommitRefs(UsdDevice* device)
 
   getSamplerRefData(paramData.color, paramData.colorSamplerTimeStep, DMI::DIFFUSE, device, logInfo);
   getSamplerRefData(paramData.opacity, paramData.opacitySamplerTimeStep, DMI::OPACITY, device, logInfo);
-  getSamplerRefData(paramData.specular, paramData.specularSamplerTimeStep, DMI::SPECULAR, device, logInfo);
-  getSamplerRefData(paramData.emissive, paramData.emissiveSamplerTimeStep, DMI::EMISSIVE, device, logInfo);
+  getSamplerRefData(paramData.emissiveColor, paramData.emissiveSamplerTimeStep, DMI::EMISSIVECOLOR, device, logInfo);
   getSamplerRefData(paramData.emissiveIntensity, paramData.emissiveIntensitySamplerTimeStep, DMI::EMISSIVEINTENSITY, device, logInfo);
-  getSamplerRefData(paramData.shininess, paramData.shininessSamplerTimeStep, DMI::ROUGHNESS, device, logInfo);
+  getSamplerRefData(paramData.roughness, paramData.roughnessSamplerTimeStep, DMI::ROUGHNESS, device, logInfo);
   getSamplerRefData(paramData.metallic, paramData.metallicSamplerTimeStep, DMI::METALLIC, device, logInfo);
   getSamplerRefData(paramData.ior, paramData.iorSamplerTimeStep, DMI::IOR, device, logInfo);
 

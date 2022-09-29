@@ -94,8 +94,8 @@ namespace
     bool transformTimeVarying = timeEval.IsTimeVarying(DMI::TRANSFORM);
 
     // Clear timevarying attributes if necessary
-    ClearAttributes(uniformFileAttr, timeVarFileAttr, dataTimeVarying);
-    ClearAttributes(uniformExtentAttr, timeVarExtentAttr, dataTimeVarying);
+    ClearUsdAttributes(uniformFileAttr, timeVarFileAttr, dataTimeVarying);
+    ClearUsdAttributes(uniformExtentAttr, timeVarExtentAttr, dataTimeVarying);
 
     // Set the attributes
     if(dataTimeVarying)

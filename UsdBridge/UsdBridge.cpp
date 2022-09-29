@@ -882,7 +882,7 @@ void UsdBridge::ChangeMaterialInputSourceNames(UsdMaterialHandle material, const
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
 
   for(int i = 0; i < numInputNames; ++i)
-    BRIDGE_USDWRITER.UpdateAttributeReader(materialStage, matPrimPath, inputNames[i].second, inputNames[i].first, timeStep, timeVarying);
+    BRIDGE_USDWRITER.UpdateAttributeReaders(materialStage, matPrimPath, inputNames[i].second, inputNames[i].first, timeStep, timeVarying);
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)

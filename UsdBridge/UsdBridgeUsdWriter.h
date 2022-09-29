@@ -38,7 +38,7 @@ public:
 
   int FindSessionNumber();
   bool CreateDirectories();
-#ifdef SUPPORT_MDL_SHADERS 
+#ifdef CUSTOM_PBR_MDL 
   bool CreateMdlFiles();
 #endif
   bool InitializeSession();
@@ -108,17 +108,10 @@ public:
   UsdPrim InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim) const;
   UsdPrim InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath& volumePath, bool uniformPrim) const;
   UsdShadeMaterial InitializeUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim) const;
-  UsdPrim InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, UsdBridgeSamplerData::SamplerType type, bool uniformPrim) const;
+  void InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, UsdBridgeSamplerData::SamplerType type, bool uniformPrim) const;
   UsdShadeShader GetOrCreateAttributeReader() const;
 
 #ifdef VALUE_CLIP_RETIMING
-  //void InitializeUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry);
-  //void InitializeUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry);
-  //void InitializeUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry);
-  //void InitializeUsdVolumeManifest(const UsdBridgePrimCache* cacheEntry);
-  //void InitializeUsdMaterialManifest(const UsdBridgePrimCache* cacheEntry);
-  //void InitializeUsdSamplerManifest(const UsdBridgePrimCache* cacheEntry);
-
   void UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeMeshData& meshData);
   void UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeInstancerData& instancerData);
   void UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeCurveData& curveData);
@@ -138,13 +131,13 @@ public:
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& instancerPath, const UsdBridgeInstancerData& geomData, double timeStep);
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& curvePath, const UsdBridgeCurveData& geomData, double timeStep);
   void UpdateUsdMaterial(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
-  void UpdateUsdShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
-#ifdef SUPPORT_MDL_SHADERS 
-  void UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
-#endif
+  void UpdatePsShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
+  void UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
   void UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfPath& volPrimPath, const UsdBridgeVolumeData& volumeData, double timeStep, UsdBridgePrimCache* cacheEntry);
   void UpdateUsdSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry);
-  void UpdateAttributeReader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, MaterialDMI dataMemberId, const char* newName, double timeStep, MaterialDMI timeVarying);
+  void UpdateMdlSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry);
+  void UpdateSamplers(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry);
+  void UpdateAttributeReaders(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, MaterialDMI dataMemberId, const char* newName, double timeStep, MaterialDMI timeVarying);
   void UpdateInAttribute(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const char* newName, double timeStep, SamplerDMI timeVarying);
   void UpdateBeginEndTime(double timeStep);
 
@@ -196,7 +189,7 @@ protected:
   std::string SessionDirectory;
   std::string RootName;
   std::string RootClassName;
-#ifdef SUPPORT_MDL_SHADERS
+#ifdef CUSTOM_PBR_MDL 
   SdfAssetPath MdlOpaqueRelFilePath; // relative from Scene Folder
   SdfAssetPath MdlTranslucentRelFilePath; // relative from Scene Folder
 #endif
