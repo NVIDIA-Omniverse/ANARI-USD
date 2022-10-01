@@ -4,6 +4,7 @@
 #include "UsdBridgeUsdWriter.h"
 
 #include "UsdBridgeUsdWriter_Common.h"
+#include "stb_image_write.h"
 
 namespace
 {
@@ -42,6 +43,28 @@ TfStaticData<QualifiedTokenCollection> QualifiedTokens;
 
 namespace
 {
+  struct StbWriteOutput
+  {
+    StbWriteOutput() = default;
+    ~StbWriteOutput()
+    {
+      delete[] imageData;
+    }
+
+    const char* imageData = nullptr;
+    size_t imageSize = 0;
+  };
+
+  void StbWriteToBuffer(void *context, void *data, int size)
+  {
+    if(data)
+    {
+      StbWriteOutput* output = reinterpret_cast<StbWriteOutput*>(context);
+      output->imageData = new char[size];
+      output->imageSize = size;
+    }
+  }
+
   template<typename DataType>
   void CreateShaderInput(UsdShadeShader& shader, const TimeEvaluator<DataType>* timeEval, typename DataType::DataMemberId dataMemberId, 
     const TfToken& inputToken, const TfToken& qualifiedInputToken, const SdfValueTypeName& valueType)
@@ -611,7 +634,7 @@ namespace
 
       // Check whether the output type is still correct
       // (Experimental: assume the output type doesn't change over time, this just gives it a chance to match the image type)
-      size_t numComponents = samplerData.ImageNumComponents;
+      int numComponents = samplerData.ImageNumComponents;
       const TfToken& outputToken = GetSamplerOutputColorToken<true>(numComponents);
       if(!uniformSamplerPrim.GetOutput(outputToken))
       {
@@ -827,12 +850,19 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, const Sdf
     assert(samplerData.Data);
     if(!isSharedResource || !IsSharedResourceModified(key))
     {
-      const char* imageData = nullptr;
-      size_t imageSize = 0;  
+      //if() // todo: format check
+      {
+        StbWriteOutput writeOutput;
 
-      // Filename, relative from connection working dir
-      std::string wdRelFilename(SessionDirectory + imgFileName);
-      Connect->WriteFile(imageData, imageSize, wdRelFilename.c_str(), true);
+        int numComponents = std::min(samplerData.ImageNumComponents, 4);
+        stbi_write_png_to_func(StbWriteToBuffer, &writeOutput, 
+          static_cast<int>(samplerData.ImageDims[0]), static_cast<int>(samplerData.ImageDims[1]), 
+          numComponents, samplerData.Data, samplerData.ImageStride[1]);
+
+        // Filename, relative from connection working dir
+        std::string wdRelFilename(SessionDirectory + imgFileName);
+        Connect->WriteFile(writeOutput.imageData, writeOutput.imageSize, wdRelFilename.c_str(), true);
+      }
     }
   }
 }

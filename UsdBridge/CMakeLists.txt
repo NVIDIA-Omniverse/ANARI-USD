@@ -151,6 +151,7 @@ endif()
 
 target_link_libraries(UsdBridge
   PRIVATE
+    stb_image
     UsdBridge_Volume
     UsdBridge_Connect
     ${USD_TARGETS}

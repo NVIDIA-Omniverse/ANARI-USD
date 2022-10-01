@@ -499,7 +499,7 @@ namespace
   }
 
   template<bool PreviewSurface>
-  const TfToken& GetSamplerOutputColorToken(size_t numComponents)
+  const TfToken& GetSamplerOutputColorToken(int numComponents)
   {
     if(PreviewSurface)
     {
@@ -513,7 +513,7 @@ namespace
     return UsdBridgeTokens->out;
   }
 
-  const SdfValueTypeName& GetSamplerOutputColorType(size_t numComponents)
+  const SdfValueTypeName& GetSamplerOutputColorType(int numComponents)
   {
     switch(numComponents)
     {

@@ -167,7 +167,7 @@ void UsdDataArray::setLayoutAndSize(uint64_t numItems1,
     byteStride3 = byteStride2 * numItems2;
 
   dataSizeInBytes = byteStride3 * numItems3 - (byteStride1 - typeSize);
-  layout = { typeSize, numItems1, byteStride1, numItems2, byteStride2, numItems3, byteStride3 };
+  layout = { typeSize, numItems1, numItems2, numItems3, byteStride1, byteStride2, byteStride3 };
 }
 
 bool UsdDataArray::CheckFormatting(UsdDevice* device)

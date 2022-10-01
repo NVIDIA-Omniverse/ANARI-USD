@@ -23,6 +23,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 include(GNUInstallDirs)
 
+add_subdirectory(thirdparty)
+
 ## Dependencies ##
 
 if (NOT EXISTS ${ANARI_ROOT_DIR})

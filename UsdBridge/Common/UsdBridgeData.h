@@ -405,7 +405,9 @@ struct UsdBridgeSamplerData
 
   const char* ImageUrl = nullptr;
   const char* ImageName = nullptr;
-  size_t ImageNumComponents = 4;
+  uint64_t ImageDims[3] = {0, 0, 0};
+  int64_t ImageStride[3] = {0, 0, 0};
+  int ImageNumComponents = 4;
 
   const void* Data = nullptr;
   UsdBridgeType DataType = UsdBridgeType::UNDEFINED;
@@ -417,7 +419,7 @@ struct UsdBridgeSamplerData
 
 struct UsdSamplerRefData
 {
-  size_t ImageNumComponents;
+  int ImageNumComponents;
   double TimeStep;
   UsdBridgeMaterialData::DataMemberId DataMemberId; // Material input parameter to connect to
 };

@@ -142,11 +142,11 @@ bool UsdMaterial::getSamplerRefData(UsdMaterialMultiTypeParameter<ValueType> par
     bool fNameTimeVarying = (samplerParamData.timeVarying & 1);
     
     const char* imageName = nullptr;
-    size_t imageNumComponents = 4;
+    int imageNumComponents = 4;
     if(samplerParamData.imageData)
     {
       imageName = UsdSharedString::c_str(samplerParamData.imageData->getName());
-      imageNumComponents = anari::componentsOf(samplerParamData.imageData->getType());
+      imageNumComponents = static_cast<int>(anari::componentsOf(samplerParamData.imageData->getType()));
     }
     UsdSamplerRefData samplerRefData = {imageNumComponents, samplerRefTime, dataMemberId};
 

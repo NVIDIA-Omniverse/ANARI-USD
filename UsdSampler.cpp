@@ -148,39 +148,58 @@ bool UsdSampler::doCommitData(UsdDevice* device)
     if (paramData.inAttribute && (std::strlen(UsdSharedString::c_str(paramData.inAttribute)) > 0) 
       && (paramData.imageUrl || paramData.imageData))
     {
-      UsdLogInfo logInfo(device, this, ANARI_SAMPLER, getName());
-
-      UsdBridgeSamplerData samplerData;
-      samplerData.Type = type;
-
-      double worldTimeStep = device->getReadParams().timeStep;
-      double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
-
-      samplerData.InAttribute = AnariAttributeToUsdName(UsdSharedString::c_str(paramData.inAttribute), perInstance, logInfo);
-    
-      if(paramData.imageUrl)
-      {
-        samplerData.ImageUrl = UsdSharedString::c_str(paramData.imageUrl);
-      }
-
+      bool supportedImage = true;
+      int numComponents = 0;
       if(paramData.imageData)
       {
-        samplerData.ImageName = UsdSharedString::c_str(paramData.imageData->getName());
-        samplerData.ImageNumComponents = anari::componentsOf(paramData.imageData->getType());
-        if(samplerData.ImageNumComponents > 4)
+        numComponents = static_cast<int>(anari::componentsOf(paramData.imageData->getType()));
+
+        if(numComponents > 4)
           device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, 
-            "UsdSampler '%s' data has more than 4 components. Anything above the 4th component will be ignored.", UsdSharedString::c_str(paramData.imageData->getName()));  
+            "UsdSampler '%s' image data has more than 4 components. Anything above the 4th component will be ignored.", UsdSharedString::c_str(paramData.imageData->getName()));
+
+        if(anari::sizeOf(paramData.imageData->getType()) != sizeof(int8_t) * numComponents)
+        {
+          device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, 
+            "UsdSampler '%s' commit failed: image data color channels are not 8 bit.", UsdSharedString::c_str(paramData.imageData->getName()));  
+          supportedImage = false;
+        }
       }
 
-      samplerData.Data = paramData.imageData->getData();
+      if(supportedImage)
+      {
+        UsdLogInfo logInfo(device, this, ANARI_SAMPLER, getName());
 
-      samplerData.WrapS = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapS));
-      samplerData.WrapT = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapT));
-      samplerData.WrapR = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapR));
+        UsdBridgeSamplerData samplerData;
+        samplerData.Type = type;
 
-      samplerData.TimeVarying = (UsdBridgeSamplerData::DataMemberId)paramData.timeVarying;
+        double worldTimeStep = device->getReadParams().timeStep;
+        double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
 
-      usdBridge->SetSamplerData(usdHandle, samplerData, dataTimeStep);
+        samplerData.InAttribute = AnariAttributeToUsdName(UsdSharedString::c_str(paramData.inAttribute), perInstance, logInfo);
+      
+        if(paramData.imageUrl)
+        {
+          samplerData.ImageUrl = UsdSharedString::c_str(paramData.imageUrl);
+        }
+
+        if(paramData.imageData)
+        {
+          samplerData.ImageName = UsdSharedString::c_str(paramData.imageData->getName());
+          samplerData.ImageNumComponents = numComponents;
+          paramData.imageData->getLayout().copyDims(samplerData.ImageDims);
+          paramData.imageData->getLayout().copyStride(samplerData.ImageStride);  
+        }
+        samplerData.Data = paramData.imageData->getData();
+
+        samplerData.WrapS = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapS));
+        samplerData.WrapT = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapT));
+        samplerData.WrapR = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapR));
+
+        samplerData.TimeVarying = (UsdBridgeSamplerData::DataMemberId)paramData.timeVarying;
+
+        usdBridge->SetSamplerData(usdHandle, samplerData, dataTimeStep);
+      }
     }
     else
     {
