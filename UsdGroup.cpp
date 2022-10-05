@@ -17,7 +17,7 @@ using VolumeUsdType = AnariToUsdBridgedObject<VolumeType>::Type;
 DEFINE_PARAMETER_MAP(UsdGroup,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
+  REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("surface", ANARI_ARRAY, surfaces)
   REGISTER_PARAMETER_MACRO("volume", ANARI_ARRAY, volumes)
 )

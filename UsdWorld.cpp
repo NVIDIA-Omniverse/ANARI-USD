@@ -14,7 +14,7 @@ using InstanceUsdType = AnariToUsdBridgedObject<InstanceType>::Type;
 DEFINE_PARAMETER_MAP(UsdWorld,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
+  REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("instance", ANARI_ARRAY, instances)
 )
 

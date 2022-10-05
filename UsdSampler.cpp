@@ -10,9 +10,9 @@
 DEFINE_PARAMETER_MAP(UsdSampler, 
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
-  REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
-  REGISTER_PARAMETER_MACRO("usd::imageurl", ANARI_STRING, imageUrl)
+  REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
+  REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
+  REGISTER_PARAMETER_MACRO("usd::imageUrl", ANARI_STRING, imageUrl)
   REGISTER_PARAMETER_MACRO("inAttribute", ANARI_STRING, inAttribute)
   REGISTER_PARAMETER_MACRO("image", ANARI_ARRAY, imageData)
   REGISTER_PARAMETER_MACRO("wrapMode", ANARI_STRING, wrapS)
@@ -204,7 +204,7 @@ bool UsdSampler::doCommitData(UsdDevice* device)
     else
     {
       device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, 
-        "UsdSampler '%s' commit failed: missing either the 'inAttribute', or both the 'image' and 'usd::imageurl' parameter", UsdSharedString::c_str(paramData.imageData->getName()));
+        "UsdSampler '%s' commit failed: missing either the 'inAttribute', or both the 'image' and 'usd::imageUrl' parameter", UsdSharedString::c_str(paramData.imageData->getName()));
     }
 
     paramChanged = false;

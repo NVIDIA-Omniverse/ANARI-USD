@@ -173,20 +173,20 @@ void doTest(TestParameters testParams)
 
   int useVertexColors = testParams.useVertexColors;
 
-  anariSetParameter(dev, dev, "usd::connection.logverbosity", ANARI_INT32, &connLogVerbosity);
+  anariSetParameter(dev, dev, "usd::connection.logVerbosity", ANARI_INT32, &connLogVerbosity);
 
   if (outputOmniverse)
   {
-    anariSetParameter(dev, dev, "usd::serialize.hostname", ANARI_STRING, "ov-test");
+    anariSetParameter(dev, dev, "usd::serialize.hostName", ANARI_STRING, "ov-test");
     anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
   }
-  anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
+  anariSetParameter(dev, dev, "usd::serialize.outputBinary", ANARI_BOOL, &outputBinary);
   anariSetParameter(dev, dev, "usd::output.material", ANARI_BOOL, &outputMaterial);
-  anariSetParameter(dev, dev, "usd::output.previewsurfaceshader", ANARI_BOOL, &outputPreviewSurface);
-  anariSetParameter(dev, dev, "usd::output.mdlshader", ANARI_BOOL, &outputMdl);
-  anariSetParameter(dev, dev, "usd::output.displaycolors", ANARI_BOOL, &outputDisplayColors);
-  anariSetParameter(dev, dev, "usd::output.mdlcolors", ANARI_BOOL, &outputMdlColors);
-  anariSetParameter(dev, dev, "usd::writeatcommit", ANARI_BOOL, &testParams.writeAtCommit);
+  anariSetParameter(dev, dev, "usd::output.previewSurfaceShader", ANARI_BOOL, &outputPreviewSurface);
+  anariSetParameter(dev, dev, "usd::output.mdlShader", ANARI_BOOL, &outputMdl);
+  anariSetParameter(dev, dev, "usd::output.displayColors", ANARI_BOOL, &outputDisplayColors);
+  anariSetParameter(dev, dev, "usd::output.mdlColors", ANARI_BOOL, &outputMdlColors);
+  anariSetParameter(dev, dev, "usd::writeAtCommit", ANARI_BOOL, &testParams.writeAtCommit);
 
   // commit device
   anariCommitParameters(dev, dev);
@@ -267,7 +267,7 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
   anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
   int materialTimeVarying = 1<<2; // Set emissive to timevarying (should appear in material stage under primstages/)
-  anariSetParameter(dev, mat, "usd::timevarying", ANARI_INT32, &materialTimeVarying);
+  anariSetParameter(dev, mat, "usd::timeVarying", ANARI_INT32, &materialTimeVarying);
   anariCommitParameters(dev, mat);
   anariRelease(dev, sampler);
 

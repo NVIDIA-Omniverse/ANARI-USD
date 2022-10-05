@@ -13,9 +13,9 @@
 DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
-  REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
-  REGISTER_PARAMETER_MACRO("usd::usepointinstancer", ANARI_INT32, UseUsdGeomPointInstancer) // Use UsdGeomPointInstancer instead of UsdGeomPoints
+  REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
+  REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
+  REGISTER_PARAMETER_MACRO("usd::usePointInstancer", ANARI_INT32, UseUsdGeomPointInstancer) // Use UsdGeomPointInstancer instead of UsdGeomPoints
   REGISTER_PARAMETER_MACRO("primitive.index", ANARI_ARRAY, indices)
   REGISTER_PARAMETER_MACRO("primitive.normal", ANARI_ARRAY, primitiveNormals)
   REGISTER_PARAMETER_MACRO("primitive.color", ANARI_ARRAY, primitiveColors)
@@ -818,7 +818,7 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
     if (geomType == GEOM_SPHERE || geomType == GEOM_CURVE)
     {
       if(geomType == GEOM_SPHERE && !paramData.UseUsdGeomPointInstancer)
-        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' is a sphere geometry with indices, but the usd::usepointinstancer parameter is not set, so all vertices will show as spheres.", debugName);
+        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' is a sphere geometry with indices, but the usd::usePointInstancer parameter is not set, so all vertices will show as spheres.", debugName);
 
       if (indexType != ANARI_INT32 && indexType != ANARI_UINT32 && indexType != ANARI_INT64 && indexType != ANARI_UINT64)
       {

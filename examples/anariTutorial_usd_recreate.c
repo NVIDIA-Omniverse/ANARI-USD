@@ -163,15 +163,15 @@ int main(int argc, const char **argv)
 
     int useVertexColors = (anariPass == 0);
 
-    anariSetParameter(dev, dev, "usd::connection.logverbosity", ANARI_INT32, &connLogVerbosity);
+    anariSetParameter(dev, dev, "usd::connection.logVerbosity", ANARI_INT32, &connLogVerbosity);
 
     if (outputOmniverse)
     {
-      anariSetParameter(dev, dev, "usd::serialize.hostname", ANARI_STRING, "ov-test");
+      anariSetParameter(dev, dev, "usd::serialize.hostName", ANARI_STRING, "ov-test");
       anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
     }
-    anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
-    anariSetParameter(dev, dev, "usd::serialize.newsession", ANARI_BOOL, &createNewSession);
+    anariSetParameter(dev, dev, "usd::serialize.outputBinary", ANARI_BOOL, &outputBinary);
+    anariSetParameter(dev, dev, "usd::serialize.newSession", ANARI_BOOL, &createNewSession);
     anariSetParameter(dev, dev, "usd::output.material", ANARI_BOOL, &outputMaterial);
 
     // commit device

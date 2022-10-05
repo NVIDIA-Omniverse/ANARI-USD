@@ -108,17 +108,17 @@ public:
 
 
 DEFINE_PARAMETER_MAP(UsdDevice,
-  REGISTER_PARAMETER_MACRO("usd::serialize.hostname", ANARI_STRING, hostName)
+  REGISTER_PARAMETER_MACRO("usd::serialize.hostName", ANARI_STRING, hostName)
   REGISTER_PARAMETER_MACRO("usd::serialize.location", ANARI_STRING, outputPath)
-  REGISTER_PARAMETER_MACRO("usd::serialize.newsession", ANARI_BOOL, createNewSession)
-  REGISTER_PARAMETER_MACRO("usd::serialize.outputbinary", ANARI_BOOL, outputBinary)
-  REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
-  REGISTER_PARAMETER_MACRO("usd::writeatcommit", ANARI_BOOL, writeAtCommit)
+  REGISTER_PARAMETER_MACRO("usd::serialize.newSession", ANARI_BOOL, createNewSession)
+  REGISTER_PARAMETER_MACRO("usd::serialize.outputBinary", ANARI_BOOL, outputBinary)
+  REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
+  REGISTER_PARAMETER_MACRO("usd::writeAtCommit", ANARI_BOOL, writeAtCommit)
   REGISTER_PARAMETER_MACRO("usd::output.material", ANARI_BOOL, outputMaterial)
-  REGISTER_PARAMETER_MACRO("usd::output.displaycolors", ANARI_BOOL, outputDisplayColors)
-  REGISTER_PARAMETER_MACRO("usd::output.mdlcolors", ANARI_BOOL, outputMdlColors)
-  REGISTER_PARAMETER_MACRO("usd::output.previewsurfaceshader", ANARI_BOOL, outputPreviewSurfaceShader)
-  REGISTER_PARAMETER_MACRO("usd::output.mdlshader", ANARI_BOOL, outputMdlShader)
+  REGISTER_PARAMETER_MACRO("usd::output.displayColors", ANARI_BOOL, outputDisplayColors)
+  REGISTER_PARAMETER_MACRO("usd::output.mdlColors", ANARI_BOOL, outputMdlColors)
+  REGISTER_PARAMETER_MACRO("usd::output.previewSurfaceShader", ANARI_BOOL, outputPreviewSurfaceShader)
+  REGISTER_PARAMETER_MACRO("usd::output.mdlShader", ANARI_BOOL, outputMdlShader)
 )
 
 UsdDevice::UsdDevice()
@@ -204,27 +204,27 @@ void UsdDevice::reportStatus(void* source,
 void UsdDevice::deviceSetParameter(
   const char *id, ANARIDataType type, const void *mem)
 {
-  if (std::strcmp(id, "usd::garbagecollect") == 0)
+  if (std::strcmp(id, "usd::garbageCollect") == 0)
   {
     // Perform garbage collection on usd objects (needs to move into the user interface)
     if(internals->bridge)
       internals->bridge->GarbageCollect();
   }
-  else if(std::strcmp(id, "usd::removeunusednames") == 0)
+  else if(std::strcmp(id, "usd::removeUnusedNames") == 0)
   {
     internals->uniqueNames.clear();
   }
-  else if (std::strcmp(id, "usd::connection.logverbosity") == 0) // 0 <= verbosity <= 4, with 4 being the loudest
+  else if (std::strcmp(id, "usd::connection.logVerbosity") == 0) // 0 <= verbosity <= 4, with 4 being the loudest
   {
     if(type == ANARI_INT32)
       UsdBridge::SetConnectionLogVerbosity(*(reinterpret_cast<const int*>(mem)));
   }
-  else if(std::strcmp(id, "usd::scenestage") == 0)
+  else if(std::strcmp(id, "usd::sceneStage") == 0)
   {
     if(type == ANARI_VOID_POINTER)
       internals->externalSceneStage = const_cast<void *>(mem);
   }
-  else if (std::strcmp(id, "usd::enablesaving") == 0)
+  else if (std::strcmp(id, "usd::enableSaving") == 0)
   {
     if(type == ANARI_BOOL)
     {
@@ -257,8 +257,8 @@ void UsdDevice::deviceUnsetParameter(const char * id)
   {
     userSetStatusUserData = nullptr;
   }
-  else if (std::strcmp(id, "usd::garbagecollect") != 0
-    && std::strcmp(id, "usd::removeunusednames") != 0)
+  else if (std::strcmp(id, "usd::garbageCollect") != 0
+    && std::strcmp(id, "usd::removeUnusedNames") != 0)
   {
     resetParam(id);
   }

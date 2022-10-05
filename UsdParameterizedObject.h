@@ -259,7 +259,7 @@ protected:
         if(contentUpdate)
           setMultiParamType(destAddress, typeInfo, srcType);
 
-        if(!strcmp(name, "usd::timestep")) // Allow for re-use of object as reference at different timestep, without triggering a full re-commit of the referenced object
+        if(!strcmp(name, "usd::time")) // Allow for re-use of object as reference at different timestep, without triggering a full re-commit of the referenced object
         {
 #ifdef TIME_BASED_CACHING
           paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
@@ -299,7 +299,7 @@ protected:
       // Just replace contents of the whole parameter structure, single or multiparam
       std::memcpy(destAddress, srcAddress, paramSize);
 
-      if(!strcmp(name, "usd::timestep")) 
+      if(!strcmp(name, "usd::time")) 
       {
         paramChanged = true;
       }

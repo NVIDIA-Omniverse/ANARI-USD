@@ -16,8 +16,8 @@ using MaterialUsdType = AnariToUsdBridgedObject<MaterialType>::Type;
 DEFINE_PARAMETER_MAP(UsdSurface,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timestep::geometry", ANARI_FLOAT64, geometryRefTimeStep)
-  REGISTER_PARAMETER_MACRO("usd::timestep::material", ANARI_FLOAT64, materialRefTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::time::geometry", ANARI_FLOAT64, geometryRefTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::time::material", ANARI_FLOAT64, materialRefTimeStep)
   REGISTER_PARAMETER_MACRO("geometry", GeometryType, geometry)
   REGISTER_PARAMETER_MACRO("material", MaterialType, material)
 )

@@ -126,14 +126,14 @@ int main(int argc, const char **argv)
   int outputOmniverse = 0;
   int connLogVerbosity = 0;
 
-  anariSetParameter(dev, dev, "usd::connection.logverbosity", ANARI_INT32, &connLogVerbosity);
+  anariSetParameter(dev, dev, "usd::connection.logVerbosity", ANARI_INT32, &connLogVerbosity);
 
   if (outputOmniverse)
   {
-    anariSetParameter(dev, dev, "usd::serialize.hostname", ANARI_STRING, "ov-test");
+    anariSetParameter(dev, dev, "usd::serialize.hostName", ANARI_STRING, "ov-test");
     anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
   }
-  anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
+  anariSetParameter(dev, dev, "usd::serialize.outputBinary", ANARI_BOOL, &outputBinary);
 
   // commit device
   anariCommitParameters(dev, dev);
@@ -166,7 +166,7 @@ int main(int argc, const char **argv)
   {
     int doubleNodes = ((timeIdx % 3) == 1);
 
-    anariSetParameter(dev, dev, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+    anariSetParameter(dev, dev, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
     anariCommitParameters(dev, dev);
 
     ANARIWorld world = anariNewWorld(dev);
@@ -205,8 +205,8 @@ int main(int argc, const char **argv)
     anariRelease(dev, array);
 
     int timeVarying = 0xFFFFFFDF;// Texcoords are not timeVarying
-    anariSetParameter(dev, mesh, "usd::timevarying", ANARI_INT32, &timeVarying);
-    anariSetParameter(dev, mesh, "usd::timestep", ANARI_FLOAT64, geomTimeValues + timeIdx);
+    anariSetParameter(dev, mesh, "usd::timeVarying", ANARI_INT32, &timeVarying);
+    anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, geomTimeValues + timeIdx);
 
     anariCommitParameters(dev, mesh);
 
@@ -226,7 +226,7 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
     anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
     anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
-    anariSetParameter(dev, mat, "usd::timestep", ANARI_FLOAT64, matTimeValues + timeIdx);
+    anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, matTimeValues + timeIdx);
     anariCommitParameters(dev, mat);
     anariRelease(dev, sampler);
 
@@ -299,7 +299,7 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
-      anariSetParameter(dev, mesh, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+      anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
 
       anariCommitParameters(dev, mesh);
 
@@ -314,7 +314,7 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial_1");
       anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
       anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
-      anariSetParameter(dev, mat, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+      anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
       anariCommitParameters(dev, mat);
       anariRelease(dev, sampler);
 
@@ -397,11 +397,11 @@ int main(int argc, const char **argv)
 
     // Remove unused prims in usd
     // Only useful when objects are possibly removed over the whole timeline
-    anariSetParameter(dev, dev, "usd::garbagecollect", ANARI_VOID_POINTER, 0);
+    anariSetParameter(dev, dev, "usd::garbageCollect", ANARI_VOID_POINTER, 0);
 
     // Reset generation of unique names for next frame
     // Only necessary when relying upon auto-generation of names instead of manual creation, AND not retaining ANARI objects over timesteps
-    anariSetParameter(dev, dev, "usd::removeunusednames", ANARI_VOID_POINTER, 0);
+    anariSetParameter(dev, dev, "usd::removeUnusedNames", ANARI_VOID_POINTER, 0);
 
     // ~
   }
@@ -411,7 +411,7 @@ int main(int argc, const char **argv)
 
   for (int timeIdx = 0; timeIdx < numTimeSteps/2; ++timeIdx)
   {
-    anariSetParameter(dev, dev, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+    anariSetParameter(dev, dev, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
     anariCommitParameters(dev, dev);
 
     ANARIWorld world = anariNewWorld(dev);
@@ -451,7 +451,7 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
-      anariSetParameter(dev, mesh, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx*2); // Switch the child timestep for something else
+      anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, timeValues + timeIdx*2); // Switch the child timestep for something else
 
       anariCommitParameters(dev, mesh);
 
@@ -467,7 +467,7 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
       //anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
       anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
-      anariSetParameter(dev, mat, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx*2);
+      anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, timeValues + timeIdx*2);
       anariCommitParameters(dev, mat);
       anariRelease(dev, sampler);
 
@@ -550,11 +550,11 @@ int main(int argc, const char **argv)
 
     // Remove unused prims in usd
     // Only useful when objects are possibly removed over the whole timeline
-    anariSetParameter(dev, dev, "usd::garbagecollect", ANARI_VOID_POINTER, 0);
+    anariSetParameter(dev, dev, "usd::garbageCollect", ANARI_VOID_POINTER, 0);
 
     // Reset generation of unique names for next frame
     // Only necessary when relying upon auto-generation of names instead of manual creation, AND not retaining ANARI objects over timesteps
-    anariSetParameter(dev, dev, "usd::removeunusednames", ANARI_VOID_POINTER, 0);
+    anariSetParameter(dev, dev, "usd::removeUnusedNames", ANARI_VOID_POINTER, 0);
 
     // ~
   }

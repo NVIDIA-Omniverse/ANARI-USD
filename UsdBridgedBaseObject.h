@@ -81,15 +81,15 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
         }
         return 1;
       }
-      else if (type == ANARI_STRING && strcmp(name, "usd::primpath") == 0)
+      else if (type == ANARI_STRING && strcmp(name, "usd::primPath") == 0)
       {
         const char* primPath = usdBridge->GetPrimPath(&usdHandle);
         snprintf((char*)mem, size, "%s", primPath);
         return 1;
       }
-      else if (type == ANARI_UINT64 && strcmp(name, "usd::primpath.size") == 0)
+      else if (type == ANARI_UINT64 && strcmp(name, "usd::primPath.size") == 0)
       {
-        if (Assert64bitStringLengthProperty(size, UsdLogInfo(device, this, ANARI_OBJECT, this->getName()), "usd::primpath.size"))
+        if (Assert64bitStringLengthProperty(size, UsdLogInfo(device, this, ANARI_OBJECT, this->getName()), "usd::primPath.size"))
         {
           const char* primPath = usdBridge->GetPrimPath(&usdHandle);
           uint64_t nameLen = strlen(primPath)+1;
