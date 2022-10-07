@@ -439,7 +439,7 @@ namespace
       }
       else if (paramData.primitiveColors)
       {
-        if (paramData.vertexColors->getType() == ANARI_FLOAT32_VEC3 || paramData.vertexColors->getType() == ANARI_FLOAT64_VEC3)
+        if (paramData.primitiveColors->getType() == ANARI_FLOAT32_VEC3 || paramData.primitiveColors->getType() == ANARI_FLOAT64_VEC3)
           getValues3(paramData.primitiveColors->getData(), paramData.primitiveColors->getType(), primIdx, colors);
         else
           getValues4(paramData.primitiveColors->getData(), paramData.primitiveColors->getType(), primIdx, colors);
@@ -560,26 +560,26 @@ UsdGeometry::UsdGeometry(const char* name, const char* type, UsdBridge* bridge, 
 {
   bool createTempArrays = false;
 
-  if (strcmp(type, "sphere") == 0)
+  if (strEquals(type, "sphere"))
     geomType = GEOM_SPHERE;
-  else if (strcmp(type, "cylinder") == 0)
+  else if (strEquals(type, "cylinder"))
   {
     geomType = GEOM_CYLINDER;
     createTempArrays = true;
   }
-  else if (strcmp(type, "cone") == 0)
+  else if (strEquals(type, "cone"))
   {
     geomType = GEOM_CONE;
     createTempArrays = true;
   }
-  else if (strcmp(type, "curve") == 0)
+  else if (strEquals(type, "curve"))
   {
     geomType = GEOM_CURVE;
     createTempArrays = true;
   }
-  else if(strcmp(type, "triangle") == 0)
+  else if(strEquals(type, "triangle"))
     geomType = GEOM_TRIANGLE;
-  else if (strcmp(type, "quad") == 0)
+  else if (strEquals(type, "quad"))
     geomType = GEOM_QUAD;
   else
     device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' construction failed: type %s not supported", getName(), name);

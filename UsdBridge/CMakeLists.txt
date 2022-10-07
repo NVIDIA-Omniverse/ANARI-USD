@@ -109,6 +109,7 @@ set(USDBRIDGE_SOURCES
   Common/UsdBridgeData.h
   Common/UsdBridgeNumerics.h
   Common/UsdBridgeUtils.h
+  Common/UsdBridgeUtils_Internal.h
   Common/UsdBridgeMacros.h
   usd.h
   ${USDBRIDGE_MDL_SOURCES}

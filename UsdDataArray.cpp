@@ -83,7 +83,7 @@ void UsdDataArray::filterSetParam(const char *name,
   const void *mem,
   UsdDevice* device)
 {
-  if(std::strcmp(name, "name") == 0)
+  if(strEquals(name, "name"))
   {
     const char* srcCstr = reinterpret_cast<const char*>(mem);
     
@@ -110,7 +110,7 @@ void UsdDataArray::filterResetParam(
 
 int UsdDataArray::getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice* device)
 {
-  if (strcmp(name, "usd::name") == 0)
+  if (strEquals(name, "usd::name"))
   {
     device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdDataArray does not have a usd::name property, as it is not represented in the USD output.");
@@ -208,7 +208,10 @@ void UsdDataArray::decRef(const ANARIObject* anariObjects, uint64_t numAnariObje
     allocDevice->LogDeallocation(baseObj);
 #endif
     if (baseObj)
+    {
+      assert(baseObj->useCount(anari::RefType::INTERNAL) > 0);
       baseObj->refDec(anari::RefType::INTERNAL);
+    }
   }
 }
 

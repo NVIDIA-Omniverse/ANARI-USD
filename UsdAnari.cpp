@@ -449,22 +449,26 @@ const char* AnariTypeToString(ANARIDataType anariType)
 
 const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo)
 {
-  if(!strcmp(param, "worldPosition") 
-  || !strcmp(param, "worldNormal"))
+  if(strEquals(param, "worldPosition")
+  || strEquals(param, "worldNormal"))
   {
     reportStatusThroughDevice(logInfo, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdSampler '%s' inAttribute %s not supported, use inTransform parameter on object-space attribute instead.", logInfo.sourceName, param);
   }
-  if(!strcmp(param, "objectPosition"))
+  if(strEquals(param, "objectPosition"))
   {
     if(perInstance)
       return "positions";
     else
       return "points";
   }
-  else if(!strcmp(param, "objectNormal"))
+  else if(strEquals(param, "objectNormal"))
   {
     return "normals";
+  }
+  else if(strEquals(param, "color"))
+  {
+    return "displayColor";
   }
   //else if(!strncmp(param, "attribute", 9))
   //{

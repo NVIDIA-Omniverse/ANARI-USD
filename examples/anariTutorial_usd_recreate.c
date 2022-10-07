@@ -13,61 +13,7 @@
 // stb_image
 #include "stb_image_write.h"
 
-const char *g_libraryType = "usd";
-
-#ifdef _WIN32
-const char* texFile = "d:/models/texture.png";
-#else
-const char* texFile = "/home/<username>/models/texture.png"; // Point this to any png
-#endif
-
-const char* wrapS = "repeat";
-const char* wrapT = "repeat";
-
-/******************************************************************/
-void statusFunc(const void *userData,
-  ANARIDevice device,
-  ANARIObject source,
-  ANARIDataType sourceType,
-  ANARIStatusSeverity severity,
-  ANARIStatusCode code,
-  const char *message)
-{
-  (void)userData;
-  if (severity == ANARI_SEVERITY_FATAL_ERROR) {
-    fprintf(stderr, "[FATAL] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_ERROR) {
-    fprintf(stderr, "[ERROR] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_WARNING) {
-    fprintf(stderr, "[WARN ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_PERFORMANCE_WARNING) {
-    fprintf(stderr, "[PERF ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_INFO) {
-    fprintf(stderr, "[INFO ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_DEBUG) {
-    fprintf(stderr, "[DEBUG] %s\n", message);
-  }
-}
-
-void writePNG(const char *fileName, ANARIDevice d, ANARIFrame frame)
-{
-  uint32_t size[2] = {0, 0};
-  ANARIDataType type = ANARI_UNKNOWN;
-  uint32_t *pixel =
-      (uint32_t *)anariMapFrame(d, frame, "color", &size[0], &size[1], &type);
-
-  if (type == ANARI_UFIXED8_RGBA_SRGB)
-    stbi_write_png(fileName, size[0], size[1], 4, pixel, 4 * size[0]);
-  else
-    printf("Incorrectly returned color buffer pixel type, image not saved.\n");
-
-  anariUnmapFrame(d, frame, "color");
-}
+#include "anariTutorial_usd_common.h"
 
 int main(int argc, const char **argv)
 {
@@ -162,6 +108,7 @@ int main(int argc, const char **argv)
     int createNewSession = (anariPass == 0) ? 1 : 0;
 
     int useVertexColors = (anariPass == 0);
+    int useTexture = 1;
 
     anariSetParameter(dev, dev, "usd::connection.logVerbosity", ANARI_INT32, &connLogVerbosity);
 
@@ -234,7 +181,7 @@ int main(int argc, const char **argv)
 
     anariCommitParameters(dev, mesh);
 
-    ANARISampler sampler = anariNewSampler(dev, "texture2d");
+    ANARISampler sampler = anariNewSampler(dev, "image2D");
     ANARIMaterial mat = anariNewMaterial(dev, "matte");
     // The second iteration should not commit samplers/materials and not add it to the surface,
     // so the material prim itself will remain untouched in the pre-existing stage,
@@ -243,19 +190,22 @@ int main(int argc, const char **argv)
     {
       // Create a sampler
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
-      anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
-      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
-      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
+      anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
+      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
       anariCommitParameters(dev, sampler);
 
       // Create a material
       anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial");
 
       float opacity = 1.0f;
-      anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
-      if (!useVertexColors)
-        anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
-      anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
+      if (useVertexColors)
+        anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
+      else if(useTexture)
+        anariSetParameter(dev, mat, "color", ANARI_SAMPLER, &sampler);
+      else
+        anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
       anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
       anariCommitParameters(dev, mat);
     }
@@ -358,26 +308,11 @@ int main(int argc, const char **argv)
 
     anariCommitParameters(dev, frame);
 
-    printf("rendering initial frame to firstFrame.png...");
+    printf("rendering frame...");
 
     // render one frame
     anariRenderFrame(dev, frame);
     anariFrameReady(dev, frame, ANARI_WAIT);
-
-    // access frame and write its content as PNG file
-    writePNG("firstFrame.png", dev, frame);
-
-    printf("done!\n");
-    printf("rendering 10 accumulated frames to accumulatedFrame.png...");
-
-    // render 10 more frames, which are accumulated to result in a better
-    //   converged image
-    for (int frames = 0; frames < 10; frames++) {
-      anariRenderFrame(dev, frame);
-      anariFrameReady(dev, frame, ANARI_WAIT);
-    }
-
-    writePNG("accumulatedFrame.png", dev, frame);
 
     printf("done!\n");
     printf("\ncleaning up objects...");

@@ -191,3 +191,7 @@ void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfP
   cacheEntry->AddResourceKey(UsdBridgeResourceKey(nullptr, timeStep));
 }
 
+void ResourceCollectVolume(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter)
+{
+  RemoveResourceFiles(cache, usdWriter, constring::volFolder, constring::vdbExtension);
+}

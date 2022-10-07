@@ -51,15 +51,7 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (UsdPreviewSurface) \
   (useSpecularWorkflow) \
   (result) \
-  (roughness) \
-  (opacity) \
-  (metallic) \
-  (ior) \
-  (diffuseColor) \
-  (specularColor) \
-  (emissiveColor) \
   (surface) \
-  (varname) \
   ((PrimVarReader_Float, "UsdPrimvarReader_float")) \
   ((PrimVarReader_Float2, "UsdPrimvarReader_float2")) \
   ((PrimVarReader_Float3, "UsdPrimvarReader_float3")) \
@@ -69,53 +61,73 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (rg) \
   (rgb) \
   (a) \
-  (file) \
-  (WrapS) \
-  (WrapT) \
-  (WrapR) \
   (black) \
   (clamp) \
   (repeat) \
   (mirror)
+
+#define USDPREVSURF_INPUT_TOKEN_SEQ \
+  (roughness) \
+  (opacity) \
+  (metallic) \
+  (ior) \
+  (diffuseColor) \
+  (specularColor) \
+  (emissiveColor) \
+  (file) \
+  (WrapS) \
+  (WrapT) \
+  (WrapR) \
+  (varname)
+
+#define MDL_TOKEN_SEQ \
+  (sourceAsset) \
+  (mdl) \
+  (OmniPBR) \
+  (out) \
+  (data_lookup_float) \
+  (data_lookup_float2) \
+  (data_lookup_float3) \
+  (lookup_color) \
+  (coord)
+
+#define MDL_INPUT_TOKEN_SEQ \
+  (reflection_roughness_constant) \
+  (opacity_constant) \
+  (metallic_constant) \
+  (ior_constant) \
+  (diffuse_color_constant) \
+  (emissive_color) \
+  (emissive_intensity) \
+  (enable_emission) \
+  (name) \
+  (tex) \
+  (wrap_u) \
+  (wrap_v) \
+  (wrap_w)
 
 #define VOLUME_TOKEN_SEQ \
   (density) \
   (color) \
   (filePath)
 
-#define MDL_TOKEN_SEQ \
-  (sourceAsset) \
-  (mdl) \
-  (OmniPBR) \
-  (diffuse_color_constant) \
-  (emissive_color) \
-  (emissive_intensity) \
-  (enable_emission) \
-  (reflection_roughness_constant) \
-  (metallic_constant) \
-  (ior_constant) \
-  (opacity_constant) \
-  (enable_opacity) \
-  (name) \
-  (out) \
-  (data_lookup_float) \
-  (data_lookup_float2) \
-  (data_lookup_float3) \
-  (lookup_color) \
-  (coord) \
-  (tex) \
-  (wrap_u) \
-  (wrap_v) \
-  (wrap_w)
-
 TF_DECLARE_PUBLIC_TOKENS(
   UsdBridgeTokens,
 
   ATTRIB_TOKEN_SEQ
   USDPREVSURF_TOKEN_SEQ
+  USDPREVSURF_INPUT_TOKEN_SEQ
   MDL_TOKEN_SEQ
+  MDL_INPUT_TOKEN_SEQ
   VOLUME_TOKEN_SEQ
   MISC_TOKEN_SEQ
+);
+
+TF_DECLARE_PUBLIC_TOKENS(
+  QualifiedTokens,
+
+  USDPREVSURF_INPUT_TOKEN_SEQ
+  MDL_INPUT_TOKEN_SEQ
 );
 
 namespace constring
@@ -383,17 +395,55 @@ namespace
   }
 
   template<bool PreviewSurface>
+  const TfToken& GetMaterialShaderInputQualifiedToken(UsdBridgeMaterialData::DataMemberId dataMemberId)
+  {
+    using DMI = UsdBridgeMaterialData::DataMemberId;
+
+    if(PreviewSurface)
+    {
+      switch(dataMemberId)
+      {
+        case DMI::DIFFUSE: { return QualifiedTokens->diffuseColor; break; } 
+        case DMI::OPACITY: { return QualifiedTokens->opacity; break; } 
+        case DMI::EMISSIVECOLOR: { return QualifiedTokens->emissiveColor; break; } 
+        case DMI::ROUGHNESS: { return QualifiedTokens->roughness; break; } 
+        case DMI::METALLIC: { return QualifiedTokens->metallic; break; } 
+        case DMI::IOR: { return QualifiedTokens->ior; break; } 
+
+        default: assert(false); break;
+      };
+    }
+    else
+    {
+      switch(dataMemberId)
+      {
+        case DMI::DIFFUSE: { return QualifiedTokens->diffuse_color_constant; break; } 
+        case DMI::OPACITY: { return QualifiedTokens->opacity_constant; break; } 
+        case DMI::EMISSIVECOLOR: { return QualifiedTokens->emissive_color; break; } 
+        case DMI::EMISSIVEINTENSITY: { return QualifiedTokens->emissive_intensity; break; } 
+        case DMI::ROUGHNESS: { return QualifiedTokens->reflection_roughness_constant; break; } 
+        case DMI::METALLIC: { return QualifiedTokens->metallic_constant; break; } 
+        case DMI::IOR: { return QualifiedTokens->ior_constant; break; } 
+
+        default: assert(false); break;
+      };
+    }
+
+    return QualifiedTokens->diffuseColor;  
+  }
+
+  template<bool PreviewSurface>
   SdfPath GetAttributeReaderPathPf(UsdBridgeMaterialData::DataMemberId dataMemberId)
   {
     using DMI = UsdBridgeMaterialData::DataMemberId;
 
-    const char* const diffuseAttribReaderPrimPf_usd = "diffuseattribreader_usd";
-    const char* const opacityAttribReaderPrimPf_usd = "opacityattribreader_usd";
-    const char* const emissiveColorAttribReaderPrimPf_usd = "emissivecolorattribreader_usd";
-    const char* const emissiveIntensityAttribReaderPrimPf_usd = "emissiveintensityattribreader_usd";
-    const char* const roughnessAttribReaderPrimPf_usd = "roughnessattribreader_usd";
-    const char* const metallicAttribReaderPrimPf_usd = "metallicattribreader_usd";
-    const char* const iorAttribReaderPrimPf_usd = "iorattribreader_usd";
+    const char* const diffuseAttribReaderPrimPf_ps = "diffuseattribreader_ps";
+    const char* const opacityAttribReaderPrimPf_ps = "opacityattribreader_ps";
+    const char* const emissiveColorAttribReaderPrimPf_ps = "emissivecolorattribreader_ps";
+    const char* const emissiveIntensityAttribReaderPrimPf_ps = "emissiveintensityattribreader_ps";
+    const char* const roughnessAttribReaderPrimPf_ps = "roughnessattribreader_ps";
+    const char* const metallicAttribReaderPrimPf_ps = "metallicattribreader_ps";
+    const char* const iorAttribReaderPrimPf_ps = "iorattribreader_ps";
 
     const char* const diffuseAttribReaderPrimPf_mdl = "diffuseattribreader_mdl";
     const char* const opacityAttribReaderPrimPf_mdl = "opacityattribreader_mdl";
@@ -408,13 +458,13 @@ namespace
     {
       switch(dataMemberId)
       {
-        case DMI::DIFFUSE: { result = diffuseAttribReaderPrimPf_usd; break; } 
-        case DMI::OPACITY: { result = opacityAttribReaderPrimPf_usd; break; } 
-        case DMI::EMISSIVECOLOR: { result = emissiveColorAttribReaderPrimPf_usd; break; } 
-        case DMI::EMISSIVEINTENSITY: { result = emissiveIntensityAttribReaderPrimPf_usd; break; } 
-        case DMI::ROUGHNESS: { result = roughnessAttribReaderPrimPf_usd; break; } 
-        case DMI::METALLIC: { result = metallicAttribReaderPrimPf_usd; break; } 
-        case DMI::IOR: { result = iorAttribReaderPrimPf_usd; break; } 
+        case DMI::DIFFUSE: { result = diffuseAttribReaderPrimPf_ps; break; } 
+        case DMI::OPACITY: { result = opacityAttribReaderPrimPf_ps; break; } 
+        case DMI::EMISSIVECOLOR: { result = emissiveColorAttribReaderPrimPf_ps; break; } 
+        case DMI::EMISSIVEINTENSITY: { result = emissiveIntensityAttribReaderPrimPf_ps; break; } 
+        case DMI::ROUGHNESS: { result = roughnessAttribReaderPrimPf_ps; break; } 
+        case DMI::METALLIC: { result = metallicAttribReaderPrimPf_ps; break; } 
+        case DMI::IOR: { result = iorAttribReaderPrimPf_ps; break; } 
 
         default: assert(false); break;
       };

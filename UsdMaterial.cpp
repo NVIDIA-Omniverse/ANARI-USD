@@ -11,6 +11,9 @@
 #define SamplerType ANARI_SAMPLER
 using SamplerUsdType = AnariToUsdBridgedObject<SamplerType>::Type;
 
+#define REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO(ParamName, ParamType0, ParamData) \
+  REGISTER_PARAMETER_MULTITYPE_MACRO(ParamName, ParamType0, SamplerType, ANARI_STRING, ParamData)
+
 DEFINE_PARAMETER_MAP(UsdMaterial, 
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
@@ -23,13 +26,13 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
   REGISTER_PARAMETER_MACRO("usd::time::roughness", ANARI_FLOAT64, roughnessSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::metallic", ANARI_FLOAT64, metallicSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::ior", ANARI_FLOAT64, iorSamplerTimeStep)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("color", ANARI_FLOAT32_VEC3, SamplerType, ANARI_STRING, color)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("opacity", ANARI_FLOAT32, SamplerType, ANARI_STRING, opacity)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("emissiveColor", ANARI_FLOAT32_VEC3, SamplerType, ANARI_STRING, emissiveColor)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("emissiveIntensity", ANARI_FLOAT32, SamplerType, ANARI_STRING, emissiveIntensity)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("roughness", ANARI_FLOAT32, SamplerType, ANARI_STRING, roughness)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("metallic", ANARI_FLOAT32, SamplerType, ANARI_STRING, metallic)
-  REGISTER_PARAMETER_MULTITYPE_MACRO("ior", ANARI_FLOAT32, SamplerType, ANARI_STRING, ior) 
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("color", ANARI_FLOAT32_VEC3, color)
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("opacity", ANARI_FLOAT32, opacity)
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("emissiveColor", ANARI_FLOAT32_VEC3, emissiveColor)
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("emissiveIntensity", ANARI_FLOAT32, emissiveIntensity)
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("roughness", ANARI_FLOAT32, roughness)
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("metallic", ANARI_FLOAT32, metallic)
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("ior", ANARI_FLOAT32, ior) 
 )
 
 using DMI = UsdMaterial::MaterialDMI;
@@ -37,22 +40,22 @@ using DMI = UsdMaterial::MaterialDMI;
 UsdMaterial::UsdMaterial(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_MATERIAL, name, bridge)
 {
-  if (!std::strcmp(type, "matte"))
+  if (strEquals(type, "matte"))
   {
     isPbr = false;
     isTranslucent = false;
   }
-  else if (!std::strcmp(type, "transparentMatte"))
+  else if (strEquals(type, "transparentMatte"))
   {
     isPbr = false;
     isTranslucent = true;
   }
-  if (!std::strcmp(type, "pbr"))
+  else if (strEquals(type, "pbr"))
   {
     isPbr = true;
     isTranslucent = false;
   }
-  else if (!std::strcmp(type, "transparentPbr"))
+  else if (strEquals(type, "transparentPbr"))
   {
     isPbr = true;
     isTranslucent = true;
@@ -86,13 +89,13 @@ void UsdMaterial::filterResetParam(const char *name)
 }
 
 template<typename ValueType>
-bool UsdMaterial::getMaterialInputSourceName(UsdMaterialMultiTypeParameter<ValueType> param, MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo)
+bool UsdMaterial::getMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param, MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo)
 {
   UsdSharedString* anariAttribStr = nullptr;
   param.Get(anariAttribStr);
   const char* anariAttrib = UsdSharedString::c_str(anariAttribStr);
 
-  if(anariAttrib && !strcmp(anariAttrib, "objectPosition"))
+  if(anariAttrib && strEquals(anariAttrib, "objectPosition"))
   {
     // In case of a per-instance specific attribute name, there can be only one change of the attribute name.
     // Otherwise there is a risk of the material 
@@ -116,7 +119,7 @@ bool UsdMaterial::getMaterialInputSourceName(UsdMaterialMultiTypeParameter<Value
 }
 
 template<typename ValueType>
-bool UsdMaterial::getSamplerRefData(UsdMaterialMultiTypeParameter<ValueType> param, double refTimeStep, MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo)
+bool UsdMaterial::getSamplerRefData(const UsdMaterialMultiTypeParameter<ValueType>& param, double refTimeStep, MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo)
 {
   UsdSampler* sampler = nullptr;
   param.Get(sampler);
@@ -138,14 +141,11 @@ bool UsdMaterial::getSamplerRefData(UsdMaterialMultiTypeParameter<ValueType> par
     // However, in case of a sampler this is not a problem in practice; data transfer is only a concern when the filename is *not* set, at which point a relative file corresponding
     // to the sampler timestep will be automatically chosen and set for the material, without the sampler object requiring any updates. 
     // In case a filename *is* set, only the filename is used and no data transfer/file io operations are performed.
-    const char* imageUrl = UsdSharedString::c_str(samplerParamData.imageUrl);
-    bool fNameTimeVarying = (samplerParamData.timeVarying & 1);
-    
-    const char* imageName = nullptr;
+    //const char* imageUrl = UsdSharedString::c_str(samplerParamData.imageUrl); // not required anymore since all materials are a graph
+
     int imageNumComponents = 4;
     if(samplerParamData.imageData)
     {
-      imageName = UsdSharedString::c_str(samplerParamData.imageData->getName());
       imageNumComponents = static_cast<int>(anari::componentsOf(samplerParamData.imageData->getType()));
     }
     UsdSamplerRefData samplerRefData = {imageNumComponents, samplerRefTime, dataMemberId};
@@ -158,8 +158,8 @@ bool UsdMaterial::getSamplerRefData(UsdMaterialMultiTypeParameter<ValueType> par
 }
 
 template<typename ValueType>
-void UsdMaterial::assignParameterToMaterialInput(UsdMaterialMultiTypeParameter<ValueType> param, 
-  UsdBridgeMaterialData::MaterialInput<ValueType> matInput, const UsdLogInfo& logInfo)
+void UsdMaterial::assignParameterToMaterialInput(const UsdMaterialMultiTypeParameter<ValueType>& param, 
+  UsdBridgeMaterialData::MaterialInput<ValueType>& matInput, const UsdLogInfo& logInfo)
 {
   param.Get(matInput.Value);
 

@@ -65,17 +65,17 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     using MaterialInputSourceNamePair = std::pair<const char*, MaterialDMI>;
 
     template<typename ValueType>
-    bool getMaterialInputSourceName(UsdMaterialMultiTypeParameter<ValueType> param,
+    bool getMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param,
       MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo);
 
     template<typename ValueType>
-    bool getSamplerRefData(UsdMaterialMultiTypeParameter<ValueType> param, double refTimeStep, 
+    bool getSamplerRefData(const UsdMaterialMultiTypeParameter<ValueType>& param, double refTimeStep,
       MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo);
 
     template<typename ValueType>
     void assignParameterToMaterialInput(
-      UsdMaterialMultiTypeParameter<ValueType> param, 
-      UsdBridgeMaterialData::MaterialInput<ValueType> matInput, 
+      const UsdMaterialMultiTypeParameter<ValueType>& param, 
+      UsdBridgeMaterialData::MaterialInput<ValueType>& matInput, 
       const UsdLogInfo& logInfo);
 
     bool deferCommit(UsdDevice* device) override;

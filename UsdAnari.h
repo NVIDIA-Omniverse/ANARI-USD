@@ -32,6 +32,16 @@ namespace anari
   ANARI_TYPEFOR_SPECIALIZATION(UsdSharedString*, ANARI_STRING);
 }
 
+// Shared convenience functions
+namespace
+{
+  inline bool strEquals(const char* arg0, const char* arg1)
+  {
+    return std::strcmp(arg0, arg1) == 0;
+  }
+}
+
+// Standard log info
 struct UsdLogInfo
 {
   UsdLogInfo(UsdDevice* dev, void* src, ANARIDataType srcType, const char* srcName)
@@ -47,6 +57,10 @@ struct UsdLogInfo
   const char* sourceName = nullptr;
 };
 
+void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
+  const char *format, const char* firstArg, const char* secondArg); // In case #include <UsdDevice.h> is undesired
+
+// Anari <=> USD conversions
 UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType);
 UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType);
 size_t AnariTypeSize(ANARIDataType anariType);
@@ -54,14 +68,10 @@ const char* AnariTypeToString(ANARIDataType anariType);
 const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo);
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level);
 
-void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
-  const char *format, const char* firstArg, const char* secondArg); // In case #include <UsdDevice.h> is undesired
-
 bool Assert64bitStringLengthProperty(uint64_t size, const UsdLogInfo& logInfo, const char* propName);
 bool AssertOneDimensional(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName);
 bool AssertNoStride(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName);
 bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const UsdLogInfo& logInfo, const char* errorMessage);
-
 
 // Template definitions
 

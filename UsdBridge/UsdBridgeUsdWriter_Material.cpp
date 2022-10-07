@@ -6,40 +6,36 @@
 #include "UsdBridgeUsdWriter_Common.h"
 #include "stb_image_write.h"
 
-namespace
-{
-  struct QualifiedTokenCollection
-  {
-    TfToken roughness = TfToken("inputs:roughness", TfToken::Immortal);
-    TfToken opacity = TfToken("inputs:opacity", TfToken::Immortal);
-    TfToken metallic = TfToken("inputs:metallic", TfToken::Immortal);
-    TfToken ior = TfToken("inputs:ior", TfToken::Immortal);
-    TfToken diffuseColor = TfToken("inputs:diffuseColor", TfToken::Immortal);
-    TfToken specularColor = TfToken("inputs:specularColor", TfToken::Immortal);
-    TfToken emissiveColor = TfToken("inputs:emissiveColor", TfToken::Immortal);
-    TfToken file = TfToken("inputs:file", TfToken::Immortal);
-    TfToken WrapS = TfToken("inputs:WrapS", TfToken::Immortal);
-    TfToken WrapT = TfToken("inputs:WrapT", TfToken::Immortal);
-    TfToken WrapR = TfToken("inputs:WrapR", TfToken::Immortal);
-    TfToken varname = TfToken("inputs:varname", TfToken::Immortal);
+_TF_TOKENS_STRUCT_NAME(QualifiedTokens)::_TF_TOKENS_STRUCT_NAME(QualifiedTokens)()
+  : roughness(TfToken("inputs:roughness", TfToken::Immortal))
+  , opacity(TfToken("inputs:opacity", TfToken::Immortal))
+  , metallic(TfToken("inputs:metallic", TfToken::Immortal))
+  , ior(TfToken("inputs:ior", TfToken::Immortal))
+  , diffuseColor(TfToken("inputs:diffuseColor", TfToken::Immortal))
+  , specularColor(TfToken("inputs:specularColor", TfToken::Immortal))
+  , emissiveColor(TfToken("inputs:emissiveColor", TfToken::Immortal))
+  , file(TfToken("inputs:file", TfToken::Immortal))
+  , WrapS(TfToken("inputs:WrapS", TfToken::Immortal))
+  , WrapT(TfToken("inputs:WrapT", TfToken::Immortal))
+  , WrapR(TfToken("inputs:WrapR", TfToken::Immortal))
+  , varname(TfToken("inputs:varname", TfToken::Immortal))
 
-    TfToken reflection_roughness_constant = TfToken("inputs:reflection_roughness_constant", TfToken::Immortal);
-    TfToken opacity_constant = TfToken("inputs:opacity_constant", TfToken::Immortal);
-    TfToken metallic_constant = TfToken("inputs:metallic_constant", TfToken::Immortal);
-    TfToken ior_constant = TfToken("inputs:ior_constant");
-    TfToken diffuse_color_constant = TfToken("inputs:diffuse_color_constant", TfToken::Immortal);
-    TfToken emissive_color = TfToken("inputs:emissive_color", TfToken::Immortal);
-    TfToken emissive_intensity = TfToken("inputs:emissive_intensity", TfToken::Immortal);
-    TfToken enable_emission = TfToken("inputs:enable_emission", TfToken::Immortal);
-    TfToken name = TfToken("inputs:name", TfToken::Immortal);
-    TfToken tex = TfToken("inputs:tex", TfToken::Immortal);
-    TfToken wrap_u = TfToken("inputs:wrap_u", TfToken::Immortal);
-    TfToken wrap_v = TfToken("inputs:wrap_v", TfToken::Immortal);
-    TfToken wrap_w = TfToken("inputs:wrap_w", TfToken::Immortal);
-
-  };
-}
-TfStaticData<QualifiedTokenCollection> QualifiedTokens;
+  , reflection_roughness_constant(TfToken("inputs:reflection_roughness_constant", TfToken::Immortal))
+  , opacity_constant(TfToken("inputs:opacity_constant", TfToken::Immortal))
+  , metallic_constant(TfToken("inputs:metallic_constant", TfToken::Immortal))
+  , ior_constant(TfToken("inputs:ior_constant"))
+  , diffuse_color_constant(TfToken("inputs:diffuse_color_constant", TfToken::Immortal))
+  , emissive_color(TfToken("inputs:emissive_color", TfToken::Immortal))
+  , emissive_intensity(TfToken("inputs:emissive_intensity", TfToken::Immortal))
+  , enable_emission(TfToken("inputs:enable_emission", TfToken::Immortal))
+  , name(TfToken("inputs:name", TfToken::Immortal))
+  , tex(TfToken("inputs:tex", TfToken::Immortal))
+  , wrap_u(TfToken("inputs:wrap_u", TfToken::Immortal))
+  , wrap_v(TfToken("inputs:wrap_v", TfToken::Immortal))
+  , wrap_w(TfToken("inputs:wrap_w", TfToken::Immortal))
+{}
+_TF_TOKENS_STRUCT_NAME(QualifiedTokens)::~_TF_TOKENS_STRUCT_NAME(QualifiedTokens)() = default;
+TfStaticData<_TF_TOKENS_STRUCT_NAME(QualifiedTokens)> QualifiedTokens;
 
 namespace
 {
@@ -75,6 +71,15 @@ namespace
       shader.GetPrim().RemoveProperty(qualifiedInputToken);
   }
 
+  template<bool PreviewSurface>
+  void CreateMaterialShaderInput(UsdShadeShader& shader, const TimeEvaluator<UsdBridgeMaterialData>* timeEval, 
+    typename UsdBridgeMaterialData::DataMemberId dataMemberId, const SdfValueTypeName& valueType)
+  {
+    const TfToken& inputToken = GetMaterialShaderInputToken<PreviewSurface>(dataMemberId);
+    const TfToken& qualifiedInputToken = GetMaterialShaderInputQualifiedToken<PreviewSurface>(dataMemberId);
+    CreateShaderInput(shader, timeEval, dataMemberId, inputToken, qualifiedInputToken, valueType);
+  }
+
   template<typename ValueType, typename DataType>
   void SetShaderInput(UsdShadeShader& uniformShadPrim, UsdShadeShader& timeVarShadPrim, const TimeEvaluator<DataType>& timeEval, 
     const TfToken& inputToken, typename DataType::DataMemberId dataMemberId, ValueType value)
@@ -88,11 +93,13 @@ namespace
     if(timeVarShadPrim) // Allow for non-existing prims (based on timeVaryingUpdate)
     {
       timeVarInput = timeVarShadPrim.GetInput(inputToken);
+      assert(timeVarInput);
       timeVarAttrib = timeVarInput.GetAttr();
     }
     if(uniformShadPrim)
     {
       uniformInput = uniformShadPrim.GetInput(inputToken);
+      assert(uniformInput);
       uniformAttrib = uniformInput.GetAttr();
     }
 
@@ -116,12 +123,12 @@ namespace
   {
     typedef UsdBridgeMaterialData::DataMemberId DMI;
 
-    CreateShaderInput(shader, timeEval, DMI::DIFFUSE, UsdBridgeTokens->diffuseColor, QualifiedTokens->diffuseColor, SdfValueTypeNames->Color3f);
-    CreateShaderInput(shader, timeEval, DMI::EMISSIVECOLOR, UsdBridgeTokens->emissiveColor, QualifiedTokens->emissiveColor, SdfValueTypeNames->Color3f);
-    CreateShaderInput(shader, timeEval, DMI::ROUGHNESS, UsdBridgeTokens->roughness, QualifiedTokens->roughness, SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::OPACITY, UsdBridgeTokens->opacity, QualifiedTokens->opacity, SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::METALLIC, UsdBridgeTokens->metallic, QualifiedTokens->metallic, SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::IOR, UsdBridgeTokens->ior, QualifiedTokens->ior, SdfValueTypeNames->Float);
+    CreateMaterialShaderInput<true>(shader, timeEval, DMI::DIFFUSE, SdfValueTypeNames->Color3f);
+    CreateMaterialShaderInput<true>(shader, timeEval, DMI::EMISSIVECOLOR, SdfValueTypeNames->Color3f);
+    CreateMaterialShaderInput<true>(shader, timeEval, DMI::ROUGHNESS, SdfValueTypeNames->Float);
+    CreateMaterialShaderInput<true>(shader, timeEval, DMI::OPACITY, SdfValueTypeNames->Float);
+    CreateMaterialShaderInput<true>(shader, timeEval, DMI::METALLIC, SdfValueTypeNames->Float);
+    CreateMaterialShaderInput<true>(shader, timeEval, DMI::IOR, SdfValueTypeNames->Float);
   }
 
   void InitializeMdlShaderUniform(UsdShadeShader& shader)
@@ -135,14 +142,15 @@ namespace
   {
     typedef UsdBridgeMaterialData::DataMemberId DMI;
 
-    CreateShaderInput(shader, timeEval, DMI::DIFFUSE, UsdBridgeTokens->diffuse_color_constant, QualifiedTokens->diffuse_color_constant, SdfValueTypeNames->Color3f);
-    CreateShaderInput(shader, timeEval, DMI::EMISSIVECOLOR, UsdBridgeTokens->emissive_color, QualifiedTokens->emissive_color, SdfValueTypeNames->Color3f);
-    CreateShaderInput(shader, timeEval, DMI::EMISSIVEINTENSITY, UsdBridgeTokens->emissive_intensity, QualifiedTokens->emissive_intensity, SdfValueTypeNames->Float);
+    CreateMaterialShaderInput<false>(shader, timeEval, DMI::DIFFUSE, SdfValueTypeNames->Color3f);
+    CreateMaterialShaderInput<false>(shader, timeEval, DMI::EMISSIVECOLOR, SdfValueTypeNames->Color3f);
+    CreateMaterialShaderInput<false>(shader, timeEval, DMI::EMISSIVEINTENSITY, SdfValueTypeNames->Float);
+    CreateMaterialShaderInput<false>(shader, timeEval, DMI::ROUGHNESS, SdfValueTypeNames->Float);
+    CreateMaterialShaderInput<false>(shader, timeEval, DMI::OPACITY, SdfValueTypeNames->Float);
+    CreateMaterialShaderInput<false>(shader, timeEval, DMI::METALLIC, SdfValueTypeNames->Float);
+    CreateMaterialShaderInput<false>(shader, timeEval, DMI::IOR, SdfValueTypeNames->Float);
+
     CreateShaderInput(shader, timeEval, DMI::EMISSIVEINTENSITY, UsdBridgeTokens->enable_emission, QualifiedTokens->enable_emission, SdfValueTypeNames->Bool);
-    CreateShaderInput(shader, timeEval, DMI::ROUGHNESS, UsdBridgeTokens->reflection_roughness_constant, QualifiedTokens->reflection_roughness_constant, SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::OPACITY, UsdBridgeTokens->opacity_constant, QualifiedTokens->opacity_constant, SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::METALLIC, UsdBridgeTokens->metallic_constant, QualifiedTokens->metallic_constant, SdfValueTypeNames->Float);
-    CreateShaderInput(shader, timeEval, DMI::IOR, UsdBridgeTokens->ior_constant, QualifiedTokens->ior_constant, SdfValueTypeNames->Float);
   }
 
   UsdShadeOutput InitializePsAttributeReaderUniform(UsdShadeShader& attributeReader, const TfToken& readerId, const SdfValueTypeName& returnType)
@@ -337,7 +345,7 @@ namespace
       InitializePsSamplerUniform(sampler, valueType, tcrOutput);
     }
 
-    InitializeMdlAttributeReaderTimeVar(texCoordReader, DMI::INATTRIBUTE, timeEval);
+    InitializePsAttributeReaderTimeVar(texCoordReader, DMI::INATTRIBUTE, timeEval);
     InitializePsSamplerTimeVar(sampler, type, timeEval);
 
     return sampler.GetPrim();
@@ -553,12 +561,12 @@ namespace
   }
 
   template<bool PreviewSurface>
-  void UpdateShaderInput_Sampler(UsdStageRefPtr sceneStage, UsdStageRefPtr materialStage, const SdfPath& shaderPrimPath, const SdfPath& samplerPrimPath, const UsdSamplerRefData& samplerRefData)
+  void UpdateShaderInput_Sampler(UsdStageRefPtr sceneStage, UsdStageRefPtr materialStage, const SdfPath& shaderPrimPath, const SdfPath& refSamplerPrimPath, const UsdSamplerRefData& samplerRefData)
   {
     using DMI = UsdBridgeMaterialData::DataMemberId;
 
     // Referenced sampler prim
-    UsdShadeShader refSampler = UsdShadeShader::Get(sceneStage, samplerPrimPath); // type inherited from sampler prim (in AddRef)
+    UsdShadeShader refSampler = UsdShadeShader::Get(sceneStage, refSamplerPrimPath); // type inherited from sampler prim (in AddRef)
     assert(refSampler);
 
     UsdShadeShader uniformShad = UsdShadeShader::Get(sceneStage, shaderPrimPath);
@@ -569,7 +577,8 @@ namespace
     //Bind the sampler to the diffuse color of the uniform shader, so remove any existing values from the timeVar prim 
     DMI samplerDMI = samplerRefData.DataMemberId;
     const TfToken& inputToken = GetMaterialShaderInputToken<PreviewSurface>(samplerDMI);
-    timeVarShad.GetInput(inputToken).GetAttr().Clear();
+    const UsdShadeInput& matInput = timeVarShad.GetInput(inputToken);
+    matInput.GetAttr().Clear();
 
     // Connect refSampler output to uniformShad input
     const TfToken& outputToken = GetSamplerOutputColorToken<PreviewSurface>(samplerRefData.ImageNumComponents);
@@ -705,18 +714,18 @@ void UsdBridgeUsdWriter::ConnectSamplerToMaterial(UsdStageRefPtr materialStage, 
   {
     // Get shader prims
     SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(constring::psShaderPrimPf));
-    SdfPath samplerPrimPath = refSamplerPrimPath.AppendPath(SdfPath(constring::psSamplerPrimPf));
+    SdfPath refPsSamplerPrimPath = refSamplerPrimPath.AppendPath(SdfPath(constring::psSamplerPrimPf));
 
-    UpdateShaderInput_Sampler<true>(this->SceneStage, materialStage, shaderPrimPath, samplerPrimPath, samplerRefData);
+    UpdateShaderInput_Sampler<true>(this->SceneStage, materialStage, shaderPrimPath, refPsSamplerPrimPath, samplerRefData);
   }
 
   if(Settings.EnableMdlShader)
   {
     // Get shader prims
     SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(constring::mdlShaderPrimPf));
-    SdfPath samplerPrimPath = refSamplerPrimPath.AppendPath(SdfPath(constring::mdlSamplerPrimPf));
+    SdfPath refMdlSamplerPrimPath = refSamplerPrimPath.AppendPath(SdfPath(constring::mdlSamplerPrimPf));
 
-    UpdateShaderInput_Sampler<true>(this->SceneStage, materialStage, shaderPrimPath, samplerPrimPath, samplerRefData);
+    UpdateShaderInput_Sampler<false>(this->SceneStage, materialStage, shaderPrimPath, refMdlSamplerPrimPath, samplerRefData);
   }
 }
 
@@ -959,5 +968,10 @@ void UsdBridgeUsdWriter::UpdateInAttribute(UsdStageRefPtr timeVarStage, const Sd
     SdfPath usdSamplerPrimPath = samplerPrimPath.AppendPath(SdfPath(constring::mdlSamplerPrimPf));
     UpdateSamplerTcReader<false>(SceneStage, timeVarStage, usdSamplerPrimPath, newNameToken, timeEval);
   }
+}
+
+void ResourceCollectSampler(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter)
+{
+  RemoveResourceFiles(cache, usdWriter, constring::imgFolder, constring::imageExtension);
 }
 

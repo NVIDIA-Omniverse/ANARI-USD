@@ -71,8 +71,9 @@ protected:
 #ifdef CHECK_MEMLEAKS
       allocDevice->LogDeallocation(*baseObj);
 #endif
+      assert((*baseObj)->useCount(anari::RefType::INTERNAL) > 0);
       (*baseObj)->refDec(anari::RefType::INTERNAL);
-      *baseObj = nullptr; // Explicitly clear the pointer
+      *baseObj = nullptr; // Explicitly clear the pointer (see destructor)
     }
   }
 
@@ -148,6 +149,7 @@ public:
       getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo, 
         writeParamType, writeParamAddress);
 
+      // Works even if two parameters point to the same object, as the object pointers are set to null
       if(isBaseObject(readParamType))
         safeRefDec(readParamAddress);
       if(isBaseObject(writeParamType))
@@ -221,7 +223,7 @@ protected:
             UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*ptrToBaseObjectPtr(destAddress));
             const char* srcCstr = reinterpret_cast<const char*>(srcAddress);
 
-            contentUpdate = contentUpdate || !destStr || std::strcmp(destStr->c_str(), srcCstr) != 0; // Note that execution of strcmp => (srcType == destType) 
+            contentUpdate = contentUpdate || !destStr || !strEquals(destStr->c_str(), srcCstr); // Note that execution of strEquals => (srcType == destType) 
 
             if(contentUpdate)
             {
@@ -234,7 +236,7 @@ protected:
             }
           }
           else
-            contentUpdate = contentUpdate || bool(memcmp(destAddress, srcAddress, numBytes));
+            contentUpdate = contentUpdate || bool(std::memcmp(destAddress, srcAddress, numBytes));
 
           if(contentUpdate)
           {
@@ -259,7 +261,7 @@ protected:
         if(contentUpdate)
           setMultiParamType(destAddress, typeInfo, srcType);
 
-        if(!strcmp(name, "usd::time")) // Allow for re-use of object as reference at different timestep, without triggering a full re-commit of the referenced object
+        if(!strEquals(name, "usd::time")) // Allow for re-use of object as reference at different timestep, without triggering a full re-commit of the referenced object
         {
 #ifdef TIME_BASED_CACHING
           paramChanged = true; //For time-varying parameters, comparisons between content of potentially different timesteps is meaningless
@@ -299,7 +301,7 @@ protected:
       // Just replace contents of the whole parameter structure, single or multiparam
       std::memcpy(destAddress, srcAddress, paramSize);
 
-      if(!strcmp(name, "usd::time")) 
+      if(!strEquals(name, "usd::time")) 
       {
         paramChanged = true;
       }
@@ -324,17 +326,23 @@ protected:
       getParamTypeAndAddress(paramDataSets[paramReadIdx], typeInfo, 
         destType, destAddress);
 
-      // First inc, then dec (in case of src and dest being the same)
-      if (isBaseObject(srcType))
-        safeRefInc(srcAddress);
-      if (isBaseObject(destType))
-        safeRefDec(destAddress);
+      // SrcAddress and destAddress are not the same, but they may specifically contain the same object pointers.
+      // Branch out on that situation (may also be disabled, which results in a superfluous inc/dec) 
+      if(std::memcmp(destAddress, srcAddress, typeInfo.size))
+      {
+        // First inc, then dec (in case branch is taken out and the pointed to object is the same)
+        if (isBaseObject(srcType))
+          safeRefInc(srcAddress);
+        if (isBaseObject(destType))
+          safeRefDec(destAddress);
+
+        // Perform assignment immediately; there may be multiple parameters with the same object target,
+        // which will be branched out at the compare the second time around
+        std::memcpy(destAddress, srcAddress, typeInfo.size);
+      }
 
       ++it;
     }
-
-    // Pod datatype, so directly assign the structs
-    paramDataSets[paramReadIdx] = paramDataSets[paramWriteIdx];
   }
 
   static ParamContainer* registerParams();

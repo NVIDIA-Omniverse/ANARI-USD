@@ -34,7 +34,7 @@ static char deviceName[] = "usd";
 extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_NEW_DEVICE(
     usd, library, _subtype)
 {
-  if (!std::strcmp(_subtype, "default") || !std::strcmp(_subtype, "usd"))
+  if (strEquals(_subtype, "default") || strEquals(_subtype, "usd"))
     return (ANARIDevice) new UsdDevice(library);
   return nullptr;
 }
@@ -70,9 +70,7 @@ public:
       deviceParams.createNewSession,
       deviceParams.outputBinary,
       deviceParams.outputPreviewSurfaceShader,
-      deviceParams.outputDisplayColors,
-      deviceParams.outputMdlShader,
-      deviceParams.outputMdlColors
+      deviceParams.outputMdlShader
     };
 
     bridge = std::make_unique<UsdBridge>(bridgeSettings);
@@ -115,8 +113,6 @@ DEFINE_PARAMETER_MAP(UsdDevice,
   REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
   REGISTER_PARAMETER_MACRO("usd::writeAtCommit", ANARI_BOOL, writeAtCommit)
   REGISTER_PARAMETER_MACRO("usd::output.material", ANARI_BOOL, outputMaterial)
-  REGISTER_PARAMETER_MACRO("usd::output.displayColors", ANARI_BOOL, outputDisplayColors)
-  REGISTER_PARAMETER_MACRO("usd::output.mdlColors", ANARI_BOOL, outputMdlColors)
   REGISTER_PARAMETER_MACRO("usd::output.previewSurfaceShader", ANARI_BOOL, outputPreviewSurfaceShader)
   REGISTER_PARAMETER_MACRO("usd::output.mdlShader", ANARI_BOOL, outputMdlShader)
 )
@@ -204,27 +200,27 @@ void UsdDevice::reportStatus(void* source,
 void UsdDevice::deviceSetParameter(
   const char *id, ANARIDataType type, const void *mem)
 {
-  if (std::strcmp(id, "usd::garbageCollect") == 0)
+  if (strEquals(id, "usd::garbageCollect"))
   {
     // Perform garbage collection on usd objects (needs to move into the user interface)
     if(internals->bridge)
       internals->bridge->GarbageCollect();
   }
-  else if(std::strcmp(id, "usd::removeUnusedNames") == 0)
+  else if(strEquals(id, "usd::removeUnusedNames"))
   {
     internals->uniqueNames.clear();
   }
-  else if (std::strcmp(id, "usd::connection.logVerbosity") == 0) // 0 <= verbosity <= 4, with 4 being the loudest
+  else if (strEquals(id, "usd::connection.logVerbosity")) // 0 <= verbosity <= 4, with 4 being the loudest
   {
     if(type == ANARI_INT32)
       UsdBridge::SetConnectionLogVerbosity(*(reinterpret_cast<const int*>(mem)));
   }
-  else if(std::strcmp(id, "usd::sceneStage") == 0)
+  else if(strEquals(id, "usd::sceneStage"))
   {
     if(type == ANARI_VOID_POINTER)
       internals->externalSceneStage = const_cast<void *>(mem);
   }
-  else if (std::strcmp(id, "usd::enableSaving") == 0)
+  else if (strEquals(id, "usd::enableSaving"))
   {
     if(type == ANARI_BOOL)
     {
@@ -233,11 +229,11 @@ void UsdDevice::deviceSetParameter(
         internals->bridge->SetEnableSaving(internals->enableSaving);
     }
   }
-  else if (std::strcmp(id, "statusCallback") == 0 && type == ANARI_STATUS_CALLBACK)
+  else if (strEquals(id, "statusCallback") && type == ANARI_STATUS_CALLBACK)
   {
     userSetStatusFunc = (ANARIStatusCallback)mem;
   }
-  else if (std::strcmp(id, "statusCallbackUserData") == 0 && type == ANARI_VOID_POINTER)
+  else if (strEquals(id, "statusCallbackUserData") && type == ANARI_VOID_POINTER)
   {
     userSetStatusUserData = const_cast<void *>(mem);
   }
@@ -249,16 +245,16 @@ void UsdDevice::deviceSetParameter(
 
 void UsdDevice::deviceUnsetParameter(const char * id)
 {
-  if (std::strcmp(id, "statusCallback"))
+  if (strEquals(id, "statusCallback"))
   {
     userSetStatusFunc = nullptr;
   }
-  else if (std::strcmp(id, "statusCallbackUserData"))
+  else if (strEquals(id, "statusCallbackUserData"))
   {
     userSetStatusUserData = nullptr;
   }
-  else if (std::strcmp(id, "usd::garbageCollect") != 0
-    && std::strcmp(id, "usd::removeUnusedNames") != 0)
+  else if (!strEquals(id, "usd::garbageCollect")
+    && !strEquals(id, "usd::removeUnusedNames"))
   {
     resetParam(id);
   }
@@ -692,7 +688,7 @@ int UsdDevice::getProperty(ANARIObject object,
 {
   if ((void *)object == (void *)this)
   {
-    if (!std::strcmp(name, "version") && type == ANARI_INT32) {
+    if (strEquals(name, "version") && type == ANARI_INT32) {
       writeToVoidP(mem, DEVICE_VERSION);
       return 1;
     }

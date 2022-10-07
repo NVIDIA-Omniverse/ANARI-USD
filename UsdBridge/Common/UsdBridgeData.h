@@ -120,9 +120,12 @@ struct UsdBridgeSettings
 
   // Output settings
   bool EnablePreviewSurfaceShader;
-  bool EnableDisplayColors;
   bool EnableMdlShader;
-  bool EnableMdlColors;
+
+  // About to be deprecated
+  static constexpr bool EnableDisplayColors = true;
+  static constexpr bool EnableMdlColors = false;
+  static constexpr bool EnableStTexCoords = false;
 };
 
 // Generic attribute definition

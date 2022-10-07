@@ -13,43 +13,7 @@
 // stb_image
 #include "stb_image_write.h"
 
-const char *g_libraryType = "usd";
-
-#ifdef _WIN32
-const char* texFile = "d:/models/texture.png";
-#else
-const char* texFile = "/home/<username>/models/texture.png"; // Point this to any png
-#endif
-
-const char* wrapS = "repeat";
-const char* wrapT = "repeat";
-
-/******************************************************************/
-void statusFunc(const void *userData,
-  ANARIDevice device,
-  ANARIObject source,
-  ANARIDataType sourceType,
-  ANARIStatusSeverity severity,
-  ANARIStatusCode code,
-  const char *message)
-{
-  (void)userData;
-  if (severity == ANARI_SEVERITY_FATAL_ERROR) {
-    fprintf(stderr, "[FATAL] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_ERROR) {
-    fprintf(stderr, "[ERROR] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_WARNING) {
-    fprintf(stderr, "[WARN ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_PERFORMANCE_WARNING) {
-    fprintf(stderr, "[PERF ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_INFO) {
-    fprintf(stderr, "[INFO] %s\n", message);
-  }
-}
+#include "anariTutorial_usd_common.h"
 
 int main(int argc, const char **argv)
 {
@@ -159,6 +123,7 @@ int main(int argc, const char **argv)
   int numTimeSteps = sizeof(timeValues) / sizeof(double);
 
   int useVertexColors = 0;
+  int useTexture = 1;
 
   // CREATE ALL TIMESTEPS:
 
@@ -210,21 +175,24 @@ int main(int argc, const char **argv)
 
     anariCommitParameters(dev, mesh);
 
-    ANARISampler sampler = anariNewSampler(dev, "texture2d");
+    ANARISampler sampler = anariNewSampler(dev, "image2D");
     anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler_0");
-    anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
-    anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
-    anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
+    anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+    anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+    anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
+    anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
     anariCommitParameters(dev, sampler);
 
     ANARIMaterial mat = anariNewMaterial(dev, "matte");
     anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial_0");
 
     float opacity = 1.0;// -timeIdx * 0.1f;
-    anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
-    if(!useVertexColors)
-      anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
-    anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
+    if (useVertexColors)
+      anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
+    else if(useTexture)
+      anariSetParameter(dev, mat, "color", ANARI_SAMPLER, &sampler);
+    else
+      anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
     anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
     anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, matTimeValues + timeIdx);
     anariCommitParameters(dev, mat);
@@ -303,17 +271,20 @@ int main(int argc, const char **argv)
 
       anariCommitParameters(dev, mesh);
 
-      sampler = anariNewSampler(dev, "texture2d");
+      sampler = anariNewSampler(dev, "image2D");
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler_1");
-      anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
-      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
-      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
+      anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
+      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
       anariCommitParameters(dev, sampler);
 
       mat = anariNewMaterial(dev, "matte");
       anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial_1");
-      anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
-      anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
+      if (useVertexColors)
+        anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
+      else
+        anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
       anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
       anariCommitParameters(dev, mat);
       anariRelease(dev, sampler);
@@ -381,7 +352,7 @@ int main(int argc, const char **argv)
 
     anariCommitParameters(dev, frame);
 
-    printf("rendering initial frame to firstFrame.png...");
+    printf("rendering frame...");
 
     // render one frame
     anariRenderFrame(dev, frame);
@@ -455,18 +426,20 @@ int main(int argc, const char **argv)
 
       anariCommitParameters(dev, mesh);
 
-      sampler = anariNewSampler(dev, "texture2d");
+      sampler = anariNewSampler(dev, "image2D");
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler_1");
-      anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
-      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
-      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
+      anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
+      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
       anariCommitParameters(dev, sampler);
 
       mat = anariNewMaterial(dev, "matte");
       anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial_1");
-      anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
-      //anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
-      anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
+      if (useVertexColors)
+        anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
+      else
+        anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
       anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, timeValues + timeIdx*2);
       anariCommitParameters(dev, mat);
       anariRelease(dev, sampler);
@@ -533,7 +506,7 @@ int main(int argc, const char **argv)
 
     anariCommitParameters(dev, frame);
 
-    printf("rendering initial frame to firstFrame.png...");
+    printf("rendering frame...");
 
     // render one frame
     anariRenderFrame(dev, frame);
@@ -544,7 +517,6 @@ int main(int argc, const char **argv)
     anariRelease(dev, camera);
     anariRelease(dev, frame);
     anariRelease(dev, world);
-
 
     // USD-SPECIFIC RUNTIME:
 

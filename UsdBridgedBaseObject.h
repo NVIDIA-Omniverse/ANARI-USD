@@ -36,9 +36,9 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 
       if (type == ANARI_STRING)
       {
-        if ((strcmp(name, "name") == 0))
+        if (strEquals(name, "name"))
         {
-          if (strcmp(objectName, "") == 0)
+          if (strEquals(objectName, ""))
           {
             reportStatusThroughDevice(UsdLogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
               "%s: ANARI object %s cannot be an empty string, using auto-generated name instead.", getName(), "name");
@@ -51,7 +51,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
           }
           return false;
         }
-        else if (strcmp(name, "usd::name") == 0)
+        else if (strEquals(name, "usd::name"))
         {
           reportStatusThroughDevice(UsdLogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
             "%s parameter '%s' cannot be set, only read with getProperty().", getName(), "usd::name");
@@ -67,12 +67,12 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
       uint64_t size,
       UsdDevice* device)
     {
-      if (type == ANARI_STRING && strcmp(name, "usd::name") == 0)
+      if (type == ANARI_STRING && strEquals(name, "usd::name"))
       {
         snprintf((char*)mem, size, "%s", UsdSharedString::c_str(this->getReadParams().usdName));
         return 1;
       }
-      else if (type == ANARI_UINT64 && strcmp(name, "usd::name.size") == 0)
+      else if (type == ANARI_UINT64 && strEquals(name, "usd::name.size"))
       {
         if (Assert64bitStringLengthProperty(size, UsdLogInfo(device, this, ANARI_OBJECT, this->getName()), "usd::name.size"))
         {
@@ -81,13 +81,13 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
         }
         return 1;
       }
-      else if (type == ANARI_STRING && strcmp(name, "usd::primPath") == 0)
+      else if (type == ANARI_STRING && strEquals(name, "usd::primPath"))
       {
         const char* primPath = usdBridge->GetPrimPath(&usdHandle);
         snprintf((char*)mem, size, "%s", primPath);
         return 1;
       }
-      else if (type == ANARI_UINT64 && strcmp(name, "usd::primPath.size") == 0)
+      else if (type == ANARI_UINT64 && strEquals(name, "usd::primPath.size"))
       {
         if (Assert64bitStringLengthProperty(size, UsdLogInfo(device, this, ANARI_OBJECT, this->getName()), "usd::primPath.size"))
         {

@@ -29,16 +29,20 @@ add_subdirectory(thirdparty)
 
 if (NOT EXISTS ${ANARI_ROOT_DIR})
   find_path(ANARI_ROOT_DIR NAMES include/anari/anari.h DOC "Path to ANARI SDK")
-  message(STATUS "Using ANARI_ROOT_DIR: ${ANARI_ROOT_DIR}")
+endif()
+
+set(ANARI_CONFIG_SUBDIR "release")
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  set(ANARI_CONFIG_SUBDIR "debug")  
+endif()
+if (EXISTS "${ANARI_ROOT_DIR}/${ANARI_CONFIG_SUBDIR}")
+  set(ANARI_ROOT_DIR "${ANARI_ROOT_DIR}/${ANARI_CONFIG_SUBDIR}")
 endif()
 
 if (NOT EXISTS ${ANARI_ROOT_DIR})
   message(FATAL_ERROR "No valid ANARI_ROOT_DIR set, or found using CMAKE_PREFIX_PATH: ${ANARI_ROOT_DIR}")
-endif()
-
-if (EXISTS "${ANARI_ROOT_DIR}/release")
-  # Use the release install for now, until release/debug are in the same package
-  set(ANARI_ROOT_DIR "${ANARI_ROOT_DIR}/release")
+else()
+  message(STATUS "Using ANARI_ROOT_DIR: ${ANARI_ROOT_DIR}")
 endif()
 
 # Search in config mode

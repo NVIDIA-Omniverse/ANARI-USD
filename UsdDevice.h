@@ -43,8 +43,6 @@ struct UsdDeviceData
   double timeStep = 0.0;
 
   bool outputMaterial = true;
-  bool outputDisplayColors = true;
-  bool outputMdlColors = true;
   bool outputPreviewSurfaceShader = true;
   bool outputMdlShader = true;
 };

@@ -1323,7 +1323,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
 
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomPoints);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomNormals);
-  if( UsdGeomDataHasTexCoords(geomData) ) 
+  if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) ) 
     { UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomTexCoords); }
   UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomAttributes);
   UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);
@@ -1353,7 +1353,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomInstanceIds);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomWidths);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomOrientNormals);
-    if( UsdGeomDataHasTexCoords(geomData) ) 
+    if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) ) 
       { UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomTexCoords); }
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomAttributes);
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);
@@ -1372,7 +1372,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomInstanceIds);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomScales);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomOrientations);
-    if( UsdGeomDataHasTexCoords(geomData) ) 
+    if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) ) 
       { UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomTexCoords); }
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomAttributes);
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);
@@ -1402,7 +1402,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
 
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomPoints);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomNormals);
-  if( UsdGeomDataHasTexCoords(geomData) ) 
+  if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) ) 
     { UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomTexCoords); }
   UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomAttributes);
   UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);

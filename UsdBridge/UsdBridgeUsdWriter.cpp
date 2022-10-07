@@ -12,7 +12,9 @@ TF_DEFINE_PUBLIC_TOKENS(
 
   ATTRIB_TOKEN_SEQ
   USDPREVSURF_TOKEN_SEQ
+  USDPREVSURF_INPUT_TOKEN_SEQ
   MDL_TOKEN_SEQ
+  MDL_INPUT_TOKEN_SEQ
   VOLUME_TOKEN_SEQ
   MISC_TOKEN_SEQ
 );
@@ -445,9 +447,10 @@ void UsdBridgeUsdWriter::InitializePrimVisibility(UsdStageRefPtr stage, const Sd
 
   if (imageable)
   {
-    imageable.CreateVisibilityAttr(VtValue(UsdGeomTokens->invisible)); // default is invisible
     UsdAttribute visAttrib = imageable.GetVisibilityAttr(); // in case MakeVisible fails
-
+    if(!visAttrib)
+      visAttrib = imageable.CreateVisibilityAttr(VtValue(UsdGeomTokens->invisible)); // default is invisible
+    
     double startTime = stage->GetStartTimeCode();
     double endTime = stage->GetEndTimeCode();
     if (startTime < timeCode)
@@ -823,7 +826,9 @@ void UsdBridgeUsdWriter::ManageUnusedRefs(UsdStageRefPtr stage, UsdBridgePrimCac
 #ifdef TIME_BASED_CACHING
       {
         // make *referencing* prim invisible at timestep
-        //SetPrimVisibility(oldChild.GetPath(), timeCode, false);
+        //SetPrimVisibility(oldChild.GetPath(), timeCode, false); // Moved into PrimRemoveIfVisible 
+                                                                  // (since there is a timesamples value and not necessarily a manifest, 
+                                                                  // the default attribute value will not be read)
 
         // Remove *referencing* prim if visible
         PrimRemoveIfVisible(stage, parentCache, oldChild, timeVarying, timeCode, atRemoveRef); 
@@ -1010,14 +1015,4 @@ void RemoveResourceFiles(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWrite
     }
   }
   keys.resize(0);
-}
-
-void ResourceCollectVolume(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter)
-{
-  RemoveResourceFiles(cache, usdWriter, constring::volFolder, constring::vdbExtension);
-}
-
-void ResourceCollectSampler(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter)
-{
-  RemoveResourceFiles(cache, usdWriter, constring::imgFolder, constring::imageExtension);
 }

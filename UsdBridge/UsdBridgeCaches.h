@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "UsdBridgeData.h"
+#include "UsdBridgeUtils_Internal.h"
 
 struct UsdBridgePrimCache;
 class UsdBridgeUsdWriter;
@@ -41,11 +42,11 @@ struct UsdBridgeResourceKey
 
   bool operator==(const UsdBridgeResourceKey& rhs) const
   {
-    return ( name ? (rhs.name ? !std::strcmp(name, rhs.name) 
+    return ( name ? (rhs.name ? (strEquals(name, rhs.name) 
 #ifdef TIME_BASED_CACHING
       && timeStep == rhs.timeStep
 #endif
-      : false ) : !rhs.name);
+      ) : false ) : !rhs.name);
   }
 };
 

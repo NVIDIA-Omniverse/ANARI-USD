@@ -28,15 +28,15 @@ namespace
     UsdBridgeSamplerData::WrapMode usdWrapMode = UsdBridgeSamplerData::WrapMode::BLACK;
     if(anariWrapMode)
     {
-      if (!std::strcmp(anariWrapMode, "clampToEdge"))
+      if (strEquals(anariWrapMode, "clampToEdge"))
       {
         usdWrapMode = UsdBridgeSamplerData::WrapMode::CLAMP;
       }
-      else if (!std::strcmp(anariWrapMode, "repeat"))
+      else if (strEquals(anariWrapMode, "repeat"))
       {
         usdWrapMode = UsdBridgeSamplerData::WrapMode::REPEAT;
       }
-      else if (!std::strcmp(anariWrapMode, "mirrorRepeat"))
+      else if (strEquals(anariWrapMode, "mirrorRepeat"))
       {
         usdWrapMode = UsdBridgeSamplerData::WrapMode::MIRROR;
       }
@@ -48,11 +48,11 @@ namespace
 UsdSampler::UsdSampler(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_SAMPLER, name, bridge)
 {
-  if (strcmp(type, "sphere") == 0)
+  if (strEquals(type, "image1D"))
     samplerType = SAMPLER_1D;
-  else if (strcmp(type, "cylinder") == 0)
+  else if (strEquals(type, "image2D"))
     samplerType = SAMPLER_2D;
-  else if (strcmp(type, "cone") == 0)
+  else if (strEquals(type, "image3D"))
     samplerType = SAMPLER_3D;
   else
     device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdSampler '%s' construction failed: type %s not supported", getName(), name);
@@ -90,7 +90,7 @@ void UsdSampler::setPerInstance(bool enable, UsdDevice* device)
     // Fix up the position attribute
     const UsdSamplerData& paramData = getReadParams();
     const char* inAttribName = UsdSharedString::c_str(paramData.inAttribute);
-    if(inAttribName && !strcmp(inAttribName, "objectPosition"))
+    if(inAttribName && strEquals(inAttribName, "objectPosition"))
     {
       // In case of a per-instance specific attribute name, there can be only one change of the attribute name.
       UsdLogInfo logInfo(device, this, ANARI_SAMPLER, getName());
@@ -185,12 +185,12 @@ bool UsdSampler::doCommitData(UsdDevice* device)
 
         if(paramData.imageData)
         {
+          samplerData.Data = paramData.imageData->getData();
           samplerData.ImageName = UsdSharedString::c_str(paramData.imageData->getName());
           samplerData.ImageNumComponents = numComponents;
           paramData.imageData->getLayout().copyDims(samplerData.ImageDims);
-          paramData.imageData->getLayout().copyStride(samplerData.ImageStride);  
+          paramData.imageData->getLayout().copyStride(samplerData.ImageStride);
         }
-        samplerData.Data = paramData.imageData->getData();
 
         samplerData.WrapS = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapS));
         samplerData.WrapT = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapT));
