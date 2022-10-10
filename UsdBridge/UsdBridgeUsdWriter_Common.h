@@ -36,7 +36,7 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (attribute1) \
   (attribute2) \
   (attribute3) \
-  (displayColor) \
+  (color) \
   (ids) \
   (widths) \
   (protoIndices) \
@@ -88,6 +88,7 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (data_lookup_float) \
   (data_lookup_float2) \
   (data_lookup_float3) \
+  (data_lookup_color) \
   (lookup_color) \
   (coord)
 
@@ -108,7 +109,6 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
 
 #define VOLUME_TOKEN_SEQ \
   (density) \
-  (color) \
   (filePath)
 
 TF_DECLARE_PUBLIC_TOKENS(
@@ -514,9 +514,9 @@ namespace
 
     switch(dataMemberId)
     {
-      case DMI::DIFFUSE: { return UsdBridgeTokens->data_lookup_float3; break; } 
+      case DMI::DIFFUSE: { return UsdBridgeTokens->data_lookup_color; break; }
       case DMI::OPACITY: { return UsdBridgeTokens->data_lookup_float; break; } 
-      case DMI::EMISSIVECOLOR: { return UsdBridgeTokens->data_lookup_float3; break; } 
+      case DMI::EMISSIVECOLOR: { return UsdBridgeTokens->data_lookup_color; break; }
       case DMI::EMISSIVEINTENSITY: { return UsdBridgeTokens->data_lookup_float; break; } 
       case DMI::ROUGHNESS: { return UsdBridgeTokens->data_lookup_float; break; } 
       case DMI::METALLIC: { return UsdBridgeTokens->data_lookup_float; break; } 

@@ -172,7 +172,7 @@ namespace
     {
       if(settings.EnableDisplayColors)
       {
-        primvarApi.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray);
+        primvarApi.CreatePrimvar(UsdBridgeTokens->color, SdfValueTypeNames->Color3fArray);
       }
       if(settings.EnableMdlColors)
       {
@@ -184,7 +184,7 @@ namespace
     {
       if(settings.EnableDisplayColors)
       {
-        primvarApi.RemovePrimvar(UsdBridgeTokens->displayColor);
+        primvarApi.RemovePrimvar(UsdBridgeTokens->color);
       }
       if(settings.EnableMdlColors)
       {
@@ -275,7 +275,8 @@ namespace
 
     CreateUsdGeomColorPrimvars(primvarApi, meshData, settings, timeEval);
 
-    CreateUsdGeomTexturePrimvars(primvarApi, meshData, settings, timeEval);
+    if(settings.EnableStTexCoords)
+      CreateUsdGeomTexturePrimvars(primvarApi, meshData, settings, timeEval);
 
     CreateUsdGeomAttributePrimvars(primvarApi, meshData, timeEval);
   }
@@ -316,7 +317,8 @@ namespace
 
     CreateUsdGeomColorPrimvars(primvarApi, instancerData, settings, timeEval);
 
-    CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
+    if(settings.EnableStTexCoords)
+      CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
 
     CreateUsdGeomAttributePrimvars(primvarApi, instancerData, timeEval);
   }
@@ -362,7 +364,8 @@ namespace
 
     CreateUsdGeomColorPrimvars(primvarApi, instancerData, settings, timeEval);
 
-    CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
+    if(settings.EnableStTexCoords)
+      CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
 
     CreateUsdGeomAttributePrimvars(primvarApi, instancerData, timeEval);
 
@@ -418,7 +421,8 @@ namespace
 
     CreateUsdGeomColorPrimvars(primvarApi, curveData, settings, timeEval);
 
-    CreateUsdGeomTexturePrimvars(primvarApi, curveData, settings, timeEval);
+    if(settings.EnableStTexCoords)
+      CreateUsdGeomTexturePrimvars(primvarApi, curveData, settings, timeEval);
 
     CreateUsdGeomAttributePrimvars(primvarApi, curveData, timeEval);
 
@@ -775,8 +779,8 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::COLORS);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::COLORS);
 
-    UsdGeomPrimvar uniformDispPrimvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->displayColor);
-    UsdGeomPrimvar timeVarDispPrimvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->displayColor);
+    UsdGeomPrimvar uniformDispPrimvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->color);
+    UsdGeomPrimvar timeVarDispPrimvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->color);
     UsdGeomPrimvar uniformSt1Primvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->st1);
     UsdGeomPrimvar timeVarSt1Primvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->st1);
     UsdGeomPrimvar uniformSt2Primvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->st2);

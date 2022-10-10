@@ -20,7 +20,12 @@ int main(int argc, const char **argv)
   stbi_flip_vertically_on_write(1);
 
   // image size
-  int imgSize[2] = { 1024, 768 };
+  int frameSize[2] = { 1024, 768 };
+  int textureSize[2] = { 256, 256 };
+
+  uint8_t* textureData = 0;
+  int numTexComponents = 3;
+  textureData = generateTexture(textureSize, numTexComponents);
 
   // camera
   float cam_pos[] = {0.f, 0.f, 0.f};
@@ -129,7 +134,7 @@ int main(int argc, const char **argv)
 
     // create and setup camera
     ANARICamera camera = anariNewCamera(dev, "perspective");
-    float aspect = imgSize[0] / (float)imgSize[1];
+    float aspect = frameSize[0] / (float)frameSize[1];
     anariSetParameter(dev, camera, "aspect", ANARI_FLOAT32, &aspect);
     anariSetParameter(dev, camera, "position", ANARI_FLOAT32_VEC3, cam_pos);
     anariSetParameter(dev, camera, "direction", ANARI_FLOAT32_VEC3, cam_view);
@@ -190,11 +195,14 @@ int main(int argc, const char **argv)
     {
       // Create a sampler
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
-      anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
+      anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &array);
       anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
       anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
       anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
       anariCommitParameters(dev, sampler);
+      anariRelease(dev, array);
 
       // Create a material
       anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial");
@@ -298,7 +306,7 @@ int main(int argc, const char **argv)
     ANARIFrame frame = anariNewFrame(dev);
     ANARIDataType colFormat = ANARI_UFIXED8_RGBA_SRGB;
     ANARIDataType depthFormat = ANARI_FLOAT32;
-    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, imgSize);
+    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, frameSize);
     anariSetParameter(dev, frame, "color", ANARI_DATA_TYPE, &colFormat);
     anariSetParameter(dev, frame, "depth", ANARI_DATA_TYPE, &depthFormat);
 
@@ -334,6 +342,8 @@ int main(int argc, const char **argv)
       vertex[vIdx] += 1.0f;
     }
   }
+
+  freeTexture(textureData);
 
   return 0;
 }

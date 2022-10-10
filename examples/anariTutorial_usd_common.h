@@ -67,9 +67,9 @@ void writePNG(const char *fileName, ANARIDevice d, ANARIFrame frame)
   anariUnmapFrame(d, frame, "color");
 }
 
-inline uint8_t normalize(float val)
+inline uint8_t touint8t(float val)
 {
-  return (uint8_t)floorf((val+1.0f)*128.0f); // 0.5*256
+  return (uint8_t)floorf((val + 1.0f)*127.5f); // 0.5*255
 }
 
 uint8_t* generateTexture(int* size, int numComps)
@@ -83,13 +83,17 @@ uint8_t* generateTexture(int* size, int numComps)
       int pixIdx = i*size[1]+j;
       int offset = pixIdx*numComps;
 
-      float rVal = sin((float)i/size[0] * 2.0f * PI);
+      float rVal = sin((float)i / size[0] * 2.0f * PI);
       float gVal = cos((float)i/size[0] * 8.0f * PI);
       float bVal = cos((float)j/size[1] * 20.0f * PI);
 
-      texData[offset] = normalize(rVal);
-      texData[offset+1] = normalize(gVal);
-      texData[offset+2] = normalize(bVal);
+      texData[offset] = touint8t(rVal);
+      if(numComps >= 2)
+        texData[offset+1] = touint8t(gVal);
+      if(numComps >= 3)
+        texData[offset+2] = touint8t(bVal);
+      if(numComps == 4)
+        texData[offset+3] = 255;
     }
   }
   

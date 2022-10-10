@@ -47,7 +47,7 @@ namespace
       delete[] imageData;
     }
 
-    const char* imageData = nullptr;
+    char* imageData = nullptr;
     size_t imageSize = 0;
   };
 
@@ -58,6 +58,8 @@ namespace
       StbWriteOutput* output = reinterpret_cast<StbWriteOutput*>(context);
       output->imageData = new char[size];
       output->imageSize = size;
+
+      memcpy(output->imageData, data, size);
     }
   }
 
@@ -148,7 +150,7 @@ namespace
     CreateMaterialShaderInput<false>(shader, timeEval, DMI::ROUGHNESS, SdfValueTypeNames->Float);
     CreateMaterialShaderInput<false>(shader, timeEval, DMI::OPACITY, SdfValueTypeNames->Float);
     CreateMaterialShaderInput<false>(shader, timeEval, DMI::METALLIC, SdfValueTypeNames->Float);
-    CreateMaterialShaderInput<false>(shader, timeEval, DMI::IOR, SdfValueTypeNames->Float);
+    //CreateMaterialShaderInput<false>(shader, timeEval, DMI::IOR, SdfValueTypeNames->Float); // not supported in OmniPBR.mdl
 
     CreateShaderInput(shader, timeEval, DMI::EMISSIVEINTENSITY, UsdBridgeTokens->enable_emission, QualifiedTokens->enable_emission, SdfValueTypeNames->Bool);
   }
@@ -801,7 +803,7 @@ void UsdBridgeUsdWriter::UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfP
   UPDATE_MDL_SHADER_INPUT_MACRO(DMI::OPACITY, matData.Opacity);
   UPDATE_MDL_SHADER_INPUT_MACRO(DMI::ROUGHNESS, matData.Roughness);
   UPDATE_MDL_SHADER_INPUT_MACRO(DMI::METALLIC, matData.Metallic);
-  UPDATE_MDL_SHADER_INPUT_MACRO(DMI::IOR, matData.Ior);
+  //UPDATE_MDL_SHADER_INPUT_MACRO(DMI::IOR, matData.Ior);
   SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->enable_emission, DMI::EMISSIVEINTENSITY, enableEmission); // Just a value, not connected to attribreaders
 
 #ifdef CUSTOM_PBR_MDL
@@ -862,7 +864,7 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, const Sdf
       //if() // todo: format check
       {
         StbWriteOutput writeOutput;
-
+        
         int numComponents = std::min(samplerData.ImageNumComponents, 4);
         stbi_write_png_to_func(StbWriteToBuffer, &writeOutput, 
           static_cast<int>(samplerData.ImageDims[0]), static_cast<int>(samplerData.ImageDims[1]), 

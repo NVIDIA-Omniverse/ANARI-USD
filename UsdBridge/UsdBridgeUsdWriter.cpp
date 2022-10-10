@@ -118,6 +118,7 @@ bool UsdBridgeUsdWriter::CreateDirectories()
     valid = valid && Connect->CreateFolder((SessionDirectory + constring::mdlFolder).c_str(), true, folderMayExist);
   }
 #endif
+  valid = valid && Connect->CreateFolder((SessionDirectory + constring::imgFolder).c_str(), true, folderMayExist);
   valid = valid && Connect->CreateFolder((SessionDirectory + constring::volFolder).c_str(), true, folderMayExist);
 
   if (!valid)

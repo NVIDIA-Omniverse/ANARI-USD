@@ -20,7 +20,12 @@ int main(int argc, const char **argv)
   stbi_flip_vertically_on_write(1);
 
   // image size
-  int imgSize[2] = { 1024, 768 };
+  int frameSize[2] = { 1024, 768 };
+  int textureSize[2] = { 256, 256 };
+
+  uint8_t* textureData = 0;
+  int numTexComponents = 3;
+  textureData = generateTexture(textureSize, numTexComponents);
 
   // camera
   float cam_pos[] = {0.f, 0.f, 0.f};
@@ -107,12 +112,15 @@ int main(int argc, const char **argv)
 
   // create and setup camera
   ANARICamera camera = anariNewCamera(dev, "perspective");
-  float aspect = imgSize[0] / (float)imgSize[1];
+  float aspect = frameSize[0] / (float)frameSize[1];
   anariSetParameter(dev, camera, "aspect", ANARI_FLOAT32, &aspect);
   anariSetParameter(dev, camera, "position", ANARI_FLOAT32_VEC3, cam_pos);
   anariSetParameter(dev, camera, "direction", ANARI_FLOAT32_VEC3, cam_view);
   anariSetParameter(dev, camera, "up", ANARI_FLOAT32_VEC3, cam_up);
   anariCommitParameters(dev, camera); // commit each object to indicate mods are done
+
+  // Setup texture array
+  ANARIArray2D texArray = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
 
   printf("done!\n");
   printf("setting up scene...");
@@ -177,7 +185,8 @@ int main(int argc, const char **argv)
 
     ANARISampler sampler = anariNewSampler(dev, "image2D");
     anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler_0");
-    anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+    //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+    anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &texArray);
     anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
     anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
     anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
@@ -273,7 +282,8 @@ int main(int argc, const char **argv)
 
       sampler = anariNewSampler(dev, "image2D");
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler_1");
-      anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &texArray);
       anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
       anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
       anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
@@ -286,6 +296,8 @@ int main(int argc, const char **argv)
       else
         anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
       anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
+      timeVarying = 1;// Only colors are timevarying
+      anariSetParameter(dev, mat, "usd::timeVarying", ANARI_INT32, &timeVarying);
       anariCommitParameters(dev, mat);
       anariRelease(dev, sampler);
 
@@ -342,7 +354,7 @@ int main(int argc, const char **argv)
     ANARIFrame frame = anariNewFrame(dev);
     ANARIDataType colFormat = ANARI_UFIXED8_RGBA_SRGB;
     ANARIDataType depthFormat = ANARI_FLOAT32;
-    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, imgSize);
+    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, frameSize);
     anariSetParameter(dev, frame, "color", ANARI_DATA_TYPE, &colFormat);
     anariSetParameter(dev, frame, "depth", ANARI_DATA_TYPE, &depthFormat);
 
@@ -375,6 +387,9 @@ int main(int argc, const char **argv)
     anariSetParameter(dev, dev, "usd::removeUnusedNames", ANARI_VOID_POINTER, 0);
 
     // ~
+
+    // Constant color get a bit more red every step
+    kd[0] = timeIdx / (float)numTimeSteps;
   }
 
 
@@ -428,7 +443,8 @@ int main(int argc, const char **argv)
 
       sampler = anariNewSampler(dev, "image2D");
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler_1");
-      anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &texArray);
       anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
       anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
       anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
@@ -496,7 +512,7 @@ int main(int argc, const char **argv)
     ANARIFrame frame = anariNewFrame(dev);
     ANARIDataType colFormat = ANARI_UFIXED8_RGBA_SRGB;
     ANARIDataType depthFormat = ANARI_FLOAT32;
-    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, imgSize);
+    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, frameSize);
     anariSetParameter(dev, frame, "color", ANARI_DATA_TYPE, &colFormat);
     anariSetParameter(dev, frame, "depth", ANARI_DATA_TYPE, &depthFormat);
 
@@ -531,7 +547,11 @@ int main(int argc, const char **argv)
     // ~
   }
 
+  anariRelease(dev, texArray);
+
   anariRelease(dev, dev);
+
+  freeTexture(textureData);
 
   printf("done!\n");
 

@@ -466,10 +466,6 @@ const char* AnariAttributeToUsdName(const char* param, bool perInstance, const U
   {
     return "normals";
   }
-  else if(strEquals(param, "color"))
-  {
-    return "displayColor";
-  }
   //else if(!strncmp(param, "attribute", 9))
   //{
   //  return param;

@@ -32,9 +32,9 @@ void doTest(TestParameters testParams)
   // image sizes
   int frameSize[2] = { 1024, 768 };
   int textureSize[2] = { 256, 256 };
-  int numTexComponents = 3;
 
   uint8_t* textureData = 0;
+  int numTexComponents = 3;
   textureData = generateTexture(textureSize, numTexComponents);
 
   // camera
@@ -206,9 +206,9 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
   anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
   
-  //array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
-  anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
-  anariSetParameter(dev, sampler, "image", ANARI_ARRAY, array);
+  array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
+  //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+  anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &array);
   
   if(useTexture)
     anariCommitParameters(dev, sampler);
@@ -347,9 +347,9 @@ void doTest(TestParameters testParams)
 
   anariUnloadLibrary(lib);
 
-  printf("done!\n");
-
   freeTexture(textureData);
+
+  printf("done!\n");
 }
 
 
