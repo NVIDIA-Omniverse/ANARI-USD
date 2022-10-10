@@ -4,10 +4,11 @@
 #pragma once
 
 #include "UsdParameterizedObject.h"
+#include "UsdBridge/UsdBridge.h"
+#include "UsdDataArray.h"
 
 #include <cmath>
 
-class UsdBridge;
 class UsdDevice;
 
 template<class T, class D, class H>
@@ -47,7 +48,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
           {
             ParamClass::setParam(name, type, mem, device);
             ParamClass::setParam("usd::name", type, mem, device);
-            formatUsdName(this->getWriteParams().usdName);
+            this->formatUsdName(this->getWriteParams().usdName);
           }
           return false;
         }

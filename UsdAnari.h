@@ -8,6 +8,8 @@
 #include "anari/anari_enums.h"
 #include "anari/anari_cpp/Traits.h"
 
+#include <cstring>
+
 class UsdDevice;
 class UsdDataArray;
 class UsdFrame;
@@ -23,6 +25,7 @@ class UsdSpatialField;
 class UsdVolume;
 class UsdWorld;
 class UsdSharedString;
+class UsdBaseObject;
 struct UsdDataLayout;
 
 namespace anari
@@ -37,7 +40,7 @@ namespace
 {
   inline bool strEquals(const char* arg0, const char* arg1)
   {
-    return std::strcmp(arg0, arg1) == 0;
+    return strcmp(arg0, arg1) == 0;
   }
 }
 
@@ -59,6 +62,11 @@ struct UsdLogInfo
 
 void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
   const char *format, const char* firstArg, const char* secondArg); // In case #include <UsdDevice.h> is undesired
+
+#ifdef CHECK_MEMLEAKS  
+void logAllocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj);
+void logDeallocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj);
+#endif
 
 // Anari <=> USD conversions
 UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType);

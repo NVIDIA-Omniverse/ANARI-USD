@@ -69,7 +69,7 @@ protected:
     if (*baseObj)
     {
 #ifdef CHECK_MEMLEAKS
-      allocDevice->LogDeallocation(*baseObj);
+      logDeallocationThroughDevice(allocDevice, *baseObj);
 #endif
       assert((*baseObj)->useCount(anari::RefType::INTERNAL) > 0);
       (*baseObj)->refDec(anari::RefType::INTERNAL);
@@ -185,7 +185,7 @@ protected:
     }
 
     // Check if name registered
-    ParamContainer::iterator it = registeredParams->find(name);
+    typename ParamContainer::iterator it = registeredParams->find(name);
     if (it != registeredParams->end())
     {
       const ParamTypeInfo& typeInfo = it->second;
@@ -231,7 +231,7 @@ protected:
               numBytes = sizeof(void*);
               srcAddress = &sharedStr;
 #ifdef CHECK_MEMLEAKS
-              allocDevice->LogAllocation(sharedStr);
+              logAllocationThroughDevice(allocDevice, sharedStr);
 #endif
             }
           }
@@ -278,7 +278,7 @@ protected:
 
   void resetParam(const char* name)
   {
-    ParamContainer::iterator it = registeredParams->find(name);
+    typename ParamContainer::iterator it = registeredParams->find(name);
     if (it != registeredParams->end())
     {
       const ParamTypeInfo& typeInfo = it->second;

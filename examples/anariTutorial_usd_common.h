@@ -67,7 +67,7 @@ void writePNG(const char *fileName, ANARIDevice d, ANARIFrame frame)
   anariUnmapFrame(d, frame, "color");
 }
 
-inline uint8_t touint8t(float val)
+uint8_t touint8t(float val)
 {
   return (uint8_t)floorf((val + 1.0f)*127.5f); // 0.5*255
 }

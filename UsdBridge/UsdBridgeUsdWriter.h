@@ -202,7 +202,7 @@ protected:
 
 void RemoveResourceFiles(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter, 
   const char* resourceFolder, const char* fileExtension);
-void ResourceCollectVolume(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter);
-void ResourceCollectSampler(UsdBridgePrimCache* cache, const UsdBridgeUsdWriter& usdWriter);
+void ResourceCollectVolume(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter);
+void ResourceCollectSampler(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter);
 
 #endif

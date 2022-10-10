@@ -6,11 +6,13 @@
 
 #include "UsdBridgeData.h"
 
+#include <cstring>
+
 namespace
 {
   inline bool strEquals(const char* arg0, const char* arg1)
   {
-    return std::strcmp(arg0, arg1) == 0;
+    return strcmp(arg0, arg1) == 0;
   }
 }
 

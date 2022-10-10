@@ -493,6 +493,18 @@ void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity se
     logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, severity, statusCode, format, firstArg, secondArg);
 }
 
+#ifdef CHECK_MEMLEAKS
+void logAllocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj)
+{
+  device->LogAllocation(obj);
+}
+
+void logDeallocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj)
+{
+  device->LogDeallocation(obj);
+}
+#endif
+
 bool Assert64bitStringLengthProperty(uint64_t size, const UsdLogInfo& logInfo, const char* name)
 {
   if (size != sizeof(uint64_t) && logInfo.device)
