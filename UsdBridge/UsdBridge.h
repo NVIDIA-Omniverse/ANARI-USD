@@ -50,7 +50,9 @@ class UsdBridge
   
     void SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep);
     void SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep);
+    void SetSurfaceRefs(UsdWorldHandle world, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep);
     void SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep);
+    void SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep);
     void SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep);
     void SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep);
     void SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep);
@@ -59,7 +61,9 @@ class UsdBridge
   
     void DeleteInstanceRefs(UsdWorldHandle world, bool timeVarying, double timeStep);
     void DeleteGroupRef(UsdInstanceHandle instance, bool timeVarying, double timeStep);
+    void DeleteSurfaceRefs(UsdWorldHandle world, bool timeVarying, double timeStep);
     void DeleteSurfaceRefs(UsdGroupHandle group, bool timeVarying, double timeStep);
+    void DeleteVolumeRefs(UsdWorldHandle world, bool timeVarying, double timeStep);
     void DeleteVolumeRefs(UsdGroupHandle group, bool timeVarying, double timeStep);
     void DeleteGeometryRef(UsdSurfaceHandle surface, double timeStep);
     void DeleteSpatialFieldRef(UsdVolumeHandle volume, double timeStep);
@@ -99,6 +103,13 @@ class UsdBridge
 
     template<typename GeomDataType>
     void SetGeometryDataTemplate(UsdGeometryHandle geometry, const GeomDataType& geomData, double timeStep);
+
+    template<typename ParentHandleType, typename ChildHandleType>
+    void SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleType* childHandles, uint64_t numChildren, 
+      const char* refPathExt, bool timeVarying, double timeStep);
+
+    template<typename ParentHandleType>
+    void DeleteAllRefs(ParentHandleType parentHandle, const char* refPathExt, bool timeVarying, double timeStep);
 
     UsdBridgeInternals* Internals;
   

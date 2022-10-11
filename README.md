@@ -62,14 +62,14 @@ ANARI scene objects:
 - Materials:
     - setting a parameter to an attribute string will only produce valid output if the parameter value and connected attribute array type are an exact match 
     - any world-space attribute as parameter argument
+    - the fourth channel of `color` will be ignored (only the `opacity` parameter is used for opacity) 
 - Samplers:
     - setting `inAttribute` will only produce valid output if the parameter value and connected attribute array type are an exact match 
     - any world-space attribute as parameter argument
     - the `<in/out>Transform` parameters
+    - anything other than 8-bit-per-component `image` data
 - Lights
     - completely unsupported
-- World
-    - direct surface/volume parameters
 
 ### Detailed build info #
 

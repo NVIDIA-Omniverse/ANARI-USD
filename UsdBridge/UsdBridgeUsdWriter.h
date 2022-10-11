@@ -84,7 +84,7 @@ public:
 #endif
 
   SdfPath AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-    bool timeVarying, double parentTimeStep, double childTimeStep,
+    bool timeVarying, double parentTimeStep,
     const RefModFuncs& refModCallbacks);
   SdfPath AddRef(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, bool valueClip, bool clipStages, const char* clipPostFix,

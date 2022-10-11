@@ -12,8 +12,10 @@ struct UsdWorldData
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
-  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:instances
+  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:instances, 1:surfaces, 2:volumes
   UsdDataArray* instances = nullptr;
+  UsdDataArray* surfaces = nullptr;
+  UsdDataArray* volumes = nullptr;
 };
 
 class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHandle>
@@ -36,4 +38,6 @@ class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHan
     void doCommitRefs(UsdDevice* device) override;
 
     std::vector<UsdInstanceHandle> instanceHandles; // for convenience
+    std::vector<UsdSurfaceHandle> surfaceHandles; // for convenience
+    std::vector<UsdVolumeHandle> volumeHandles; // for convenience
 };

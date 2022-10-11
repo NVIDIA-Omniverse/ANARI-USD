@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdDevice.h"
-#include "UsdBridge/UsdBridge.h"
 #include "UsdBridgedBaseObject.h"
 #include "UsdDataArray.h"
 #include "UsdGeometry.h"

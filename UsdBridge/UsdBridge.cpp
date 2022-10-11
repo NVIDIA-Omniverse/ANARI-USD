@@ -537,18 +537,25 @@ void UsdBridge::DeleteSampler(UsdSamplerHandle handle)
   Internals->FindAndDeletePrim(handle);
 }
 
+template<typename ParentHandleType, typename ChildHandleType>
+void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleType* childHandles, uint64_t numChildren, 
+  const char* refPathExt, bool timeVarying, double timeStep)
+{
+  if (parentHandle.value == nullptr) return;
+
+  UsdBridgePrimCache* parentCache = BRIDGE_CACHE.ConvertToPrimCache(parentHandle);
+  const UsdBridgePrimCacheList& childCaches = Internals->ExtractPrimCaches<ChildHandleType>(childHandles, numChildren);
+
+  BRIDGE_USDWRITER.ManageUnusedRefs(parentCache, childCaches, surfacePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  for (uint64_t i = 0; i < numChildren; ++i)
+  {
+    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], surfacePathRp, timeVarying, timeStep, Internals->RefModCallbacks);
+  }
+}
+
 void UsdBridge::SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep)
 {
-  if (world.value == nullptr) return;
-
-  UsdBridgePrimCache* worldCache = BRIDGE_CACHE.ConvertToPrimCache(world);
-  const UsdBridgePrimCacheList& instanceCaches = Internals->ExtractPrimCaches<UsdInstanceHandle>(instances, numInstances);
-
-  BRIDGE_USDWRITER.ManageUnusedRefs(worldCache, instanceCaches, nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  for (uint64_t i = 0; i < numInstances; ++i)
-  {
-    BRIDGE_USDWRITER.AddRef_NoClip(worldCache, instanceCaches[i], nullptr, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
-  }
+  SetNoClipRefs(world, instances, numInstances, nullptr, timeVarying, timeStep);
 }
 
 void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep)
@@ -559,35 +566,27 @@ void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bo
   UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
 
   BRIDGE_USDWRITER.ManageUnusedRefs(instanceCache, Internals->ToCacheList(groupCache), nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  BRIDGE_USDWRITER.AddRef_NoClip(instanceCache, groupCache, nullptr, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
+  BRIDGE_USDWRITER.AddRef_NoClip(instanceCache, groupCache, nullptr, timeVarying, timeStep, Internals->RefModCallbacks);
+}
+
+void UsdBridge::SetSurfaceRefs(UsdWorldHandle world, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
+{
+  SetNoClipRefs(world, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
 {
-  if (group.value == nullptr) return;
+  SetNoClipRefs(group, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep);
+}
 
-  UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-  const UsdBridgePrimCacheList& surfaceCaches = Internals->ExtractPrimCaches<UsdSurfaceHandle>(surfaces, numSurfaces);
-
-  BRIDGE_USDWRITER.ManageUnusedRefs(groupCache, surfaceCaches, surfacePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  for (uint64_t i = 0; i < numSurfaces; ++i)
-  {
-    BRIDGE_USDWRITER.AddRef_NoClip(groupCache, surfaceCaches[i], surfacePathRp, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
-  }
+void UsdBridge::SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep)
+{
+  SetNoClipRefs(world, volumes, numVolumes, volumePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep)
 {
-  if (group.value == nullptr) return;
-
-  UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-  const UsdBridgePrimCacheList& volumeCaches = Internals->ExtractPrimCaches<UsdVolumeHandle>(volumes, numVolumes);
-
-  BRIDGE_USDWRITER.ManageUnusedRefs(groupCache, volumeCaches, volumePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  for (uint64_t i = 0; i < numVolumes; ++i)
-  {
-    BRIDGE_USDWRITER.AddRef_NoClip(groupCache, volumeCaches[i], volumePathRp, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
-  }
+  SetNoClipRefs(group, volumes, numVolumes, volumePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep)
@@ -670,77 +669,64 @@ void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandl
 #endif
 }
 
+template<typename ParentHandleType>
+void UsdBridge::DeleteAllRefs(ParentHandleType parentHandle, const char* refPathExt, bool timeVarying, double timeStep)
+{
+  if (parentHandle.value == nullptr) return;
+
+  UsdBridgePrimCache* parentCache = BRIDGE_CACHE.ConvertToPrimCache(parentHandle);
+
+  BRIDGE_USDWRITER.RemoveAllRefs(parentCache, refPathExt, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+}
+
 void UsdBridge::DeleteInstanceRefs(UsdWorldHandle world, bool timeVarying, double timeStep)
 {
-  if (world.value == nullptr) return;
-
-  UsdBridgePrimCache* worldCache = BRIDGE_CACHE.ConvertToPrimCache(world);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(worldCache, nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(world, nullptr, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteGroupRef(UsdInstanceHandle instance, bool timeVarying, double timeStep)
 {
-  if (instance.value == nullptr) return;
+  DeleteAllRefs(instance, nullptr, timeVarying, timeStep);
+}
 
-  UsdBridgePrimCache* instanceCache = BRIDGE_CACHE.ConvertToPrimCache(instance);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(instanceCache, nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+void UsdBridge::DeleteSurfaceRefs(UsdWorldHandle world, bool timeVarying, double timeStep)
+{
+  DeleteAllRefs(world, surfacePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteSurfaceRefs(UsdGroupHandle group, bool timeVarying, double timeStep)
 {
-  if (group.value == nullptr) return;
+  DeleteAllRefs(group, surfacePathRp, timeVarying, timeStep);
+}
 
-  UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(groupCache, surfacePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+void UsdBridge::DeleteVolumeRefs(UsdWorldHandle world, bool timeVarying, double timeStep)
+{
+  DeleteAllRefs(world, volumePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteVolumeRefs(UsdGroupHandle group, bool timeVarying, double timeStep)
 {
-  if (group.value == nullptr) return;
-
-  UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(groupCache, volumePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(group, volumePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteGeometryRef(UsdSurfaceHandle surface, double timeStep)
 {
-  if (surface.value == nullptr) return;
-
-  UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(surfaceCache, surfacePathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(surface, geometryPathRp, false, timeStep);
 }
 
 void UsdBridge::DeleteSpatialFieldRef(UsdVolumeHandle volume, double timeStep)
 {
-  if (volume.value == nullptr) return;
-
-  UsdBridgePrimCache* volumeCache = BRIDGE_CACHE.ConvertToPrimCache(volume);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(volumeCache, fieldPathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(volume, fieldPathRp, false, timeStep);
 }
 
 void UsdBridge::DeleteMaterialRef(UsdSurfaceHandle surface, double timeStep)
 {
-  if (surface.value == nullptr) return;
-
-  UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(surfaceCache, materialPathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(surface, materialPathRp, false, timeStep);
 }
 
 void UsdBridge::DeleteSamplerRefs(UsdMaterialHandle material, double timeStep)
 {
-  if (material.value == nullptr) return;
-
-  UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
-
-  // Remove the sampler reference from the material node
-  BRIDGE_USDWRITER.RemoveAllRefs(matCache, samplerPathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(material, samplerPathRp, false, timeStep);
 }
 
 void UsdBridge::UpdateBeginEndTime(double timeStep)

@@ -685,10 +685,10 @@ void UsdBridgeUsdWriter::UpdateClipMetaData(const UsdPrim& clipPrim, UsdBridgePr
 #endif
 
 SdfPath UsdBridgeUsdWriter::AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-  bool timeVarying, double parentTimeStep, double childTimeStep,
+  bool timeVarying, double parentTimeStep,
   const RefModFuncs& refModCallbacks)
 {
-  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, childTimeStep, refModCallbacks);
+  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, parentTimeStep, refModCallbacks);
 }
 
 SdfPath UsdBridgeUsdWriter::AddRef(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
@@ -701,7 +701,7 @@ SdfPath UsdBridgeUsdWriter::AddRef(UsdBridgePrimCache* parentCache, UsdBridgePri
 }
 
 SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-  bool timeVarying, // Timevarying existence of the reference itself
+  bool timeVarying, // Timevarying existence (visible or not) of the reference itself
   bool valueClip,   // Retiming through a value clip
   bool clipStages,  // Separate stages for separate time slots (can only exist in usd if valueClip enabled)
   const char* clipPostfix, double parentTimeStep, double childTimeStep,
