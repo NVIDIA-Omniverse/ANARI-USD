@@ -145,6 +145,8 @@ if (WIN32)
     PUBLIC "${USD_PYTHON_LINK_DIRS}" "${USD_LIB_DIR}")
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
+  target_compile_definitions(UsdBridge PRIVATE
+    _GLIBCXX_USE_CXX11_ABI=0 )
   target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
 endif()
 
