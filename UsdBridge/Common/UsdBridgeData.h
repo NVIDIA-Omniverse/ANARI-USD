@@ -123,8 +123,6 @@ struct UsdBridgeSettings
   bool EnableMdlShader;
 
   // About to be deprecated
-  static constexpr bool EnableDisplayColors = true;
-  static constexpr bool EnableMdlColors = false;
   static constexpr bool EnableStTexCoords = false;
 };
 

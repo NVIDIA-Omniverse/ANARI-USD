@@ -30,8 +30,6 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (positions) \
   (normals) \
   (st) \
-  (st1) \
-  (st2) \
   (attribute0) \
   (attribute1) \
   (attribute2) \

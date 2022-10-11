@@ -170,27 +170,11 @@ namespace
 
     if (timeVarChecked)
     {
-      if(settings.EnableDisplayColors)
-      {
-        primvarApi.CreatePrimvar(UsdBridgeTokens->color, SdfValueTypeNames->Color3fArray);
-      }
-      if(settings.EnableMdlColors)
-      {
-        primvarApi.CreatePrimvar(UsdBridgeTokens->st1, SdfValueTypeNames->TexCoord2fArray);
-        primvarApi.CreatePrimvar(UsdBridgeTokens->st2, SdfValueTypeNames->TexCoord2fArray);
-      }
+      primvarApi.CreatePrimvar(UsdBridgeTokens->color, SdfValueTypeNames->Color3fArray);
     }
     else
     {
-      if(settings.EnableDisplayColors)
-      {
-        primvarApi.RemovePrimvar(UsdBridgeTokens->color);
-      }
-      if(settings.EnableMdlColors)
-      {
-        primvarApi.RemovePrimvar(UsdBridgeTokens->st1);
-        primvarApi.RemovePrimvar(UsdBridgeTokens->st2);
-      }
+      primvarApi.RemovePrimvar(UsdBridgeTokens->color);
     }
   }
 
@@ -781,28 +765,14 @@ namespace
 
     UsdGeomPrimvar uniformDispPrimvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->color);
     UsdGeomPrimvar timeVarDispPrimvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->color);
-    UsdGeomPrimvar uniformSt1Primvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->st1);
-    UsdGeomPrimvar timeVarSt1Primvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->st1);
-    UsdGeomPrimvar uniformSt2Primvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->st2);
-    UsdGeomPrimvar timeVarSt2Primvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->st2);
 
-    if(writer->Settings.EnableDisplayColors)
-    {
-      ClearUsdAttributes(uniformDispPrimvar.GetAttr(), timeVarDispPrimvar.GetAttr(), timeVaryingUpdate);
-    }
-    if (writer->Settings.EnableMdlColors)
-    {
-      ClearUsdAttributes(uniformSt1Primvar.GetAttr(), timeVarSt1Primvar.GetAttr(), timeVaryingUpdate);
-      ClearUsdAttributes(uniformSt2Primvar.GetAttr(), timeVarSt2Primvar.GetAttr(), timeVaryingUpdate);
-    }
+    ClearUsdAttributes(uniformDispPrimvar.GetAttr(), timeVarDispPrimvar.GetAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
       UsdTimeCode timeCode = timeEval.Eval(DMI::COLORS);
 
       UsdGeomPrimvar colorPrimvar = timeVaryingUpdate ? timeVarDispPrimvar : uniformDispPrimvar;
-      UsdGeomPrimvar vc0Primvar = timeVaryingUpdate ? timeVarSt1Primvar : uniformSt1Primvar;
-      UsdGeomPrimvar vc1Primvar = timeVaryingUpdate ? timeVarSt2Primvar : uniformSt2Primvar;
 
       if (geomData.Colors != nullptr)
       {
@@ -810,93 +780,24 @@ namespace
         size_t arrayNumElements = geomData.PerPrimColors ? numPrims : geomData.NumPoints;
         TfToken colorInterpolation = geomData.PerPrimColors ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
 
-        bool typeSupported = true;
-        if(writer->Settings.EnableDisplayColors)
-        {
-          assert(colorPrimvar);
+        assert(colorPrimvar);
 
-          UsdAttribute arrayPrimvar = colorPrimvar;
-          switch (geomData.ColorsType)
-          {
-          case UsdBridgeType::FLOAT3: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
-          case UsdBridgeType::FLOAT4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3fArray, GfVec4f); break; }
-          case UsdBridgeType::DOUBLE3: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
-          case UsdBridgeType::DOUBLE4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3dArray, GfVec4d); break; }
-          default: { typeSupported = false; UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom DisplayColorPrimvar should be FLOAT3, FLOAT4, DOUBLE3 or DOUBLE4."); break; }
-          }
-
-          // Per face or per-vertex interpolation. This will break timesteps that have been written before.
-          uniformDispPrimvar.SetInterpolation(colorInterpolation);
-        }
-        else
+        UsdAttribute arrayPrimvar = colorPrimvar;
+        switch (geomData.ColorsType)
         {
-          typeSupported = (geomData.ColorsType == UsdBridgeType::FLOAT3 || geomData.ColorsType == UsdBridgeType::FLOAT4 ||
-            geomData.ColorsType == UsdBridgeType::DOUBLE3 || geomData.ColorsType == UsdBridgeType::DOUBLE4);
+        case UsdBridgeType::FLOAT3: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
+        case UsdBridgeType::FLOAT4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3fArray, GfVec4f); break; }
+        case UsdBridgeType::DOUBLE3: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
+        case UsdBridgeType::DOUBLE4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3dArray, GfVec4d); break; }
+        default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom DisplayColorPrimvar should be FLOAT3, FLOAT4, DOUBLE3 or DOUBLE4."); break; }
         }
 
-        if (typeSupported && writer->Settings.EnableMdlColors)
-        {
-          assert(vc0Primvar);
-          assert(vc1Primvar);
-
-          // Make sure the "st" array has values
-          {
-            const UsdGeomPrimvarsAPI& outPrimvars = timeVaryingUpdate ? timeVarPrimvars : uniformPrimvars;
-            UsdAttribute texcoordPrimvar = outPrimvars.GetPrimvar(UsdBridgeTokens->st);
-            assert(texcoordPrimvar);
-
-            if (!texcoordPrimvar.HasValue())
-            {
-              VtVec2fArray defaultTexCoords(geomData.NumPoints);
-              defaultTexCoords.assign(geomData.NumPoints, GfVec2f(0.0f, 0.0f));
-
-              texcoordPrimvar.Set(defaultTexCoords, timeCode);
-            }
-          }
-
-          // Fill the vc arrays
-          VtVec2fArray customVertexColors0(arrayNumElements), customVertexColors1(arrayNumElements);
-          int numComponents = (geomData.ColorsType == UsdBridgeType::FLOAT3 || geomData.ColorsType == UsdBridgeType::DOUBLE3) ?
-            3 : 4;
-          double* dElts = (double*)arrayData;
-          float* fElts = (float*)arrayData;
-          bool alphaComponent = (numComponents == 4);
-
-          if (geomData.ColorsType == UsdBridgeType::FLOAT3 || geomData.ColorsType == UsdBridgeType::FLOAT4)
-          {
-            for (int i = 0; i < arrayNumElements; ++i, fElts += numComponents)
-            {
-              customVertexColors0[i] = GfVec2f(fElts[0], fElts[1]);
-              customVertexColors1[i] = GfVec2f(fElts[2], alphaComponent ? fElts[3] : 1.0f);
-            }
-          }
-          else
-          {
-            for (int i = 0; i < arrayNumElements; ++i, dElts += numComponents)
-            {
-              customVertexColors0[i] = GfVec2f((float)(dElts[0]), (float)(dElts[1]));
-              customVertexColors1[i] = GfVec2f((float)(dElts[2]), alphaComponent ? (float)(dElts[3]) : 1.0f);
-            }
-          }
-
-          vc0Primvar.Set(customVertexColors0, timeCode);
-          vc1Primvar.Set(customVertexColors1, timeCode);
-
-          uniformSt1Primvar.SetInterpolation(colorInterpolation);
-          uniformSt2Primvar.SetInterpolation(colorInterpolation);
-        }
+        // Per face or per-vertex interpolation. This will break timesteps that have been written before.
+        uniformDispPrimvar.SetInterpolation(colorInterpolation);
       }
       else
       {
-        if(writer->Settings.EnableDisplayColors)
-        {
-          colorPrimvar.GetAttr().Set(SdfValueBlock(), timeCode);
-        }
-        if (writer->Settings.EnableMdlColors)
-        {
-          vc0Primvar.GetAttr().Set(SdfValueBlock(), timeCode);
-          vc1Primvar.GetAttr().Set(SdfValueBlock(), timeCode);
-        }
+        colorPrimvar.GetAttr().Set(SdfValueBlock(), timeCode);
       }
     }
   }
