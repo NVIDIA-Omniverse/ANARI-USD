@@ -687,8 +687,38 @@ int UsdDevice::getProperty(ANARIObject object,
 {
   if ((void *)object == (void *)this)
   {
-    if (strEquals(name, "version") && type == ANARI_INT32) {
-      writeToVoidP(mem, DEVICE_VERSION);
+    if (strEquals(name, "version") && type == ANARI_INT32)
+    {
+      writeToVoidP(mem, DEVICE_VERSION_BUILD);
+      return 1;
+    }
+    if (strEquals(name, "version.major") && type == ANARI_INT32)
+    {
+      writeToVoidP(mem, DEVICE_VERSION_MAJOR);
+      return 1;
+    }
+    if (strEquals(name, "version.minor") && type == ANARI_INT32)
+    {
+      writeToVoidP(mem, DEVICE_VERSION_MINOR);
+      return 1;
+    }
+    if (strEquals(name, "version.patch") && type == ANARI_INT32)
+    {
+      writeToVoidP(mem, DEVICE_VERSION_PATCH);
+      return 1;
+    }
+    if (strEquals(name, "version.name") && type == ANARI_STRING)
+    {
+      snprintf((char*)mem, size, "%s", DEVICE_VERSION_NAME);
+      return 1;
+    }
+    else if (type == ANARI_UINT64 && strEquals(name, "version.name.size"))
+    {
+      if (Assert64bitStringLengthProperty(size, UsdLogInfo(this, this, ANARI_DEVICE, "UsdDevice"), "version.name.size"))
+      {
+        uint64_t nameLen = strlen(DEVICE_VERSION_NAME)+1;
+        memcpy(mem, &nameLen, size);
+      }
       return 1;
     }
   }
