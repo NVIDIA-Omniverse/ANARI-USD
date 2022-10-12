@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdLight.h"
-#include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdDevice.h"
 

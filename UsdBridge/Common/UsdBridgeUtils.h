@@ -6,6 +6,8 @@
 
 #include "UsdBridgeData.h"
 
+// USD-independent utils for the UsdBridge
+
 const char* UsdBridgeTypeToString(UsdBridgeType type);
 
 #endif

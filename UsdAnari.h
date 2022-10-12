@@ -4,8 +4,11 @@
 #pragma once
 
 #include "UsdBridgeData.h"
-#include "anari/anari_enums.h"
 #include "UsdCommonMacros.h"
+#include "anari/anari_enums.h"
+#include "anari/anari_cpp/Traits.h"
+
+#include <cstring>
 
 class UsdDevice;
 class UsdDataArray;
@@ -21,11 +24,30 @@ class UsdSampler;
 class UsdSpatialField;
 class UsdVolume;
 class UsdWorld;
+class UsdSharedString;
+class UsdBaseObject;
 struct UsdDataLayout;
 
-struct LogInfo
+namespace anari
 {
-  LogInfo(UsdDevice* dev, void* src, ANARIDataType srcType, const char* srcName)
+  ANARI_TYPEFOR_SPECIALIZATION(UsdFloat3, ANARI_FLOAT32_VEC3);
+  ANARI_TYPEFOR_SPECIALIZATION(UsdSampler*, ANARI_SAMPLER);
+  ANARI_TYPEFOR_SPECIALIZATION(UsdSharedString*, ANARI_STRING);
+}
+
+// Shared convenience functions
+namespace
+{
+  inline bool strEquals(const char* arg0, const char* arg1)
+  {
+    return strcmp(arg0, arg1) == 0;
+  }
+}
+
+// Standard log info
+struct UsdLogInfo
+{
+  UsdLogInfo(UsdDevice* dev, void* src, ANARIDataType srcType, const char* srcName)
     : device(dev)
     , source(src)
     , sourceType(srcType)
@@ -38,20 +60,26 @@ struct LogInfo
   const char* sourceName = nullptr;
 };
 
+void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
+  const char *format, const char* firstArg, const char* secondArg); // In case #include <UsdDevice.h> is undesired
+
+#ifdef CHECK_MEMLEAKS  
+void logAllocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj);
+void logDeallocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj);
+#endif
+
+// Anari <=> USD conversions
 UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType);
 UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType);
 size_t AnariTypeSize(ANARIDataType anariType);
 const char* AnariTypeToString(ANARIDataType anariType);
+const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo);
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level);
 
-void reportStatusThroughDevice(const LogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
-  const char *format, const char* firstArg, const char* secondArg); // In case #include <UsdDevice.h> is undesired
-
-bool Assert64bitStringLengthProperty(uint64_t size, const LogInfo& logInfo, const char* propName);
-bool AssertOneDimensional(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName);
-bool AssertNoStride(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName);
-bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const LogInfo& logInfo, const char* errorMessage);
-
+bool Assert64bitStringLengthProperty(uint64_t size, const UsdLogInfo& logInfo, const char* propName);
+bool AssertOneDimensional(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName);
+bool AssertNoStride(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName);
+bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const UsdLogInfo& logInfo, const char* errorMessage);
 
 // Template definitions
 

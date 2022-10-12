@@ -12,6 +12,9 @@ typedef void* SceneStagePtr; // Placeholder for UsdStage*
 class UsdBridge
 {
   public:
+    using MaterialDMI = UsdBridgeMaterialData::DataMemberId;
+    using SamplerDMI = UsdBridgeSamplerData::DataMemberId;
+    using MaterialInputSourceName = std::pair<const char*, MaterialDMI>;
 
     UsdBridge(const UsdBridgeSettings& settings);
     ~UsdBridge();
@@ -47,21 +50,25 @@ class UsdBridge
   
     void SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep);
     void SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep);
+    void SetSurfaceRefs(UsdWorldHandle world, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep);
     void SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep);
+    void SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep);
     void SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep);
     void SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep);
     void SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep);
     void SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle field, double timeStep, double fieldTimeStep);
-    void SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampler, const char* texfileName, bool texfileTimeVarying, double timeStep, double samplerTimeStep);
+    void SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandle* samplers, const UsdSamplerRefData* samplerRefData, size_t numSamplers, double timeStep);
   
     void DeleteInstanceRefs(UsdWorldHandle world, bool timeVarying, double timeStep);
     void DeleteGroupRef(UsdInstanceHandle instance, bool timeVarying, double timeStep);
+    void DeleteSurfaceRefs(UsdWorldHandle world, bool timeVarying, double timeStep);
     void DeleteSurfaceRefs(UsdGroupHandle group, bool timeVarying, double timeStep);
+    void DeleteVolumeRefs(UsdWorldHandle world, bool timeVarying, double timeStep);
     void DeleteVolumeRefs(UsdGroupHandle group, bool timeVarying, double timeStep);
     void DeleteGeometryRef(UsdSurfaceHandle surface, double timeStep);
     void DeleteSpatialFieldRef(UsdVolumeHandle volume, double timeStep);
     void DeleteMaterialRef(UsdSurfaceHandle surface, double timeStep);
-    void DeleteSamplerRef(UsdMaterialHandle material, double timeStep);
+    void DeleteSamplerRefs(UsdMaterialHandle material, double timeStep);
   
     void UpdateBeginEndTime(double timeStep);
     void SetInstanceTransform(UsdInstanceHandle instance, float* transform, bool timeVarying, double timeStep);
@@ -71,10 +78,15 @@ class UsdBridge
     void SetSpatialFieldData(UsdSpatialFieldHandle field, const UsdBridgeVolumeData& volumeData, double timeStep);
     void SetMaterialData(UsdMaterialHandle material, const UsdBridgeMaterialData& matData, double timeStep);
     void SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerData& samplerData, double timeStep);
+
+    void ChangeMaterialInputSourceNames(UsdMaterialHandle material, const MaterialInputSourceName* inputNames, size_t numInputNames, double timeStep, MaterialDMI timeVarying);
+    void ChangeInAttribute(UsdSamplerHandle sampler, const char* newName, double timeStep, SamplerDMI timeVarying);
   
     void SaveScene();
 
-    void GarbageCollect();
+    void ResetResourceUpdateState(); // Eg. clears all dirty flags on shared resources
+
+    void GarbageCollect(); // Deletes all handles without parents (from Set<X>Refs) 
 
     const char* GetPrimPath(UsdBridgeHandle* handle);
 
@@ -91,6 +103,13 @@ class UsdBridge
 
     template<typename GeomDataType>
     void SetGeometryDataTemplate(UsdGeometryHandle geometry, const GeomDataType& geomData, double timeStep);
+
+    template<typename ParentHandleType, typename ChildHandleType>
+    void SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleType* childHandles, uint64_t numChildren, 
+      const char* refPathExt, bool timeVarying, double timeStep);
+
+    template<typename ParentHandleType>
+    void DeleteAllRefs(ParentHandleType parentHandle, const char* refPathExt, bool timeVarying, double timeStep);
 
     UsdBridgeInternals* Internals;
   

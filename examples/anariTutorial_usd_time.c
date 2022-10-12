@@ -13,50 +13,19 @@
 // stb_image
 #include "stb_image_write.h"
 
-const char *g_libraryType = "usd";
-
-#ifdef _WIN32
-const char* texFile = "d:/models/texture.png";
-#else
-const char* texFile = "/home/<username>/models/texture.png"; // Point this to any png
-#endif
-
-const char* wrapS = "repeat";
-const char* wrapT = "repeat";
-
-/******************************************************************/
-void statusFunc(const void *userData,
-  ANARIDevice device,
-  ANARIObject source,
-  ANARIDataType sourceType,
-  ANARIStatusSeverity severity,
-  ANARIStatusCode code,
-  const char *message)
-{
-  (void)userData;
-  if (severity == ANARI_SEVERITY_FATAL_ERROR) {
-    fprintf(stderr, "[FATAL] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_ERROR) {
-    fprintf(stderr, "[ERROR] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_WARNING) {
-    fprintf(stderr, "[WARN ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_PERFORMANCE_WARNING) {
-    fprintf(stderr, "[PERF ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_INFO) {
-    fprintf(stderr, "[INFO] %s\n", message);
-  }
-}
+#include "anariTutorial_usd_common.h"
 
 int main(int argc, const char **argv)
 {
   stbi_flip_vertically_on_write(1);
 
   // image size
-  int imgSize[2] = { 1024, 768 };
+  int frameSize[2] = { 1024, 768 };
+  int textureSize[2] = { 256, 256 };
+
+  uint8_t* textureData = 0;
+  int numTexComponents = 3;
+  textureData = generateTexture(textureSize, numTexComponents);
 
   // camera
   float cam_pos[] = {0.f, 0.f, 0.f};
@@ -126,14 +95,14 @@ int main(int argc, const char **argv)
   int outputOmniverse = 0;
   int connLogVerbosity = 0;
 
-  anariSetParameter(dev, dev, "usd::connection.logverbosity", ANARI_INT32, &connLogVerbosity);
+  anariSetParameter(dev, dev, "usd::connection.logVerbosity", ANARI_INT32, &connLogVerbosity);
 
   if (outputOmniverse)
   {
-    anariSetParameter(dev, dev, "usd::serialize.hostname", ANARI_STRING, "ov-test");
+    anariSetParameter(dev, dev, "usd::serialize.hostName", ANARI_STRING, "ov-test");
     anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
   }
-  anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
+  anariSetParameter(dev, dev, "usd::serialize.outputBinary", ANARI_BOOL, &outputBinary);
 
   // commit device
   anariCommitParameters(dev, dev);
@@ -143,12 +112,15 @@ int main(int argc, const char **argv)
 
   // create and setup camera
   ANARICamera camera = anariNewCamera(dev, "perspective");
-  float aspect = imgSize[0] / (float)imgSize[1];
+  float aspect = frameSize[0] / (float)frameSize[1];
   anariSetParameter(dev, camera, "aspect", ANARI_FLOAT32, &aspect);
   anariSetParameter(dev, camera, "position", ANARI_FLOAT32_VEC3, cam_pos);
   anariSetParameter(dev, camera, "direction", ANARI_FLOAT32_VEC3, cam_view);
   anariSetParameter(dev, camera, "up", ANARI_FLOAT32_VEC3, cam_up);
   anariCommitParameters(dev, camera); // commit each object to indicate mods are done
+
+  // Setup texture array
+  ANARIArray2D texArray = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
 
   printf("done!\n");
   printf("setting up scene...");
@@ -159,6 +131,7 @@ int main(int argc, const char **argv)
   int numTimeSteps = sizeof(timeValues) / sizeof(double);
 
   int useVertexColors = 0;
+  int useTexture = 1;
 
   // CREATE ALL TIMESTEPS:
 
@@ -166,7 +139,7 @@ int main(int argc, const char **argv)
   {
     int doubleNodes = ((timeIdx % 3) == 1);
 
-    anariSetParameter(dev, dev, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+    anariSetParameter(dev, dev, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
     anariCommitParameters(dev, dev);
 
     ANARIWorld world = anariNewWorld(dev);
@@ -205,28 +178,32 @@ int main(int argc, const char **argv)
     anariRelease(dev, array);
 
     int timeVarying = 0xFFFFFFDF;// Texcoords are not timeVarying
-    anariSetParameter(dev, mesh, "usd::timevarying", ANARI_INT32, &timeVarying);
-    anariSetParameter(dev, mesh, "usd::timestep", ANARI_FLOAT64, geomTimeValues + timeIdx);
+    anariSetParameter(dev, mesh, "usd::timeVarying", ANARI_INT32, &timeVarying);
+    anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, geomTimeValues + timeIdx);
 
     anariCommitParameters(dev, mesh);
 
-    ANARISampler sampler = anariNewSampler(dev, "texture2d");
+    ANARISampler sampler = anariNewSampler(dev, "image2D");
     anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler_0");
-    anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
-    anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
-    anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
+    //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+    anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &texArray);
+    anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+    anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
+    anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
     anariCommitParameters(dev, sampler);
 
     ANARIMaterial mat = anariNewMaterial(dev, "matte");
     anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial_0");
 
     float opacity = 1.0;// -timeIdx * 0.1f;
-    anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
-    if(!useVertexColors)
-      anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
-    anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
+    if (useVertexColors)
+      anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
+    else if(useTexture)
+      anariSetParameter(dev, mat, "color", ANARI_SAMPLER, &sampler);
+    else
+      anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
     anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
-    anariSetParameter(dev, mat, "usd::timestep", ANARI_FLOAT64, matTimeValues + timeIdx);
+    anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, matTimeValues + timeIdx);
     anariCommitParameters(dev, mat);
     anariRelease(dev, sampler);
 
@@ -299,22 +276,28 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
-      anariSetParameter(dev, mesh, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+      anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
 
       anariCommitParameters(dev, mesh);
 
-      sampler = anariNewSampler(dev, "texture2d");
+      sampler = anariNewSampler(dev, "image2D");
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler_1");
-      anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
-      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
-      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
+      //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &texArray);
+      anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
+      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
       anariCommitParameters(dev, sampler);
 
       mat = anariNewMaterial(dev, "matte");
       anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial_1");
-      anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
-      anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
-      anariSetParameter(dev, mat, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+      if (useVertexColors)
+        anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
+      else
+        anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
+      anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
+      timeVarying = 1;// Only colors are timevarying
+      anariSetParameter(dev, mat, "usd::timeVarying", ANARI_INT32, &timeVarying);
       anariCommitParameters(dev, mat);
       anariRelease(dev, sampler);
 
@@ -371,7 +354,7 @@ int main(int argc, const char **argv)
     ANARIFrame frame = anariNewFrame(dev);
     ANARIDataType colFormat = ANARI_UFIXED8_RGBA_SRGB;
     ANARIDataType depthFormat = ANARI_FLOAT32;
-    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, imgSize);
+    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, frameSize);
     anariSetParameter(dev, frame, "color", ANARI_DATA_TYPE, &colFormat);
     anariSetParameter(dev, frame, "depth", ANARI_DATA_TYPE, &depthFormat);
 
@@ -381,7 +364,7 @@ int main(int argc, const char **argv)
 
     anariCommitParameters(dev, frame);
 
-    printf("rendering initial frame to firstFrame.png...");
+    printf("rendering frame...");
 
     // render one frame
     anariRenderFrame(dev, frame);
@@ -397,13 +380,16 @@ int main(int argc, const char **argv)
 
     // Remove unused prims in usd
     // Only useful when objects are possibly removed over the whole timeline
-    anariSetParameter(dev, dev, "usd::garbagecollect", ANARI_VOID_POINTER, 0);
+    anariSetParameter(dev, dev, "usd::garbageCollect", ANARI_VOID_POINTER, 0);
 
     // Reset generation of unique names for next frame
     // Only necessary when relying upon auto-generation of names instead of manual creation, AND not retaining ANARI objects over timesteps
-    anariSetParameter(dev, dev, "usd::removeunusednames", ANARI_VOID_POINTER, 0);
+    anariSetParameter(dev, dev, "usd::removeUnusedNames", ANARI_VOID_POINTER, 0);
 
     // ~
+
+    // Constant color get a bit more red every step
+    kd[0] = timeIdx / (float)numTimeSteps;
   }
 
 
@@ -411,7 +397,7 @@ int main(int argc, const char **argv)
 
   for (int timeIdx = 0; timeIdx < numTimeSteps/2; ++timeIdx)
   {
-    anariSetParameter(dev, dev, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx);
+    anariSetParameter(dev, dev, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
     anariCommitParameters(dev, dev);
 
     ANARIWorld world = anariNewWorld(dev);
@@ -451,23 +437,26 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
-      anariSetParameter(dev, mesh, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx*2); // Switch the child timestep for something else
+      anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, timeValues + timeIdx*2); // Switch the child timestep for something else
 
       anariCommitParameters(dev, mesh);
 
-      sampler = anariNewSampler(dev, "texture2d");
+      sampler = anariNewSampler(dev, "image2D");
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler_1");
-      anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
-      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
-      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
+      //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+      anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &texArray);
+      anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+      anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
+      anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
       anariCommitParameters(dev, sampler);
 
       mat = anariNewMaterial(dev, "matte");
       anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial_1");
-      anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
-      //anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
-      anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
-      anariSetParameter(dev, mat, "usd::timestep", ANARI_FLOAT64, timeValues + timeIdx*2);
+      if (useVertexColors)
+        anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
+      else
+        anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
+      anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, timeValues + timeIdx*2);
       anariCommitParameters(dev, mat);
       anariRelease(dev, sampler);
 
@@ -523,7 +512,7 @@ int main(int argc, const char **argv)
     ANARIFrame frame = anariNewFrame(dev);
     ANARIDataType colFormat = ANARI_UFIXED8_RGBA_SRGB;
     ANARIDataType depthFormat = ANARI_FLOAT32;
-    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, imgSize);
+    anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, frameSize);
     anariSetParameter(dev, frame, "color", ANARI_DATA_TYPE, &colFormat);
     anariSetParameter(dev, frame, "depth", ANARI_DATA_TYPE, &depthFormat);
 
@@ -533,7 +522,7 @@ int main(int argc, const char **argv)
 
     anariCommitParameters(dev, frame);
 
-    printf("rendering initial frame to firstFrame.png...");
+    printf("rendering frame...");
 
     // render one frame
     anariRenderFrame(dev, frame);
@@ -545,21 +534,24 @@ int main(int argc, const char **argv)
     anariRelease(dev, frame);
     anariRelease(dev, world);
 
-
     // USD-SPECIFIC RUNTIME:
 
     // Remove unused prims in usd
     // Only useful when objects are possibly removed over the whole timeline
-    anariSetParameter(dev, dev, "usd::garbagecollect", ANARI_VOID_POINTER, 0);
+    anariSetParameter(dev, dev, "usd::garbageCollect", ANARI_VOID_POINTER, 0);
 
     // Reset generation of unique names for next frame
     // Only necessary when relying upon auto-generation of names instead of manual creation, AND not retaining ANARI objects over timesteps
-    anariSetParameter(dev, dev, "usd::removeunusednames", ANARI_VOID_POINTER, 0);
+    anariSetParameter(dev, dev, "usd::removeUnusedNames", ANARI_VOID_POINTER, 0);
 
     // ~
   }
 
+  anariRelease(dev, texArray);
+
   anariRelease(dev, dev);
+
+  freeTexture(textureData);
 
   printf("done!\n");
 

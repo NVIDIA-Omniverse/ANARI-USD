@@ -13,77 +13,29 @@
 // stb_image
 #include "stb_image_write.h"
 
-const char *g_libraryType = "usd";
-
-#ifdef _WIN32
-const char* texFile = "d:/models/texture.png";
-#else
-const char* texFile = "/home/<username>/models/texture.png"; // Point this to any png
-#endif
-
-const char* wrapS = "repeat";
-const char* wrapT = "repeat";
+#include "anariTutorial_usd_common.h"
 
 typedef struct TestParameters
 {
   int writeAtCommit;
   int useVertexColors;
+  int useTexture;
 } TestParameters;
-
-/******************************************************************/
-void statusFunc(const void *userData,
-  ANARIDevice device,
-  ANARIObject source,
-  ANARIDataType sourceType,
-  ANARIStatusSeverity severity,
-  ANARIStatusCode code,
-  const char *message)
-{
-  (void)userData;
-  if (severity == ANARI_SEVERITY_FATAL_ERROR) {
-    fprintf(stderr, "[FATAL] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_ERROR) {
-    fprintf(stderr, "[ERROR] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_WARNING) {
-    fprintf(stderr, "[WARN ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_PERFORMANCE_WARNING) {
-    fprintf(stderr, "[PERF ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_INFO) {
-    fprintf(stderr, "[INFO ] %s\n", message);
-  }
-  else if (severity == ANARI_SEVERITY_DEBUG) {
-    fprintf(stderr, "[DEBUG] %s\n", message);
-  }
-}
-
-void writePNG(const char *fileName, ANARIDevice d, ANARIFrame frame)
-{
-  uint32_t size[2] = {0, 0};
-  ANARIDataType type = ANARI_UNKNOWN;
-  uint32_t *pixel =
-      (uint32_t *)anariMapFrame(d, frame, "color", &size[0], &size[1], &type);
-
-  if (type == ANARI_UFIXED8_RGBA_SRGB)
-    stbi_write_png(fileName, size[0], size[1], 4, pixel, 4 * size[0]);
-  else
-    printf("Incorrectly returned color buffer pixel type, image not saved.\n");
-
-  anariUnmapFrame(d, frame, "color");
-}
 
 void doTest(TestParameters testParams)
 {
   printf("\n\n--------------  Starting new test iteration \n\n");
-  printf("Parameters: writeatcommit %d, useVertexColors %d \n", testParams.writeAtCommit, testParams.useVertexColors);
+  printf("Parameters: writeatcommit %d, useVertexColors %d, useTexture %d \n", testParams.writeAtCommit, testParams.useVertexColors, testParams.useTexture);
 
   stbi_flip_vertically_on_write(1);
 
-  // image size
-  int imgSize[2] = { 1024, 768 };
+  // image sizes
+  int frameSize[2] = { 1024, 768 };
+  int textureSize[2] = { 256, 256 };
+
+  uint8_t* textureData = 0;
+  int numTexComponents = 3;
+  textureData = generateTexture(textureSize, numTexComponents);
 
   // camera
   float cam_pos[] = { 0.f, 0.f, 0.f };
@@ -168,25 +120,22 @@ void doTest(TestParameters testParams)
   int outputMaterial = 1;
   int outputPreviewSurface = 1;
   int outputMdl = 1;
-  int outputDisplayColors = 1;
-  int outputMdlColors = 1;
 
   int useVertexColors = testParams.useVertexColors;
+  int useTexture = testParams.useTexture;
 
-  anariSetParameter(dev, dev, "usd::connection.logverbosity", ANARI_INT32, &connLogVerbosity);
+  anariSetParameter(dev, dev, "usd::connection.logVerbosity", ANARI_INT32, &connLogVerbosity);
 
   if (outputOmniverse)
   {
-    anariSetParameter(dev, dev, "usd::serialize.hostname", ANARI_STRING, "ov-test");
+    anariSetParameter(dev, dev, "usd::serialize.hostName", ANARI_STRING, "ov-test");
     anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
   }
-  anariSetParameter(dev, dev, "usd::serialize.outputbinary", ANARI_BOOL, &outputBinary);
+  anariSetParameter(dev, dev, "usd::serialize.outputBinary", ANARI_BOOL, &outputBinary);
   anariSetParameter(dev, dev, "usd::output.material", ANARI_BOOL, &outputMaterial);
-  anariSetParameter(dev, dev, "usd::output.previewsurfaceshader", ANARI_BOOL, &outputPreviewSurface);
-  anariSetParameter(dev, dev, "usd::output.mdlshader", ANARI_BOOL, &outputMdl);
-  anariSetParameter(dev, dev, "usd::output.displaycolors", ANARI_BOOL, &outputDisplayColors);
-  anariSetParameter(dev, dev, "usd::output.mdlcolors", ANARI_BOOL, &outputMdlColors);
-  anariSetParameter(dev, dev, "usd::writeatcommit", ANARI_BOOL, &testParams.writeAtCommit);
+  anariSetParameter(dev, dev, "usd::output.previewSurfaceShader", ANARI_BOOL, &outputPreviewSurface);
+  anariSetParameter(dev, dev, "usd::output.mdlShader", ANARI_BOOL, &outputMdl);
+  anariSetParameter(dev, dev, "usd::writeAtCommit", ANARI_BOOL, &testParams.writeAtCommit);
 
   // commit device
   anariCommitParameters(dev, dev);
@@ -196,7 +145,7 @@ void doTest(TestParameters testParams)
 
   // create and setup camera
   ANARICamera camera = anariNewCamera(dev, "perspective");
-  float aspect = imgSize[0] / (float)imgSize[1];
+  float aspect = frameSize[0] / (float)frameSize[1];
   anariSetParameter(dev, camera, "aspect", ANARI_FLOAT32, &aspect);
   anariSetParameter(dev, camera, "position", ANARI_FLOAT32_VEC3, cam_pos);
   anariSetParameter(dev, camera, "direction", ANARI_FLOAT32_VEC3, cam_view);
@@ -248,26 +197,38 @@ void doTest(TestParameters testParams)
 
   anariCommitParameters(dev, mesh);
 
+
   // Create a sampler
-  ANARISampler sampler = anariNewSampler(dev, "texture2d");
+  ANARISampler sampler = anariNewSampler(dev, "image2D");
   anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
-  anariSetParameter(dev, sampler, "filename", ANARI_STRING, texFile);
-  anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, &wrapS);
-  anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, &wrapT);
-  anariCommitParameters(dev, sampler);
+
+  anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+  anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
+  anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
+  
+  array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
+  //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+  anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &array);
+  
+  if(useTexture)
+    anariCommitParameters(dev, sampler);
+  anariRelease(dev, array);
 
   // Create a material
   ANARIMaterial mat = anariNewMaterial(dev, "matte");
   anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial");
 
   float opacity = 1.0f;
-  anariSetParameter(dev, mat, "usevertexcolors", ANARI_BOOL, &useVertexColors);
-  if (!useVertexColors)
-    anariSetParameter(dev, mat, "map_kd", ANARI_SAMPLER, &sampler);
-  anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
+  if (useVertexColors)
+    anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
+  else if(useTexture)
+    anariSetParameter(dev, mat, "color", ANARI_SAMPLER, &sampler);
+  else
+    anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
   anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
-  int materialTimeVarying = 1<<2; // Set emissive to timevarying (should appear in material stage under primstages/)
-  anariSetParameter(dev, mat, "usd::timevarying", ANARI_INT32, &materialTimeVarying);
+
+  int materialTimeVarying = 1<<3; // Set emissive to timevarying (should appear in material stage under primstages/)
+  anariSetParameter(dev, mat, "usd::timeVarying", ANARI_INT32, &materialTimeVarying);
   anariCommitParameters(dev, mat);
   anariRelease(dev, sampler);
 
@@ -357,7 +318,7 @@ void doTest(TestParameters testParams)
   ANARIFrame frame = anariNewFrame(dev);
   ANARIDataType colFormat = ANARI_UFIXED8_RGBA_SRGB;
   ANARIDataType depthFormat = ANARI_FLOAT32;
-  anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, imgSize);
+  anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, frameSize);
   anariSetParameter(dev, frame, "color", ANARI_DATA_TYPE, &colFormat);
   anariSetParameter(dev, frame, "depth", ANARI_DATA_TYPE, &depthFormat);
 
@@ -367,26 +328,11 @@ void doTest(TestParameters testParams)
 
   anariCommitParameters(dev, frame);
 
-  printf("rendering initial frame to firstFrame.png...");
+  printf("rendering frame...");
 
   // render one frame
   anariRenderFrame(dev, frame);
   anariFrameReady(dev, frame, ANARI_WAIT);
-
-  // access frame and write its content as PNG file
-  writePNG("firstFrame.png", dev, frame);
-
-  printf("done!\n");
-  printf("rendering 10 accumulated frames to accumulatedFrame.png...");
-
-  // render 10 more frames, which are accumulated to result in a better
-  //   converged image
-  for (int frames = 0; frames < 10; frames++) {
-    anariRenderFrame(dev, frame);
-    anariFrameReady(dev, frame, ANARI_WAIT);
-  }
-
-  writePNG("accumulatedFrame.png", dev, frame);
 
   printf("done!\n");
   printf("\ncleaning up objects...");
@@ -401,6 +347,8 @@ void doTest(TestParameters testParams)
 
   anariUnloadLibrary(lib);
 
+  freeTexture(textureData);
+
   printf("done!\n");
 }
 
@@ -409,16 +357,28 @@ int main(int argc, const char **argv)
 {
   TestParameters testParams;
 
+  // Test standard flow with textures
   testParams.writeAtCommit = 0;
   testParams.useVertexColors = 0;
+  testParams.useTexture = 1;
   doTest(testParams);
 
-  testParams.writeAtCommit = 1;
-  testParams.useVertexColors = 0;
-  doTest(testParams);
-
+  // With vertex colors
   testParams.writeAtCommit = 0;
   testParams.useVertexColors = 1;
+  testParams.useTexture = 0;
+  doTest(testParams);
+
+  // With color constant
+  testParams.writeAtCommit = 0;
+  testParams.useVertexColors = 0;
+  testParams.useTexture = 0;
+  doTest(testParams);
+
+  // Test immediate mode writing
+  testParams.writeAtCommit = 1;
+  testParams.useVertexColors = 0;
+  testParams.useTexture = 1;
   doTest(testParams);
 
   return 0;

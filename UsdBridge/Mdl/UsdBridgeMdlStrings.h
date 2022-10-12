@@ -3,7 +3,7 @@
 
 #include "UsdBridgeMacros.h"
 
-#ifdef SUPPORT_MDL_SHADERS 
+#ifdef CUSTOM_PBR_MDL 
 
 static const char Mdl_PBRBase_string[] = R"matstrdelim(
 /*****************************************************************************
@@ -90,7 +90,7 @@ tex::wrap_mode get_wrap_mode(int wrap_constant)
 
 // -------------------- MATERIAL ----------------------
 
-export material PBR_Base(
+export material OmniPBR(
 
   color diffuse_color_constant = color(0.2f)
   [[

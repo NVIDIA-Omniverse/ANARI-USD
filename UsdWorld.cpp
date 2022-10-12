@@ -2,20 +2,28 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdWorld.h"
-#include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdInstance.h"
+#include "UsdSurface.h"
+#include "UsdVolume.h"
 #include "UsdDevice.h"
 #include "UsdDataArray.h"
+#include "UsdGroup.h"
 
 #define InstanceType ANARI_INSTANCE
+#define SurfaceType ANARI_SURFACE
+#define VolumeType ANARI_VOLUME
 using InstanceUsdType = AnariToUsdBridgedObject<InstanceType>::Type;
+using SurfaceUsdType = AnariToUsdBridgedObject<SurfaceType>::Type;
+using VolumeUsdType = AnariToUsdBridgedObject<VolumeType>::Type;
 
 DEFINE_PARAMETER_MAP(UsdWorld,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
+  REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("instance", ANARI_ARRAY, instances)
+  REGISTER_PARAMETER_MACRO("surface", ANARI_ARRAY, surfaces)
+  REGISTER_PARAMETER_MACRO("volume", ANARI_ARRAY, volumes)
 )
 
 UsdWorld::UsdWorld(const char* name, UsdBridge* bridge)
@@ -49,7 +57,9 @@ bool UsdWorld::deferCommit(UsdDevice* device)
 {
   const UsdWorldData& paramData = getReadParams();
 
-  if(UsdObjectNotInitialized<InstanceUsdType>(paramData.instances))
+  if(UsdObjectNotInitialized<InstanceUsdType>(paramData.instances) ||
+    UsdObjectNotInitialized<SurfaceUsdType>(paramData.surfaces) || 
+    UsdObjectNotInitialized<VolumeUsdType>(paramData.volumes))
   {
     return true;
   }
@@ -84,35 +94,21 @@ void UsdWorld::doCommitRefs(UsdDevice* device)
   const UsdWorldData& paramData = getReadParams();
   double timeStep = device->getReadParams().timeStep;
 
-  bool instancesTimeVarying = paramData.timeVarying != 0;
+  bool instancesTimeVarying = paramData.timeVarying & 1;
+  bool surfacesTimeVarying = paramData.timeVarying & (1 << 1);
+  bool volumesTimeVarying = paramData.timeVarying & (1 << 2);
 
-  if (paramData.instances)
-  {
-    if (paramData.instances->getType() == InstanceType)
-    {
-      const ANARIInstance* instances = reinterpret_cast<const ANARIInstance*>(paramData.instances->getData());
+  UsdLogInfo logInfo(device, this, ANARI_WORLD, this->getName());
 
-      uint64_t numInstances = paramData.instances->getLayout().numItems1;
-      instanceHandles.resize(numInstances);
-      for (uint64_t i = 0; i < numInstances; ++i)
-      {
-        const UsdInstance* usdInstance = reinterpret_cast<const UsdInstance*>(instances[i]);
-        instanceHandles[i] = usdInstance->getUsdHandle();
-      }
+  ManageRefArray<InstanceType, ANARIInstance, UsdInstance>(usdHandle, paramData.instances, instancesTimeVarying, timeStep,
+    instanceHandles, &UsdBridge::SetInstanceRefs, &UsdBridge::DeleteInstanceRefs,
+    usdBridge, logInfo, "UsdWorld commit failed: 'instance' array elements should be of type ANARI_INSTANCE");
 
-      if (numInstances)
-        usdBridge->SetInstanceRefs(usdHandle, &instanceHandles[0], numInstances, instancesTimeVarying, timeStep);
-      else
-        usdBridge->DeleteInstanceRefs(usdHandle, instancesTimeVarying, timeStep);
-    }
-    else
-    {
-      device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
-        "UsdWorld '%s' commit failed: 'instance' array elements should be of type ANARI_INSTANCE", objName);
-    }
-  }
-  else
-  {
-    usdBridge->DeleteInstanceRefs(usdHandle, instancesTimeVarying, timeStep);
-  }
+  ManageRefArray<SurfaceType, ANARISurface, UsdSurface>(usdHandle, paramData.surfaces, surfacesTimeVarying, timeStep,
+    surfaceHandles, &UsdBridge::SetSurfaceRefs, &UsdBridge::DeleteSurfaceRefs,
+    usdBridge, logInfo, "UsdGroup commit failed: 'surface' array elements should be of type ANARI_SURFACE");
+
+  ManageRefArray<VolumeType, ANARIVolume, UsdVolume>(usdHandle, paramData.volumes, volumesTimeVarying, timeStep,
+    volumeHandles, &UsdBridge::SetVolumeRefs, &UsdBridge::DeleteVolumeRefs,
+    usdBridge, logInfo, "UsdGroup commit failed: 'volume' array elements should be of type ANARI_VOLUME");
 }

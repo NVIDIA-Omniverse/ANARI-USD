@@ -97,11 +97,19 @@ set(USDBRIDGE_SOURCES
   Common/UsdBridgeUtils.cpp
   UsdBridgeCaches.cpp
   UsdBridgeUsdWriter.cpp
+  UsdBridgeUsdWriter_Geometry.cpp
+  UsdBridgeUsdWriter_Material.cpp
+  UsdBridgeUsdWriter_Volume.cpp
+  UsdBridgeTimeEvaluator.cpp
   UsdBridge.h
   UsdBridgeCaches.h
   UsdBridgeUsdWriter.h
+  UsdBridgeUsdWriter_Common.h
+  UsdBridgeTimeEvaluator.h
   Common/UsdBridgeData.h
+  Common/UsdBridgeNumerics.h
   Common/UsdBridgeUtils.h
+  Common/UsdBridgeUtils_Internal.h
   Common/UsdBridgeMacros.h
   usd.h
   ${USDBRIDGE_MDL_SOURCES}
@@ -137,6 +145,8 @@ if (WIN32)
     PUBLIC "${USD_PYTHON_LINK_DIRS}" "${USD_LIB_DIR}")
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
+  target_compile_definitions(UsdBridge PRIVATE
+    _GLIBCXX_USE_CXX11_ABI=0 )
   target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
 endif()
 
@@ -144,6 +154,7 @@ endif()
 
 target_link_libraries(UsdBridge
   PRIVATE
+    stb_image
     UsdBridge_Volume
     UsdBridge_Connect
     ${USD_TARGETS}

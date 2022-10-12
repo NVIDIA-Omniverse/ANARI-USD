@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdVolume.h"
-#include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdDevice.h"
 #include "UsdSpatialField.h"
@@ -11,9 +10,9 @@
 DEFINE_PARAMETER_MAP(UsdVolume,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
-  REGISTER_PARAMETER_MACRO("usd::preclassified", ANARI_BOOL, preClassified)
-  REGISTER_PARAMETER_MACRO("usd::timestep::field", ANARI_FLOAT64, fieldRefTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
+  REGISTER_PARAMETER_MACRO("usd::preClassified", ANARI_BOOL, preClassified)
+  REGISTER_PARAMETER_MACRO("usd::time::field", ANARI_FLOAT64, fieldRefTimeStep)
   REGISTER_PARAMETER_MACRO("field", ANARI_SPATIAL_FIELD, field)
   REGISTER_PARAMETER_MACRO("color", ANARI_ARRAY, color)
   REGISTER_PARAMETER_MACRO("opacity", ANARI_ARRAY, opacity)
@@ -60,13 +59,13 @@ bool UsdVolume::CheckTfParams(UsdDevice* device)
 
   const char* debugName = getName();
 
-  LogInfo logInfo(device, this, ANARI_VOLUME, debugName);
+  UsdLogInfo logInfo(device, this, ANARI_VOLUME, debugName);
 
   // Only perform data(type) checks, data upload along with field in UsdVolume::commit()
   const UsdDataArray* tfColor = paramData.color;
   if (paramData.color == nullptr)
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction color array not set.", debugName);
     return false;
   }
@@ -74,35 +73,35 @@ bool UsdVolume::CheckTfParams(UsdDevice* device)
   const UsdDataArray* tfOpacity = paramData.opacity;
   if (tfOpacity == nullptr)
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction opacity not set.", debugName);
     return false;
   }
 
   if (!AssertOneDimensional(tfColor->getLayout(), logInfo, "tfColor"))
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction color array not one-dimensional.", debugName);
     return false;
   }
 
   if (!AssertOneDimensional(tfOpacity->getLayout(), logInfo, "tfOpacity"))
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction opacity array not one-dimensional.", debugName);
     return false;
   }
 
   if (tfColor->getType() != ANARI_FLOAT32_VEC3)
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction color array needs to be of type vec3f.", debugName);
     return false;
   }
 
   if (tfOpacity->getType() != ANARI_FLOAT32)
   {
-    device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdVolume '%s' commit failed: transferfunction opacity array needs to be of type float.", debugName);
     return false;
   }
@@ -224,7 +223,7 @@ bool UsdVolume::doCommitData(UsdDevice* device)
     }
     else
     {
-      device->reportStatus(this, ANARI_SPATIAL_FIELD, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+      device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
         "UsdVolume '%s' commit failed: field reference missing.", debugName);
     }
   }

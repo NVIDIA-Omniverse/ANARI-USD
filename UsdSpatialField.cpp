@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdSpatialField.h"
-#include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdDataArray.h"
 #include "UsdDevice.h"
@@ -13,8 +12,8 @@
 DEFINE_PARAMETER_MAP(UsdSpatialField,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
-  REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
+  REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
+  REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("data", ANARI_ARRAY, data)
   REGISTER_PARAMETER_MACRO("spacing", ANARI_FLOAT32_VEC3, gridSpacing)
   REGISTER_PARAMETER_MACRO("origin", ANARI_FLOAT32_VEC3, gridOrigin)
@@ -63,7 +62,7 @@ bool UsdSpatialField::doCommitData(UsdDevice* device)
   const UsdSpatialFieldData& paramData = getReadParams();
 
   const char* debugName = getName();
-  LogInfo logInfo(device, this, ANARI_SPATIAL_FIELD, debugName);
+  UsdLogInfo logInfo(device, this, ANARI_SPATIAL_FIELD, debugName);
 
   bool isNew = false;
   if(!usdHandle.value)

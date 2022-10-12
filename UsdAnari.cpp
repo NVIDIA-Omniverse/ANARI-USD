@@ -16,6 +16,20 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType)
   case ANARI_INT8_VEC3: return UsdBridgeType::CHAR3;
   case ANARI_INT8_VEC4: return UsdBridgeType::CHAR4;
 
+  case ANARI_UFIXED8: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_VEC2: return UsdBridgeType::UCHAR2;
+  case ANARI_UFIXED8_VEC3: return UsdBridgeType::UCHAR3;
+  case ANARI_UFIXED8_VEC4: return UsdBridgeType::UCHAR4;
+  case ANARI_FIXED8: return UsdBridgeType::CHAR;
+  case ANARI_FIXED8_VEC2: return UsdBridgeType::CHAR2;
+  case ANARI_FIXED8_VEC3: return UsdBridgeType::CHAR3;
+  case ANARI_FIXED8_VEC4: return UsdBridgeType::CHAR4;
+
+  case ANARI_UFIXED8_R_SRGB: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_RA_SRGB: return UsdBridgeType::UCHAR2;
+  case ANARI_UFIXED8_RGB_SRGB: return UsdBridgeType::UCHAR3;
+  case ANARI_UFIXED8_RGBA_SRGB: return UsdBridgeType::UCHAR4;
+
   case ANARI_UINT16: return UsdBridgeType::USHORT;
   case ANARI_UINT16_VEC2: return UsdBridgeType::USHORT2;
   case ANARI_UINT16_VEC3: return UsdBridgeType::USHORT3;
@@ -24,6 +38,15 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType)
   case ANARI_INT16_VEC2: return UsdBridgeType::SHORT2;
   case ANARI_INT16_VEC3: return UsdBridgeType::SHORT3;
   case ANARI_INT16_VEC4: return UsdBridgeType::SHORT4;
+
+  case ANARI_UFIXED16: return UsdBridgeType::USHORT;
+  case ANARI_UFIXED16_VEC2: return UsdBridgeType::USHORT2;
+  case ANARI_UFIXED16_VEC3: return UsdBridgeType::USHORT3;
+  case ANARI_UFIXED16_VEC4: return UsdBridgeType::USHORT4;
+  case ANARI_FIXED16: return UsdBridgeType::SHORT;
+  case ANARI_FIXED16_VEC2: return UsdBridgeType::SHORT2;
+  case ANARI_FIXED16_VEC3: return UsdBridgeType::SHORT3;
+  case ANARI_FIXED16_VEC4: return UsdBridgeType::SHORT4;
 
   case ANARI_UINT32: return UsdBridgeType::UINT;
   case ANARI_UINT32_VEC2: return UsdBridgeType::UINT2;
@@ -34,14 +57,23 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType)
   case ANARI_INT32_VEC3: return UsdBridgeType::INT3;
   case ANARI_INT32_VEC4: return UsdBridgeType::INT4;
 
-  case ANARI_INT64: return UsdBridgeType::LONG;
-  case ANARI_INT64_VEC2: return UsdBridgeType::LONG2;
-  case ANARI_INT64_VEC3: return UsdBridgeType::LONG3;
-  case ANARI_INT64_VEC4: return UsdBridgeType::LONG4;
+  case ANARI_UFIXED32: return UsdBridgeType::UINT;
+  case ANARI_UFIXED32_VEC2: return UsdBridgeType::UINT2;
+  case ANARI_UFIXED32_VEC3: return UsdBridgeType::UINT3;
+  case ANARI_UFIXED32_VEC4: return UsdBridgeType::UINT4;
+  case ANARI_FIXED32: return UsdBridgeType::INT;
+  case ANARI_FIXED32_VEC2: return UsdBridgeType::INT2;
+  case ANARI_FIXED32_VEC3: return UsdBridgeType::INT3;
+  case ANARI_FIXED32_VEC4: return UsdBridgeType::INT4;
+
   case ANARI_UINT64: return UsdBridgeType::ULONG;
   case ANARI_UINT64_VEC2: return UsdBridgeType::ULONG2;
   case ANARI_UINT64_VEC3: return UsdBridgeType::ULONG3;
   case ANARI_UINT64_VEC4: return UsdBridgeType::ULONG4;
+  case ANARI_INT64: return UsdBridgeType::LONG;
+  case ANARI_INT64_VEC2: return UsdBridgeType::LONG2;
+  case ANARI_INT64_VEC3: return UsdBridgeType::LONG3;
+  case ANARI_INT64_VEC4: return UsdBridgeType::LONG4;
 
   case ANARI_FLOAT32: return UsdBridgeType::FLOAT;
   case ANARI_FLOAT32_VEC2: return UsdBridgeType::FLOAT2;
@@ -70,6 +102,20 @@ UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType)
   case ANARI_INT8_VEC3: return UsdBridgeType::CHAR;
   case ANARI_INT8_VEC4: return UsdBridgeType::CHAR;
 
+  case ANARI_UFIXED8: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_VEC2: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_VEC3: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_VEC4: return UsdBridgeType::UCHAR;
+  case ANARI_FIXED8: return UsdBridgeType::CHAR;
+  case ANARI_FIXED8_VEC2: return UsdBridgeType::CHAR;
+  case ANARI_FIXED8_VEC3: return UsdBridgeType::CHAR;
+  case ANARI_FIXED8_VEC4: return UsdBridgeType::CHAR;
+
+  case ANARI_UFIXED8_R_SRGB: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_RA_SRGB: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_RGB_SRGB: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_RGBA_SRGB: return UsdBridgeType::UCHAR;
+
   case ANARI_UINT16: return UsdBridgeType::USHORT;
   case ANARI_UINT16_VEC2: return UsdBridgeType::USHORT;
   case ANARI_UINT16_VEC3: return UsdBridgeType::USHORT;
@@ -78,6 +124,15 @@ UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType)
   case ANARI_INT16_VEC2: return UsdBridgeType::SHORT;
   case ANARI_INT16_VEC3: return UsdBridgeType::SHORT;
   case ANARI_INT16_VEC4: return UsdBridgeType::SHORT;
+
+  case ANARI_UFIXED16: return UsdBridgeType::USHORT;
+  case ANARI_UFIXED16_VEC2: return UsdBridgeType::USHORT;
+  case ANARI_UFIXED16_VEC3: return UsdBridgeType::USHORT;
+  case ANARI_UFIXED16_VEC4: return UsdBridgeType::USHORT;
+  case ANARI_FIXED16: return UsdBridgeType::SHORT;
+  case ANARI_FIXED16_VEC2: return UsdBridgeType::SHORT;
+  case ANARI_FIXED16_VEC3: return UsdBridgeType::SHORT;
+  case ANARI_FIXED16_VEC4: return UsdBridgeType::SHORT;
 
   case ANARI_UINT32: return UsdBridgeType::UINT;
   case ANARI_UINT32_VEC2: return UsdBridgeType::UINT;
@@ -88,15 +143,24 @@ UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType)
   case ANARI_INT32_VEC3: return UsdBridgeType::INT;
   case ANARI_INT32_VEC4: return UsdBridgeType::INT;
 
-  case ANARI_INT64: return UsdBridgeType::LONG;
-  case ANARI_INT64_VEC2: return UsdBridgeType::LONG;
-  case ANARI_INT64_VEC3: return UsdBridgeType::LONG;
-  case ANARI_INT64_VEC4: return UsdBridgeType::LONG;
+  case ANARI_UFIXED32: return UsdBridgeType::UINT;
+  case ANARI_UFIXED32_VEC2: return UsdBridgeType::UINT;
+  case ANARI_UFIXED32_VEC3: return UsdBridgeType::UINT;
+  case ANARI_UFIXED32_VEC4: return UsdBridgeType::UINT;
+  case ANARI_FIXED32: return UsdBridgeType::INT;
+  case ANARI_FIXED32_VEC2: return UsdBridgeType::INT;
+  case ANARI_FIXED32_VEC3: return UsdBridgeType::INT;
+  case ANARI_FIXED32_VEC4: return UsdBridgeType::INT;
+
   case ANARI_UINT64: return UsdBridgeType::ULONG;
   case ANARI_UINT64_VEC2: return UsdBridgeType::ULONG;
   case ANARI_UINT64_VEC3: return UsdBridgeType::ULONG;
   case ANARI_UINT64_VEC4: return UsdBridgeType::ULONG;
-
+  case ANARI_INT64: return UsdBridgeType::LONG;
+  case ANARI_INT64_VEC2: return UsdBridgeType::LONG;
+  case ANARI_INT64_VEC3: return UsdBridgeType::LONG;
+  case ANARI_INT64_VEC4: return UsdBridgeType::LONG;
+  
   case ANARI_FLOAT32: return UsdBridgeType::FLOAT;
   case ANARI_FLOAT32_VEC2: return UsdBridgeType::FLOAT;
   case ANARI_FLOAT32_VEC3: return UsdBridgeType::FLOAT;
@@ -447,6 +511,32 @@ const char* AnariTypeToString(ANARIDataType anariType)
   return typeString;
 }
 
+const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo)
+{
+  if(strEquals(param, "worldPosition")
+  || strEquals(param, "worldNormal"))
+  {
+    reportStatusThroughDevice(logInfo, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+      "UsdSampler '%s' inAttribute %s not supported, use inTransform parameter on object-space attribute instead.", logInfo.sourceName, param);
+  }
+  if(strEquals(param, "objectPosition"))
+  {
+    if(perInstance)
+      return "positions";
+    else
+      return "points";
+  }
+  else if(strEquals(param, "objectNormal"))
+  {
+    return "normals";
+  }
+  //else if(!strncmp(param, "attribute", 9))
+  //{
+  //  return param;
+  //}
+  return param; // The generic case just returns the param itself
+}
+
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level)
 {
   ANARIStatusSeverity severity = ANARI_SEVERITY_INFO;
@@ -460,15 +550,28 @@ ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level)
   return severity;
 }
 
-void reportStatusThroughDevice(const LogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
+void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity severity, ANARIStatusCode statusCode,
   const char *format, const char* firstArg, const char* secondArg)
 {
-  logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, severity, statusCode, format, firstArg, secondArg);
+  if(logInfo.device)
+    logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, severity, statusCode, format, firstArg, secondArg);
 }
 
-bool Assert64bitStringLengthProperty(uint64_t size, const LogInfo& logInfo, const char* name)
+#ifdef CHECK_MEMLEAKS
+void logAllocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj)
 {
-  if (size != sizeof(uint64_t))
+  device->LogAllocation(obj);
+}
+
+void logDeallocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj)
+{
+  device->LogDeallocation(obj);
+}
+#endif
+
+bool Assert64bitStringLengthProperty(uint64_t size, const UsdLogInfo& logInfo, const char* name)
+{
+  if (size != sizeof(uint64_t) && logInfo.device)
   {
     logInfo.device->reportStatus(logInfo.source, ANARI_OBJECT, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "On object '%s', getProperty() on %s, size parameter differs from sizeof(uint64_t)", logInfo.sourceName, name);
@@ -477,9 +580,9 @@ bool Assert64bitStringLengthProperty(uint64_t size, const LogInfo& logInfo, cons
   return true;
 }
 
-bool AssertOneDimensional(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName)
+bool AssertOneDimensional(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName)
 {
-  if (!layout.isOneDimensional())
+  if (!layout.isOneDimensional() && logInfo.device)
   {
     logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "On object '%s', '%s' array has to be 1-dimensional.", logInfo.sourceName, arrayName);
     return false;
@@ -487,9 +590,9 @@ bool AssertOneDimensional(const UsdDataLayout& layout, const LogInfo& logInfo, c
   return true;
 }
 
-bool AssertNoStride(const UsdDataLayout& layout, const LogInfo& logInfo, const char* arrayName)
+bool AssertNoStride(const UsdDataLayout& layout, const UsdLogInfo& logInfo, const char* arrayName)
 {
-  if (!layout.isDense())
+  if (!layout.isDense() && logInfo.device)
   {
     logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "On object '%s', '%s' layout strides should all be 0.", logInfo.sourceName, arrayName);
     return false;
@@ -497,9 +600,9 @@ bool AssertNoStride(const UsdDataLayout& layout, const LogInfo& logInfo, const c
   return true;
 }
 
-bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const LogInfo& logInfo, const char* errorMessage)
+bool AssertArrayType(UsdDataArray* dataArray, ANARIDataType dataType, const UsdLogInfo& logInfo, const char* errorMessage)
 {
-  if (dataArray && dataArray->getType() != dataType)
+  if (dataArray && dataArray->getType() != dataType && logInfo.device)
   {
     logInfo.device->reportStatus(logInfo.source, logInfo.sourceType, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "On object '%s', '%s'", logInfo.sourceName, errorMessage);
     return false;

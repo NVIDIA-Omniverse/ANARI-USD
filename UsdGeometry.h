@@ -46,6 +46,8 @@ struct UsdGeometryData
   // Curves
 };
 
+struct UsdGeometryTempArrays;
+
 class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, UsdGeometryHandle>
 {
   protected:
@@ -75,18 +77,12 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
     void filterResetParam(
       const char *name) override;
 
-    struct TempArrays
-    {
-      std::vector<int> CurveLengths;
-      std::vector<float> PointsArray;
-      std::vector<float> NormalsArray;
-      std::vector<float> ColorsArray;
-      std::vector<float> ScalesArray;
-      std::vector<float> OrientationsArray;
-      std::vector<int64_t> IdsArray;
-      std::vector<int64_t> InvisIdsArray;
-      AttributeDataArraysType AttributeDataArrays;
-    };
+    bool isInstanced() const 
+    { 
+      return type == GEOM_SPHERE 
+        || type == GEOM_CONE 
+        || type == GEOM_CYLINDER; 
+    }
 
   protected:
     bool deferCommit(UsdDevice* device) override;
@@ -120,7 +116,7 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
 
     GeomType geomType = GEOM_UNKNOWN;
 
-    std::unique_ptr<TempArrays> tempArrays;
+    std::unique_ptr<UsdGeometryTempArrays> tempArrays;
 
     AttributeArray attributeArray;
 };

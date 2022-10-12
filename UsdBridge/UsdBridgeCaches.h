@@ -6,8 +6,11 @@
 
 #include <string>
 #include <map>
+#include <vector>
+#include <memory>
 
 #include "UsdBridgeData.h"
+#include "UsdBridgeUtils_Internal.h"
 
 struct UsdBridgePrimCache;
 class UsdBridgeUsdWriter;
@@ -15,10 +18,37 @@ class UsdBridgePrimCacheManager;
 
 typedef std::pair<std::string, UsdStageRefPtr> UsdStagePair; //Stage ptr and filename
 typedef std::pair<std::pair<bool,bool>, UsdBridgePrimCache*> BoolEntryPair; // Prim exists in stage, prim exists in cache, result cache entry ptr
-typedef void (*ResourceCollectFunc)(const UsdBridgePrimCache*, const UsdBridgeUsdWriter&);
+typedef void (*ResourceCollectFunc)(UsdBridgePrimCache*, UsdBridgeUsdWriter&);
 typedef std::function<void(UsdBridgePrimCache*)> AtRemoveFunc;
 typedef std::vector<UsdBridgePrimCache*> UsdBridgePrimCacheList;
 
+struct UsdBridgeResourceKey
+{ 
+  UsdBridgeResourceKey() = default;
+  ~UsdBridgeResourceKey() = default;
+  UsdBridgeResourceKey(const UsdBridgeResourceKey& key) = default;
+  UsdBridgeResourceKey(const char* n, double t)
+  {
+    name = n;
+#ifdef TIME_BASED_CACHING
+    timeStep = t;
+#endif    
+  }
+
+  const char* name;
+#ifdef TIME_BASED_CACHING
+  double timeStep;  
+#endif
+
+  bool operator==(const UsdBridgeResourceKey& rhs) const
+  {
+    return ( name ? (rhs.name ? (strEquals(name, rhs.name) 
+#ifdef TIME_BASED_CACHING
+      && timeStep == rhs.timeStep
+#endif
+      ) : false ) : !rhs.name);
+  }
+};
 
 struct UsdBridgeRefCache
 {
@@ -41,17 +71,34 @@ protected:
 
 struct UsdBridgePrimCache : public UsdBridgeRefCache
 {
+  using ResourceContainer = std::vector<UsdBridgeResourceKey>;
+
   //Constructors
   UsdBridgePrimCache(const SdfPath& pp, const SdfPath& nm, ResourceCollectFunc cf)
     : PrimPath(pp), Name(nm), ResourceCollect(cf)
 #ifndef NDEBUG
     , Debug_Name(nm.GetString())
 #endif
-  {}
+  {
+    if(cf)
+    {
+      ResourceKeys = std::make_unique<ResourceContainer>();
+    }
+  }
 
   SdfPath PrimPath;
   SdfPath Name;
   ResourceCollectFunc ResourceCollect;
+  std::unique_ptr<ResourceContainer> ResourceKeys; // Referenced resources
+
+  bool AddResourceKey(UsdBridgeResourceKey key) // copy by value
+  {
+    assert(ResourceKeys);
+    bool newEntry = std::find(ResourceKeys->begin(), ResourceKeys->end(), key) == ResourceKeys->end();
+    if(newEntry)
+      ResourceKeys->push_back(key);
+    return newEntry;
+  }
 
 #ifdef VALUE_CLIP_RETIMING
   UsdStagePair ManifestStage; // Holds the manifest

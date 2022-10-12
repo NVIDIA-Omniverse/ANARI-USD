@@ -54,7 +54,7 @@ class UsdRefCountWrapped : public UsdBaseObject
   public:
     UsdRefCountWrapped(ANARIDataType t, InitType i)
         : UsdBaseObject(t)
-        , Data(i)
+        , data(i)
     {}
 
     // We should split the refcounted+type into its own class instead of overriding
@@ -76,7 +76,7 @@ class UsdRefCountWrapped : public UsdBaseObject
 
     void commit(UsdDevice* device) override {}
 
-    BaseType Data;
+    BaseType data;
 
   protected:
     virtual bool deferCommit(UsdDevice* device) { return false; }
@@ -92,5 +92,5 @@ class UsdSharedString : public UsdRefCountWrapped<std::string, const char*>
     {}
 
     static const char* c_str(const UsdSharedString* string) { return string ? string->c_str() : nullptr; }
-    const char* c_str() const { return Data.c_str(); }
+    const char* c_str() const { return data.c_str(); }
 };

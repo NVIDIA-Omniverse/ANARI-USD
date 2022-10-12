@@ -65,13 +65,13 @@ const void* UsdFrame::mapBuffer(const char *channel,
   *height = paramData.size[1];
   *pixelType = ANARI_UNKNOWN;
 
-  if (strcmp(channel, "color") == 0)
+  if (strEquals(channel, "color"))
   {
     mappedColorMem = ReserveBuffer(paramData.color);
     *pixelType = paramData.color;
     return mappedColorMem;
   }
-  else if (strcmp(channel, "depth") == 0)
+  else if (strEquals(channel, "depth"))
   {
     mappedDepthMem = ReserveBuffer(paramData.depth);
     *pixelType = paramData.depth;
@@ -86,12 +86,12 @@ const void* UsdFrame::mapBuffer(const char *channel,
 
 void UsdFrame::unmapBuffer(const char *channel)
 {
-  if (strcmp(channel, "color") == 0)
+  if (strEquals(channel, "color"))
   {
     delete[] mappedColorMem;
     mappedColorMem = nullptr;
   }
-  else if (strcmp(channel, "depth") == 0)
+  else if (strEquals(channel, "depth"))
   {
     delete[] mappedDepthMem;
     mappedDepthMem = nullptr;

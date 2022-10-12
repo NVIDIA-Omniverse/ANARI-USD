@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdSurface.h"
-#include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdDevice.h"
 #include "UsdMaterial.h"
@@ -16,8 +15,8 @@ using MaterialUsdType = AnariToUsdBridgedObject<MaterialType>::Type;
 DEFINE_PARAMETER_MAP(UsdSurface,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timestep::geometry", ANARI_FLOAT64, geometryRefTimeStep)
-  REGISTER_PARAMETER_MACRO("usd::timestep::material", ANARI_FLOAT64, materialRefTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::time::geometry", ANARI_FLOAT64, geometryRefTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::time::material", ANARI_FLOAT64, materialRefTimeStep)
   REGISTER_PARAMETER_MACRO("geometry", GeometryType, geometry)
   REGISTER_PARAMETER_MACRO("material", MaterialType, material)
 )
@@ -104,6 +103,8 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
         selectRefTime(paramData.geometryRefTimeStep, geomObjTimeStep, worldTimeStep),
         selectRefTime(paramData.materialRefTimeStep, matObjTimeStep, worldTimeStep)
         );
+
+      paramData.material->setPerInstance(paramData.geometry->isInstanced(), device); // Make sure the material/samplers know whether they are bound to per-instance geometry (has an effect on source primvar names)
     }
     else
     {

@@ -11,9 +11,12 @@ struct UsdSamplerData
   UsdSharedString* usdName = nullptr;
 
   double timeStep = 0.0;
-  int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0:fileName, 1:wrapS, 2:wrapT
+  int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0:imageUrl, 1:wrapS, 2:wrapT
 
-  UsdSharedString* fileName = nullptr;
+  const UsdDataArray* imageData = nullptr;
+
+  UsdSharedString* inAttribute = nullptr; 
+  UsdSharedString* imageUrl = nullptr;
   UsdSharedString* wrapS = nullptr;
   UsdSharedString* wrapT = nullptr;
   UsdSharedString* wrapR = nullptr;
@@ -42,6 +45,9 @@ class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSa
     void filterResetParam(
       const char *name) override;
 
+    bool isPerInstance() const { return perInstance; }
+    void setPerInstance(bool enable, UsdDevice* device);
+
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;
@@ -49,4 +55,6 @@ class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSa
 
     SamplerType samplerType = SAMPLER_UNKNOWN;
 
+    bool perInstance = false; // Whether sampler is attached to a point instancer
+    bool instanceAttributeAttached = false; // Whether a value to inAttribute has been set which in USD is different between per-instance and regular geometries
 };

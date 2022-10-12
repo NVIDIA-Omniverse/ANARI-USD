@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdGeometry.h"
-#include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdDataArray.h"
 #include "UsdDevice.h"
@@ -13,9 +12,9 @@
 DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
-  REGISTER_PARAMETER_MACRO("usd::timestep", ANARI_FLOAT64, timeStep)
-  REGISTER_PARAMETER_MACRO("usd::timevarying", ANARI_INT32, timeVarying)
-  REGISTER_PARAMETER_MACRO("usd::usepointinstancer", ANARI_INT32, UseUsdGeomPointInstancer) // Use UsdGeomPointInstancer instead of UsdGeomPoints
+  REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
+  REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
+  REGISTER_PARAMETER_MACRO("usd::usePointInstancer", ANARI_INT32, UseUsdGeomPointInstancer) // Use UsdGeomPointInstancer instead of UsdGeomPoints
   REGISTER_PARAMETER_MACRO("primitive.index", ANARI_ARRAY, indices)
   REGISTER_PARAMETER_MACRO("primitive.normal", ANARI_ARRAY, primitiveNormals)
   REGISTER_PARAMETER_MACRO("primitive.color", ANARI_ARRAY, primitiveColors)
@@ -31,6 +30,101 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
 ) // See .h for usage.
 
 static constexpr int TIMEVAR_ATTRIBUTE_START_BIT = 6;
+
+struct UsdGeometryTempArrays
+{
+  UsdGeometryTempArrays(const UsdGeometry::AttributeArray& attributes)
+    : Attributes(attributes)
+  {}
+
+  std::vector<int> CurveLengths;
+  std::vector<float> PointsArray;
+  std::vector<float> NormalsArray;
+  std::vector<float> ScalesArray;
+  std::vector<float> OrientationsArray;
+  std::vector<int64_t> IdsArray;
+  std::vector<int64_t> InvisIdsArray;
+  std::vector<char> ColorsArray; // generic byte array
+  ANARIDataType ColorsArrayType;
+  UsdGeometry::AttributeDataArraysType AttributeDataArrays;
+  
+  const UsdGeometry::AttributeArray& Attributes;
+  
+  void resetColorsArray(size_t numElements, ANARIDataType type)
+  {
+    ColorsArray.resize(numElements*anari::sizeOf(type));
+    ColorsArrayType = type;
+  }
+
+  void reserveColorsArray(size_t numElements)
+  {
+    ColorsArray.reserve(numElements*anari::sizeOf(ColorsArrayType));
+  }
+
+  size_t expandColorsArray(size_t numElements)
+  {
+    size_t startByte = ColorsArray.size();
+    size_t typeSize = anari::sizeOf(ColorsArrayType);
+    ColorsArray.resize(startByte+numElements*typeSize);
+    return startByte/typeSize;
+  }
+  
+  void copyToColorsArray(const void* source, size_t srcIdx, size_t destIdx, size_t numElements)
+  {
+    size_t typeSize = anari::sizeOf(ColorsArrayType);
+    size_t srcStart = srcIdx*typeSize;
+    size_t dstStart = destIdx*typeSize;
+    size_t numBytes = numElements*typeSize;
+    assert(dstStart+numBytes <= ColorsArray.size());
+    memcpy(ColorsArray.data()+dstStart, reinterpret_cast<const char*>(source)+srcStart, numBytes);
+  }
+
+  void resetAttributeDataArray(size_t attribIdx, size_t numElements)
+  {
+    if(Attributes[attribIdx].Data)
+    {
+      uint32_t eltSize = Attributes[attribIdx].EltSize;
+      AttributeDataArrays[attribIdx].resize(numElements*eltSize);
+    }
+    else
+      AttributeDataArrays[attribIdx].resize(0);
+  }
+  
+  void reserveAttributeDataArray(size_t attribIdx, size_t numElements)
+  {
+    if(Attributes[attribIdx].Data)
+    {
+      uint32_t eltSize = Attributes[attribIdx].EltSize;
+      AttributeDataArrays[attribIdx].reserve(numElements*eltSize);
+    } 
+  }
+
+  size_t expandAttributeDataArray(size_t attribIdx, size_t numElements)
+  {
+    if(Attributes[attribIdx].Data)
+    {
+      uint32_t eltSize = Attributes[attribIdx].EltSize;
+      size_t startByte = AttributeDataArrays[attribIdx].size();
+      AttributeDataArrays[attribIdx].resize(startByte+numElements*eltSize);
+      return startByte/eltSize;
+    }
+    return 0;
+  }
+
+  void copyToAttributeDataArray(size_t attribIdx, size_t srcIdx, size_t destIdx, size_t numElements)
+  {
+    if(Attributes[attribIdx].Data)
+    {
+      uint32_t eltSize = Attributes[attribIdx].EltSize;
+      const void* attribSrc = reinterpret_cast<const char*>(Attributes[attribIdx].Data) + srcIdx*eltSize;
+      size_t dstStart = destIdx*eltSize;
+      size_t numBytes = numElements*eltSize;
+      assert(dstStart+numBytes <= AttributeDataArrays[attribIdx].size());
+      void* attribDest = &AttributeDataArrays[attribIdx][dstStart];
+      memcpy(attribDest, attribSrc, numElements*eltSize);
+    }
+  }
+};
 
 namespace
 {
@@ -120,22 +214,22 @@ namespace
     if (type == ANARI_FLOAT32_VEC4)
     {
       const float* vertf = reinterpret_cast<const float*>(vertices);
-      result[0] = vertf[idx * 3];
-      result[1] = vertf[idx * 3 + 1];
-      result[2] = vertf[idx * 3 + 2];
-      result[3] = vertf[idx * 3 + 3];
+      result[0] = vertf[idx * 4];
+      result[1] = vertf[idx * 4 + 1];
+      result[2] = vertf[idx * 4 + 2];
+      result[3] = vertf[idx * 4 + 3];
     }
     else if (type == ANARI_FLOAT64_VEC4)
     {
       const double* vertd = reinterpret_cast<const double*>(vertices);
-      result[0] = (float)vertd[idx * 3];
-      result[1] = (float)vertd[idx * 3 + 1];
-      result[2] = (float)vertd[idx * 3 + 2];
-      result[3] = (float)vertd[idx * 3 + 3];
+      result[0] = (float)vertd[idx * 4];
+      result[1] = (float)vertd[idx * 4 + 1];
+      result[2] = (float)vertd[idx * 4 + 2];
+      result[3] = (float)vertd[idx * 4 + 3];
     }
   }
 
-  void generateIndexedSphereData(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays)
+  void generateIndexedSphereData(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometryTempArrays* tempArrays)
   {
     if (paramData.indices)
     {
@@ -148,20 +242,16 @@ namespace
       bool perPrimScales = !paramData.vertexRadii && paramData.primitiveRadii;
       bool perPrimColors = !paramData.vertexColors && paramData.primitiveColors;
 
+      ANARIDataType colorType = perPrimColors ? paramData.primitiveColors->getType() : ANARI_UINT8; // Vertex colors aren't reordered
+
       // Effectively only has to reorder if the source array is perPrim, otherwise this function effectively falls through and the source array is assigned directly at parent scope.
       tempArrays->NormalsArray.resize(perPrimNormals ? numVertices*3 : 0);
       tempArrays->ScalesArray.resize(perPrimScales ?  numVertices : 0);
-      tempArrays->ColorsArray.resize(perPrimColors ?  numVertices*4 : 0);
       tempArrays->IdsArray.resize(numVertices, -1); // Always filled, since indices implies necessity for invisibleIds, and therefore also an Id array
+      tempArrays->resetColorsArray(perPrimColors ?  numVertices : 0, colorType);
       for(size_t attribIdx = 0; attribIdx < attribDataArrays.size(); ++attribIdx)
       {
-        if(attributeArray[attribIdx].Data && attributeArray[attribIdx].PerPrimData)
-        {
-          uint32_t eltSize = attributeArray[attribIdx].EltSize;
-          attribDataArrays[attribIdx].resize(numVertices*eltSize);
-        }
-        else
-          attribDataArrays[attribIdx].resize(0);
+        tempArrays->resetAttributeDataArray(attribIdx, attributeArray[attribIdx].PerPrimData ? numVertices : 0);
       }
 
       const void* indices = paramData.indices->getData();
@@ -190,37 +280,30 @@ namespace
         // Colors 
         if (perPrimColors)
         {
-          float* colorsDest = &tempArrays->ColorsArray[vertIdx * 4];
-          colorsDest[3] = 0.0f;
-          if (paramData.vertexColors->getType() == ANARI_FLOAT32_VEC3 || paramData.vertexColors->getType() == ANARI_FLOAT64_VEC3)
-            getValues3(paramData.primitiveColors->getData(), paramData.primitiveColors->getType(), primIdx, colorsDest);
-          else
-            getValues4(paramData.primitiveColors->getData(), paramData.primitiveColors->getType(), primIdx, colorsDest);
+          assert(primIdx < paramData.primitiveColors->getLayout().numItems1);
+          tempArrays->copyToColorsArray(paramData.primitiveColors->getData(), primIdx, vertIdx, 1);
         }
 
         // Attributes
         for(size_t attribIdx = 0; attribIdx < attribDataArrays.size(); ++attribIdx)
         {
-          if(attributeArray[attribIdx].Data && attributeArray[attribIdx].PerPrimData)
-          {
-            uint32_t eltSize = attributeArray[attribIdx].EltSize;
-            const void* attribSrc = reinterpret_cast<const char*>(attributeArray[attribIdx].Data) + primIdx*eltSize;
-            void* attribDest = &attribDataArrays[attribIdx][vertIdx*eltSize];
-            memcpy(attribDest, attribSrc, eltSize);
+          if(attributeArray[attribIdx].PerPrimData)
+          { 
+            tempArrays->copyToAttributeDataArray(attribIdx, primIdx, vertIdx, 1);
           }
         }
 
         // Ids
         if (paramData.primitiveIds)
         {
-          int64_t id = (int64_t)getIndex(paramData.primitiveIds->getData(), paramData.primitiveIds->getType(), primIdx);
+          int64_t id = static_cast<int64_t>(getIndex(paramData.primitiveIds->getData(), paramData.primitiveIds->getType(), primIdx));
           tempArrays->IdsArray[vertIdx] = id;
           if (id > maxId)
             maxId = id;
         }
         else
         {
-          int64_t id = (int64_t)vertIdx;
+          int64_t id = static_cast<int64_t>(vertIdx);
           maxId = tempArrays->IdsArray[vertIdx] = id;
         }
       }
@@ -240,7 +323,7 @@ namespace
     }
   }
 
-  void convertLinesToSticks(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays)
+  void convertLinesToSticks(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometryTempArrays* tempArrays)
   {
     auto& attribDataArrays = tempArrays->AttributeDataArrays;
     assert(attribDataArrays.size() == attributeArray.size());
@@ -261,16 +344,11 @@ namespace
     tempArrays->OrientationsArray.resize(numSticks * 4);  
     tempArrays->IdsArray.resize(paramData.primitiveIds ? numSticks : 0);
     // Only reorder per-vertex arrays, per-prim is already in order of the output stick center vertices
-    tempArrays->ColorsArray.resize(paramData.vertexColors ? numSticks * 4 : 0);
+    ANARIDataType colorType = paramData.vertexColors ? paramData.vertexColors->getType() : ANARI_UINT8;
+    tempArrays->resetColorsArray(paramData.vertexColors ?  numSticks : 0,  colorType);
     for(size_t attribIdx = 0; attribIdx < attribDataArrays.size(); ++attribIdx)
     {
-      if(attributeArray[attribIdx].Data && !attributeArray[attribIdx].PerPrimData)
-      {
-        uint32_t eltSize = attributeArray[attribIdx].EltSize;
-        attribDataArrays[attribIdx].resize(numSticks*eltSize);
-      }
-      else
-        attribDataArrays[attribIdx].resize(0);
+      tempArrays->resetAttributeDataArray(attribIdx, !attributeArray[attribIdx].PerPrimData ? numSticks : 0);
     }
 
     for (size_t i = 0; i < numIndices; i += 2)
@@ -348,25 +426,16 @@ namespace
       //Colors 
       if (paramData.vertexColors)
       {
-        float* colorsDest = &tempArrays->ColorsArray[primIdx * 4];
-        colorsDest[3] = 0.0f;
-        if (paramData.vertexColors->getType() == ANARI_FLOAT32_VEC3 || paramData.vertexColors->getType() == ANARI_FLOAT64_VEC3)
-          getValues3(paramData.vertexColors->getData(), paramData.vertexColors->getType(), vertIdx0, colorsDest);
-        else
-          getValues4(paramData.vertexColors->getData(), paramData.vertexColors->getType(), vertIdx0, colorsDest);
+        assert(vertIdx0 < paramData.vertexColors->getLayout().numItems1);
+        tempArrays->copyToColorsArray(paramData.vertexColors->getData(), vertIdx0, primIdx, 1);  
       }
 
       // Attributes
       for(size_t attribIdx = 0; attribIdx < attribDataArrays.size(); ++attribIdx)
       {
-        if(attributeArray[attribIdx].Data && !attributeArray[attribIdx].PerPrimData)
-        { // Only reorder per-vertex arrays to per-stick order
-          uint32_t eltSize = attributeArray[attribIdx].EltSize;
-          size_t srcIndex = vertIdx0;
-
-          const void* attribSrc = reinterpret_cast<const char*>(attributeArray[attribIdx].Data) + srcIndex*eltSize;
-          void* attribDest = &attribDataArrays[attribIdx][primIdx*eltSize];
-          memcpy(attribDest, attribSrc, eltSize);
+        if(!attributeArray[attribIdx].PerPrimData)
+        {
+          tempArrays->copyToAttributeDataArray(attribIdx, vertIdx0, primIdx, 1);
         }
       }
 
@@ -378,7 +447,7 @@ namespace
     }
   }
 
-  void pushVertex(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays,
+  void pushVertex(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometryTempArrays* tempArrays,
     const void* vertices, ANARIDataType vertexType,
     bool hasNormals, bool hasColors, bool hasRadii,
     size_t segStart, size_t primIdx)
@@ -428,47 +497,23 @@ namespace
     // Colors
     if (hasColors)
     {
-      float colors[4];
-      colors[3] = 0.0f;
+      size_t destIdx = tempArrays->expandColorsArray(1);
       if (paramData.vertexColors)
       {
-        if (paramData.vertexColors->getType() == ANARI_FLOAT32_VEC3 || paramData.vertexColors->getType() == ANARI_FLOAT64_VEC3)
-          getValues3(paramData.vertexColors->getData(), paramData.vertexColors->getType(), segStart, colors);
-        else
-          getValues4(paramData.vertexColors->getData(), paramData.vertexColors->getType(), segStart, colors);
+        tempArrays->copyToColorsArray(paramData.vertexColors->getData(), segStart, destIdx, 1);
       }
       else if (paramData.primitiveColors)
       {
-        if (paramData.vertexColors->getType() == ANARI_FLOAT32_VEC3 || paramData.vertexColors->getType() == ANARI_FLOAT64_VEC3)
-          getValues3(paramData.primitiveColors->getData(), paramData.primitiveColors->getType(), primIdx, colors);
-        else
-          getValues4(paramData.primitiveColors->getData(), paramData.primitiveColors->getType(), primIdx, colors);
+        tempArrays->copyToColorsArray(paramData.primitiveColors->getData(), primIdx, destIdx, 1);
       }
-
-      tempArrays->ColorsArray.push_back(colors[0]);
-      tempArrays->ColorsArray.push_back(colors[1]);
-      tempArrays->ColorsArray.push_back(colors[2]);
-      tempArrays->ColorsArray.push_back(colors[3]);
     }
 
     // Attributes
     for(size_t attribIdx = 0; attribIdx < attribDataArrays.size(); ++attribIdx)
     {
-      auto& srcAttribArray = attributeArray[attribIdx];
-      if(srcAttribArray.Data)
-      {
-        uint32_t eltSize = attributeArray[attribIdx].EltSize;
-        bool perPrimAttrib = srcAttribArray.PerPrimData;
-        size_t srcMultiplier = perPrimAttrib ? primIdx : segStart;
-        const void* attribSrc = reinterpret_cast<const char*>(srcAttribArray.Data) + srcMultiplier*eltSize;
-        
-        auto& destDataArray = attribDataArrays[attribIdx];
-        size_t valIdx = destDataArray.size();
-        destDataArray.resize(valIdx+eltSize);
-        void* attribDest = &destDataArray[valIdx];
-
-        memcpy(attribDest, attribSrc, eltSize);
-      }
+      size_t srcIdx = attributeArray[attribIdx].PerPrimData ? primIdx : segStart;
+      size_t destIdx = tempArrays->expandAttributeDataArray(attribIdx, 1);
+      tempArrays->copyToAttributeDataArray(attribIdx, srcIdx, destIdx, 1);
     }
   }
 
@@ -478,7 +523,7 @@ namespace
     hasNormals, hasColors, hasRadii, \
     x, y)
 
-  void reorderCurveGeometry(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometry::TempArrays* tempArrays)
+  void reorderCurveGeometry(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometryTempArrays* tempArrays)
   {
     auto& attribDataArrays = tempArrays->AttributeDataArrays;
     assert(attribDataArrays.size() == attributeArray.size());
@@ -506,8 +551,8 @@ namespace
     bool hasColors = paramData.vertexColors || paramData.primitiveColors;
     if (hasColors)
     {
-      tempArrays->ColorsArray.resize(0);
-      tempArrays->ColorsArray.reserve(maxNumVerts * 4);
+      tempArrays->resetColorsArray(0, paramData.vertexColors ? paramData.vertexColors->getType() : paramData.primitiveColors->getType());
+      tempArrays->reserveColorsArray(maxNumVerts);
     }
     bool hasRadii = paramData.vertexRadii || paramData.primitiveRadii;
     if (hasRadii)
@@ -517,12 +562,8 @@ namespace
     }
     for(size_t attribIdx = 0; attribIdx < attribDataArrays.size(); ++attribIdx)
     {
-      attribDataArrays[attribIdx].resize(0);
-      if(attributeArray[attribIdx].Data)
-      {
-        uint32_t eltSize = attributeArray[attribIdx].EltSize;
-        attribDataArrays[attribIdx].reserve(maxNumVerts*eltSize);
-      }  
+      tempArrays->resetAttributeDataArray(attribIdx, 0);
+      tempArrays->reserveAttributeDataArray(attribIdx, maxNumVerts);
     }
 
     size_t prevSegEnd = 0;
@@ -560,32 +601,32 @@ UsdGeometry::UsdGeometry(const char* name, const char* type, UsdBridge* bridge, 
 {
   bool createTempArrays = false;
 
-  if (strcmp(type, "sphere") == 0)
+  if (strEquals(type, "sphere"))
     geomType = GEOM_SPHERE;
-  else if (strcmp(type, "cylinder") == 0)
+  else if (strEquals(type, "cylinder"))
   {
     geomType = GEOM_CYLINDER;
     createTempArrays = true;
   }
-  else if (strcmp(type, "cone") == 0)
+  else if (strEquals(type, "cone"))
   {
     geomType = GEOM_CONE;
     createTempArrays = true;
   }
-  else if (strcmp(type, "curve") == 0)
+  else if (strEquals(type, "curve"))
   {
     geomType = GEOM_CURVE;
     createTempArrays = true;
   }
-  else if(strcmp(type, "triangle") == 0)
+  else if(strEquals(type, "triangle"))
     geomType = GEOM_TRIANGLE;
-  else if (strcmp(type, "quad") == 0)
+  else if (strEquals(type, "quad"))
     geomType = GEOM_QUAD;
   else
     device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' construction failed: type %s not supported", getName(), name);
 
   if(createTempArrays)
-    tempArrays = std::make_unique<TempArrays>();
+    tempArrays = std::make_unique<UsdGeometryTempArrays>(attributeArray);
 }
 
 UsdGeometry::~UsdGeometry()
@@ -630,6 +671,7 @@ void UsdGeometry::syncAttributeArrays()
 {
   const UsdGeometryData& paramData = getReadParams();
 
+  // Find the max index of the last attribute that still contains an array
   int attribCount = 0;
   for(int i = 0; i < MAX_ATTRIBS; ++i)
   {
@@ -637,6 +679,7 @@ void UsdGeometry::syncAttributeArrays()
       attribCount = i+1;
   }
 
+  // Set the attribute arrays and related info, resize temporary attribute array data for reordering
   if(attribCount)
   {
     attributeArray.resize(attribCount);
@@ -649,6 +692,11 @@ void UsdGeometry::syncAttributeArrays()
         attributeArray[i].DataType = AnariToUsdBridgeType(attribArray->getType());
         attributeArray[i].PerPrimData = paramData.vertexAttributes[i] ? false : true;
         attributeArray[i].EltSize = static_cast<uint32_t>(AnariTypeSize(attribArray->getType()));
+      }
+      else
+      {
+        attributeArray[i].Data = nullptr;
+        attributeArray[i].DataType = UsdBridgeType::UNDEFINED;
       }
     }
 
@@ -743,7 +791,7 @@ bool UsdGeometry::checkArrayConstraints(const UsdDataArray* vertexArray, const U
 {
   const UsdGeometryData& paramData = getReadParams();
 
-  LogInfo logInfo(device, this, ANARI_GEOMETRY, debugName);
+  UsdLogInfo logInfo(device, this, ANARI_GEOMETRY, debugName);
 
   const UsdDataArray* vertices = paramData.vertexPositions;
   const UsdDataLayout& vertLayout = vertices->getLayout();
@@ -818,7 +866,7 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
     if (geomType == GEOM_SPHERE || geomType == GEOM_CURVE)
     {
       if(geomType == GEOM_SPHERE && !paramData.UseUsdGeomPointInstancer)
-        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' is a sphere geometry with indices, but the usd::usepointinstancer parameter is not set, so all vertices will show as spheres.", debugName);
+        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' is a sphere geometry with indices, but the usd::usePointInstancer parameter is not set, so all vertices will show as spheres.", debugName);
 
       if (indexType != ANARI_INT32 && indexType != ANARI_UINT32 && indexType != ANARI_INT64 && indexType != ANARI_UINT64)
       {
@@ -867,9 +915,9 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
   if (colors)
   {
     ANARIDataType arrayType = colors->getType();
-    if (arrayType != ANARI_FLOAT32_VEC3 && arrayType != ANARI_FLOAT64_VEC3 && arrayType != ANARI_FLOAT32_VEC4 && arrayType != ANARI_FLOAT64_VEC4)
+    if ((int)arrayType < (int)ANARI_INT8 || (int)arrayType > (int)ANARI_UFIXED8_RGBA_SRGB)
     {
-      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: 'vertex/primitive.color' parameter should be of type ANARI_FLOAT32_VEC(3/4) or ANARI_FLOAT64_VEC(3/4).", debugName);
+      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: 'vertex/primitive.color' parameter should be of Color type (see ANARI standard)", debugName);
       return false;
     }
   }
@@ -995,7 +1043,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeInstancerData& inst
     if (paramData.indices && tempArrays->ColorsArray.size())
     {
       instancerData.Colors = tempArrays->ColorsArray.data();
-      instancerData.ColorsType = UsdBridgeType::FLOAT4;
+      instancerData.ColorsType = AnariToUsdBridgeType(tempArrays->ColorsArrayType);
     }
     else 
     {
@@ -1017,17 +1065,8 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeInstancerData& inst
     // Just set attributeArray's data to tempArrays where necessary
     if(paramData.indices)
     {
-      const AttributeDataArraysType& attribDataArrays = tempArrays->AttributeDataArrays;
-      assert(attributeArray.size() == attribDataArrays.size());
-      for(size_t attribIdx = 0; attribIdx < attribDataArrays.size(); ++attribIdx)
-      {
-        if(attribDataArrays[attribIdx].size())
-        {
-          // Type remains the same, everything per-vertex (as explained above)
-          attributeArray[attribIdx].Data = attribDataArrays[attribIdx].data();
-          attributeArray[attribIdx].PerPrimData = false;
-        }
-      }
+      // Type remains the same, everything per-vertex (as explained above)
+      assignTempDataToAttributes(false);
     }
     else
     {
@@ -1108,7 +1147,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeInstancerData& inst
       if (tempArrays->ColorsArray.size())
       {
         instancerData.Colors = tempArrays->ColorsArray.data();
-        instancerData.ColorsType = UsdBridgeType::FLOAT4;
+        instancerData.ColorsType = AnariToUsdBridgeType(tempArrays->ColorsArrayType);
       }
       else if(const UsdDataArray* colors = paramData.primitiveColors)
       { // Per-primitive color array corresponds to per-vertex stick output
@@ -1161,7 +1200,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeCurveData& curveDat
     if (tempArrays->ColorsArray.size())
     {
       curveData.Colors = tempArrays->ColorsArray.data();
-      curveData.ColorsType = UsdBridgeType::FLOAT4;
+      curveData.ColorsType = AnariToUsdBridgeType(tempArrays->ColorsArrayType);
     }
     curveData.PerPrimColors = false; // Always vertex colored as per reorderCurveGeometry. One entry per whole curve would be useless
 

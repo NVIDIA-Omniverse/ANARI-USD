@@ -5,6 +5,7 @@
 #define UsdBridgeData_h
 
 #include "UsdBridgeMacros.h"
+#include "UsdBridgeNumerics.h"
 
 #include <cstddef>
 #include <functional>
@@ -119,11 +120,10 @@ struct UsdBridgeSettings
 
   // Output settings
   bool EnablePreviewSurfaceShader;
-  bool EnableDisplayColors;
-#ifdef SUPPORT_MDL_SHADERS
   bool EnableMdlShader;
-  bool EnableMdlColors;
-#endif
+
+  // About to be deprecated
+  static constexpr bool EnableStTexCoords = false;
 };
 
 // Generic attribute definition
@@ -331,32 +331,45 @@ struct UsdBridgeVolumeData
 
 struct UsdBridgeMaterialData
 {
+  template<typename ValueType>
+  struct MaterialInput
+  {
+    ValueType Value;
+    const char* SrcAttrib;
+    bool Sampler; // Only denote whether a sampler is attached
+  };
+
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
     DIFFUSE = (1 << 0), 
-    SPECULAR = (1 << 1),
-    EMISSIVE = (1 << 2),
-    OPACITY = (1 << 3),
-    EMISSIVEINTENSITY = (1 << 4),
-    ROUGHNESS = (1 << 5),
-    METALLIC = (1 << 6),
-    IOR = (1 << 7),
-    ALL = (1 << 8) - 1
+    OPACITY = (1 << 1),
+    EMISSIVECOLOR = (1 << 2),
+    EMISSIVEINTENSITY = (1 << 3),
+    ROUGHNESS = (1 << 4),
+    METALLIC = (1 << 5),
+    IOR = (1 << 6),
+    ALL = (1 << 7) - 1
   };
   DataMemberId TimeVarying = DataMemberId::NONE;
 
-  float Diffuse[3] = { 1.0f };
-  float Specular[3] = { 1.0f };
-  float Emissive[3] = { 1.0f };
-  float Opacity = 1.0f;
   bool HasTranslucency = false;
-  float EmissiveIntensity = 0.0f;
-  float Roughness = 0.5f;
-  float Metallic = -1.0;
-  float Ior = 1.0f;
-  bool UseVertexColors = false;
+  bool IsPbr = true;
+
+  MaterialInput<UsdFloat3> Diffuse = {{ 1.0f }, nullptr};
+  MaterialInput<UsdFloat3> Emissive = {{ 1.0f }, nullptr};
+  MaterialInput<float> Opacity = {1.0f, nullptr};
+  MaterialInput<float> EmissiveIntensity = {0.0f, nullptr};
+  MaterialInput<float> Roughness = {0.5f, nullptr};
+  MaterialInput<float> Metallic = {-1.0, nullptr};
+  MaterialInput<float> Ior = {1.0f, nullptr};
 };
+
+template<typename ValueType>
+const typename ValueType::DataType* GetValuePtr(const UsdBridgeMaterialData::MaterialInput<ValueType>& input)
+{
+  return input.Value.Data;
+}
 
 struct UsdBridgeSamplerData
 {
@@ -370,11 +383,12 @@ struct UsdBridgeSamplerData
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
-    FILENAME = (1 << 0),
-    WRAPS = (1 << 1),
-    WRAPT = (1 << 2),
-    WRAPR = (1 << 3),
-    ALL = (1 << 4) - 1
+    INATTRIBUTE = (1 << 0),
+    DATA = (1 << 1), // Refers to: data(-type), image name/url
+    WRAPS = (1 << 2),
+    WRAPT = (1 << 3),
+    WRAPR = (1 << 4),
+    ALL = (1 << 5) - 1
   };
   DataMemberId TimeVarying = DataMemberId::NONE;
 
@@ -388,10 +402,27 @@ struct UsdBridgeSamplerData
 
   SamplerType Type = SamplerType::SAMPLER_1D;
 
-  const char* FileName = nullptr;
+  const char* InAttribute = nullptr;
+
+  const char* ImageUrl = nullptr;
+  const char* ImageName = nullptr;
+  uint64_t ImageDims[3] = {0, 0, 0};
+  int64_t ImageStride[3] = {0, 0, 0};
+  int ImageNumComponents = 4;
+
+  const void* Data = nullptr;
+  UsdBridgeType DataType = UsdBridgeType::UNDEFINED;
+
   WrapMode WrapS = WrapMode::BLACK;
   WrapMode WrapT = WrapMode::BLACK;
   WrapMode WrapR = WrapMode::BLACK;
+};
+
+struct UsdSamplerRefData
+{
+  int ImageNumComponents;
+  double TimeStep;
+  UsdBridgeMaterialData::DataMemberId DataMemberId; // Material input parameter to connect to
 };
 
 template<class TEnum>

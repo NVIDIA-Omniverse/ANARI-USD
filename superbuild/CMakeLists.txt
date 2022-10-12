@@ -237,9 +237,6 @@ if (BUILD_ANARI_USD_DEVICE)
     endif()
     if(USD_DEVICE_USE_OMNIVERSE)
       list(APPEND ANARI_DEVICE_BUILD_ARGS -DOMNICLIENT_ROOT_DIR=${OMNICLIENT_ROOT_DIR})
-      if(NOT WIN32) # Assume Omniverse-enabled builds use the nvidia-based USD build, which requires CXX11_ABI=0
-        list(APPEND ANARI_DEVICE_BUILD_ARGS -DCMAKE_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=0")
-      endif()
     endif()
   endif()
 

@@ -103,38 +103,39 @@ int UsdBridgeConnection::MaxSessionNr() const
   return sessionNr - 1;
 }
 
-bool UsdBridgeConnection::CreateFolder(const char* dirName, bool mayExist) const
+bool UsdBridgeConnection::CreateFolder(const char* dirName, bool isRelative, bool mayExist) const
 {
   try
   {
-    TempUrl = Settings.WorkingDirectory + dirName;
-    if (!mayExist || !fs::exists(TempUrl))
-      return fs::create_directory(TempUrl);
+    const char* dirUrl = isRelative ? GetUrl(dirName) : dirName;
+    if (!mayExist || !fs::exists(dirUrl))
+      return fs::create_directory(dirUrl);
   }
   CONNECT_CATCH(false)
 
   return true;
 }
 
-bool UsdBridgeConnection::RemoveFolder(const char* dirName) const
+bool UsdBridgeConnection::RemoveFolder(const char* dirName, bool isRelative) const
 {
   bool success = false;
   try
   {
-    TempUrl = Settings.WorkingDirectory + dirName;
-    if(fs::exists(TempUrl))
-      success = fs::remove_all(TempUrl);
+    const char* dirUrl = isRelative ? GetUrl(dirName) : dirName;
+    if(fs::exists(dirUrl))
+      success = fs::remove_all(dirUrl);
   }
   CONNECT_CATCH(false)
 
   return success;
 }
 
-bool UsdBridgeConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary) const
+bool UsdBridgeConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool isRelative, bool binary) const
 {
   try
   {
-    std::ofstream file(Settings.WorkingDirectory + filePath, std::ios_base::out
+    const char* fileUrl = isRelative ? GetUrl(filePath) : filePath;
+    std::ofstream file(fileUrl, std::ios_base::out
       | std::ios_base::trunc
       | (binary ? std::ios_base::binary : std::ios_base::out));
     if (file.is_open())
@@ -149,14 +150,14 @@ bool UsdBridgeConnection::WriteFile(const char* data, size_t dataSize, const cha
   return false;
 }
 
-bool UsdBridgeConnection::RemoveFile(const char* filePath) const
+bool UsdBridgeConnection::RemoveFile(const char* filePath, bool isRelative) const
 {
   bool success = false;
   try
   {
-    TempUrl = Settings.WorkingDirectory + filePath;
-    if (fs::exists(TempUrl))
-      success = fs::remove(TempUrl);
+    const char* fileUrl = isRelative ? GetUrl(filePath) : filePath;
+    if (fs::exists(fileUrl))
+      success = fs::remove(fileUrl);
   }
   CONNECT_CATCH(false)
 
@@ -488,11 +489,11 @@ int UsdBridgeRemoteConnection::MaxSessionNr() const
   return context.sessionNumber;
 }
 
-bool UsdBridgeRemoteConnection::CreateFolder(const char* dirName, bool mayExist) const
+bool UsdBridgeRemoteConnection::CreateFolder(const char* dirName, bool isRelative, bool mayExist) const
 {
   DefaultContext context;
 
-  const char* dirUrl = this->GetUrl(dirName);
+  const char* dirUrl = isRelative ? this->GetUrl(dirName) : dirName;
   omniClientWait(omniClientCreateFolder(dirUrl, &context,
     [](void* userData, OmniClientResult result) OMNICLIENT_NOEXCEPT
     {
@@ -506,11 +507,11 @@ bool UsdBridgeRemoteConnection::CreateFolder(const char* dirName, bool mayExist)
     || (mayExist && context.result == eOmniClientResult_ErrorAlreadyExists);
 }
 
-bool UsdBridgeRemoteConnection::RemoveFolder(const char* dirName) const
+bool UsdBridgeRemoteConnection::RemoveFolder(const char* dirName, bool isRelative) const
 {
   DefaultContext context;
 
-  const char* dirUrl = this->GetUrl(dirName);
+  const char* dirUrl = isRelative ? this->GetUrl(dirName) : dirName;
   omniClientWait(omniClientDelete(dirUrl, &context,
     [](void* userData, OmniClientResult result) OMNICLIENT_NOEXCEPT
     {
@@ -523,14 +524,14 @@ bool UsdBridgeRemoteConnection::RemoveFolder(const char* dirName) const
   return context.result == eOmniClientResult_Ok || context.result == eOmniClientResult_OkLatest;
 }
 
-bool UsdBridgeRemoteConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary) const
+bool UsdBridgeRemoteConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool isRelative, bool binary) const
 {
   (void)binary;
   UsdBridgeLogMacro(UsdBridgeLogLevel::STATUS, "Copying data to: " << filePath);
 
   DefaultContext context;
 
-  const char* fileUrl = this->GetUrl(filePath);
+  const char* fileUrl = isRelative ? this->GetUrl(filePath) : filePath;
   OmniClientContent omniContent{ (void*)data, dataSize, nullptr };
   omniClientWait(omniClientWriteFile(fileUrl, &omniContent, &context, [](void* userData, OmniClientResult result) OMNICLIENT_NOEXCEPT
     {
@@ -543,12 +544,12 @@ bool UsdBridgeRemoteConnection::WriteFile(const char* data, size_t dataSize, con
   return context.result == eOmniClientResult_Ok || context.result == eOmniClientResult_OkLatest;
 }
 
-bool UsdBridgeRemoteConnection::RemoveFile(const char* filePath) const
+bool UsdBridgeRemoteConnection::RemoveFile(const char* filePath, bool isRelative) const
 {
   DefaultContext context;
   UsdBridgeLogMacro(UsdBridgeLogLevel::STATUS, "Removing file: " << filePath);
 
-  const char* fileUrl = this->GetUrl(filePath);
+  const char* fileUrl = isRelative ? this->GetUrl(filePath) : filePath;
   omniClientWait(omniClientDelete(fileUrl, &context, [](void* userData, OmniClientResult result) OMNICLIENT_NOEXCEPT
     {
       auto& context = *(DefaultContext*)(userData);
@@ -569,7 +570,7 @@ bool UsdBridgeRemoteConnection::ProcessUpdates()
 
 bool UsdBridgeRemoteConnection::CheckWritePermissions()
 {
-  bool success = this->CreateFolder("", true);
+  bool success = this->CreateFolder("", true, true);
   return success;
 }
 
@@ -615,24 +616,24 @@ int UsdBridgeRemoteConnection::MaxSessionNr() const
   return UsdBridgeConnection::MaxSessionNr();
 }
 
-bool UsdBridgeRemoteConnection::CreateFolder(const char* dirName, bool mayExist) const
+bool UsdBridgeRemoteConnection::CreateFolder(const char* dirName, bool isRelative, bool mayExist) const
 {
-  return UsdBridgeConnection::CreateFolder(dirName, mayExist);
+  return UsdBridgeConnection::CreateFolder(dirName, isRelative, mayExist);
 }
 
-bool UsdBridgeRemoteConnection::RemoveFolder(const char* dirName) const
+bool UsdBridgeRemoteConnection::RemoveFolder(const char* dirName, bool isRelative) const
 {
-  return UsdBridgeConnection::RemoveFolder(dirName);
+  return UsdBridgeConnection::RemoveFolder(dirName, isRelative);
 }
 
-bool UsdBridgeRemoteConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary) const
+bool UsdBridgeRemoteConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool isRelative, bool binary) const
 {
-  return UsdBridgeConnection::WriteFile(data, dataSize, filePath, binary);
+  return UsdBridgeConnection::WriteFile(data, dataSize, filePath, isRelative, binary);
 }
 
-bool UsdBridgeRemoteConnection::RemoveFile(const char* filePath) const
+bool UsdBridgeRemoteConnection::RemoveFile(const char* filePath, bool isRelative) const
 {
-  return UsdBridgeConnection::RemoveFile(filePath);
+  return UsdBridgeConnection::RemoveFile(filePath, isRelative);
 }
 
 bool UsdBridgeRemoteConnection::ProcessUpdates()
@@ -715,24 +716,24 @@ int UsdBridgeLocalConnection::MaxSessionNr() const
   return UsdBridgeConnection::MaxSessionNr();
 }
 
-bool UsdBridgeLocalConnection::CreateFolder(const char* dirName, bool mayExist) const
+bool UsdBridgeLocalConnection::CreateFolder(const char* dirName, bool isRelative, bool mayExist) const
 {
-  return UsdBridgeConnection::CreateFolder(dirName, mayExist);
+  return UsdBridgeConnection::CreateFolder(dirName, isRelative, mayExist);
 }
 
-bool UsdBridgeLocalConnection::RemoveFolder(const char* dirName) const
+bool UsdBridgeLocalConnection::RemoveFolder(const char* dirName, bool isRelative) const
 {
-  return UsdBridgeConnection::RemoveFolder(dirName);
+  return UsdBridgeConnection::RemoveFolder(dirName, isRelative);
 }
 
-bool UsdBridgeLocalConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary) const
+bool UsdBridgeLocalConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool isRelative, bool binary) const
 {
-  return UsdBridgeConnection::WriteFile(data, dataSize, filePath, binary);
+  return UsdBridgeConnection::WriteFile(data, dataSize, filePath, isRelative, binary);
 }
 
-bool UsdBridgeLocalConnection::RemoveFile(const char* filePath) const
+bool UsdBridgeLocalConnection::RemoveFile(const char* filePath, bool isRelative) const
 {
-  return UsdBridgeConnection::RemoveFile(filePath);
+  return UsdBridgeConnection::RemoveFile(filePath, isRelative);
 }
 
 bool UsdBridgeLocalConnection::ProcessUpdates()
@@ -778,22 +779,22 @@ int UsdBridgeVoidConnection::MaxSessionNr() const
   return -1;
 }
 
-bool UsdBridgeVoidConnection::CreateFolder(const char* dirName, bool mayExist) const
+bool UsdBridgeVoidConnection::CreateFolder(const char* dirName, bool isRelative, bool mayExist) const
 {
   return true;
 }
 
-bool UsdBridgeVoidConnection::RemoveFolder(const char* dirName) const
+bool UsdBridgeVoidConnection::RemoveFolder(const char* dirName, bool isRelative) const
 {
   return true;
 }
 
-bool UsdBridgeVoidConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool binary) const
+bool UsdBridgeVoidConnection::WriteFile(const char* data, size_t dataSize, const char* filePath, bool isRelative, bool binary) const
 {
   return true;
 }
 
-bool UsdBridgeVoidConnection::RemoveFile(const char* filePath) const
+bool UsdBridgeVoidConnection::RemoveFile(const char* filePath, bool isRelative) const
 {
   return true;
 }

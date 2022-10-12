@@ -27,51 +27,50 @@ In short, use the above to set `USD_ROOT_DIR` to the directory containing the `/
 Specific ANARIDevice object parameters:
 - Set `usd::serialize.location` string to the output location on disk, `usd::serialize.outputBinary` bool for binary or text output. These parameters are **immutable** (after first `anariCommit`).
 - Alternatively, `usd::serialize.location` will also try the `ANARI_USD_SERIALIZE_LOCATION` environment variable. If neither are specified, it will default to `"./"` and emit a warning.
-- Parameter `usd::serialize.hostname` has to be used to specify the server name (if Omniverse support is available) and optional port for Omniverse connections. This parameter is **immutable**.
-- Use `usd::timestep` to set a global timestep for USD output. All parameters and references from parent to child ANARI objects will be converted into USD for this particular global timestep, except for selected "timed objects" (see below). The value of this parameter can be changed at any time, but make sure to call `anariCommit` on the device after setting it.
+- Parameter `usd::serialize.hostName` has to be used to specify the server name (if Omniverse support is available) and optional port for Omniverse connections. This parameter is **immutable**.
+- Use `usd::time` to set a global timestep for USD output. All parameters and references from parent to child ANARI objects will be converted into USD for this particular global timestep, with the optional exception of "timed objects" (see below). The value of this parameter can be changed at any time, but make sure to call `anariCommit` on the device after setting it.
 
 Specific ANARI scene object parameters (World, Instancer, Group, Surface, Geometry, Volume, Spatialfield, Material, Sampler, Light):
-- Each ANARI scene object has a `name` parameter as scenegraph identifier (over time). Upon setting this name, a formatted version is stored in the `usd::name` property (with corresponding `.size` as uint64). After `anariCommit` (or `anariRenderFrame`, depending on the `usd::writeatcommit` device parameter) its full USD primpath can be retrieved with `usd::primpath` (with corresponding `.size` as uint64).
+- Each ANARI scene object has a `name` parameter as scenegraph identifier (over time). Upon setting this name, a formatted version is stored in the `usd::name` property (with corresponding `.size` as uint64). After `anariRenderFrame` (or, if the `usd::writeAtCommit` device parameter is enabled, after `anariCommit` for some objects), its full USD primpath can be retrieved by querying the `usd::primPath` property (with corresponding `.size` as uint64).
 - Changes to data are **actually saved to USD output** when `anariRenderFrame()` is called.
-- If ANARI objects of a certain `name` are not referenced from within any committed timestep, their internal data is only cleaned up when calling `anariDeviceSetParam(d, "usd::garbagecollect", ANARI_VOID_POINTER, 0)`. This is adviced after every `anariRenderFrame()` or a subfrequency thereof.
+- If ANARI objects of a certain `name` are not referenced from within any committed timestep, their internal data is only cleaned up when calling `anariDeviceSetParam(d, "usd::garbageCollect", ANARI_VOID_POINTER, 0)`. This is adviced after every `anariRenderFrame()` or a subfrequency thereof.
 
 Specific ANARI timed object parameters (Geometry, Material, Spatialfield, Sampler):
-- A `usd::timestep` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`, regardless of the global timestep set for the ANARIDevice object. The effect of setting this parameter is that the parent objects referencing these "timed objects" will keep a USD-based time-mapping per global timestep. This way, a child reference defined at a particular global timestep will point to the data output of the child object at its `usd::timestep`. This parameter is applied like any other parameter during `anariCommit`.
+- A `usd::time` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`, regardless of the global timestep set for the ANARIDevice object. The effect of setting this parameter is that the parent objects referencing these "timed objects" will keep a USD-based time-mapping per global timestep. This way, a child reference defined at a particular global timestep will point to the data output of the child object at its `usd::time`, thereby avoiding data duplication. This parameter is applied like any other parameter during `anariCommit`.
 
 ### Advanced parameters #
 ANARIDevice object parameters:
-- Device parameter `usd::scenestage` allows the user to provide a pre-constructed stage, into which the USD output will be constructed. For correct operation, make sure that `anariSetParameter` for `usd::scenestage` takes a `UsdStage*` (ie. the `mem` argument is directly of `UsdStage*` type) with `ANARI_VOID_POINTER` as type enumeration. This parameter is **immutable**.
-- Device parameter `usd::enablesaving` of type `ANARI_BOOL` (default `ON`) allows the user to explicitly control whether USD output is written out to disk, or kept in memory. Assets that are not stored in USD format, such as MDL materials, texture images and volumes, will always be written to disk regardless of the value of this parameter. In order for no files to be written at all, additionally pass the special string `"void"` to `usd::serialize.location`. This parameter can be changed at any time and **applies immediately**.
-- Device parameter `usd::serialize.newsession` of type `ANARI_BOOL` (default `ON`) allows the user to explicitly control whether a new empty session directory has to be created for USD output, or whether the last written session and its USD files have to be reopened, after which the device will continue (over-)writing the existing files. In the latter case, existing prims will be changed to match the contents of any committed ANARI objects that go by their corresponding name, but other already existing prims within the USD files will be left untouched. This parameter is **immutable**.
+- Device parameter `usd::sceneStage` allows the user to provide a pre-constructed stage, into which the USD output will be constructed. For correct operation, make sure that `anariSetParameter` for `usd::sceneStage` takes a `UsdStage*` (ie. the `mem` argument is directly of `UsdStage*` type) with `ANARI_VOID_POINTER` as type enumeration. This parameter is **immutable**.
+- Device parameter `usd::enableSaving` of type `ANARI_BOOL` (default `ON`) allows the user to explicitly control whether USD output is written out to disk, or kept in memory. Assets that are not stored in USD format, such as MDL materials, texture images and volumes, will always be written to disk regardless of the value of this parameter. In order for no files to be written at all, additionally pass the special string `"void"` to `usd::serialize.location`. This parameter can be changed at any time and **applies immediately**.
+- Device parameter `usd::serialize.newSession` of type `ANARI_BOOL` (default `ON`) allows the user to explicitly control whether a new empty session directory has to be created for USD output, or whether the last written session and its USD files have to be reopened, after which the device will continue (over-)writing the existing files. In the latter case, existing prims will be changed to match the contents of any committed ANARI objects that go by their corresponding name, but other already existing prims within the USD files will be left untouched. This parameter is **immutable**.
 - Device parameters `usd::output.<x>`, which give control over what or how certain objects are converted to USD, to increase compatibility with certain renderers or reduce clutter in the resulting USD graph. All of them are **immutable**. Permissible values for `<x>` are: 
     - `material`: Whether material objects are included in the output 
     - `previewsurfaceshader`: Whether previewsurface shader prims are output for material objects
     - `mdlshader`: Whether mdl shader prims are output for material objects
-    - `displaycolors`: Whether displaycolor primvars are output for geometry objects, to support vertex coloring on previewsurface shaders
-    - `mdlcolors`: Whether `st1/2` color arrays are output for geometries, to support vertex coloring on mdl shaders
-- Device parameter `usd::writeatcommit` controls whether writing to USD will happen immediately at the `anariCommit` call, or at `anariRenderFrame` (default). The potential advantage of the former is that one has more granular control over USD processing time. Note that if this parameter is set, the ANARIDevice (specifically its `usd::timestep`) should be committed before any other object in the scene. This parameter can be changed at any time and **applies immediately**. 
-
+- Device parameter `usd::writeAtCommit` controls whether writing to USD will happen immediately at the `anariCommit` call, or at `anariRenderFrame` (default). The potential advantage of the former is that one has more granular control over USD processing time. Note that if this parameter is set, the ANARIDevice (specifically its `usd::time`) should be committed before any other object in the scene. This parameter can be changed at any time and **applies immediately**. 
 
 ANARI scene objects:
 - Use individual bits of the `usd::timeVarying` parameter to control which exact ANARI object parameters should vary over time, and which ones should store only one value over all timesteps. Which bit corresponds to which parameter can for the moment only be gathered from the `Usd<objectname>.h` header. This parameter can be changed at any time and is applied like any other parameter during `anariCommit`.
 
 ### Not supported #
 
-- Arbitrary commit order - commits need to happen from leaf objects (Geometry/Materials/etc.) to root objects (World)
 - Geometries:
-    - color array type other than double/float (so no fixed types)
+    - all fixed point color array types will be normalized to float, double will be type-cast
     - strided arrays
+    - attribute arrays and their types are fixed after the first commit (ie. from that point one cannot assign a different array to an attribute parameter)
 - Volumes
     - `color/opacity.position` parameters
 - Materials:
-    - `obj` materials, just use `matte` and `transparentMatte`
-    - string/sampler parameters, except `map_kd` which remains as texture sampler (set `usevertexcolors` for vertex coloring - for full parameter list see `UsdMaterial.cpp`)
+    - setting a parameter to an attribute string will only produce valid output if the parameter value and connected attribute array type are an exact match 
+    - any world-space attribute as parameter argument
+    - the fourth channel of `color` will be ignored (only the `opacity` parameter is used for opacity) 
 - Samplers:
-    - anything other than `filename` argument for texture source, with `wrapmode1/wrapmode2`
+    - setting `inAttribute` will only produce valid output if the parameter value and connected attribute array type are an exact match 
+    - any world-space attribute as parameter argument
+    - the `<in/out>Transform` parameters
+    - anything other than 8-bit-per-component `image` data
 - Lights
     - completely unsupported
-- World
-    - direct surface/volume parameters
 
 ### Detailed build info #
 

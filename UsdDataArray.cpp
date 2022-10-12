@@ -6,6 +6,11 @@
 #include "UsdAnari.h"
 #include "anari/type_utility.h"
 
+DEFINE_PARAMETER_MAP(UsdDataArray,
+  REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
+  REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
+)
+
 #define TO_OBJ_PTR reinterpret_cast<const ANARIObject*>
 
 UsdDataArray::UsdDataArray(const void *appMemory,
@@ -78,6 +83,23 @@ void UsdDataArray::filterSetParam(const char *name,
   const void *mem,
   UsdDevice* device)
 {
+  if(strEquals(name, "name"))
+  {
+    const char* srcCstr = reinterpret_cast<const char*>(mem);
+    
+    if(srcCstr != 0 && strlen(srcCstr) > 0)
+    {
+      setParam(name, type, mem, device);
+      setParam("usd::name", type, mem, device);
+      formatUsdName(getWriteParams().usdName);
+
+      //Name is kept for the lifetime of the device (to allow using pointer for shared resource caching)
+      device->addToSharedStringList(getWriteParams().usdName); 
+    }
+    else
+      device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+        "UsdDataArray name parameter set failed: name of zero length.");
+  }
 }
 
 void UsdDataArray::filterResetParam(
@@ -88,7 +110,7 @@ void UsdDataArray::filterResetParam(
 
 int UsdDataArray::getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice* device)
 {
-  if (strcmp(name, "usd::name") == 0)
+  if (strEquals(name, "usd::name"))
   {
     device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdDataArray does not have a usd::name property, as it is not represented in the USD output.");
@@ -98,6 +120,8 @@ int UsdDataArray::getProperty(const char * name, ANARIDataType type, void * mem,
 
 void UsdDataArray::commit(UsdDevice* device)
 {
+  transferWriteToReadParams();
+
   if (anari::isObject(type) && (layout.numItems2 != 1 || layout.numItems3 != 1))
     device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdDataArray only supports one-dimensional ANARI_OBJECT arrays");
@@ -143,7 +167,7 @@ void UsdDataArray::setLayoutAndSize(uint64_t numItems1,
     byteStride3 = byteStride2 * numItems2;
 
   dataSizeInBytes = byteStride3 * numItems3 - (byteStride1 - typeSize);
-  layout = { typeSize, numItems1, byteStride1, numItems2, byteStride2, numItems3, byteStride3 };
+  layout = { typeSize, numItems1, numItems2, numItems3, byteStride1, byteStride2, byteStride3 };
 }
 
 bool UsdDataArray::CheckFormatting(UsdDevice* device)
@@ -184,7 +208,10 @@ void UsdDataArray::decRef(const ANARIObject* anariObjects, uint64_t numAnariObje
     allocDevice->LogDeallocation(baseObj);
 #endif
     if (baseObj)
+    {
+      assert(baseObj->useCount(anari::RefType::INTERNAL) > 0);
       baseObj->refDec(anari::RefType::INTERNAL);
+    }
   }
 }
 

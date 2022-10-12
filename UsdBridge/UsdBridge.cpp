@@ -26,6 +26,7 @@ namespace
   const char* const samplerPathCp = "samplers";
 
   // Parent path extensions for references in parent classes (Reference path)
+  const char* const instancePathRp = "instances";
   const char* const surfacePathRp = "surfaces";
   const char* const volumePathRp = "volumes";
   const char* const geometryPathRp = "geometry"; // created in surfaces parent class
@@ -537,18 +538,25 @@ void UsdBridge::DeleteSampler(UsdSamplerHandle handle)
   Internals->FindAndDeletePrim(handle);
 }
 
+template<typename ParentHandleType, typename ChildHandleType>
+void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleType* childHandles, uint64_t numChildren, 
+  const char* refPathExt, bool timeVarying, double timeStep)
+{
+  if (parentHandle.value == nullptr) return;
+
+  UsdBridgePrimCache* parentCache = BRIDGE_CACHE.ConvertToPrimCache(parentHandle);
+  const UsdBridgePrimCacheList& childCaches = Internals->ExtractPrimCaches<ChildHandleType>(childHandles, numChildren);
+
+  BRIDGE_USDWRITER.ManageUnusedRefs(parentCache, childCaches, refPathExt, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  for (uint64_t i = 0; i < numChildren; ++i)
+  {
+    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], refPathExt, timeVarying, timeStep, Internals->RefModCallbacks);
+  }
+}
+
 void UsdBridge::SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep)
 {
-  if (world.value == nullptr) return;
-
-  UsdBridgePrimCache* worldCache = BRIDGE_CACHE.ConvertToPrimCache(world);
-  const UsdBridgePrimCacheList& instanceCaches = Internals->ExtractPrimCaches<UsdInstanceHandle>(instances, numInstances);
-
-  BRIDGE_USDWRITER.ManageUnusedRefs(worldCache, instanceCaches, nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  for (uint64_t i = 0; i < numInstances; ++i)
-  {
-    BRIDGE_USDWRITER.AddRef_NoClip(worldCache, instanceCaches[i], nullptr, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
-  }
+  SetNoClipRefs(world, instances, numInstances, instancePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep)
@@ -559,35 +567,27 @@ void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bo
   UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
 
   BRIDGE_USDWRITER.ManageUnusedRefs(instanceCache, Internals->ToCacheList(groupCache), nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  BRIDGE_USDWRITER.AddRef_NoClip(instanceCache, groupCache, nullptr, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
+  BRIDGE_USDWRITER.AddRef_NoClip(instanceCache, groupCache, nullptr, timeVarying, timeStep, Internals->RefModCallbacks);
+}
+
+void UsdBridge::SetSurfaceRefs(UsdWorldHandle world, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
+{
+  SetNoClipRefs(world, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
 {
-  if (group.value == nullptr) return;
+  SetNoClipRefs(group, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep);
+}
 
-  UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-  const UsdBridgePrimCacheList& surfaceCaches = Internals->ExtractPrimCaches<UsdSurfaceHandle>(surfaces, numSurfaces);
-
-  BRIDGE_USDWRITER.ManageUnusedRefs(groupCache, surfaceCaches, surfacePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  for (uint64_t i = 0; i < numSurfaces; ++i)
-  {
-    BRIDGE_USDWRITER.AddRef_NoClip(groupCache, surfaceCaches[i], surfacePathRp, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
-  }
+void UsdBridge::SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep)
+{
+  SetNoClipRefs(world, volumes, numVolumes, volumePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep)
 {
-  if (group.value == nullptr) return;
-
-  UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-  const UsdBridgePrimCacheList& volumeCaches = Internals->ExtractPrimCaches<UsdVolumeHandle>(volumes, numVolumes);
-
-  BRIDGE_USDWRITER.ManageUnusedRefs(groupCache, volumeCaches, volumePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  for (uint64_t i = 0; i < numVolumes; ++i)
-  {
-    BRIDGE_USDWRITER.AddRef_NoClip(groupCache, volumeCaches[i], volumePathRp, timeVarying, timeStep, timeStep, Internals->RefModCallbacks);
-  }
+  SetNoClipRefs(group, volumes, numVolumes, volumePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep)
@@ -639,27 +639,30 @@ void UsdBridge::SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle
   SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, timeVarying, true, false, nullptr, timeStep, fieldTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
 }
 
-void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampler, const char* texfileName, bool texfileTimeVarying, double timeStep, double samplerTimeStep)
+void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandle* samplers, const UsdSamplerRefData* samplerRefData, size_t numSamplers, double timeStep)
 {
   if (material.value == nullptr) return;
 
   UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
-  UsdBridgePrimCache* samplerCache = BRIDGE_CACHE.ConvertToPrimCache(sampler);
+  const UsdBridgePrimCacheList& samplerCaches = Internals->ExtractPrimCaches<UsdSamplerHandle>(samplers, numSamplers);
 
   // Sampler references cannot be time-varying (connectToSource doesn't allow for that), and are set on the scenestage prim (so they inherit the type of the sampler prim)
   // However, they do allow value clip retiming.
   bool timeVarying = false;
   bool valueClip = true;
   bool clipStages = false;
-  BRIDGE_USDWRITER.ManageUnusedRefs(matCache, Internals->ToCacheList(samplerCache), samplerPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-
-  SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef(matCache, samplerCache, samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerTimeStep, Internals->RefModCallbacks);
+  BRIDGE_USDWRITER.ManageUnusedRefs(matCache, samplerCaches, samplerPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
   // Bind sampler and material
   SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache);
 
-  BRIDGE_USDWRITER.BindSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, texfileName, texfileTimeVarying, timeStep); // requires world timestep, see implementation
+  for (uint64_t i = 0; i < numSamplers; ++i)
+  {
+    SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef(matCache, samplerCaches[i], samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerRefData[i].TimeStep, Internals->RefModCallbacks);
+
+    BRIDGE_USDWRITER.ConnectSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, samplerCaches[i]->Name.GetString(), samplerRefData[i], timeStep); // requires world timestep, see implementation
+  }
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -667,80 +670,64 @@ void UsdBridge::SetSamplerRef(UsdMaterialHandle material, UsdSamplerHandle sampl
 #endif
 }
 
+template<typename ParentHandleType>
+void UsdBridge::DeleteAllRefs(ParentHandleType parentHandle, const char* refPathExt, bool timeVarying, double timeStep)
+{
+  if (parentHandle.value == nullptr) return;
+
+  UsdBridgePrimCache* parentCache = BRIDGE_CACHE.ConvertToPrimCache(parentHandle);
+
+  BRIDGE_USDWRITER.RemoveAllRefs(parentCache, refPathExt, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+}
+
 void UsdBridge::DeleteInstanceRefs(UsdWorldHandle world, bool timeVarying, double timeStep)
 {
-  if (world.value == nullptr) return;
-
-  UsdBridgePrimCache* worldCache = BRIDGE_CACHE.ConvertToPrimCache(world);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(worldCache, nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(world, instancePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteGroupRef(UsdInstanceHandle instance, bool timeVarying, double timeStep)
 {
-  if (instance.value == nullptr) return;
+  DeleteAllRefs(instance, nullptr, timeVarying, timeStep);
+}
 
-  UsdBridgePrimCache* instanceCache = BRIDGE_CACHE.ConvertToPrimCache(instance);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(instanceCache, nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+void UsdBridge::DeleteSurfaceRefs(UsdWorldHandle world, bool timeVarying, double timeStep)
+{
+  DeleteAllRefs(world, surfacePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteSurfaceRefs(UsdGroupHandle group, bool timeVarying, double timeStep)
 {
-  if (group.value == nullptr) return;
+  DeleteAllRefs(group, surfacePathRp, timeVarying, timeStep);
+}
 
-  UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(groupCache, surfacePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+void UsdBridge::DeleteVolumeRefs(UsdWorldHandle world, bool timeVarying, double timeStep)
+{
+  DeleteAllRefs(world, volumePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteVolumeRefs(UsdGroupHandle group, bool timeVarying, double timeStep)
 {
-  if (group.value == nullptr) return;
-
-  UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(groupCache, volumePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(group, volumePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteGeometryRef(UsdSurfaceHandle surface, double timeStep)
 {
-  if (surface.value == nullptr) return;
-
-  UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(surfaceCache, surfacePathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(surface, geometryPathRp, false, timeStep);
 }
 
 void UsdBridge::DeleteSpatialFieldRef(UsdVolumeHandle volume, double timeStep)
 {
-  if (volume.value == nullptr) return;
-
-  UsdBridgePrimCache* volumeCache = BRIDGE_CACHE.ConvertToPrimCache(volume);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(volumeCache, fieldPathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(volume, fieldPathRp, false, timeStep);
 }
 
 void UsdBridge::DeleteMaterialRef(UsdSurfaceHandle surface, double timeStep)
 {
-  if (surface.value == nullptr) return;
-
-  UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
-
-  BRIDGE_USDWRITER.RemoveAllRefs(surfaceCache, materialPathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(surface, materialPathRp, false, timeStep);
 }
 
-void UsdBridge::DeleteSamplerRef(UsdMaterialHandle material, double timeStep)
+void UsdBridge::DeleteSamplerRefs(UsdMaterialHandle material, double timeStep)
 {
-  if (material.value == nullptr) return;
-
-  UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
-  const SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
-
-  BRIDGE_USDWRITER.UnBindSamplerFromMaterial(matPrimPath);
-
-  // Remove the sampler reference from the material node
-  BRIDGE_USDWRITER.RemoveAllRefs(matCache, samplerPathRp, false, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  DeleteAllRefs(material, samplerPathRp, false, timeStep);
 }
 
 void UsdBridge::UpdateBeginEndTime(double timeStep)
@@ -820,7 +807,7 @@ void UsdBridge::SetSpatialFieldData(UsdSpatialFieldHandle field, const UsdBridge
   UsdStageRefPtr volumeStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
 
   // To avoid data duplication when using of clip stages, we need to potentially use the scenestage prim for time-uniform data.
-  BRIDGE_USDWRITER.UpdateUsdVolume(volumeStage, cache->PrimPath, cache->Name.GetString(), volumeData, timeStep);
+  BRIDGE_USDWRITER.UpdateUsdVolume(volumeStage, cache->PrimPath, volumeData, timeStep, cache);
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -864,7 +851,42 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
 
   UsdStageRefPtr samplerStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
   
-  BRIDGE_USDWRITER.UpdateUsdSampler(samplerStage, samplerPrimPath, samplerData, timeStep);
+  BRIDGE_USDWRITER.UpdateUsdSampler(samplerStage, samplerPrimPath, samplerData, timeStep, cache);
+
+#ifdef VALUE_CLIP_RETIMING
+  if(this->EnableSaving)
+    samplerStage->Save();
+#endif
+}
+
+void UsdBridge::ChangeMaterialInputSourceNames(UsdMaterialHandle material, const MaterialInputSourceName* inputNames, size_t numInputNames, double timeStep, MaterialDMI timeVarying)
+{
+  if (material.value == nullptr) return;
+
+  UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(material);
+  SdfPath& matPrimPath = cache->PrimPath;// .AppendPath(SdfPath(samplerAttribPf));
+
+  UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
+
+  for(int i = 0; i < numInputNames; ++i)
+    BRIDGE_USDWRITER.UpdateAttributeReaders(materialStage, matPrimPath, inputNames[i].second, inputNames[i].first, timeStep, timeVarying);
+
+#ifdef VALUE_CLIP_RETIMING
+  if(this->EnableSaving)
+    materialStage->Save();
+#endif
+}
+
+void UsdBridge::ChangeInAttribute(UsdSamplerHandle sampler, const char* newName, double timeStep, SamplerDMI timeVarying)
+{
+  if (sampler.value == nullptr) return;
+
+  UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(sampler);
+  SdfPath& samplerPrimPath = cache->PrimPath;// .AppendPath(SdfPath(samplerAttribPf));
+
+  UsdStageRefPtr samplerStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
+  
+  BRIDGE_USDWRITER.UpdateInAttribute(samplerStage, samplerPrimPath, newName, timeStep, timeVarying);
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -878,6 +900,13 @@ void UsdBridge::SaveScene()
 
   if(this->EnableSaving)
     BRIDGE_USDWRITER.GetSceneStage()->Save();
+}
+
+void UsdBridge::ResetResourceUpdateState()
+{
+  if (!SessionValid) return;
+
+  BRIDGE_USDWRITER.ResetSharedResourceModified();
 }
 
 void UsdBridge::GarbageCollect()
