@@ -566,7 +566,9 @@ void UsdBridgeUsdWriter::InitializeClipMetaData(const UsdPrim& clipPrim, UsdBrid
 
     bool exists;
     const UsdStagePair& childStagePair = FindOrCreateClipStage(childCache, clipPostfix, childTimeStep, exists);
-    assert(exists);
+    //assert(exists); // In case prim creation succeeds but an update is not attempted, no clip stage is generated, so exists will be false
+    if(!exists)
+      UsdBridgeLogMacro(this, UsdBridgeLogLevel::WARNING, "Child clip stage not found while setting clip metadata, using generated stage instead. Probably the child data has not been properly updated.");
 
     refStagePath = &childStagePair.first;
   }

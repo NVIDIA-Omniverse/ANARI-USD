@@ -434,7 +434,7 @@ namespace
       {
         if(uniformPrim) // Implies !timeEval, so initialize
         {
-          InitializePsAttributeReaderUniform(attributeReader, GetUsdAttributeReaderId(dataMemberId), GetShaderNodeOutputType(dataMemberId));
+          InitializePsAttributeReaderUniform(attributeReader, GetPsAttributeReaderId(dataMemberId), GetShaderNodeOutputType(dataMemberId));
         }
 
         // Create attribute reader varname, and if timeEval (manifest), can also remove the input

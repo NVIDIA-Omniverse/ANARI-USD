@@ -154,7 +154,6 @@ public:
     const char* resourceFolder, const char* extension);
 
   VtIntArray TempIndexArray;
-  VtVec3fArray TempScalesArray;
 
   // Settings 
   UsdBridgeSettings Settings;

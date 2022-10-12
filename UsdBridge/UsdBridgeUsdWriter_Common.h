@@ -53,6 +53,7 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   ((PrimVarReader_Float, "UsdPrimvarReader_float")) \
   ((PrimVarReader_Float2, "UsdPrimvarReader_float2")) \
   ((PrimVarReader_Float3, "UsdPrimvarReader_float3")) \
+  ((PrimVarReader_Float4, "UsdPrimvarReader_float4")) \
   (UsdUVTexture) \
   (fallback) \
   (r) \
@@ -486,13 +487,13 @@ namespace
     return SdfPath(result);
   }
 
-  const TfToken& GetUsdAttributeReaderId(UsdBridgeMaterialData::DataMemberId dataMemberId)
+  const TfToken& GetPsAttributeReaderId(UsdBridgeMaterialData::DataMemberId dataMemberId)
   {
     using DMI = UsdBridgeMaterialData::DataMemberId;
 
     switch(dataMemberId)
     {
-      case DMI::DIFFUSE: { return UsdBridgeTokens->PrimVarReader_Float3; break; } 
+      case DMI::DIFFUSE: { return UsdBridgeTokens->PrimVarReader_Float4; break; } // float4 instead of float4, to fix implicit conversion issue in storm
       case DMI::OPACITY: { return UsdBridgeTokens->PrimVarReader_Float; break; } 
       case DMI::EMISSIVECOLOR: { return UsdBridgeTokens->PrimVarReader_Float3; break; } 
       case DMI::EMISSIVEINTENSITY: { return UsdBridgeTokens->PrimVarReader_Float; break; } 
@@ -570,16 +571,6 @@ namespace
       default: { return SdfValueTypeNames->Float3; break; } // The alpha component is always separate
     }
     return SdfValueTypeNames->Float3;
-  }
-
-  template<typename OutputArrayType, typename InputEltType>
-  void ExpandToVec3(OutputArrayType& output, const void* input, uint64_t numElements)
-  {
-    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(input);
-    for (int i = 0; i < numElements; ++i)
-    {
-      output[i] = typename OutputArrayType::ElementType(typedInput[i], typedInput[i], typedInput[i]);
-    }
   }
 
   template<class T>

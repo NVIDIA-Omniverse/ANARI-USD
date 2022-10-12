@@ -16,6 +16,20 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType)
   case ANARI_INT8_VEC3: return UsdBridgeType::CHAR3;
   case ANARI_INT8_VEC4: return UsdBridgeType::CHAR4;
 
+  case ANARI_UFIXED8: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_VEC2: return UsdBridgeType::UCHAR2;
+  case ANARI_UFIXED8_VEC3: return UsdBridgeType::UCHAR3;
+  case ANARI_UFIXED8_VEC4: return UsdBridgeType::UCHAR4;
+  case ANARI_FIXED8: return UsdBridgeType::CHAR;
+  case ANARI_FIXED8_VEC2: return UsdBridgeType::CHAR2;
+  case ANARI_FIXED8_VEC3: return UsdBridgeType::CHAR3;
+  case ANARI_FIXED8_VEC4: return UsdBridgeType::CHAR4;
+
+  case ANARI_UFIXED8_R_SRGB: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_RA_SRGB: return UsdBridgeType::UCHAR2;
+  case ANARI_UFIXED8_RGB_SRGB: return UsdBridgeType::UCHAR3;
+  case ANARI_UFIXED8_RGBA_SRGB: return UsdBridgeType::UCHAR4;
+
   case ANARI_UINT16: return UsdBridgeType::USHORT;
   case ANARI_UINT16_VEC2: return UsdBridgeType::USHORT2;
   case ANARI_UINT16_VEC3: return UsdBridgeType::USHORT3;
@@ -24,6 +38,15 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType)
   case ANARI_INT16_VEC2: return UsdBridgeType::SHORT2;
   case ANARI_INT16_VEC3: return UsdBridgeType::SHORT3;
   case ANARI_INT16_VEC4: return UsdBridgeType::SHORT4;
+
+  case ANARI_UFIXED16: return UsdBridgeType::USHORT;
+  case ANARI_UFIXED16_VEC2: return UsdBridgeType::USHORT2;
+  case ANARI_UFIXED16_VEC3: return UsdBridgeType::USHORT3;
+  case ANARI_UFIXED16_VEC4: return UsdBridgeType::USHORT4;
+  case ANARI_FIXED16: return UsdBridgeType::SHORT;
+  case ANARI_FIXED16_VEC2: return UsdBridgeType::SHORT2;
+  case ANARI_FIXED16_VEC3: return UsdBridgeType::SHORT3;
+  case ANARI_FIXED16_VEC4: return UsdBridgeType::SHORT4;
 
   case ANARI_UINT32: return UsdBridgeType::UINT;
   case ANARI_UINT32_VEC2: return UsdBridgeType::UINT2;
@@ -34,14 +57,23 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType)
   case ANARI_INT32_VEC3: return UsdBridgeType::INT3;
   case ANARI_INT32_VEC4: return UsdBridgeType::INT4;
 
-  case ANARI_INT64: return UsdBridgeType::LONG;
-  case ANARI_INT64_VEC2: return UsdBridgeType::LONG2;
-  case ANARI_INT64_VEC3: return UsdBridgeType::LONG3;
-  case ANARI_INT64_VEC4: return UsdBridgeType::LONG4;
+  case ANARI_UFIXED32: return UsdBridgeType::UINT;
+  case ANARI_UFIXED32_VEC2: return UsdBridgeType::UINT2;
+  case ANARI_UFIXED32_VEC3: return UsdBridgeType::UINT3;
+  case ANARI_UFIXED32_VEC4: return UsdBridgeType::UINT4;
+  case ANARI_FIXED32: return UsdBridgeType::INT;
+  case ANARI_FIXED32_VEC2: return UsdBridgeType::INT2;
+  case ANARI_FIXED32_VEC3: return UsdBridgeType::INT3;
+  case ANARI_FIXED32_VEC4: return UsdBridgeType::INT4;
+
   case ANARI_UINT64: return UsdBridgeType::ULONG;
   case ANARI_UINT64_VEC2: return UsdBridgeType::ULONG2;
   case ANARI_UINT64_VEC3: return UsdBridgeType::ULONG3;
   case ANARI_UINT64_VEC4: return UsdBridgeType::ULONG4;
+  case ANARI_INT64: return UsdBridgeType::LONG;
+  case ANARI_INT64_VEC2: return UsdBridgeType::LONG2;
+  case ANARI_INT64_VEC3: return UsdBridgeType::LONG3;
+  case ANARI_INT64_VEC4: return UsdBridgeType::LONG4;
 
   case ANARI_FLOAT32: return UsdBridgeType::FLOAT;
   case ANARI_FLOAT32_VEC2: return UsdBridgeType::FLOAT2;
@@ -70,6 +102,20 @@ UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType)
   case ANARI_INT8_VEC3: return UsdBridgeType::CHAR;
   case ANARI_INT8_VEC4: return UsdBridgeType::CHAR;
 
+  case ANARI_UFIXED8: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_VEC2: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_VEC3: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_VEC4: return UsdBridgeType::UCHAR;
+  case ANARI_FIXED8: return UsdBridgeType::CHAR;
+  case ANARI_FIXED8_VEC2: return UsdBridgeType::CHAR;
+  case ANARI_FIXED8_VEC3: return UsdBridgeType::CHAR;
+  case ANARI_FIXED8_VEC4: return UsdBridgeType::CHAR;
+
+  case ANARI_UFIXED8_R_SRGB: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_RA_SRGB: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_RGB_SRGB: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_RGBA_SRGB: return UsdBridgeType::UCHAR;
+
   case ANARI_UINT16: return UsdBridgeType::USHORT;
   case ANARI_UINT16_VEC2: return UsdBridgeType::USHORT;
   case ANARI_UINT16_VEC3: return UsdBridgeType::USHORT;
@@ -78,6 +124,15 @@ UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType)
   case ANARI_INT16_VEC2: return UsdBridgeType::SHORT;
   case ANARI_INT16_VEC3: return UsdBridgeType::SHORT;
   case ANARI_INT16_VEC4: return UsdBridgeType::SHORT;
+
+  case ANARI_UFIXED16: return UsdBridgeType::USHORT;
+  case ANARI_UFIXED16_VEC2: return UsdBridgeType::USHORT;
+  case ANARI_UFIXED16_VEC3: return UsdBridgeType::USHORT;
+  case ANARI_UFIXED16_VEC4: return UsdBridgeType::USHORT;
+  case ANARI_FIXED16: return UsdBridgeType::SHORT;
+  case ANARI_FIXED16_VEC2: return UsdBridgeType::SHORT;
+  case ANARI_FIXED16_VEC3: return UsdBridgeType::SHORT;
+  case ANARI_FIXED16_VEC4: return UsdBridgeType::SHORT;
 
   case ANARI_UINT32: return UsdBridgeType::UINT;
   case ANARI_UINT32_VEC2: return UsdBridgeType::UINT;
@@ -88,15 +143,24 @@ UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType)
   case ANARI_INT32_VEC3: return UsdBridgeType::INT;
   case ANARI_INT32_VEC4: return UsdBridgeType::INT;
 
-  case ANARI_INT64: return UsdBridgeType::LONG;
-  case ANARI_INT64_VEC2: return UsdBridgeType::LONG;
-  case ANARI_INT64_VEC3: return UsdBridgeType::LONG;
-  case ANARI_INT64_VEC4: return UsdBridgeType::LONG;
+  case ANARI_UFIXED32: return UsdBridgeType::UINT;
+  case ANARI_UFIXED32_VEC2: return UsdBridgeType::UINT;
+  case ANARI_UFIXED32_VEC3: return UsdBridgeType::UINT;
+  case ANARI_UFIXED32_VEC4: return UsdBridgeType::UINT;
+  case ANARI_FIXED32: return UsdBridgeType::INT;
+  case ANARI_FIXED32_VEC2: return UsdBridgeType::INT;
+  case ANARI_FIXED32_VEC3: return UsdBridgeType::INT;
+  case ANARI_FIXED32_VEC4: return UsdBridgeType::INT;
+
   case ANARI_UINT64: return UsdBridgeType::ULONG;
   case ANARI_UINT64_VEC2: return UsdBridgeType::ULONG;
   case ANARI_UINT64_VEC3: return UsdBridgeType::ULONG;
   case ANARI_UINT64_VEC4: return UsdBridgeType::ULONG;
-
+  case ANARI_INT64: return UsdBridgeType::LONG;
+  case ANARI_INT64_VEC2: return UsdBridgeType::LONG;
+  case ANARI_INT64_VEC3: return UsdBridgeType::LONG;
+  case ANARI_INT64_VEC4: return UsdBridgeType::LONG;
+  
   case ANARI_FLOAT32: return UsdBridgeType::FLOAT;
   case ANARI_FLOAT32_VEC2: return UsdBridgeType::FLOAT;
   case ANARI_FLOAT32_VEC3: return UsdBridgeType::FLOAT;

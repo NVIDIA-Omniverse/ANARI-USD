@@ -26,6 +26,7 @@ namespace
   const char* const samplerPathCp = "samplers";
 
   // Parent path extensions for references in parent classes (Reference path)
+  const char* const instancePathRp = "instances";
   const char* const surfacePathRp = "surfaces";
   const char* const volumePathRp = "volumes";
   const char* const geometryPathRp = "geometry"; // created in surfaces parent class
@@ -546,16 +547,16 @@ void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleTy
   UsdBridgePrimCache* parentCache = BRIDGE_CACHE.ConvertToPrimCache(parentHandle);
   const UsdBridgePrimCacheList& childCaches = Internals->ExtractPrimCaches<ChildHandleType>(childHandles, numChildren);
 
-  BRIDGE_USDWRITER.ManageUnusedRefs(parentCache, childCaches, surfacePathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  BRIDGE_USDWRITER.ManageUnusedRefs(parentCache, childCaches, refPathExt, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   for (uint64_t i = 0; i < numChildren; ++i)
   {
-    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], surfacePathRp, timeVarying, timeStep, Internals->RefModCallbacks);
+    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], refPathExt, timeVarying, timeStep, Internals->RefModCallbacks);
   }
 }
 
 void UsdBridge::SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep)
 {
-  SetNoClipRefs(world, instances, numInstances, nullptr, timeVarying, timeStep);
+  SetNoClipRefs(world, instances, numInstances, instancePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep)
@@ -681,7 +682,7 @@ void UsdBridge::DeleteAllRefs(ParentHandleType parentHandle, const char* refPath
 
 void UsdBridge::DeleteInstanceRefs(UsdWorldHandle world, bool timeVarying, double timeStep)
 {
-  DeleteAllRefs(world, nullptr, timeVarying, timeStep);
+  DeleteAllRefs(world, instancePathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteGroupRef(UsdInstanceHandle instance, bool timeVarying, double timeStep)

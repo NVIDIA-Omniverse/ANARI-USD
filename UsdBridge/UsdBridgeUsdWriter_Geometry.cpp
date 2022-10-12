@@ -7,6 +7,14 @@
 
 namespace
 {
+  template<typename ArrayType>
+  ArrayType& GetStaticTempArray()
+  {
+    static ArrayType array;
+    array.resize(0);
+    return array;
+  }
+
   template<typename UsdGeomType>
   UsdAttribute UsdGeomGetPointsAttribute(UsdGeomType& usdGeom) { return UsdAttribute(); }
 
@@ -22,6 +30,7 @@ namespace
   template<>
   UsdAttribute UsdGeomGetPointsAttribute(UsdGeomPointInstancer& usdGeom) { return usdGeom.GetPositionsAttr(); }
 
+  // Array assignment
   template<class ArrayType>
   void AssignArrayToPrimvar(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
   {
@@ -65,38 +74,86 @@ namespace
     AssignArrayToPrimvarConvert<ArrayType, EltType>(data, numFlattenedElements, primvar, timeCode, usdArray);
   }
 
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarReduced(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
+  template<typename ArrayType, typename EltType>
+  void Expand1ToVec3(const void* data, uint64_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
   {
-    using ElementType = typename ArrayType::ElementType;
-    EltType* typedData = (EltType*)data;
-
     usdArray->resize(numElements);
+    const EltType* typedInput = reinterpret_cast<const EltType*>(data);
     for (int i = 0; i < numElements; ++i)
     {
-      for (int j = 0; j < ElementType::dimension; ++j)
-        (*usdArray)[i][j] = typedData[i][j];
+      (*usdArray)[i] = typename ArrayType::ElementType(typedInput[i], typedInput[i], typedInput[i]);
     }
-
     primvar.Set(*usdArray, timeCode);
   }
 
-  #define ASSIGN_ARRAY_TO_PRIMVAR_MACRO(ArrayType) \
-    ArrayType usdArray; AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-  #define ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(ArrayType) \
-    ArrayType usdArray; AssignArrayToPrimvarFlatten<ArrayType>(arrayData, arrayDataType, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-  #define ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(ArrayType, EltType) \
-    ArrayType usdArray; AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-  #define ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_FLATTEN_MACRO(ArrayType, EltType) \
-    ArrayType usdArray; AssignArrayToPrimvarConvertFlatten<ArrayType, EltType>(arrayData, arrayDataType, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-  #define ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(ArrayType, EltType) \
-    ArrayType usdArray; AssignArrayToPrimvarReduced<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-  #define ASSIGN_CUSTOM_ARRAY_TO_PRIMVAR_MACRO(ArrayType, customArray) \
+  template<typename InputEltType, int numComponents>
+  void ExpandToColor(const void* data, uint64_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, VtVec4fArray* usdArray)
+  {
+    usdArray->resize(numElements);
+    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
+    // No memcopies, as input is not guaranteed to be of float type
+    if(numComponents == 1)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(typedInput[i], 0.0f, 0.0f, 1.0f);
+    if(numComponents == 2)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(typedInput[i*2], typedInput[i*2+1], 0.0f, 1.0f);
+    if(numComponents == 3)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(typedInput[i*3], typedInput[i*3+1], typedInput[i*3+2], 1.0f);
+    primvar.Set(*usdArray, timeCode);
+  }
+
+  template<typename InputEltType, int numComponents>
+  void ExpandToColorNormalize(const void* data, uint64_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, VtVec4fArray* usdArray)
+  {
+    usdArray->resize(numElements);
+    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
+    double normFactor = 1.0f / (double)std::numeric_limits<InputEltType>::max(); // float may not be enough for uint32_t
+    // No memcopies, as input is not guaranteed to be of float type
+    if(numComponents == 1)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(typedInput[i]*normFactor, 0.0f, 0.0f, 1.0f);
+    if(numComponents == 2)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(typedInput[i*2]*normFactor, typedInput[i*2+1]*normFactor, 0.0f, 1.0f);
+    if(numComponents == 3)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(typedInput[i*3]*normFactor, typedInput[i*3+1]*normFactor, typedInput[i*3+2]*normFactor, 1.0f);
+    if(numComponents == 4)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(typedInput[i*4]*normFactor, typedInput[i*4+1]*normFactor, typedInput[i*4+2]*normFactor, typedInput[i*4+3]*normFactor);
+    primvar.Set(*usdArray, timeCode);
+  }
+
+  #define ASSIGN_PRIMVAR_MACRO(ArrayType) \
+    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
+  #define ASSIGN_PRIMVAR_FLATTEN_MACRO(ArrayType) \
+    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); AssignArrayToPrimvarFlatten<ArrayType>(arrayData, arrayDataType, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
+  #define ASSIGN_PRIMVAR_CONVERT_MACRO(ArrayType, EltType) \
+    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
+  #define ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(ArrayType, EltType) \
+    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); AssignArrayToPrimvarConvertFlatten<ArrayType, EltType>(arrayData, arrayDataType, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
+  #define ASSIGN_PRIMVAR_CUSTOM_ARRAY_MACRO(ArrayType, customArray) \
     AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &customArray)
-  #define ASSIGN_CUSTOM_ARRAY_TO_PRIMVAR_CONVERT_MACRO(ArrayType, EltType, customArray) \
+  #define ASSIGN_PRIMVAR_CONVERT_CUSTOM_ARRAY_MACRO(ArrayType, EltType, customArray) \
     AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &customArray)
-  #define ASSIGN_ARRAY_TO_PRIMVAR_MACRO_EXPAND3(ArrayType, EltType, tempArray) \
-    tempArray.resize(arrayNumElements); ExpandToVec3<ArrayType, EltType>(tempArray, arrayData, arrayNumElements); arrayPrimvar.Set(tempArray, timeCode);
+  #define ASSIGN_PRIMVAR_MACRO_1EXPAND3(ArrayType, EltType) \
+    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); Expand1ToVec3<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(EltType) \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColor<EltType, 1>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(EltType) \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColor<EltType, 2>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(EltType) \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColor<EltType, 3>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(EltType) \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 1>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(EltType) \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 2>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(EltType) \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 3>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(EltType) \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 4>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
 
   void CopyArrayToPrimvar(UsdBridgeUsdWriter* writer, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, UsdAttribute arrayPrimvar, const UsdTimeCode& timeCode)
   {
@@ -104,54 +161,54 @@ namespace
 
     switch (arrayDataType)
     {
-      case UsdBridgeType::UCHAR: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtUCharArray); break; }
-      case UsdBridgeType::CHAR: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtUCharArray); break; }
-      case UsdBridgeType::USHORT: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtUIntArray, short); break; }
-      case UsdBridgeType::SHORT: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtIntArray, unsigned short); break; }
-      case UsdBridgeType::UINT: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtUIntArray); break; }
-      case UsdBridgeType::INT: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtIntArray); break; }
-      case UsdBridgeType::LONG: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtInt64Array); break; }
-      case UsdBridgeType::ULONG: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtUInt64Array); break; }
-      case UsdBridgeType::HALF: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtHalfArray); break; }
-      case UsdBridgeType::FLOAT: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtFloatArray); break; }
-      case UsdBridgeType::DOUBLE: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtDoubleArray); break; }
+      case UsdBridgeType::UCHAR: { ASSIGN_PRIMVAR_MACRO(VtUCharArray); break; }
+      case UsdBridgeType::CHAR: { ASSIGN_PRIMVAR_MACRO(VtUCharArray); break; }
+      case UsdBridgeType::USHORT: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtUIntArray, short); break; }
+      case UsdBridgeType::SHORT: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, unsigned short); break; }
+      case UsdBridgeType::UINT: { ASSIGN_PRIMVAR_MACRO(VtUIntArray); break; }
+      case UsdBridgeType::INT: { ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
+      case UsdBridgeType::LONG: { ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
+      case UsdBridgeType::ULONG: { ASSIGN_PRIMVAR_MACRO(VtUInt64Array); break; }
+      case UsdBridgeType::HALF: { ASSIGN_PRIMVAR_MACRO(VtHalfArray); break; }
+      case UsdBridgeType::FLOAT: { ASSIGN_PRIMVAR_MACRO(VtFloatArray); break; }
+      case UsdBridgeType::DOUBLE: { ASSIGN_PRIMVAR_MACRO(VtDoubleArray); break; }
 
-      case UsdBridgeType::INT2: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec2iArray); break; }
-      case UsdBridgeType::FLOAT2: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec2fArray); break; }
-      case UsdBridgeType::DOUBLE2: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec2dArray); break; }
+      case UsdBridgeType::INT2: { ASSIGN_PRIMVAR_MACRO(VtVec2iArray); break; }
+      case UsdBridgeType::FLOAT2: { ASSIGN_PRIMVAR_MACRO(VtVec2fArray); break; }
+      case UsdBridgeType::DOUBLE2: { ASSIGN_PRIMVAR_MACRO(VtVec2dArray); break; }
 
-      case UsdBridgeType::INT3: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3iArray); break; }
-      case UsdBridgeType::FLOAT3: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
-      case UsdBridgeType::DOUBLE3: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3dArray); break; }
+      case UsdBridgeType::INT3: { ASSIGN_PRIMVAR_MACRO(VtVec3iArray); break; }
+      case UsdBridgeType::FLOAT3: { ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
+      case UsdBridgeType::DOUBLE3: { ASSIGN_PRIMVAR_MACRO(VtVec3dArray); break; }
 
-      case UsdBridgeType::INT4: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec4iArray); break; }
-      case UsdBridgeType::FLOAT4: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec4fArray); break; }
-      case UsdBridgeType::DOUBLE4: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec4dArray); break; }
+      case UsdBridgeType::INT4: { ASSIGN_PRIMVAR_MACRO(VtVec4iArray); break; }
+      case UsdBridgeType::FLOAT4: { ASSIGN_PRIMVAR_MACRO(VtVec4fArray); break; }
+      case UsdBridgeType::DOUBLE4: { ASSIGN_PRIMVAR_MACRO(VtVec4dArray); break; }
 
       case UsdBridgeType::UCHAR2:
       case UsdBridgeType::UCHAR3: 
-      case UsdBridgeType::UCHAR4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
+      case UsdBridgeType::UCHAR4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
       case UsdBridgeType::CHAR2:
       case UsdBridgeType::CHAR3: 
-      case UsdBridgeType::CHAR4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
+      case UsdBridgeType::CHAR4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
       case UsdBridgeType::USHORT2:
       case UsdBridgeType::USHORT3:
-      case UsdBridgeType::USHORT4: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_FLATTEN_MACRO(VtUIntArray, short); break; }
+      case UsdBridgeType::USHORT4: { ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(VtUIntArray, short); break; }
       case UsdBridgeType::SHORT2:
       case UsdBridgeType::SHORT3: 
-      case UsdBridgeType::SHORT4: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_FLATTEN_MACRO(VtIntArray, unsigned short); break; }
+      case UsdBridgeType::SHORT4: { ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(VtIntArray, unsigned short); break; }
       case UsdBridgeType::UINT2:
       case UsdBridgeType::UINT3: 
-      case UsdBridgeType::UINT4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtUIntArray); break; }
+      case UsdBridgeType::UINT4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUIntArray); break; }
       case UsdBridgeType::LONG2:
       case UsdBridgeType::LONG3: 
-      case UsdBridgeType::LONG4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtInt64Array); break; }
+      case UsdBridgeType::LONG4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtInt64Array); break; }
       case UsdBridgeType::ULONG2:
       case UsdBridgeType::ULONG3: 
-      case UsdBridgeType::ULONG4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtUInt64Array); break; }
+      case UsdBridgeType::ULONG4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUInt64Array); break; }
       case UsdBridgeType::HALF2:
       case UsdBridgeType::HALF3: 
-      case UsdBridgeType::HALF4: { ASSIGN_ARRAY_TO_PRIMVAR_FLATTEN_MACRO(VtHalfArray); break; }
+      case UsdBridgeType::HALF4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtHalfArray); break; }
 
       default: {UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom Attribute<Index> primvar copy does not support source data type: " << arrayDataType) break; }
     };
@@ -170,7 +227,7 @@ namespace
 
     if (timeVarChecked)
     {
-      primvarApi.CreatePrimvar(UsdBridgeTokens->color, SdfValueTypeNames->Color3fArray);
+      primvarApi.CreatePrimvar(UsdBridgeTokens->color, SdfValueTypeNames->Color4fArray);
     }
     else
     {
@@ -202,22 +259,25 @@ namespace
 
     for(uint32_t attribIndex = 0; attribIndex < geomData.NumAttributes; ++attribIndex)
     {
-      bool timeVarChecked = true;
-      if(timeEval)
-      {
-        DMI attributeId = DMI::ATTRIBUTE0 + attribIndex;
-        timeVarChecked = timeEval->IsTimeVarying(attributeId);
-      }
-
       const UsdBridgeAttribute& attrib = geomData.Attributes[attribIndex];
-      if(timeVarChecked)
+      if(attrib.DataType != UsdBridgeType::UNDEFINED)
       {
-        SdfValueTypeName primvarType = GetPrimvarArrayType(attrib.DataType);
-        primvarApi.CreatePrimvar(AttribIndexToToken(attribIndex), primvarType);
-      }
-      else if(timeEval)
-      {
-        primvarApi.RemovePrimvar(AttribIndexToToken(attribIndex));
+        bool timeVarChecked = true;
+        if(timeEval)
+        {
+          DMI attributeId = DMI::ATTRIBUTE0 + attribIndex;
+          timeVarChecked = timeEval->IsTimeVarying(attributeId);
+        }
+
+        if(timeVarChecked)
+        {
+          SdfValueTypeName primvarType = GetPrimvarArrayType(attrib.DataType);
+          primvarApi.CreatePrimvar(AttribIndexToToken(attribIndex), primvarType);
+        }
+        else if(timeEval)
+        {
+          primvarApi.RemovePrimvar(AttribIndexToToken(attribIndex));
+        }
       }
     }
   }
@@ -531,11 +591,11 @@ namespace
         const void* arrayData = geomData.Points;
         size_t arrayNumElements = geomData.NumPoints;
         UsdAttribute arrayPrimvar = pointsAttr;
-        VtVec3fArray usdVerts;
+        VtVec3fArray& usdVerts = GetStaticTempArray<VtVec3fArray>();
         switch (geomData.PointsType)
         {
-        case UsdBridgeType::FLOAT3: {ASSIGN_CUSTOM_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray, usdVerts); break; }
-        case UsdBridgeType::DOUBLE3: {ASSIGN_CUSTOM_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d, usdVerts); break; }
+        case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_CUSTOM_ARRAY_MACRO(VtVec3fArray, usdVerts); break; }
+        case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_CUSTOM_ARRAY_MACRO(VtVec3fArray, GfVec3d, usdVerts); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom PointsAttr should be FLOAT3 or DOUBLE3."); break; }
         }
 
@@ -571,7 +631,8 @@ namespace
 
       uint64_t numIndices = geomData.NumIndices;
     
-      VtArray<int> usdVertexCounts(numPrims);
+      VtArray<int>& usdVertexCounts = GetStaticTempArray<VtArray<int>>();
+      usdVertexCounts.resize(numPrims);
       int vertexCount = numIndices / numPrims;
       for (uint64_t i = 0; i < numPrims; ++i)
         usdVertexCounts[i] = vertexCount;//geomData.FaceVertCounts[i];
@@ -597,10 +658,10 @@ namespace
         UsdAttribute arrayPrimvar = outGeom->GetFaceVertexIndicesAttr();
         switch (geomData.IndicesType)
         {
-        case UsdBridgeType::ULONG: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtIntArray, uint64_t); break; }
-        case UsdBridgeType::LONG: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtIntArray, int64_t); break; }
-        case UsdBridgeType::INT: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtIntArray); break; }
-        case UsdBridgeType::UINT: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtIntArray); break; }
+        case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, uint64_t); break; }
+        case UsdBridgeType::LONG: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, int64_t); break; }
+        case UsdBridgeType::INT: {ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
+        case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom FaceVertexIndicesAttr should be (U)LONG or (U)INT."); break; }
         }
       }
@@ -631,8 +692,8 @@ namespace
         UsdAttribute arrayPrimvar = normalsAttr;
         switch (geomData.NormalsType)
         {
-        case UsdBridgeType::FLOAT3: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
-        case UsdBridgeType::DOUBLE3: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
+        case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
+        case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom NormalsAttr should be FLOAT3 or DOUBLE3."); break; }
         }
 
@@ -677,8 +738,8 @@ namespace
 
         switch (texCoordAttrib.DataType)
         {
-        case UsdBridgeType::FLOAT2: { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec2fArray); break; }
-        case UsdBridgeType::DOUBLE2: { ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec2fArray, GfVec2d); break; }
+        case UsdBridgeType::FLOAT2: { ASSIGN_PRIMVAR_MACRO(VtVec2fArray); break; }
+        case UsdBridgeType::DOUBLE2: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec2fArray, GfVec2d); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom st primvar should be FLOAT2 or DOUBLE2."); break; }
         }
   
@@ -751,7 +812,8 @@ namespace
     for(uint32_t attribIndex = startIdx; attribIndex < geomData.NumAttributes; ++attribIndex)
     {
       const UsdBridgeAttribute& attrib = geomData.Attributes[attribIndex];
-      UpdateUsdGeomAttribute(writer, timeVarPrimvars, uniformPrimvars, geomData, numPrims, updateEval, timeEval, attribIndex);
+      if(attrib.DataType != UsdBridgeType::UNDEFINED)
+        UpdateUsdGeomAttribute(writer, timeVarPrimvars, uniformPrimvars, geomData, numPrims, updateEval, timeEval, attribIndex);
     }
   }
 
@@ -785,11 +847,27 @@ namespace
         UsdAttribute arrayPrimvar = colorPrimvar;
         switch (geomData.ColorsType)
         {
-        case UsdBridgeType::FLOAT3: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
-        case UsdBridgeType::FLOAT4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3fArray, GfVec4f); break; }
-        case UsdBridgeType::DOUBLE3: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
-        case UsdBridgeType::DOUBLE4: {ASSIGN_ARRAY_TO_PRIMVAR_REDUCED_MACRO(VtVec3dArray, GfVec4d); break; }
-        default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom DisplayColorPrimvar should be FLOAT3, FLOAT4, DOUBLE3 or DOUBLE4."); break; }
+        case UsdBridgeType::UCHAR: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint8_t); break; }
+        case UsdBridgeType::UCHAR2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint8_t); break; }
+        case UsdBridgeType::UCHAR3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint8_t); break; }
+        case UsdBridgeType::UCHAR4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint8_t); break; }
+        case UsdBridgeType::USHORT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint16_t); break; }
+        case UsdBridgeType::USHORT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint16_t); break; }
+        case UsdBridgeType::USHORT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint16_t); break; }
+        case UsdBridgeType::USHORT4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint16_t); break; }
+        case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint32_t); break; }
+        case UsdBridgeType::UINT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint32_t); break; }
+        case UsdBridgeType::UINT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint32_t); break; }
+        case UsdBridgeType::UINT4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint32_t); break; }
+        case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(float); break; }
+        case UsdBridgeType::FLOAT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(float); break; }
+        case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(float); break; }
+        case UsdBridgeType::FLOAT4: {ASSIGN_PRIMVAR_MACRO(VtVec4fArray); break; }
+        case UsdBridgeType::DOUBLE: {ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(double) break; }
+        case UsdBridgeType::DOUBLE2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(double); break; }
+        case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(double); break; }
+        case UsdBridgeType::DOUBLE4: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec4fArray, GfVec4d); break; }
+        default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4)."); break; }
         }
 
         // Per face or per-vertex interpolation. This will break timesteps that have been written before.
@@ -827,10 +905,10 @@ namespace
         UsdAttribute arrayPrimvar = idsAttr;
         switch (geomData.InstanceIdsType)
         {
-        case UsdBridgeType::UINT: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
-        case UsdBridgeType::INT: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtInt64Array, int); break; }
-        case UsdBridgeType::LONG: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtInt64Array); break; }
-        case UsdBridgeType::ULONG: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtInt64Array); break; }
+        case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
+        case UsdBridgeType::INT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, int); break; }
+        case UsdBridgeType::LONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
+        case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom IdsAttribute should be (U)LONG or (U)INT."); break; }
         }
       }
@@ -865,14 +943,16 @@ namespace
         UsdAttribute arrayPrimvar = widthsAttribute;
         switch (geomData.ScalesType)
         {
-        case UsdBridgeType::FLOAT: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtFloatArray); break; }
-        case UsdBridgeType::DOUBLE: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtFloatArray, double); break; }
+        case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO(VtFloatArray); break; }
+        case UsdBridgeType::DOUBLE: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtFloatArray, double); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom WidthsAttribute should be FLOAT or DOUBLE."); break; }
         }
       }
       else
       {
-        VtFloatArray usdWidths(geomData.NumPoints, (float)geomData.UniformScale);
+        VtFloatArray& usdWidths = GetStaticTempArray<VtFloatArray>();
+        usdWidths.resize(geomData.NumPoints);
+        for(auto& x : usdWidths) x = (float)geomData.UniformScale;
         widthsAttribute.Set(usdWidths, timeCode);
       }
     }
@@ -902,10 +982,10 @@ namespace
         UsdAttribute arrayPrimvar = scalesAttribute;
         switch (geomData.ScalesType)
         {
-        case UsdBridgeType::FLOAT: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO_EXPAND3(VtVec3fArray, float, writer->TempScalesArray); break;}
-        case UsdBridgeType::DOUBLE: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO_EXPAND3(VtVec3fArray, double, writer->TempScalesArray); break;}
-        case UsdBridgeType::FLOAT3: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
-        case UsdBridgeType::DOUBLE3: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
+        case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO_1EXPAND3(VtVec3fArray, float); break;}
+        case UsdBridgeType::DOUBLE: {ASSIGN_PRIMVAR_MACRO_1EXPAND3(VtVec3fArray, double); break;}
+        case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
+        case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom ScalesAttribute should be FLOAT(3) or DOUBLE(3)."); break; }
         }
       }
@@ -913,7 +993,9 @@ namespace
       {
         double pointScale = geomData.UniformScale;
         GfVec3f defaultScale((float)pointScale, (float)pointScale, (float)pointScale);
-        VtVec3fArray usdScales(geomData.NumPoints, defaultScale);
+        VtVec3fArray& usdScales = GetStaticTempArray<VtVec3fArray>();
+        usdScales.resize(geomData.NumPoints);
+        for(auto& x : usdScales) x = defaultScale;
         scalesAttribute.Set(usdScales, timeCode);
       }
     }
@@ -943,8 +1025,8 @@ namespace
         UsdAttribute arrayPrimvar = normalsAttribute;
         switch (geomData.OrientationsType)
         {
-        case UsdBridgeType::FLOAT3: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtVec3fArray); break; }
-        case UsdBridgeType::DOUBLE3: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
+        case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
+        case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom NormalsAttribute (orientations) should be FLOAT3 or DOUBLE3."); break; }
         }
       }
@@ -952,7 +1034,9 @@ namespace
       {
         //Always provide a default orientation
         GfVec3f defaultNormal(1, 0, 0);
-        VtVec3fArray usdNormals(geomData.NumPoints, defaultNormal);
+        VtVec3fArray& usdNormals = GetStaticTempArray<VtVec3fArray>();
+        usdNormals.resize(geomData.NumPoints);
+        for(auto& x : usdNormals) x = defaultNormal;
         normalsAttribute.Set(usdNormals, timeCode);
       }
     }
@@ -976,9 +1060,10 @@ namespace
       // Orientations
       UsdAttribute orientationsAttribute = outGeom.GetOrientationsAttr();
       assert(orientationsAttribute);
+      VtQuathArray& usdOrients = GetStaticTempArray<VtQuathArray>();
       if (geomData.Orientations)
       {
-        VtQuathArray usdOrients(geomData.NumPoints);
+        usdOrients.resize(geomData.NumPoints);
         switch (geomData.OrientationsType)
         {
         case UsdBridgeType::FLOAT3: { ConvertNormalsToQuaternions<float>(usdOrients, geomData.Orientations, geomData.NumPoints); break; }
@@ -1001,7 +1086,8 @@ namespace
       {
         //Always provide a default orientation
         GfQuath defaultOrient(1, 0, 0, 0);
-        VtQuathArray usdOrients(geomData.NumPoints, defaultOrient);
+        usdOrients.resize(geomData.NumPoints);
+        for(auto& x : usdOrients) x = defaultOrient;
         orientationsAttribute.Set(usdOrients, timeCode);
       }
     }
@@ -1018,7 +1104,9 @@ namespace
     
     //Shape indices
     UsdAttribute protoIndexAttr = outGeom->GetProtoIndicesAttr();
-    VtIntArray protoIndices(geomData.NumPoints, 0);
+    VtIntArray& protoIndices = GetStaticTempArray<VtIntArray>();
+    protoIndices.resize(geomData.NumPoints);
+    for(auto& x : protoIndices) x = 0;
     protoIndexAttr.Set(protoIndices, timeCode);
   }
 
@@ -1044,7 +1132,7 @@ namespace
       {
         GfVec3f* linVels = (GfVec3f*)geomData.LinearVelocities;
 
-        VtVec3fArray usdVelocities;
+        VtVec3fArray& usdVelocities = GetStaticTempArray<VtVec3fArray>();
         usdVelocities.assign(linVels, linVels + geomData.NumPoints);
         linearVelocitiesAttribute.Set(usdVelocities, timeCode);
       }
@@ -1077,7 +1165,7 @@ namespace
       {
         GfVec3f* angVels = (GfVec3f*)geomData.AngularVelocities;
 
-        VtVec3fArray usdAngularVelocities;
+        VtVec3fArray& usdAngularVelocities = GetStaticTempArray<VtVec3fArray>();
         usdAngularVelocities.assign(angVels, angVels + geomData.NumPoints);
         angularVelocitiesAttribute.Set(usdAngularVelocities, timeCode);
       }
@@ -1114,10 +1202,10 @@ namespace
         UsdAttribute arrayPrimvar = invisIdsAttr;
         switch (geomData.InvisibleIdsType)
         {
-        case UsdBridgeType::UINT: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
-        case UsdBridgeType::INT: {ASSIGN_ARRAY_TO_PRIMVAR_CONVERT_MACRO(VtInt64Array, int); break; }
-        case UsdBridgeType::LONG: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtInt64Array); break; }
-        case UsdBridgeType::ULONG: {ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtInt64Array); break; }
+        case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
+        case UsdBridgeType::INT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, int); break; }
+        case UsdBridgeType::LONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
+        case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom GetInvisibleIdsAttr should be (U)LONG or (U)INT."); break; }
         }
       }
@@ -1149,8 +1237,7 @@ namespace
       const void* arrayData = geomData.CurveLengths;
       size_t arrayNumElements = geomData.NumCurveLengths;
       UsdAttribute arrayPrimvar = vertCountAttr;
-      VtVec3fArray usdVerts;
-      { ASSIGN_ARRAY_TO_PRIMVAR_MACRO(VtIntArray); }
+      { ASSIGN_PRIMVAR_MACRO(VtIntArray); }
     }
   }
 }

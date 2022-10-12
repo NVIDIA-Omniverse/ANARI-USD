@@ -55,8 +55,9 @@ ANARI scene objects:
 ### Not supported #
 
 - Geometries:
-    - color array type other than double/float (so no fixed types)
+    - all fixed point color array types will be normalized to float, double will be type-cast
     - strided arrays
+    - attribute arrays and their types are fixed after the first commit (ie. from that point one cannot assign a different array to an attribute parameter)
 - Volumes
     - `color/opacity.position` parameters
 - Materials:
