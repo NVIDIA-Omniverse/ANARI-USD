@@ -14,8 +14,9 @@ set(CMAKE_INSTALL_RPATH "$ORIGIN")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ## Top-level project ##
+set(USD_DEVICE_VERSION 0.2.0)
 
-project(AnariUsdDevice LANGUAGES C CXX)
+project(AnariUsdDevice VERSION ${USD_DEVICE_VERSION} LANGUAGES C CXX)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -69,24 +70,6 @@ endif()
 add_subdirectory(UsdBridge)
 
 ## Build USD Device ##
-
-if(NOT USD_DEVICE_VERSION_EXPLICIT)
-  if(EXISTS ${CMAKE_SOURCE_DIR}/.git AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/.git)
-    find_package(Git REQUIRED)
-    execute_process(
-      COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      OUTPUT_VARIABLE "USD_DEVICE_VERSION"
-      ERROR_QUIET
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-  else()
-    set(USD_DEVICE_VERSION -1)
-  endif()
-else()
-  set(USD_DEVICE_VERSION ${USD_DEVICE_VERSION_EXPLICIT})
-endif()
-message(STATUS "USD Device version: ${USD_DEVICE_VERSION}")
 
 set(USDModule_SOURCES
   UsdAnari.cpp
