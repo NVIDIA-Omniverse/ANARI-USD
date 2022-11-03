@@ -76,7 +76,7 @@ find_package(anari 0.2.0 REQUIRED
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-  add_custom_target(generate_example_device
+  add_custom_target(generate_usd_queries
     COMMAND ${Python3_EXECUTABLE} ${ANARI_CODE_GEN_ROOT}/generate_queries.py
       --json ${ANARI_CODE_GEN_ROOT}
       --json ${CMAKE_CURRENT_SOURCE_DIR}
@@ -87,7 +87,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
     DEPENDS usd_device.json usd_device_features.json
   )
 
-  add_custom_target(generate_example_debug_objects
+  add_custom_target(generate_usd_debug_objects
     COMMAND ${Python3_EXECUTABLE} ${ANARI_CODE_GEN_ROOT}/generate_debug_objects.py
       --json ${ANARI_CODE_GEN_ROOT}
       --json ${CMAKE_CURRENT_SOURCE_DIR}
@@ -98,6 +98,11 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
     DEPENDS usd_device.json usd_device_features.json
   )
 
+  add_custom_target(generate_all)
+  add_dependencies(generate_all
+    generate_usd_queries
+    generate_usd_debug_objects
+  )
 endif()
 
 ## Core UsdBridge ##
