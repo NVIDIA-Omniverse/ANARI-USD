@@ -17,6 +17,8 @@
 #include "UsdFrame.h"
 #include "UsdLight.h"
 
+#include "anari/ext/debug/DebugObject.h"
+
 #include <cstdarg>
 #include <cstdio>
 #include <set>
@@ -38,10 +40,69 @@ extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_NEW_DEVICE(
   return nullptr;
 }
 
-ANARI_DEFINE_LIBRARY_GET_DEVICE_SUBTYPES(reference, libdata)
+extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_GET_DEVICE_SUBTYPES(usd, libdata)
 {
   static const char *devices[] = { deviceName, nullptr };
   return devices;
+}
+
+namespace anari {
+namespace usd {
+
+const char **query_object_types(ANARIDataType type);
+const void *query_object_info(ANARIDataType type,
+    const char *subtype,
+    const char *infoName,
+    ANARIDataType infoType);
+const void *query_param_info(ANARIDataType type,
+    const char *subtype,
+    const char *paramName,
+    ANARIDataType paramType,
+    const char *infoName,
+    ANARIDataType infoType);
+
+anari::debug_device::ObjectFactory *getDebugFactory();
+const char **query_extensions();
+
+} // namespace usd
+} // namespace anari
+
+extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_GET_OBJECT_SUBTYPES(
+    usd, library, deviceSubtype, objectType)
+{
+  return anari::usd::query_object_types(objectType);
+}
+
+extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_GET_OBJECT_PROPERTY(
+    usd,
+    library,
+    deviceSubtype,
+    objectSubtype,
+    objectType,
+    propertyName,
+    propertyType)
+{
+  return anari::usd::query_object_info(
+      objectType, objectSubtype, propertyName, propertyType);
+}
+
+extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_GET_PARAMETER_PROPERTY(
+    usd,
+    library,
+    deviceSubtype,
+    objectSubtype,
+    objectType,
+    parameterName,
+    parameterType,
+    propertyName,
+    propertyType)
+{
+  return anari::usd::query_param_info(objectType,
+      objectSubtype,
+      parameterName,
+      parameterType,
+      propertyName,
+      propertyType);
 }
 
 template <typename T>
@@ -719,6 +780,16 @@ int UsdDevice::getProperty(ANARIObject object,
         uint64_t nameLen = strlen(DEVICE_VERSION_NAME)+1;
         memcpy(mem, &nameLen, size);
       }
+      return 1;
+    }
+    if (strEquals(name, "debugObjects") && type == ANARI_FUNCTION_POINTER)
+    {
+      writeToVoidP(mem, anari::usd::getDebugFactory);
+      return 1;
+    }
+    if (strEquals(name, "features") && type == ANARI_STRING_LIST)
+    {
+      writeToVoidP(mem, anari::usd::query_extensions());
       return 1;
     }
   }

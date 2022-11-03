@@ -71,6 +71,35 @@ find_package(anari 0.2.0 REQUIRED
   PATHS ${ANARI_ROOT_DIR}
 )
 
+## Code generation
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+  add_custom_target(generate_example_device
+    COMMAND ${Python3_EXECUTABLE} ${ANARI_CODE_GEN_ROOT}/generate_queries.py
+      --json ${ANARI_CODE_GEN_ROOT}
+      --json ${CMAKE_CURRENT_SOURCE_DIR}
+      --prefix UsdDevice
+      --device ${CMAKE_CURRENT_SOURCE_DIR}/usd_device.json
+      --namespace anari::usd
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS usd_device.json usd_device_features.json
+  )
+
+  add_custom_target(generate_example_debug_objects
+    COMMAND ${Python3_EXECUTABLE} ${ANARI_CODE_GEN_ROOT}/generate_debug_objects.py
+      --json ${ANARI_CODE_GEN_ROOT}
+      --json ${CMAKE_CURRENT_SOURCE_DIR}
+      --device ${CMAKE_CURRENT_SOURCE_DIR}/usd_device.json
+      --prefix UsdDevice
+      --namespace anari::usd
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS usd_device.json usd_device_features.json
+  )
+
+endif()
+
 ## Core UsdBridge ##
 
 # Compile defs required by all subdirs
@@ -107,7 +136,9 @@ set(USDModule_SOURCES
   UsdWorld.cpp
   UsdRenderer.cpp
   UsdFrame.cpp
-  UsdLight.cpp)
+  UsdLight.cpp
+  UsdDeviceQueries.cpp
+  UsdDeviceDebugFactory.cpp)
 
 set(USDModule_HEADERS
   UsdCommonMacros.h
@@ -151,7 +182,7 @@ endif()
 
 target_link_libraries(anari_library_usd
 	PUBLIC anari::anari
-	PRIVATE anari::anari_utilities UsdBridge)
+	PRIVATE anari::anari_utilities anari::anari_library_debug UsdBridge)
 
 option(USD_DEVICE_BUILD_EXAMPLES "Build USD device examples" OFF)
 if(USD_DEVICE_BUILD_EXAMPLES)
