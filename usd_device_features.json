@@ -1,0 +1,314 @@
+{
+    "info" : {
+        "name" : "USD_DEVICE",
+        "type" : "feature",
+        "dependencies" : []
+    },
+
+    "objects" : [
+        {
+            "type" : "ANARI_DEVICE",
+            "parameters" : [
+                {
+                    "name" : "usd::serialize.hostName",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "Omniverse server name"
+                }, {
+                    "name" : "usd::serialize.location",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "USD output path"
+                }, {
+                    "name" : "usd::serialize.outputBinary",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "description" : "Enable binary USD output"
+                }, {
+                    "name" : "usd::newSession",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "description" : "TBD"
+                }, {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Global timestep"
+                }, {
+                    "name" : "usd::writeAtCommit",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "description" : "TBD"
+                }, {
+                    "name" : "usd::output.material",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "description" : "TBD"
+                }, {
+                    "name" : "usd::output.prieviewSurfaceShader",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "description" : "TBD"
+                }, {
+                    "name" : "usd::output.mdlShader",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "description" : "TBD"
+                }, {
+                    "name" : "usd::sceneStage",
+                    "types" : ["ANARI_VOID_POINTER"],
+                    "tags" : [],
+                    "description" : "USD stage pointer"
+                }, {
+                    "name" : "usd::enableSaving",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "description" : "TBD"
+                }
+            ]
+        }, {
+            "type" : "ANARI_GEOMETRY",
+            "name" : "triangle",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_GEOMETRY",
+            "name" : "quad",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_GEOMETRY",
+            "name" : "sphere",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_GEOMETRY",
+            "name" : "cone",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_GEOMETRY",
+            "name" : "cylinder",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_GEOMETRY",
+            "name" : "curve",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_MATERIAL",
+            "name" : "matte",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_MATERIAL",
+            "name" : "transparentMatte",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_SPATIAL_FIELD",
+            "name" : "structuredRegular",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_SAMPLER",
+            "name" : "image1D",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_SAMPLER",
+            "name" : "image2D",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_SAMPLER",
+            "name" : "image3D",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "Timestep"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_VOLUME",
+            "name" : "scivis",
+            "parameters" : [
+                {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_WORLD",
+            "parameters" : [
+                {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_INSTANCE",
+            "parameters" : [
+                {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_GROUP",
+            "parameters" : [
+                {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }, {
+            "type" : "ANARI_SURFACE",
+            "parameters" : [
+                {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }
+            ]
+        }
+    ]
+}
