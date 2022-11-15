@@ -67,14 +67,16 @@ else()
 endif()
 
 # Search in config mode
-find_package(anari 0.2.0 REQUIRED
+find_package(anari 0.3.0 REQUIRED
   PATHS ${ANARI_ROOT_DIR}
 )
 
 ## Code generation
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  list(PREPEND CMAKE_MODULE_PATH ${Python_ROOT_DIR})
+  find_package(Python REQUIRED COMPONENTS Interpreter Development)
+  list(POP_FRONT CMAKE_MODULE_PATH)
 
   add_custom_target(generate_usd_queries
     COMMAND ${Python3_EXECUTABLE} ${ANARI_CODE_GEN_ROOT}/generate_queries.py
