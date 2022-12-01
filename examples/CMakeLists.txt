@@ -11,6 +11,11 @@ add_executable(${PROJECT_NAME} anariTutorial_usd.c)
 target_link_libraries(${PROJECT_NAME} PRIVATE anari::anari stb_image ${PLATFORM_LIBS})
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+project(anariTutorialUsdCpp)
+add_executable(${PROJECT_NAME} anariTutorial_usd.cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE anari::anari stb_image ${PLATFORM_LIBS})
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
 project(anariTutorialUsdTime)
 add_executable(${PROJECT_NAME} anariTutorial_usd_time.c)
 target_link_libraries(${PROJECT_NAME} PRIVATE anari::anari stb_image ${PLATFORM_LIBS})
