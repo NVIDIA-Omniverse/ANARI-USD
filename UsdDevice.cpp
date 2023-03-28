@@ -164,7 +164,7 @@ public:
   std::set<std::string> uniqueNames;
 };
 
-
+//---- Make sure to update clearDeviceParameters()
 DEFINE_PARAMETER_MAP(UsdDevice,
   REGISTER_PARAMETER_MACRO("usd::serialize.hostName", ANARI_STRING, hostName)
   REGISTER_PARAMETER_MACRO("usd::serialize.location", ANARI_STRING, outputPath)
@@ -177,6 +177,14 @@ DEFINE_PARAMETER_MAP(UsdDevice,
   REGISTER_PARAMETER_MACRO("usd::output.mdlShader", ANARI_BOOL, outputMdlShader)
 )
 
+void UsdDevice::clearDeviceParameters()
+{
+  deviceUnsetParameter("usd::serialize.hostName");
+  deviceUnsetParameter("usd::serialize.location");
+  transferWriteToReadParams();
+}
+//----
+
 UsdDevice::UsdDevice()
   : internals(std::make_unique<UsdDeviceInternals>())
 {}
@@ -188,6 +196,8 @@ UsdDevice::UsdDevice(ANARILibrary library)
 UsdDevice::~UsdDevice()
 {
   clearCommitList(); // Make sure no more references are held before cleaning up the device (and checking for memleaks)
+
+  clearDeviceParameters(); // Release device parameters with object references
 
   clearSharedStringList(); // Do the same for shared string references
 

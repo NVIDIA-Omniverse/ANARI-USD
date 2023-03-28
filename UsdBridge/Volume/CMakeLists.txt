@@ -21,14 +21,13 @@ project(UsdBridge_Volume)
 add_library(${PROJECT_NAME} SHARED)
 
 if(NOT CMAKE_BUILD_TYPE) # Otherwise IlmBase::Half does not find debug/release libraries
-  message(FATAL_ERROR "A CMAKE_BUILD_TYPE has to be chosen for correct dependency resolution of OmniConnect_Volume")
+  message(FATAL_ERROR "A CMAKE_BUILD_TYPE has to be chosen for correct dependency resolution of UsdBridge_Volume")
 endif()
 
 option(USD_DEVICE_USE_OPENVDB "Enable OpenVDB support for USD device" OFF)
 
 target_sources(${PROJECT_NAME}
   PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/../Common/UsdBridgeUtils.cpp
     ${CMAKE_CURRENT_LIST_DIR}/UsdBridgeVolumeWriter.cpp
     ${CMAKE_CURRENT_LIST_DIR}/UsdBridgeVolumeWriter.h
 )
@@ -36,7 +35,11 @@ target_sources(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
     PUBLIC
       ${CMAKE_CURRENT_LIST_DIR}
-      "${CMAKE_CURRENT_LIST_DIR}/../Common"
+)
+
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE  
+    UsdBridge_Common
 )
 
 if (USD_DEVICE_USE_OPENVDB)
@@ -178,7 +181,7 @@ if (USD_DEVICE_USE_OPENVDB)
   find_package(Blosc REQUIRED)
   #find_package(OpenVDB REQUIRED)
 
-  fix_blosc_dependency()
+  #fix_blosc_dependency()
 
   set(OPENVDB_DEPENDENCY_TARGETS
     Boost::iostreams
@@ -238,6 +241,9 @@ if (USD_DEVICE_USE_OPENVDB)
         PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
     set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+  else()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+      _GLIBCXX_USE_CXX11_ABI=0 )
   endif()
 
 endif()

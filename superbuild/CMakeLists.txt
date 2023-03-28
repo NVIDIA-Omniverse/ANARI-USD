@@ -182,9 +182,13 @@ endif()
 
 if(USD_DEVICE_USE_OMNIVERSE)
   set(OMNICLIENT_ROOT_DIR "" CACHE PATH "Path to Omniverse Client")
+  set(OMNIUSDRESOLVER_ROOT_DIR "" CACHE PATH "Path to Omniverse USD Resolver")
 
   if(NOT EXISTS ${OMNICLIENT_ROOT_DIR})
     message(FATAL_ERROR "When USD_DEVICE_USE_OMNIVERSE is on, a valid directory is required for OMNICLIENT_ROOT_DIR (optionally pointing to debug/ and release/ subdirectories)")
+  endif()
+  if(NOT EXISTS ${OMNIUSDRESOLVER_ROOT_DIR})
+    message(FATAL_ERROR "When USD_DEVICE_USE_OMNIVERSE is on, a valid directory is required for OMNIUSDRESOLVER_ROOT_DIR (optionally pointing to debug/ and release/ subdirectories)")
   endif()
 endif()
 
@@ -236,7 +240,7 @@ if (BUILD_ANARI_USD_DEVICE)
       endif()
     endif()
     if(USD_DEVICE_USE_OMNIVERSE)
-      list(APPEND ANARI_DEVICE_BUILD_ARGS -DOMNICLIENT_ROOT_DIR=${OMNICLIENT_ROOT_DIR})
+      list(APPEND ANARI_DEVICE_BUILD_ARGS -DOMNICLIENT_ROOT_DIR=${OMNICLIENT_ROOT_DIR} -DOMNIUSDRESOLVER_ROOT_DIR=${OMNIUSDRESOLVER_ROOT_DIR})
     endif()
   endif()
 

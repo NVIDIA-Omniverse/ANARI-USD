@@ -100,7 +100,7 @@ bool UsdBridgeUsdWriter::CreateDirectories()
 
   valid = Connect->CreateFolder("", true, true);
 
-  //Connect->RemoveFolder(SessionDirectory.c_str(), true);
+  //Connect->RemoveFolder(SessionDirectory.c_str(), true, true);
   bool folderMayExist = !Settings.CreateNewSession;
   
   valid = valid && Connect->CreateFolder(SessionDirectory.c_str(), true, folderMayExist);

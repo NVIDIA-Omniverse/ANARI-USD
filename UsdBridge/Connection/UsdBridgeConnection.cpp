@@ -217,7 +217,6 @@ UsdBridgeRemoteConnection::~UsdBridgeRemoteConnection()
 #ifdef OMNIVERSE_CONNECTION_ENABLE
 
 #include <OmniClient.h>
-#include <OmniUsdLive.h>
 
 namespace
 {
@@ -426,7 +425,6 @@ bool UsdBridgeRemoteConnection::Initialize(const UsdBridgeConnectionSettings& se
       if (NumInitializedConnInstances == 0)
       {
         //omniClientPushBaseUrl(urlRes); // Base urls only apply to *normal* omniClient calls, not usd stage creation
-        omniUsdLiveSetDefaultEnabled(true);
       }
 
       ++NumInitializedConnInstances;
@@ -447,7 +445,7 @@ void UsdBridgeRemoteConnection::Shutdown()
     if (Internals->StatusCallbackHandle)
       omniClientUnregisterCallback(Internals->StatusCallbackHandle);
 
-    omniUsdLiveWaitForPendingUpdates();
+    omniClientLiveWaitForPendingUpdates();
 
     //omniClientPopBaseUrl(Internals->BaseUrlBuffer);
 
@@ -563,7 +561,7 @@ bool UsdBridgeRemoteConnection::RemoveFile(const char* filePath, bool isRelative
 
 bool UsdBridgeRemoteConnection::ProcessUpdates()
 {
-  omniUsdLiveProcess();
+  omniClientLiveProcess();
 
   return true;
 }

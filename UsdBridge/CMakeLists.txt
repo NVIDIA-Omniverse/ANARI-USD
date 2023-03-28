@@ -67,7 +67,7 @@ if(NOT (USD_ROOT_DIR_DEBUG STREQUAL USD_ROOT_DIR_RELEASE))
   endif()
 endif()
 
-list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade)
+list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade usdLux usdUtils)
 flatten_and_cleanup_targets(USD_TARGETS "${USD_INIT_TARGETS}")
 message(STATUS "USD_TARGETS: ${USD_TARGETS}")
 
@@ -88,13 +88,13 @@ message(STATUS "Boost_SEP_INCLUDE_DIR ${Boost_SEP_INCLUDE_DIR}")
 
 # Bridge source
 
+add_subdirectory(Common)
 add_subdirectory(Mdl)
 add_subdirectory(Connection)
 add_subdirectory(Volume)
 
 set(USDBRIDGE_SOURCES
   UsdBridge.cpp
-  Common/UsdBridgeUtils.cpp
   UsdBridgeCaches.cpp
   UsdBridgeUsdWriter.cpp
   UsdBridgeUsdWriter_Geometry.cpp
@@ -106,11 +106,6 @@ set(USDBRIDGE_SOURCES
   UsdBridgeUsdWriter.h
   UsdBridgeUsdWriter_Common.h
   UsdBridgeTimeEvaluator.h
-  Common/UsdBridgeData.h
-  Common/UsdBridgeNumerics.h
-  Common/UsdBridgeUtils.h
-  Common/UsdBridgeUtils_Internal.h
-  Common/UsdBridgeMacros.h
   usd.h
   ${USDBRIDGE_MDL_SOURCES}
 )
@@ -120,15 +115,12 @@ add_library(UsdBridge STATIC ${USDBRIDGE_SOURCES})
 # Includes
 
 target_include_directories(UsdBridge
-PUBLIC
-  ${CMAKE_CURRENT_LIST_DIR}
-  ${CMAKE_CURRENT_LIST_DIR}/Common
-PRIVATE
-  ${CMAKE_CURRENT_LIST_DIR}/Mdl
-  ${CMAKE_CURRENT_LIST_DIR}/Connection
-  ${CMAKE_CURRENT_LIST_DIR}/Volume
-  ${Boost_SEP_INCLUDE_DIR}
-)
+  PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}
+  PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/Mdl
+    ${Boost_SEP_INCLUDE_DIR}
+  )
 
 # Defs
 
@@ -141,18 +133,19 @@ if (WIN32)
   add_definitions("-DBOOST_ALL_DYN_LINK")
   # Combination of boost and python causes pragma linking issues for both libraries.
   message(STATUS "Python link dirs: ${USD_PYTHON_LINK_DIRS}")
-  target_link_directories(UsdBridge
-    PUBLIC "${USD_PYTHON_LINK_DIRS}" "${USD_LIB_DIR}")
+  # Make sure to set link dirs public, since this is a static lib, so the dynamic boost libs will propagate to the parent project. 
+  target_link_directories(UsdBridge PUBLIC "${USD_PYTHON_LINK_DIRS}" "${USD_LIB_DIR}") 
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
-  target_compile_definitions(UsdBridge PRIVATE
-    _GLIBCXX_USE_CXX11_ABI=0 )
+  target_compile_definitions(UsdBridge PRIVATE _GLIBCXX_USE_CXX11_ABI=0 )
   target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
 endif()
 
 # Linking
 
 target_link_libraries(UsdBridge
+  PUBLIC  
+    UsdBridge_Common
   PRIVATE
     stb_image
     UsdBridge_Volume

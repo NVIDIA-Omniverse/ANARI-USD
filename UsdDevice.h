@@ -170,8 +170,6 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
     bool nameExists(const char* name);
 
     void addToCommitList(UsdBaseObject* object, bool commitData);
-    void clearCommitList();
-    void flushCommitList();
     bool isFlushingCommitList() const { return lockCommitList; }
 
     void addToVolumeList(UsdVolume* volume);
@@ -180,7 +178,6 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
     // Allows for selected strings to persist, 
     // so their pointers can be cached beyond their containing objects' lifetimes
     void addToSharedStringList(UsdSharedString* sharedString); 
-    void clearSharedStringList();
 
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
@@ -201,12 +198,19 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
       const char *format,
       va_list& arglist);
 
-  private:
+  protected:
     void deviceSetParameter(const char *id, ANARIDataType type, const void *mem);
     void deviceUnsetParameter(const char *id);
     void deviceRetain();
     void deviceRelease();
     void deviceCommit();
+
+    // USD Specific Cleanup /////////////////////////////////////////////////////////////
+
+    void clearCommitList();
+    void flushCommitList();
+    void clearDeviceParameters();
+    void clearSharedStringList();
 
     void initializeBridge();
 
