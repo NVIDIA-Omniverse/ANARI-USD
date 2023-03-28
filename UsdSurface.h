@@ -27,7 +27,7 @@ struct UsdSurfaceData
 class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSurfaceHandle>
 {
   public:
-    UsdSurface(const char* name, UsdBridge* bridge, UsdDevice* device);
+    UsdSurface(const char* name, UsdDevice* device);
     ~UsdSurface();
 
     void filterSetParam(const char *name,

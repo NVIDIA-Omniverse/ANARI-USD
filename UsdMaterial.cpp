@@ -36,8 +36,8 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
 
 using DMI = UsdMaterial::MaterialDMI;
 
-UsdMaterial::UsdMaterial(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_MATERIAL, name, bridge)
+UsdMaterial::UsdMaterial(const char* name, const char* type, UsdDevice* device)
+  : BridgedBaseObjectType(ANARI_MATERIAL, name)
 {
   if (strEquals(type, "matte"))
   {
@@ -68,8 +68,8 @@ UsdMaterial::UsdMaterial(const char* name, const char* type, UsdBridge* bridge, 
 UsdMaterial::~UsdMaterial()
 {
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
-  if(usdBridge)
-    usdBridge->DeleteMaterial(usdHandle);
+  if(cachedBridge)
+    cachedBridge->DeleteMaterial(usdHandle);
 #endif
 }
 
@@ -173,6 +173,7 @@ void UsdMaterial::assignParameterToMaterialInput(const UsdMaterialMultiTypeParam
 
 void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
 { 
+  UsdBridge* usdBridge = device->getUsdBridge();
   const UsdMaterialData& paramData = getReadParams();
   
   if(perInstance != enable)
@@ -226,7 +227,9 @@ bool UsdMaterial::deferCommit(UsdDevice* device)
 
 bool UsdMaterial::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge || !device->getReadParams().outputMaterial)
+  UsdBridge* usdBridge = device->getUsdBridge();
+
+  if(!device->getReadParams().outputMaterial)
     return false;
 
   bool isNew = false;
@@ -268,6 +271,7 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
 
 void UsdMaterial::doCommitRefs(UsdDevice* device)
 {
+  UsdBridge* usdBridge = device->getUsdBridge();
   const UsdMaterialData& paramData = getReadParams();
 
   double worldTimeStep = device->getReadParams().timeStep;

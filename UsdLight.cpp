@@ -10,8 +10,8 @@ DEFINE_PARAMETER_MAP(UsdLight,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
 )
 
-UsdLight::UsdLight(const char* name, UsdBridge* bridge, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_LIGHT, name, bridge)
+UsdLight::UsdLight(const char* name, UsdDevice* device)
+  : BridgedBaseObjectType(ANARI_LIGHT, name)
 {}
 
 UsdLight::~UsdLight()

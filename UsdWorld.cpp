@@ -26,16 +26,16 @@ DEFINE_PARAMETER_MAP(UsdWorld,
   REGISTER_PARAMETER_MACRO("volume", ANARI_ARRAY, volumes)
 )
 
-UsdWorld::UsdWorld(const char* name, UsdBridge* bridge)
-  : BridgedBaseObjectType(ANARI_WORLD, name, bridge)
+UsdWorld::UsdWorld(const char* name)
+  : BridgedBaseObjectType(ANARI_WORLD, name)
 {
 }
 
 UsdWorld::~UsdWorld()
 {
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
-  if(usdBridge)
-    usdBridge->DeleteWorld(usdHandle);
+  if(cachedBridge)
+    cachedBridge->DeleteWorld(usdHandle);
 #endif
 }
 
@@ -68,8 +68,7 @@ bool UsdWorld::deferCommit(UsdDevice* device)
 
 bool UsdWorld::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge)
-    return false;
+  UsdBridge* usdBridge = device->getUsdBridge();
 
   const char* objName = getName();
 
@@ -89,10 +88,11 @@ bool UsdWorld::doCommitData(UsdDevice* device)
 
 void UsdWorld::doCommitRefs(UsdDevice* device)
 {
-  const char* objName = getName();
-
+  UsdBridge* usdBridge = device->getUsdBridge();
   const UsdWorldData& paramData = getReadParams();
   double timeStep = device->getReadParams().timeStep;
+
+  const char* objName = getName();
 
   bool instancesTimeVarying = paramData.timeVarying & 1;
   bool surfacesTimeVarying = paramData.timeVarying & (1 << 1);

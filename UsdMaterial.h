@@ -47,7 +47,7 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
   public:
     using MaterialDMI = UsdBridgeMaterialData::DataMemberId;
 
-    UsdMaterial(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device);
+    UsdMaterial(const char* name, const char* type, UsdDevice* device);
     ~UsdMaterial();
 
     void filterSetParam(const char *name,

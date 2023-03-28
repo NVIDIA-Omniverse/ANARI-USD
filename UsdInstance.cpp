@@ -17,17 +17,17 @@ DEFINE_PARAMETER_MAP(UsdInstance,
   REGISTER_PARAMETER_MACRO("transform", ANARI_FLOAT32_MAT3x4, transform)
 )
 
-UsdInstance::UsdInstance(const char* name, UsdBridge* bridge, 
+UsdInstance::UsdInstance(const char* name,
   UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_INSTANCE, name, bridge)
+  : BridgedBaseObjectType(ANARI_INSTANCE, name)
 {
 }
 
 UsdInstance::~UsdInstance()
 {
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
-  if(usdBridge)
-    usdBridge->DeleteInstance(usdHandle);
+  if(cachedBridge)
+    cachedBridge->DeleteInstance(usdHandle);
 #endif
 }
 
@@ -58,8 +58,7 @@ bool UsdInstance::deferCommit(UsdDevice* device)
 
 bool UsdInstance::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge)
-    return false;
+  UsdBridge* usdBridge = device->getUsdBridge();
 
   const char* instanceName = getName();
 
@@ -79,6 +78,7 @@ bool UsdInstance::doCommitData(UsdDevice* device)
 
 void UsdInstance::doCommitRefs(UsdDevice* device)
 {
+  UsdBridge* usdBridge = device->getUsdBridge();
   const UsdInstanceData& paramData = getReadParams();
 
   double timeStep = device->getReadParams().timeStep;

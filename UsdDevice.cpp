@@ -320,49 +320,6 @@ void UsdDevice::deviceUnsetParameter(const char * id)
   }
 }
 
-void UsdDevice::deviceCommit()
-{
-  transferWriteToReadParams();
-
-  const UsdDeviceData& paramData = getReadParams();
-
-  if(!bridgeInitialized)
-  {
-    bridgeInitialized = true;
-
-    statusFunc = userSetStatusFunc ? userSetStatusFunc : defaultStatusCallback();
-    statusUserData = userSetStatusUserData ? userSetStatusUserData : defaultStatusCallbackUserPtr();
-
-    if(paramData.outputPath)
-      internals->outputLocation = paramData.outputPath->c_str();
-
-    if(internals->outputLocation.empty()) {
-      auto *envLocation = getenv("ANARI_USD_SERIALIZE_LOCATION");
-      if (envLocation) {
-        internals->outputLocation = envLocation;
-        reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR,
-          "Usd Device parameter 'usd::serialize.location' using ANARI_USD_SERIALIZE_LOCATION value");
-      }
-    }
-
-    if (internals->outputLocation.empty())
-    {
-      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
-        "Usd Device parameter 'usd::serialize.location' not set, defaulting to './'");
-      internals->outputLocation = "./";
-    }
-
-    if (!internals->CreateNewBridge(paramData, &reportBridgeStatus, this))
-    {
-      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_UNKNOWN_ERROR, "Usd Bridge failed to load");
-    }
-  }
-  else
-  {
-    internals->bridge->UpdateBeginEndTime(paramData.timeStep);
-  }
-}
-
 void UsdDevice::deviceRetain()
 {
   this->refInc();
@@ -371,6 +328,55 @@ void UsdDevice::deviceRetain()
 void UsdDevice::deviceRelease()
 {
   this->refDec();
+}
+
+void UsdDevice::deviceCommit()
+{
+  transferWriteToReadParams();
+
+  if(!bridgeInitAttempt)
+  {
+    initializeBridge();
+  }
+  else
+  {
+    const UsdDeviceData& paramData = getReadParams();
+    internals->bridge->UpdateBeginEndTime(paramData.timeStep);
+  }
+}
+
+void UsdDevice::initializeBridge()
+{
+  const UsdDeviceData& paramData = getReadParams();
+
+  bridgeInitAttempt = true;
+
+  statusFunc = userSetStatusFunc ? userSetStatusFunc : defaultStatusCallback();
+  statusUserData = userSetStatusUserData ? userSetStatusUserData : defaultStatusCallbackUserPtr();
+
+  if(paramData.outputPath)
+    internals->outputLocation = paramData.outputPath->c_str();
+
+  if(internals->outputLocation.empty()) {
+    auto *envLocation = getenv("ANARI_USD_SERIALIZE_LOCATION");
+    if (envLocation) {
+      internals->outputLocation = envLocation;
+      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR,
+        "Usd Device parameter 'usd::serialize.location' using ANARI_USD_SERIALIZE_LOCATION value");
+    }
+  }
+
+  if (internals->outputLocation.empty())
+  {
+    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
+      "Usd Device parameter 'usd::serialize.location' not set, defaulting to './'");
+    internals->outputLocation = "./";
+  }
+
+  if (!internals->CreateNewBridge(paramData, &reportBridgeStatus, this))
+  {
+    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_UNKNOWN_ERROR, "Usd Bridge failed to load");
+  }
 }
 
 ANARIArray UsdDevice::CreateDataArray(const void *appMemory,
@@ -458,7 +464,7 @@ void UsdDevice::unmapArray(ANARIArray array)
 ANARISampler UsdDevice::newSampler(const char *type)
 {
   const char* name = makeUniqueName("Sampler");
-  UsdSampler* object = new UsdSampler(name, type, internals->bridge.get(), this);
+  UsdSampler* object = new UsdSampler(name, type, this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -469,7 +475,7 @@ ANARISampler UsdDevice::newSampler(const char *type)
 ANARIMaterial UsdDevice::newMaterial(const char *material_type)
 {
   const char* name = makeUniqueName("Material");
-  UsdMaterial* object = new UsdMaterial(name, material_type, internals->bridge.get(), this);
+  UsdMaterial* object = new UsdMaterial(name, material_type, this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -480,7 +486,7 @@ ANARIMaterial UsdDevice::newMaterial(const char *material_type)
 ANARIGeometry UsdDevice::newGeometry(const char *type)
 {
   const char* name = makeUniqueName("Geometry");
-  UsdGeometry* object = new UsdGeometry(name, type, internals->bridge.get(), this);
+  UsdGeometry* object = new UsdGeometry(name, type, this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -491,7 +497,7 @@ ANARIGeometry UsdDevice::newGeometry(const char *type)
 ANARISpatialField UsdDevice::newSpatialField(const char * type)
 {
   const char* name = makeUniqueName("SpatialField");
-  UsdSpatialField* object = new UsdSpatialField(name, type, internals->bridge.get());
+  UsdSpatialField* object = new UsdSpatialField(name, type);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -502,7 +508,7 @@ ANARISpatialField UsdDevice::newSpatialField(const char * type)
 ANARISurface UsdDevice::newSurface()
 {
   const char* name = makeUniqueName("Surface");
-  UsdSurface* object = new UsdSurface(name, internals->bridge.get(), this);
+  UsdSurface* object = new UsdSurface(name, this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -513,7 +519,7 @@ ANARISurface UsdDevice::newSurface()
 ANARIVolume UsdDevice::newVolume(const char *type)
 {
   const char* name = makeUniqueName("Volume");
-  UsdVolume* object = new UsdVolume(name, internals->bridge.get(), this);
+  UsdVolume* object = new UsdVolume(name, this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -524,7 +530,7 @@ ANARIVolume UsdDevice::newVolume(const char *type)
 ANARIGroup UsdDevice::newGroup()
 {
   const char* name = makeUniqueName("Group");
-  UsdGroup* object = new UsdGroup(name, internals->bridge.get(), this);
+  UsdGroup* object = new UsdGroup(name, this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -535,7 +541,7 @@ ANARIGroup UsdDevice::newGroup()
 ANARIInstance UsdDevice::newInstance()
 {
   const char* name = makeUniqueName("Instance");
-  UsdInstance* object = new UsdInstance(name, internals->bridge.get(), this);
+  UsdInstance* object = new UsdInstance(name, this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -546,7 +552,7 @@ ANARIInstance UsdDevice::newInstance()
 ANARIWorld UsdDevice::newWorld()
 {
   const char* name = makeUniqueName("World");
-  UsdWorld* object = new UsdWorld(name, internals->bridge.get());
+  UsdWorld* object = new UsdWorld(name);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -556,7 +562,7 @@ ANARIWorld UsdDevice::newWorld()
 
 ANARIRenderer UsdDevice::newRenderer(const char *type)
 {
-  UsdRenderer* object = new UsdRenderer(internals->bridge.get());
+  UsdRenderer* object = new UsdRenderer();
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -564,11 +570,19 @@ ANARIRenderer UsdDevice::newRenderer(const char *type)
   return (ANARIRenderer)(object);
 }
 
+UsdBridge* UsdDevice::getUsdBridge()
+{
+  return internals->bridge.get();
+}
+
 void UsdDevice::renderFrame(ANARIFrame frame)
 {
   // Always commit device changes if not initialized, otherwise no conversion can be performed.
+  if(!bridgeInitAttempt)
+    initializeBridge();
+
   if(!isInitialized())
-    deviceCommit();
+      return;
 
   flushCommitList();
 
@@ -576,7 +590,7 @@ void UsdDevice::renderFrame(ANARIFrame frame)
 
   UsdRenderer* ren = ((UsdFrame*)frame)->getRenderer();
   if(ren)
-    ren->saveUsd();
+    ren->saveUsd(this);
 }
 
 const char* UsdDevice::makeUniqueName(const char* name)

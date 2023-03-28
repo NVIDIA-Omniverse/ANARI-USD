@@ -20,7 +20,7 @@ struct UsdInstanceData
 class UsdInstance : public UsdBridgedBaseObject<UsdInstance, UsdInstanceData, UsdInstanceHandle>
 {
   public:
-    UsdInstance(const char* name, UsdBridge* bridge, 
+    UsdInstance(const char* name,
       UsdDevice* device);
     ~UsdInstance();
 

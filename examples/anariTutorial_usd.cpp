@@ -10,6 +10,9 @@
 #include "anari/anari_cpp.hpp"
 #include "anari/anari_cpp/ext/std.h"
 
+// stb_image
+#include "stb_image_write.h"
+
 using uvec2 = std::array<unsigned int, 2>;
 using uvec3 = std::array<unsigned int, 3>;
 using vec3 = std::array<float, 3>;

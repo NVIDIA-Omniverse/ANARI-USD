@@ -13,6 +13,6 @@ void UsdBaseObject::commit(UsdDevice* device)
     if(commitRefs)
       device->addToCommitList(this, false); // Commit refs, but no more data
   }
-
-  device->addToCommitList(this, true); // Commit data and refs
+  else
+    device->addToCommitList(this, true); // Commit data and refs
 }

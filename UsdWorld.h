@@ -21,7 +21,7 @@ struct UsdWorldData
 class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHandle>
 {
   public:
-    UsdWorld(const char* name, UsdBridge* bridge);
+    UsdWorld(const char* name);
     ~UsdWorld();
 
     void filterSetParam(const char *name,

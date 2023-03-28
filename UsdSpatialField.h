@@ -28,7 +28,7 @@ struct UsdSpatialFieldData
 class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialFieldData, UsdSpatialFieldHandle>
 {
   public:
-    UsdSpatialField(const char* name, const char* type, UsdBridge* bridge);
+    UsdSpatialField(const char* name, const char* type);
     ~UsdSpatialField();
 
     void filterSetParam(const char *name,

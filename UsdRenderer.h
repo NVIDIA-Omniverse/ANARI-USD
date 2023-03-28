@@ -14,7 +14,7 @@ struct UsdRendererData
 class UsdRenderer : public UsdBaseObject, public UsdParameterizedObject<UsdRenderer, UsdRendererData>
 {
   public:
-    UsdRenderer(UsdBridge* bridge);
+    UsdRenderer();
     ~UsdRenderer();
 
     void filterSetParam(const char *name,
@@ -36,7 +36,7 @@ class UsdRenderer : public UsdBaseObject, public UsdParameterizedObject<UsdRende
       transferWriteToReadParams();
     }
 
-    void saveUsd();
+    void saveUsd(UsdDevice* device);
 
   protected:
     bool deferCommit(UsdDevice* device) override;

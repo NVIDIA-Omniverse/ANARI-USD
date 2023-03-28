@@ -19,16 +19,16 @@ DEFINE_PARAMETER_MAP(UsdSpatialField,
   REGISTER_PARAMETER_MACRO("origin", ANARI_FLOAT32_VEC3, gridOrigin)
 ) // See .h for usage.
 
-UsdSpatialField::UsdSpatialField(const char* name, const char* type, UsdBridge* bridge)
-  : BridgedBaseObjectType(ANARI_SPATIAL_FIELD, name, bridge)
+UsdSpatialField::UsdSpatialField(const char* name, const char* type)
+  : BridgedBaseObjectType(ANARI_SPATIAL_FIELD, name)
 {
 }
 
 UsdSpatialField::~UsdSpatialField()
 {
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
-  if(usdBridge)
-    usdBridge->DeleteSpatialField(usdHandle);
+  if(cachedBridge)
+    cachedBridge->DeleteSpatialField(usdHandle);
 #endif
 }
 
@@ -56,8 +56,7 @@ bool UsdSpatialField::deferCommit(UsdDevice* device)
 
 bool UsdSpatialField::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge)
-    return false;
+  UsdBridge* usdBridge = device->getUsdBridge();
 
   const UsdSpatialFieldData& paramData = getReadParams();
 

@@ -21,8 +21,8 @@ DEFINE_PARAMETER_MAP(UsdSurface,
   REGISTER_PARAMETER_MACRO("material", MaterialType, material)
 )
 
-UsdSurface::UsdSurface(const char* name, UsdBridge* bridge, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_SURFACE, name, bridge)
+UsdSurface::UsdSurface(const char* name, UsdDevice* device)
+  : BridgedBaseObjectType(ANARI_SURFACE, name)
 {
 }
 
@@ -31,8 +31,8 @@ UsdSurface::~UsdSurface()
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
   // Given that the object is destroyed, none of its references to other objects
   // has to be updated anymore.
-  if (usdBridge)
-    usdBridge->DeleteSurface(usdHandle);
+  if(cachedBridge)
+    cachedBridge->DeleteSurface(usdHandle);
 #endif
 }
 
@@ -64,8 +64,7 @@ bool UsdSurface::deferCommit(UsdDevice* device)
 
 bool UsdSurface::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge)
-    return false;
+  UsdBridge* usdBridge = device->getUsdBridge();
     
   bool isNew = false;
   if (!usdHandle.value)
@@ -83,6 +82,7 @@ bool UsdSurface::doCommitData(UsdDevice* device)
 
 void UsdSurface::doCommitRefs(UsdDevice* device)
 {
+  UsdBridge* usdBridge = device->getUsdBridge();
   const UsdSurfaceData& paramData = getReadParams();
 
   double worldTimeStep = device->getReadParams().timeStep;

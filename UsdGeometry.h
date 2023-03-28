@@ -66,7 +66,7 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
     typedef std::vector<UsdBridgeAttribute> AttributeArray;
     typedef std::vector<std::vector<char>> AttributeDataArraysType;
     
-    UsdGeometry(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device);
+    UsdGeometry(const char* name, const char* type, UsdDevice* device);
     ~UsdGeometry();
 
     void filterSetParam(const char *name,
@@ -97,9 +97,9 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
       const char* paramName, UsdDevice* device, const char* debugName, int attribIndex = -1);
     bool checkGeomParams(UsdDevice* device);
 
-    void updateGeomData(UsdDevice* device, UsdBridgeMeshData& meshData);
-    void updateGeomData(UsdDevice* device, UsdBridgeInstancerData& instancerData);
-    void updateGeomData(UsdDevice* device, UsdBridgeCurveData& curveData);
+    void updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeMeshData& meshData);
+    void updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeInstancerData& instancerData);
+    void updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeCurveData& curveData);
 
     template<typename UsdGeomType>
     void commitTemplate(UsdDevice* device);

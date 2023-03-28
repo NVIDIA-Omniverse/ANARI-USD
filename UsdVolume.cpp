@@ -20,8 +20,8 @@ DEFINE_PARAMETER_MAP(UsdVolume,
   REGISTER_PARAMETER_MACRO("densityScale", ANARI_FLOAT32, densityScale)
 )
 
-UsdVolume::UsdVolume(const char* name, UsdBridge* bridge, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_VOLUME, name, bridge)
+UsdVolume::UsdVolume(const char* name, UsdDevice* device)
+  : BridgedBaseObjectType(ANARI_VOLUME, name)
   , usdDevice(device)
 {
   usdDevice->addToVolumeList(this);
@@ -34,8 +34,8 @@ UsdVolume::~UsdVolume()
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
   // Given that the object is destroyed, none of its references to other objects
   // has to be updated anymore.
-  if (usdBridge)
-    usdBridge->DeleteVolume(usdHandle);
+  if(cachedBridge)
+    cachedBridge->DeleteVolume(usdHandle);
 #endif
 }
 
@@ -111,6 +111,7 @@ bool UsdVolume::CheckTfParams(UsdDevice* device)
 
 bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
 {
+  UsdBridge* usdBridge = device->getUsdBridge();
   const UsdVolumeData& paramData = getReadParams();
 
   UsdSpatialField* field = paramData.field;
@@ -179,8 +180,7 @@ bool UsdVolume::doCommitData(UsdDevice* device)
 {
   const UsdVolumeData& paramData = getReadParams();
 
-  if(!usdBridge)
-    return false;
+  UsdBridge* usdBridge = device->getUsdBridge();
 
   bool isNew = false;
   if (!usdHandle.value)

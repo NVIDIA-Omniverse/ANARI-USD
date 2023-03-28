@@ -21,17 +21,17 @@ DEFINE_PARAMETER_MAP(UsdGroup,
   REGISTER_PARAMETER_MACRO("volume", ANARI_ARRAY, volumes)
 )
 
-UsdGroup::UsdGroup(const char* name, UsdBridge* bridge,
+UsdGroup::UsdGroup(const char* name,
   UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_GROUP, name, bridge)
+  : BridgedBaseObjectType(ANARI_GROUP, name)
 {
 }
 
 UsdGroup::~UsdGroup()
 {
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
-  if(usdBridge)
-    usdBridge->DeleteGroup(usdHandle);
+  if(cachedBridge)
+    cachedBridge->DeleteGroup(usdHandle);
 #endif
 }
 
@@ -63,8 +63,7 @@ bool UsdGroup::deferCommit(UsdDevice* device)
 
 bool UsdGroup::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge)
-    return false;
+  UsdBridge* usdBridge = device->getUsdBridge();
 
   bool isNew = false;
   if (!usdHandle.value)
@@ -82,6 +81,7 @@ bool UsdGroup::doCommitData(UsdDevice* device)
 
 void UsdGroup::doCommitRefs(UsdDevice* device)
 {
+  UsdBridge* usdBridge = device->getUsdBridge();
   const UsdGroupData& paramData = getReadParams();
   double timeStep = device->getReadParams().timeStep;
 

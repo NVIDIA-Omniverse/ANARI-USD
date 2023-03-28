@@ -55,8 +55,6 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
     UsdDevice(ANARILibrary library);
     ~UsdDevice();
 
-    bool isInitialized() const { return bridgeInitialized; }
-
     /////////////////////////////////////////////////////////////////////////////
     // Main virtual interface to accepting API calls
     /////////////////////////////////////////////////////////////////////////////
@@ -166,6 +164,9 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
 
     // USD Specific /////////////////////////////////////////////////////////////
 
+    bool isInitialized() { return getUsdBridge() != nullptr; }
+    UsdBridge* getUsdBridge();
+
     bool nameExists(const char* name);
 
     void addToCommitList(UsdBaseObject* object, bool commitData);
@@ -201,11 +202,13 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
       va_list& arglist);
 
   private:
-    void deviceCommit();
-    void deviceRetain();
-    void deviceRelease();
     void deviceSetParameter(const char *id, ANARIDataType type, const void *mem);
     void deviceUnsetParameter(const char *id);
+    void deviceRetain();
+    void deviceRelease();
+    void deviceCommit();
+
+    void initializeBridge();
 
     const char* makeUniqueName(const char* name);
 
@@ -225,7 +228,7 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
 
     std::unique_ptr<UsdDeviceInternals> internals;
 
-    bool bridgeInitialized = false;
+    bool bridgeInitAttempt = false;
 
     // Using object pointers as basis for deferred commits; another option would be to traverse
     // the bridge's internal cache handles, but a handle may map to multiple objects (with the same name)

@@ -33,7 +33,7 @@ struct UsdVolumeData
 class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolumeHandle>
 {
   public:
-    UsdVolume(const char* name, UsdBridge* bridge, UsdDevice* device);
+    UsdVolume(const char* name, UsdDevice* device);
     ~UsdVolume();
 
     void filterSetParam(const char *name,

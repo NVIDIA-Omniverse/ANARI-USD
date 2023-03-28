@@ -9,9 +9,8 @@
 DEFINE_PARAMETER_MAP(UsdRenderer,
 )
 
-UsdRenderer::UsdRenderer(UsdBridge* bridge)
+UsdRenderer::UsdRenderer()
   : UsdBaseObject(ANARI_RENDERER)
-  , usdBridge(bridge)
 {
 }
 
@@ -46,10 +45,7 @@ bool UsdRenderer::doCommitData(UsdDevice* device)
   return false;
 }
 
-void UsdRenderer::saveUsd()
+void UsdRenderer::saveUsd(UsdDevice* device)
 {
-  if(!usdBridge)
-    return;
-
-  usdBridge->SaveScene();
+  device->getUsdBridge()->SaveScene();
 }

@@ -44,8 +44,8 @@ namespace
   }
 }
 
-UsdSampler::UsdSampler(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_SAMPLER, name, bridge)
+UsdSampler::UsdSampler(const char* name, const char* type, UsdDevice* device)
+  : BridgedBaseObjectType(ANARI_SAMPLER, name)
 {
   if (strEquals(type, "image1D"))
     samplerType = SAMPLER_1D;
@@ -60,8 +60,8 @@ UsdSampler::UsdSampler(const char* name, const char* type, UsdBridge* bridge, Us
 UsdSampler::~UsdSampler()
 {
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
-  if(usdBridge)
-    usdBridge->DeleteSampler(usdHandle);
+  if(cachedBridge)
+    cachedBridge->DeleteSampler(usdHandle);
 #endif
 }
 
@@ -81,6 +81,8 @@ void UsdSampler::filterResetParam(const char *name)
 
 void UsdSampler::setPerInstance(bool enable, UsdDevice* device) 
 { 
+  UsdBridge* usdBridge = device->getUsdBridge();
+
   if(!usdHandle.value)
     return;
   
@@ -124,8 +126,9 @@ bool UsdSampler::deferCommit(UsdDevice* device)
 
 bool UsdSampler::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge || 
-    !device->getReadParams().outputMaterial ||
+  UsdBridge* usdBridge = device->getUsdBridge();
+
+  if(!device->getReadParams().outputMaterial ||
     samplerType == SAMPLER_UNKNOWN)
     return false;
 

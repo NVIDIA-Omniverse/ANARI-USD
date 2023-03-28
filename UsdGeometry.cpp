@@ -596,8 +596,8 @@ namespace
   }
 }
 
-UsdGeometry::UsdGeometry(const char* name, const char* type, UsdBridge* bridge, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_GEOMETRY, name, bridge)
+UsdGeometry::UsdGeometry(const char* name, const char* type, UsdDevice* device)
+  : BridgedBaseObjectType(ANARI_GEOMETRY, name)
 {
   bool createTempArrays = false;
 
@@ -632,8 +632,8 @@ UsdGeometry::UsdGeometry(const char* name, const char* type, UsdBridge* bridge, 
 UsdGeometry::~UsdGeometry()
 {
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
-  if(usdBridge)
-    usdBridge->DeleteGeometry(usdHandle);
+  if(cachedBridge)
+    cachedBridge->DeleteGeometry(usdHandle);
 #endif
 }
 
@@ -946,7 +946,7 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
   return true;
 }
 
-void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeMeshData& meshData)
+void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeMeshData& meshData)
 {
   const UsdGeometryData& paramData = getReadParams();
 
@@ -999,7 +999,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeMeshData& meshData)
   usdBridge->SetGeometryData(usdHandle, meshData, dataTimeStep);
 }
 
-void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeInstancerData& instancerData)
+void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeInstancerData& instancerData)
 {
   const UsdGeometryData& paramData = getReadParams();
   const char* debugName = getName();
@@ -1172,7 +1172,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeInstancerData& inst
   usdBridge->SetGeometryData(usdHandle, instancerData, dataTimeStep);
 }
 
-void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeCurveData& curveData)
+void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeCurveData& curveData)
 {
   const UsdGeometryData& paramData = getReadParams();
 
@@ -1221,6 +1221,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridgeCurveData& curveDat
 template<typename UsdGeomType>
 void UsdGeometry::commitTemplate(UsdDevice* device)
 {
+  UsdBridge* usdBridge = device->getUsdBridge();
   const UsdGeometryData& paramData = getReadParams();
   const char* debugName = getName();
 
@@ -1241,7 +1242,7 @@ void UsdGeometry::commitTemplate(UsdDevice* device)
     if (paramData.vertexPositions)
     {
       if(checkGeomParams(device))
-        updateGeomData(device, geomData);
+        updateGeomData(device, usdBridge, geomData);
     }
     else
     {
@@ -1259,7 +1260,7 @@ bool UsdGeometry::deferCommit(UsdDevice* device)
 
 bool UsdGeometry::doCommitData(UsdDevice* device)
 {
-  if(!usdBridge || geomType == GEOM_UNKNOWN)
+  if(geomType == GEOM_UNKNOWN)
     return false;
 
   switch (geomType)

@@ -22,7 +22,7 @@ struct UsdGroupData
 class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHandle>
 {
   public:
-    UsdGroup(const char* name, UsdBridge* bridge, UsdDevice* device);
+    UsdGroup(const char* name, UsdDevice* device);
     ~UsdGroup();
 
     void filterSetParam(const char *name,
