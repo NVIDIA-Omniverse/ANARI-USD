@@ -12,7 +12,7 @@
 #include "UsdAnari.h"
 #include "UsdBaseObject.h"
 #include "UsdMultiTypeParameter.h"
-#include "anari/backend/utilities/IntrusivePtr.h"
+#include "helium/utility/IntrusivePtr.h"
 #include "anari/type_utility.h"
 
 class UsdDevice;
@@ -33,8 +33,8 @@ public:
     ANARIDataType singleType() const { return type0; }
     bool isMultiType() const { return type1 != ANARI_UNKNOWN; }
     bool typeMatches(ANARIDataType inType)  const
-    { 
-      return inType == type0 || 
+    {
+      return inType == type0 ||
         (isMultiType() && (inType == type1 || inType == type2));
     }
   };
@@ -60,7 +60,7 @@ protected:
   {
     UsdBaseObject** baseObj = ptrToBaseObjectPtr(paramPtr);
     if (*baseObj)
-      (*baseObj)->refInc(anari::RefType::INTERNAL);
+      (*baseObj)->refInc(helium::RefType::INTERNAL);
   }
 
   void safeRefDec(char* paramPtr) // Pointer to the parameter address which holds a UsdBaseObject*
@@ -71,8 +71,8 @@ protected:
 #ifdef CHECK_MEMLEAKS
       logDeallocationThroughDevice(allocDevice, *baseObj);
 #endif
-      assert((*baseObj)->useCount(anari::RefType::INTERNAL) > 0);
-      (*baseObj)->refDec(anari::RefType::INTERNAL);
+      assert((*baseObj)->useCount(helium::RefType::INTERNAL) > 0);
+      (*baseObj)->refDec(helium::RefType::INTERNAL);
       *baseObj = nullptr; // Explicitly clear the pointer (see destructor)
     }
   }
@@ -96,7 +96,7 @@ protected:
       *toAnariDataTypePtr(paramAddress + typeInfo.typeOffset) = newType;
   }
 
-  void getParamTypeAndAddress(D& paramData, const ParamTypeInfo& typeInfo, 
+  void getParamTypeAndAddress(D& paramData, const ParamTypeInfo& typeInfo,
         ANARIDataType& returnType, char*& returnAddress)
   {
     returnAddress = paramAddress(paramData, typeInfo);
@@ -144,9 +144,9 @@ public:
       char* readParamAddress = nullptr;
       char* writeParamAddress = nullptr;
 
-      getParamTypeAndAddress(paramDataSets[paramReadIdx], typeInfo, 
+      getParamTypeAndAddress(paramDataSets[paramReadIdx], typeInfo,
         readParamType, readParamAddress);
-      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo, 
+      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
         writeParamType, writeParamAddress);
 
       // Works even if two parameters point to the same object, as the object pointers are set to null
@@ -195,7 +195,7 @@ protected:
       {
         ANARIDataType destType;
         char* destAddress = nullptr;
-        getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo, 
+        getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
           destType, destAddress);
 
         const void* srcAddress = rawSrc; //temporary src
@@ -223,7 +223,7 @@ protected:
             UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*ptrToBaseObjectPtr(destAddress));
             const char* srcCstr = reinterpret_cast<const char*>(srcAddress);
 
-            contentUpdate = contentUpdate || !destStr || !strEquals(destStr->c_str(), srcCstr); // Note that execution of strEquals => (srcType == destType) 
+            contentUpdate = contentUpdate || !destStr || !strEquals(destStr->c_str(), srcCstr); // Note that execution of strEquals => (srcType == destType)
 
             if(contentUpdate)
             {
@@ -287,10 +287,10 @@ protected:
       // Copy to existing write param location
       ANARIDataType destType;
       char* destAddress = nullptr;
-      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo, 
+      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
         destType, destAddress);
 
-      // Create temporary default-constructed parameter set and find source param address ((multi-)type is of no concern) 
+      // Create temporary default-constructed parameter set and find source param address ((multi-)type is of no concern)
       D defaultParamData;
       char* srcAddress = paramAddress(defaultParamData, typeInfo);
 
@@ -301,7 +301,7 @@ protected:
       // Just replace contents of the whole parameter structure, single or multiparam
       std::memcpy(destAddress, srcAddress, paramSize);
 
-      if(!strEquals(name, "usd::time")) 
+      if(!strEquals(name, "usd::time"))
       {
         paramChanged = true;
       }
@@ -321,13 +321,13 @@ protected:
       char* srcAddress = nullptr;
       char* destAddress = nullptr;
 
-      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo, 
+      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
         srcType, srcAddress);
-      getParamTypeAndAddress(paramDataSets[paramReadIdx], typeInfo, 
+      getParamTypeAndAddress(paramDataSets[paramReadIdx], typeInfo,
         destType, destAddress);
 
       // SrcAddress and destAddress are not the same, but they may specifically contain the same object pointers.
-      // Branch out on that situation (may also be disabled, which results in a superfluous inc/dec) 
+      // Branch out on that situation (may also be disabled, which results in a superfluous inc/dec)
       if(std::memcmp(destAddress, srcAddress, typeInfo.size))
       {
         // First inc, then dec (in case branch is taken out and the pointed to object is the same)

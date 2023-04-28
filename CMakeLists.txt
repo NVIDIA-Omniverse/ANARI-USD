@@ -54,7 +54,7 @@ endif()
 
 set(ANARI_CONFIG_SUBDIR "release")
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
-  set(ANARI_CONFIG_SUBDIR "debug")  
+  set(ANARI_CONFIG_SUBDIR "debug")
 endif()
 if (EXISTS "${ANARI_ROOT_DIR}/${ANARI_CONFIG_SUBDIR}")
   set(ANARI_ROOT_DIR "${ANARI_ROOT_DIR}/${ANARI_CONFIG_SUBDIR}")
@@ -189,7 +189,7 @@ endif()
 
 target_link_libraries(anari_library_usd
 	PUBLIC anari::anari
-	PRIVATE anari::anari_utilities anari::anari_library_debug UsdBridge)
+	PRIVATE anari::anari_library_debug anari::helium UsdBridge)
 
 option(USD_DEVICE_BUILD_EXAMPLES "Build USD device examples" OFF)
 if(USD_DEVICE_BUILD_EXAMPLES)

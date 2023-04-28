@@ -715,7 +715,7 @@ void UsdDevice::addToVolumeList(UsdVolume* volume)
 
 void UsdDevice::addToSharedStringList(UsdSharedString* string)
 {
-  sharedStringList.push_back(anari::IntrusivePtr<UsdSharedString>(string));
+  sharedStringList.push_back(helium::IntrusivePtr<UsdSharedString>(string));
 }
 
 void UsdDevice::clearSharedStringList()
@@ -883,14 +883,14 @@ void UsdDevice::release(ANARIObject object)
   UsdBaseObject* baseObject = (UsdBaseObject*)object;
 
   bool privatizeArray = baseObject->getType() == ANARI_ARRAY
-    && baseObject->useCount(anari::RefType::INTERNAL) > 0
-    && baseObject->useCount(anari::RefType::PUBLIC) == 1;
+    && baseObject->useCount(helium::RefType::INTERNAL) > 0
+    && baseObject->useCount(helium::RefType::PUBLIC) == 1;
 
 #ifdef CHECK_MEMLEAKS
     LogDeallocation(baseObject);
 #endif
   if (baseObject)
-    baseObject->refDec(anari::RefType::PUBLIC);
+    baseObject->refDec(helium::RefType::PUBLIC);
 
   if (privatizeArray)
     ((UsdDataArray*)baseObject)->privatize();
@@ -901,7 +901,7 @@ void UsdDevice::retain(ANARIObject object)
   if (handleIsDevice(object))
     deviceRetain();
   else if (object)
-    ((UsdBaseObject*)object)->refInc(anari::RefType::PUBLIC);
+    ((UsdBaseObject*)object)->refInc(helium::RefType::PUBLIC);
 }
 
 void UsdDevice::commitParameters(ANARIObject object)
