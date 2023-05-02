@@ -43,12 +43,10 @@ namespace
     if (!timeEval || timeEval->IsTimeVarying(DMI::DATA))
     {
       volAsset.CreateFilePathAttr();
-      volAsset.CreateExtentAttr();
     }
     else
     {
       volAsset.GetPrim().RemoveProperty(UsdBridgeTokens->filePath);
-      volAsset.GetPrim().RemoveProperty(UsdBridgeTokens->extent);
     }
   }
 

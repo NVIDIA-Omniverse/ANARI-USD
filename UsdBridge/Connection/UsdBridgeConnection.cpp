@@ -16,6 +16,7 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 #else
+#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #endif
@@ -372,9 +373,6 @@ bool UsdBridgeRemoteConnection::Initialize(const UsdBridgeConnectionSettings& se
       UsdBridgeLogMacro(UsdBridgeLogLevel::ERR, "Illegal Omniverse server.");
       initSuccess = false;
     }
-
-    if (!brokenUrl->port || strlen(brokenUrl->port) == 0)
-      UsdBridgeLogMacro(UsdBridgeLogLevel::STATUS, "Warning: No port specified for Omniverse server");
 
     if (!brokenUrl->path || strlen(brokenUrl->path) == 0)
     {
