@@ -86,7 +86,7 @@ void UsdDataArray::filterSetParam(const char *name,
   if(strEquals(name, "name"))
   {
     const char* srcCstr = reinterpret_cast<const char*>(mem);
-    
+
     if(srcCstr != 0 && strlen(srcCstr) > 0)
     {
       setParam(name, type, mem, device);
@@ -94,7 +94,7 @@ void UsdDataArray::filterSetParam(const char *name,
       formatUsdName(getWriteParams().usdName);
 
       //Name is kept for the lifetime of the device (to allow using pointer for shared resource caching)
-      device->addToSharedStringList(getWriteParams().usdName); 
+      device->addToSharedStringList(getWriteParams().usdName);
     }
     else
       device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
@@ -195,7 +195,7 @@ void UsdDataArray::incRef(const ANARIObject* anariObjects, uint64_t numAnariObje
   {
     const UsdBaseObject* baseObj = (reinterpret_cast<const UsdBaseObject*>(anariObjects[i]));
     if (baseObj)
-      baseObj->refInc(anari::RefType::INTERNAL);
+      baseObj->refInc(helium::RefType::INTERNAL);
   }
 }
 
@@ -209,8 +209,8 @@ void UsdDataArray::decRef(const ANARIObject* anariObjects, uint64_t numAnariObje
 #endif
     if (baseObj)
     {
-      assert(baseObj->useCount(anari::RefType::INTERNAL) > 0);
-      baseObj->refDec(anari::RefType::INTERNAL);
+      assert(baseObj->useCount(helium::RefType::INTERNAL) > 0);
+      baseObj->refDec(helium::RefType::INTERNAL);
     }
   }
 }
@@ -277,7 +277,7 @@ void UsdDataArray::TransferAndRemoveMappedObjectCopy()
     const UsdBaseObject* oldObj = (reinterpret_cast<const UsdBaseObject*>(oldAnariObjects[i]));
 
     if (newObj != oldObj && newObj)
-      newObj->refInc(anari::RefType::INTERNAL);
+      newObj->refInc(helium::RefType::INTERNAL);
   }
 
   // Then, decrease reference counts of all objects that are different in the original array (which will delete those that not referenced anymore)
@@ -291,7 +291,7 @@ void UsdDataArray::TransferAndRemoveMappedObjectCopy()
 #ifdef CHECK_MEMLEAKS
       allocDevice->LogDeallocation(oldObj);
 #endif
-      oldObj->refDec(anari::RefType::INTERNAL);
+      oldObj->refDec(helium::RefType::INTERNAL);
     }
   }
 

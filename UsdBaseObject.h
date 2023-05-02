@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "anari/backend/utilities/IntrusivePtr.h"
+#include "helium/utility/IntrusivePtr.h"
 #include "UsdCommonMacros.h"
 #include "UsdAnari.h"
 
@@ -12,7 +12,7 @@
 
 class UsdDevice;
 
-class UsdBaseObject : public anari::RefCounted
+class UsdBaseObject : public helium::RefCounted
 {
   public:
     UsdBaseObject(ANARIDataType t)

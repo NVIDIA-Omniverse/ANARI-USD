@@ -47,7 +47,7 @@ struct UsdDeviceData
   bool outputMdlShader = true;
 };
 
-class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParameterizedObject<UsdDevice, UsdDeviceData>
+class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParameterizedObject<UsdDevice, UsdDeviceData>
 {
   public:
 
@@ -175,9 +175,9 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
     void addToVolumeList(UsdVolume* volume);
     void removeFromVolumeList(UsdVolume* volume);
 
-    // Allows for selected strings to persist, 
+    // Allows for selected strings to persist,
     // so their pointers can be cached beyond their containing objects' lifetimes
-    void addToSharedStringList(UsdSharedString* sharedString); 
+    void addToSharedStringList(UsdSharedString* sharedString);
 
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
@@ -237,12 +237,12 @@ class UsdDevice : public anari::DeviceImpl, anari::RefCounted, public UsdParamet
     // Using object pointers as basis for deferred commits; another option would be to traverse
     // the bridge's internal cache handles, but a handle may map to multiple objects (with the same name)
     // so that's not 1-1 with the effects of a non-deferred commit order.
-    using CommitListType = std::pair<anari::IntrusivePtr<UsdBaseObject>,bool>;
+    using CommitListType = std::pair<helium::IntrusivePtr<UsdBaseObject>,bool>;
     std::vector<CommitListType> commitList;
     std::vector<UsdVolume*> volumeList; // Tracks all volumes to auto-commit when child fields have been committed
     bool lockCommitList = false;
 
-    std::vector<anari::IntrusivePtr<UsdSharedString>> sharedStringList;
+    std::vector<helium::IntrusivePtr<UsdSharedString>> sharedStringList;
 
     ANARIStatusCallback statusFunc = nullptr;
     const void* statusUserData = nullptr;
