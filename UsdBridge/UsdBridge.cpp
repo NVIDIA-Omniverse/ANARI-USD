@@ -370,7 +370,8 @@ bool UsdBridge::CreateGeometryTemplate(const char* name, UsdGeometryHandle& hand
 #endif
 #endif
 
-    BRIDGE_USDWRITER.InitializeUsdGeometry(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, geomData, true);
+    UsdPrim geomPrim = BRIDGE_USDWRITER.InitializeUsdGeometry(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, geomData, true);
+    geomPrim.ApplyAPI<UsdShadeMaterialBindingAPI>();
   }
 
   handle.value = cacheEntry;

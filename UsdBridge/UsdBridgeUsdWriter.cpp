@@ -236,7 +236,7 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   assert(rootPrim);
 
   this->SceneStage->SetDefaultPrim(rootPrim);
-  UsdModelAPI(rootPrim).SetKind(KindTokens->component);
+  UsdModelAPI(rootPrim).SetKind(KindTokens->assembly);
 
   if(!this->SceneStage->HasAuthoredTimeCodeRange())
   {
