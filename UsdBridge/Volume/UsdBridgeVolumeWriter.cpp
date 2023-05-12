@@ -297,7 +297,7 @@ static void SelectTfTransform(TfTransformInput& tfTransformInput)
     break;
   default:
     {
-      const char* typeStr = UsdBridgeTypeToString(tfTransformInput.volumeData.DataType);
+      const char* typeStr = ubutils::UsdBridgeTypeToString(tfTransformInput.volumeData.DataType);
       UsdBridgeLogMacro(UsdBridgeLogLevel::ERR, "Volume writer preclassified copy does not support source data type: " << typeStr);
       break;
     }
@@ -408,7 +408,7 @@ static openvdb::GridBase::Ptr CopyToGrid(const CopyToGridInput& copyInput)
     break;
   default:
     {
-      const char* typeStr = UsdBridgeTypeToString(copyInput.volumeData.DataType);
+      const char* typeStr = ubutils::UsdBridgeTypeToString(copyInput.volumeData.DataType);
       UsdBridgeLogMacro(UsdBridgeLogLevel::ERR, "Volume writer source data copy does not support source data type: " << typeStr);
     }
     break;

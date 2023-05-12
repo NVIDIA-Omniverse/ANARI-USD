@@ -4,6 +4,7 @@
 #include "UsdBridgeUsdWriter.h"
 
 #include "UsdBridgeUsdWriter_Common.h"
+#include "UsdBridgeUtils.h"
 
 namespace
 {
@@ -126,6 +127,29 @@ namespace
     primvar.Set(*usdArray, timeCode);
   }
 
+  template<int numComponents>
+  void ExpandSRGBToColor(const void* data, uint64_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, VtVec4fArray* usdArray)
+  {
+    usdArray->resize(numElements);
+    const unsigned char* typedInput = reinterpret_cast<const unsigned char*>(data);
+    float normFactor = 1.0f / 255.0f;
+    const float* srgbTable = ubutils::SrgbToLinearTable();
+    // No memcopies, as input is not guaranteed to be of float type
+    if(numComponents == 1)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i]], 0.0f, 0.0f, 1.0f);
+    if(numComponents == 2)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i*2]], 0.0f, 0.0f, typedInput[i*2+1]*normFactor); // Alpha is linear
+    if(numComponents == 3)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i*3]], srgbTable[typedInput[i*3+1]], srgbTable[typedInput[i*3+2]], 1.0f);
+    if(numComponents == 4)
+      for (int i = 0; i < numElements; ++i)
+        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i*4]], srgbTable[typedInput[i*4+1]], srgbTable[typedInput[i*4+2]], typedInput[i*4+3]*normFactor);
+    primvar.Set(*usdArray, timeCode);
+  }
+
   #define ASSIGN_PRIMVAR_MACRO(ArrayType) \
     ArrayType& usdArray = GetStaticTempArray<ArrayType>(); AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
   #define ASSIGN_PRIMVAR_FLATTEN_MACRO(ArrayType) \
@@ -154,14 +178,21 @@ namespace
     VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 3>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
   #define ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(EltType) \
     VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 4>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_1EXPAND_SGRB() \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandSRGBToColor<1>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_2EXPAND_SGRB() \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandSRGBToColor<2>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_3EXPAND_SGRB() \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandSRGBToColor<3>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
+  #define ASSIGN_PRIMVAR_MACRO_4EXPAND_SGRB() \
+    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandSRGBToColor<4>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
 
   void CopyArrayToPrimvar(UsdBridgeUsdWriter* writer, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, UsdAttribute arrayPrimvar, const UsdTimeCode& timeCode)
   {
-    SdfValueTypeName primvarType = GetPrimvarArrayType(arrayDataType);
-
     switch (arrayDataType)
     {
       case UsdBridgeType::UCHAR: { ASSIGN_PRIMVAR_MACRO(VtUCharArray); break; }
+      case UsdBridgeType::UCHAR_SRGB_R: { ASSIGN_PRIMVAR_MACRO(VtUCharArray); break; }
       case UsdBridgeType::CHAR: { ASSIGN_PRIMVAR_MACRO(VtUCharArray); break; }
       case UsdBridgeType::USHORT: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtUIntArray, short); break; }
       case UsdBridgeType::SHORT: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, unsigned short); break; }
@@ -188,6 +219,9 @@ namespace
       case UsdBridgeType::UCHAR2:
       case UsdBridgeType::UCHAR3: 
       case UsdBridgeType::UCHAR4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
+      case UsdBridgeType::UCHAR_SRGB_RA:
+      case UsdBridgeType::UCHAR_SRGB_RGB: 
+      case UsdBridgeType::UCHAR_SRGB_RGBA: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
       case UsdBridgeType::CHAR2:
       case UsdBridgeType::CHAR3: 
       case UsdBridgeType::CHAR4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
@@ -851,6 +885,10 @@ namespace
         case UsdBridgeType::UCHAR2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint8_t); break; }
         case UsdBridgeType::UCHAR3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint8_t); break; }
         case UsdBridgeType::UCHAR4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint8_t); break; }
+        case UsdBridgeType::UCHAR_SRGB_R: {ASSIGN_PRIMVAR_MACRO_1EXPAND_SGRB(); break; }
+        case UsdBridgeType::UCHAR_SRGB_RA: {ASSIGN_PRIMVAR_MACRO_2EXPAND_SGRB(); break; }
+        case UsdBridgeType::UCHAR_SRGB_RGB: {ASSIGN_PRIMVAR_MACRO_3EXPAND_SGRB(); break; }
+        case UsdBridgeType::UCHAR_SRGB_RGBA: {ASSIGN_PRIMVAR_MACRO_4EXPAND_SGRB(); break; }
         case UsdBridgeType::USHORT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint16_t); break; }
         case UsdBridgeType::USHORT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint16_t); break; }
         case UsdBridgeType::USHORT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint16_t); break; }

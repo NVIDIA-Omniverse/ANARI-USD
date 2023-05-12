@@ -35,6 +35,7 @@ enum class UsdBridgeType
   BOOL = 0,
 
   UCHAR,
+  UCHAR_SRGB_R,
   CHAR,
   USHORT,
   SHORT,
@@ -47,6 +48,7 @@ enum class UsdBridgeType
   DOUBLE,
 
   UCHAR2,
+  UCHAR_SRGB_RA,
   CHAR2,
   USHORT2,
   SHORT2,
@@ -58,8 +60,8 @@ enum class UsdBridgeType
   FLOAT2,
   DOUBLE2,
 
-
   UCHAR3,
+  UCHAR_SRGB_RGB,
   CHAR3,
   USHORT3,
   SHORT3,
@@ -71,8 +73,8 @@ enum class UsdBridgeType
   FLOAT3,
   DOUBLE3,
 
-
   UCHAR4,
+  UCHAR_SRGB_RGBA,
   CHAR4,
   USHORT4,
   SHORT4,

@@ -915,7 +915,7 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
   if (colors)
   {
     ANARIDataType arrayType = colors->getType();
-    if ((int)arrayType < (int)ANARI_INT8 || (int)arrayType > (int)ANARI_UFIXED8_RGBA_SRGB)
+    if ((int)arrayType < (int)ANARI_INT8 || (int)arrayType > (int)ANARI_UFIXED8_R_SRGB)
     {
       device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: 'vertex/primitive.color' parameter should be of Color type (see ANARI standard)", debugName);
       return false;

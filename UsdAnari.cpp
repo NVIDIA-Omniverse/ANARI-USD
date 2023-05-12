@@ -25,10 +25,10 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType)
   case ANARI_FIXED8_VEC3: return UsdBridgeType::CHAR3;
   case ANARI_FIXED8_VEC4: return UsdBridgeType::CHAR4;
 
-  case ANARI_UFIXED8_R_SRGB: return UsdBridgeType::UCHAR;
-  case ANARI_UFIXED8_RA_SRGB: return UsdBridgeType::UCHAR2;
-  case ANARI_UFIXED8_RGB_SRGB: return UsdBridgeType::UCHAR3;
-  case ANARI_UFIXED8_RGBA_SRGB: return UsdBridgeType::UCHAR4;
+  case ANARI_UFIXED8_R_SRGB: return UsdBridgeType::UCHAR_SRGB_R;
+  case ANARI_UFIXED8_RA_SRGB: return UsdBridgeType::UCHAR_SRGB_RA;
+  case ANARI_UFIXED8_RGB_SRGB: return UsdBridgeType::UCHAR_SRGB_RGB;
+  case ANARI_UFIXED8_RGBA_SRGB: return UsdBridgeType::UCHAR_SRGB_RGBA;
 
   case ANARI_UINT16: return UsdBridgeType::USHORT;
   case ANARI_UINT16_VEC2: return UsdBridgeType::USHORT2;
@@ -111,10 +111,10 @@ UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType)
   case ANARI_FIXED8_VEC3: return UsdBridgeType::CHAR;
   case ANARI_FIXED8_VEC4: return UsdBridgeType::CHAR;
 
-  case ANARI_UFIXED8_R_SRGB: return UsdBridgeType::UCHAR;
-  case ANARI_UFIXED8_RA_SRGB: return UsdBridgeType::UCHAR;
-  case ANARI_UFIXED8_RGB_SRGB: return UsdBridgeType::UCHAR;
-  case ANARI_UFIXED8_RGBA_SRGB: return UsdBridgeType::UCHAR;
+  case ANARI_UFIXED8_R_SRGB: return UsdBridgeType::UCHAR_SRGB_R;
+  case ANARI_UFIXED8_RA_SRGB: return UsdBridgeType::UCHAR_SRGB_R;
+  case ANARI_UFIXED8_RGB_SRGB: return UsdBridgeType::UCHAR_SRGB_R;
+  case ANARI_UFIXED8_RGBA_SRGB: return UsdBridgeType::UCHAR_SRGB_R;
 
   case ANARI_UINT16: return UsdBridgeType::USHORT;
   case ANARI_UINT16_VEC2: return UsdBridgeType::USHORT;

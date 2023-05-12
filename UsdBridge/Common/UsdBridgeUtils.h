@@ -8,6 +8,13 @@
 
 // USD-independent utils for the UsdBridge
 
-const char* UsdBridgeTypeToString(UsdBridgeType type);
+namespace ubutils
+{
+  const char* UsdBridgeTypeToString(UsdBridgeType type);
+
+  const float* SrgbToLinearTable(); // returns a float[256] array
+  float SrgbToLinear(float val);
+  void SrgbToLinear3(float* color); // expects a float[3]
+}
 
 #endif

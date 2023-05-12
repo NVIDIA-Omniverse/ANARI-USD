@@ -328,25 +328,25 @@ namespace
       case UsdBridgeType::DOUBLE4: { result = SdfValueTypeNames->Double4Array; break; }
 
       case UsdBridgeType::UCHAR2:
-      case UsdBridgeType::UCHAR3: 
+      case UsdBridgeType::UCHAR3:
       case UsdBridgeType::UCHAR4: { result = SdfValueTypeNames->UCharArray; break; }
       case UsdBridgeType::CHAR2:
-      case UsdBridgeType::CHAR3: 
+      case UsdBridgeType::CHAR3:
       case UsdBridgeType::CHAR4: { result = SdfValueTypeNames->UCharArray; break; }
       case UsdBridgeType::USHORT2:
       case UsdBridgeType::USHORT3:
       case UsdBridgeType::USHORT4: { result = SdfValueTypeNames->UIntArray; break; }
       case UsdBridgeType::SHORT2:
-      case UsdBridgeType::SHORT3: 
+      case UsdBridgeType::SHORT3:
       case UsdBridgeType::SHORT4: { result = SdfValueTypeNames->IntArray; break; }
       case UsdBridgeType::UINT2:
-      case UsdBridgeType::UINT3: 
+      case UsdBridgeType::UINT3:
       case UsdBridgeType::UINT4: { result = SdfValueTypeNames->UIntArray; break; }
       case UsdBridgeType::LONG2:
-      case UsdBridgeType::LONG3: 
+      case UsdBridgeType::LONG3:
       case UsdBridgeType::LONG4: { result = SdfValueTypeNames->Int64Array; break; }
       case UsdBridgeType::ULONG2:
-      case UsdBridgeType::ULONG3: 
+      case UsdBridgeType::ULONG3:
       case UsdBridgeType::ULONG4: { result = SdfValueTypeNames->UInt64Array; break; }
 
       default: assert(false); break;
