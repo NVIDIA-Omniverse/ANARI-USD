@@ -363,7 +363,7 @@ struct UsdBridgeMaterialData
   MaterialInput<float> Opacity = {1.0f, nullptr};
   MaterialInput<float> EmissiveIntensity = {0.0f, nullptr};
   MaterialInput<float> Roughness = {0.5f, nullptr};
-  MaterialInput<float> Metallic = {-1.0, nullptr};
+  MaterialInput<float> Metallic = {0.0, nullptr};
   MaterialInput<float> Ior = {1.0f, nullptr};
 };
 

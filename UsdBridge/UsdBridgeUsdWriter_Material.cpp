@@ -767,7 +767,7 @@ void UsdBridgeUsdWriter::UpdatePsShader(UsdStageRefPtr timeVarStage, const SdfPa
   emColor *= matData.EmissiveIntensity.Value; // This multiplication won't translate to vcr/sampler usage
 
   //uniformShadPrim.GetInput(UsdBridgeTokens->useSpecularWorkflow).Set(
-  //  (matData.Metallic.Value >= 0.0 || matData.Metallic.SrcAttrib || matData.Metallic.Sampler) ? 0 : 1);
+  //  (matData.Metallic.Value > 0.0 || matData.Metallic.SrcAttrib || matData.Metallic.Sampler) ? 0 : 1);
 
   UPDATE_USD_SHADER_INPUT_MACRO(DMI::DIFFUSE, matData.Diffuse, difColor);
   UPDATE_USD_SHADER_INPUT_MACRO(DMI::EMISSIVECOLOR, matData.Emissive, emColor);

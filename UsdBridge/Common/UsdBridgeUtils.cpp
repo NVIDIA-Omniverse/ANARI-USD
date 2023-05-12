@@ -3,6 +3,8 @@
 
 #include "UsdBridgeUtils.h"
 
+#include <cmath>
+
 namespace ubutils
 {
 
