@@ -18,7 +18,7 @@ namespace
     typedef UsdBridgeVolumeData::DataMemberId DMI;
 
     UsdVolOpenVDBAsset& attribCreatePrim = volAsset;
-    UsdPrim& attribRemovePrim = volAsset.GetPrim();
+    UsdPrim attribRemovePrim = volAsset.GetPrim();
     
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::DATA, CreateFilePathAttr, UsdBridgeTokens->filePath);
   }

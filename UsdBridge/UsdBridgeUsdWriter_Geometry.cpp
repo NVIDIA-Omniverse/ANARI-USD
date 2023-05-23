@@ -97,7 +97,7 @@ namespace
     UsdGeomPrimvarsAPI primvarApi(meshGeom);
 
     UsdGeomMesh& attribCreatePrim = meshGeom;
-    UsdPrim& attribRemovePrim = meshGeom.GetPrim();
+    UsdPrim attribRemovePrim = meshGeom.GetPrim();
 
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreatePointsAttr, UsdBridgeTokens->points);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreateExtentAttr, UsdBridgeTokens->extent);
@@ -120,7 +120,7 @@ namespace
     UsdGeomPrimvarsAPI primvarApi(pointsGeom);
 
     UsdGeomPoints& attribCreatePrim = pointsGeom;
-    UsdPrim& attribRemovePrim = pointsGeom.GetPrim();
+    UsdPrim attribRemovePrim = pointsGeom.GetPrim();
 
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreatePointsAttr, UsdBridgeTokens->points);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreateExtentAttr, UsdBridgeTokens->extent);
@@ -143,7 +143,7 @@ namespace
     UsdGeomPrimvarsAPI primvarApi(pointsGeom);
 
     UsdGeomPointInstancer& attribCreatePrim = pointsGeom;
-    UsdPrim& attribRemovePrim = pointsGeom.GetPrim();
+    UsdPrim attribRemovePrim = pointsGeom.GetPrim();
 
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreatePositionsAttr, UsdBridgeTokens->positions);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreateExtentAttr, UsdBridgeTokens->extent);
@@ -171,7 +171,7 @@ namespace
     UsdGeomPrimvarsAPI primvarApi(curveGeom);
 
     UsdGeomBasisCurves& attribCreatePrim = curveGeom;
-    UsdPrim& attribRemovePrim = curveGeom.GetPrim();
+    UsdPrim attribRemovePrim = curveGeom.GetPrim();
 
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreatePointsAttr, UsdBridgeTokens->positions);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreateExtentAttr, UsdBridgeTokens->extent);
