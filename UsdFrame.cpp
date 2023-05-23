@@ -5,6 +5,7 @@
 #include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdDevice.h"
+#include "anari/type_utility.h"
 
 DEFINE_PARAMETER_MAP(UsdFrame,
   REGISTER_PARAMETER_MACRO("world", ANARI_WORLD, world)
@@ -107,7 +108,7 @@ UsdRenderer* UsdFrame::getRenderer()
 char* UsdFrame::ReserveBuffer(ANARIDataType format)
 {
   const UsdFrameData& paramData = getReadParams();
-  size_t formatSize = AnariTypeSize(format);
+  size_t formatSize = anari::sizeOf(format);
   size_t memSize = formatSize * paramData.size[0] * paramData.size[1];
   return new char[memSize];
 }

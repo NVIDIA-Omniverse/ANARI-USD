@@ -23,7 +23,7 @@ DEFINE_PARAMETER_MAP(UsdGroup,
 
 UsdGroup::UsdGroup(const char* name,
   UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_GROUP, name)
+  : BridgedBaseObjectType(ANARI_GROUP, name, device)
 {
 }
 

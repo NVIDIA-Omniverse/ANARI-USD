@@ -71,7 +71,6 @@ void logDeallocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj);
 // Anari <=> USD conversions
 UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType);
 UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType);
-size_t AnariTypeSize(ANARIDataType anariType);
 const char* AnariTypeToString(ANARIDataType anariType);
 const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo);
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level);

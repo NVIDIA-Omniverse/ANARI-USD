@@ -86,9 +86,75 @@ enum class UsdBridgeType
   FLOAT4,
   DOUBLE4,
 
+  INT_PAIR,
+  INT_PAIR2,
+  INT_PAIR3,
+  INT_PAIR4,
+
+  FLOAT_PAIR,
+  FLOAT_PAIR2,
+  FLOAT_PAIR3,
+  FLOAT_PAIR4,
+
+  DOUBLE_PAIR,
+  DOUBLE_PAIR2,
+  DOUBLE_PAIR3,
+  DOUBLE_PAIR4,
+
+  ULONG_PAIR,
+  ULONG_PAIR2,
+  ULONG_PAIR3,
+  ULONG_PAIR4,
+
+  FLOAT_MAT2,
+  FLOAT_MAT3,
+  FLOAT_MAT4,
+  FLOAT_MAT2x3,
+  FLOAT_MAT3x4,
+
   UNDEFINED
 };
-constexpr int UsdBridgeNumFundamentalTypes = (int)UsdBridgeType::UCHAR2; // Multi-component groups sizes should be equal
+constexpr int UsdBridgeNumFundamentalTypes = (int)UsdBridgeType::UCHAR2; // Multi-component groups sizes up until 4 should be equal
+
+inline int UsdBridgeTypeNumComponents(UsdBridgeType dataType)
+{
+  int typeIdent = (int)dataType;
+  if(typeIdent <= (int)UsdBridgeType::DOUBLE4)
+    return typeIdent / UsdBridgeNumFundamentalTypes;
+  
+  switch(dataType)
+  {
+    case UsdBridgeType::INT_PAIR: return 2;
+    case UsdBridgeType::INT_PAIR2: return 4;
+    case UsdBridgeType::INT_PAIR3: return 6;
+    case UsdBridgeType::INT_PAIR4: return 8;
+
+    case UsdBridgeType::FLOAT_PAIR: return 2;
+    case UsdBridgeType::FLOAT_PAIR2: return 4;
+    case UsdBridgeType::FLOAT_PAIR3: return 6;
+    case UsdBridgeType::FLOAT_PAIR4: return 8;
+
+    case UsdBridgeType::DOUBLE_PAIR: return 2;
+    case UsdBridgeType::DOUBLE_PAIR2: return 4;
+    case UsdBridgeType::DOUBLE_PAIR3: return 6;
+    case UsdBridgeType::DOUBLE_PAIR4: return 8;
+
+    case UsdBridgeType::ULONG_PAIR: return 2;
+    case UsdBridgeType::ULONG_PAIR2: return 4;
+    case UsdBridgeType::ULONG_PAIR3: return 6;
+    case UsdBridgeType::ULONG_PAIR4: return 8;
+
+    case UsdBridgeType::FLOAT_MAT2: return 4;
+    case UsdBridgeType::FLOAT_MAT3: return 9;
+    case UsdBridgeType::FLOAT_MAT4: return 16;
+    case UsdBridgeType::FLOAT_MAT2x3: return 6;
+    case UsdBridgeType::FLOAT_MAT3x4: return 12;
+
+    default: return 1;
+  }
+
+  return 1;
+}
 
 enum class UsdBridgeGeomType
 {
@@ -293,14 +359,24 @@ struct UsdBridgeCurveData
   uint64_t NumCurveLengths = 0;
 };
 
+struct UsdBridgeTfData
+{
+  const void* TfColors = nullptr;
+  UsdBridgeType TfColorsType = UsdBridgeType::UNDEFINED;
+  int TfNumColors = 0;
+  const void* TfOpacities = nullptr;
+  UsdBridgeType TfOpacitiesType = UsdBridgeType::UNDEFINED;
+  int TfNumOpacities = 0;
+  double TfValueRange[2] = { 0, 1 };
+};
+
 struct UsdBridgeVolumeData
 {
-  static constexpr int TFDataStart = 3;
+  static constexpr int TFDataStart = 2;
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
     DATA = (1 << 1), // Includes the extent - number of elements per dimension
-    TRANSFORM = (1 << 2),
     VOL_ALL = (1 << TFDataStart) - 1,
     TFCOLORS = (1 << (TFDataStart + 0)),
     TFOPACITIES = (1 << (TFDataStart + 1)),
@@ -322,13 +398,9 @@ struct UsdBridgeVolumeData
   float Origin[3] = { 0,0,0 };
   float CellDimensions[3] = { 1,1,1 };
 
-  const void* TfColors;
-  UsdBridgeType TfColorsType = UsdBridgeType::UNDEFINED;
-  int TfNumColors;
-  const void* TfOpacities;
-  UsdBridgeType TfOpacitiesType = UsdBridgeType::UNDEFINED;
-  int TfNumOpacities;
-  double TfValueRange[2] = { 0, 1 };
+  long long BackgroundIdx = -1; // When not -1, denotes the first element in Data which contains a background value
+
+  UsdBridgeTfData TfData;
 };
 
 struct UsdBridgeMaterialData

@@ -17,8 +17,8 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
   public:
     typedef UsdParameterizedObject<T, D> ParamClass;
 
-    UsdBridgedBaseObject(ANARIDataType t, const char* name)
-      : UsdBaseObject(t)
+    UsdBridgedBaseObject(ANARIDataType t, const char* name, UsdDevice* device)
+      : UsdBaseObject(t, device)
       , uniqueName(name)
     {
     }

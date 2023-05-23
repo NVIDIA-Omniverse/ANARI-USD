@@ -37,7 +37,7 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
 using DMI = UsdMaterial::MaterialDMI;
 
 UsdMaterial::UsdMaterial(const char* name, const char* type, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_MATERIAL, name)
+  : BridgedBaseObjectType(ANARI_MATERIAL, name, device)
 {
   if (strEquals(type, "matte"))
   {

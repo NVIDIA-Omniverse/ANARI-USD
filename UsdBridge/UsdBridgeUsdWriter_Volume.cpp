@@ -7,47 +7,20 @@
 
 namespace
 {
-  void BlockFieldRelationships(UsdVolVolume& volume, UsdBridgeVolumeFieldType* exception = nullptr)
-  {
-    UsdBridgeVolumeFieldType fieldTypes[] = {
-      UsdBridgeVolumeFieldType::DENSITY,
-      UsdBridgeVolumeFieldType::COLOR
-    };
-    for (int i = 0; i < sizeof(fieldTypes) / sizeof(UsdBridgeVolumeFieldType); ++i)
-    {
-      if (exception && fieldTypes[i] == *exception)
-        continue;
-      TfToken fieldToken = VolumeFieldTypeToken(fieldTypes[i]);
-      if (volume.HasFieldRelationship(fieldToken))
-        volume.BlockFieldRelationship(fieldToken);
-    }
-  }
-
   void InitializeUsdVolumeTimeVar(UsdVolVolume& volume, const TimeEvaluator<UsdBridgeVolumeData>* timeEval = nullptr)
   {
     typedef UsdBridgeVolumeData::DataMemberId DMI;
 
-    volume.ClearXformOpOrder();
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::TRANSFORM))
-    {
-      volume.AddTranslateOp();
-      volume.AddScaleOp();
-    }
   }
 
   void InitializeUsdVolumeAssetTimeVar(UsdVolOpenVDBAsset& volAsset, const TimeEvaluator<UsdBridgeVolumeData>* timeEval = nullptr)
   {
     typedef UsdBridgeVolumeData::DataMemberId DMI;
 
-    if (!timeEval || timeEval->IsTimeVarying(DMI::DATA))
-    {
-      volAsset.CreateFilePathAttr();
-    }
-    else
-    {
-      volAsset.GetPrim().RemoveProperty(UsdBridgeTokens->filePath);
-    }
+    UsdVolOpenVDBAsset& attribCreatePrim = volAsset;
+    UsdPrim& attribRemovePrim = volAsset.GetPrim();
+    
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::DATA, CreateFilePathAttr, UsdBridgeTokens->filePath);
   }
 
   UsdPrim InitializeUsdVolume_Impl(UsdStageRefPtr volumeStage, const SdfPath & volumePath, bool uniformPrim,
@@ -79,9 +52,16 @@ namespace
     SdfAssetPath volAsset(relVolPath);
 
     // Set extents in usd
+    float minX = volumeData.Origin[0];
+    float minY = volumeData.Origin[1];
+    float minZ = volumeData.Origin[2];
+    float maxX = ((float)volumeData.NumElements[0] * volumeData.CellDimensions[0]) + minX;
+    float maxY = ((float)volumeData.NumElements[1] * volumeData.CellDimensions[1]) + minY;
+    float maxZ = ((float)volumeData.NumElements[2] * volumeData.CellDimensions[2]) + minZ;
+
     VtVec3fArray extentArray(2);
-    extentArray[0].Set(0.0f, 0.0f, 0.0f);
-    extentArray[1].Set((float)volumeData.NumElements[0], (float)volumeData.NumElements[1], (float)volumeData.NumElements[2]); //approx extents
+    extentArray[0].Set(minX, minY, minZ);
+    extentArray[1].Set(maxX, maxY, maxZ);
 
     UsdAttribute uniformFileAttr = uniformField.GetFilePathAttr();
     UsdAttribute timeVarFileAttr = timeVarField.GetFilePathAttr();
@@ -89,71 +69,53 @@ namespace
     UsdAttribute timeVarExtentAttr = timeVarVolume.GetExtentAttr();
 
     bool dataTimeVarying = timeEval.IsTimeVarying(DMI::DATA);
-    bool transformTimeVarying = timeEval.IsTimeVarying(DMI::TRANSFORM);
 
     // Clear timevarying attributes if necessary
     ClearUsdAttributes(uniformFileAttr, timeVarFileAttr, dataTimeVarying);
     ClearUsdAttributes(uniformExtentAttr, timeVarExtentAttr, dataTimeVarying);
 
     // Set the attributes
-    if(dataTimeVarying)
-    {
-      timeVarFileAttr.Set(volAsset, timeEval.Eval(DMI::DATA));
-      timeVarExtentAttr.Set(extentArray, timeEval.Eval(DMI::DATA));
-    }
-    else
-    { 
-      uniformFileAttr.Set(volAsset, timeEval.Eval(DMI::DATA));
-      uniformExtentAttr.Set(extentArray, timeEval.Eval(DMI::DATA));
-    }
-
-    // Translate-scale in usd (slightly different from normal attribute setting)
-    UsdGeomXformOp transOp, scaleOp;
-    if(transformTimeVarying)
-    {
-  #ifdef VALUE_CLIP_RETIMING
-  #ifdef OMNIVERSE_CREATE_WORKAROUNDS
-      uniformVolume.ClearXformOpOrder();
-  #endif
-  #endif
-      timeVarVolume.ClearXformOpOrder();
-      transOp = timeVarVolume.AddTranslateOp();
-      scaleOp = timeVarVolume.AddScaleOp();
-    }
-    else
-    {
-      uniformVolume.ClearXformOpOrder();
-      transOp = uniformVolume.AddTranslateOp();
-      scaleOp = uniformVolume.AddScaleOp();
-    }
-
-    GfVec3d trans(volumeData.Origin[0], volumeData.Origin[1], volumeData.Origin[2]);
-    transOp.Set(trans, timeEval.Eval(DMI::TRANSFORM));
-
-    GfVec3f scale(volumeData.CellDimensions[0], volumeData.CellDimensions[1], volumeData.CellDimensions[2]);
-    scaleOp.Set(scale, timeEval.Eval(DMI::TRANSFORM));
+    SET_TIMEVARYING_ATTRIB(dataTimeVarying, timeVarFileAttr, uniformFileAttr, volAsset);
+    SET_TIMEVARYING_ATTRIB(dataTimeVarying, timeVarExtentAttr, uniformExtentAttr, extentArray);
   }
 }
 
 UsdPrim UsdBridgeUsdWriter::InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath & volumePath, bool uniformPrim) const
 { 
-  return InitializeUsdVolume_Impl(volumeStage, volumePath, uniformPrim);
+  UsdPrim volumePrim = InitializeUsdVolume_Impl(volumeStage, volumePath, uniformPrim);
+  
+#ifdef USE_INDEX_MATERIALS
+  UsdShadeMaterial matPrim = InitializeIndexVolumeMaterial_Impl(volumeStage, volumePath, uniformPrim);
+  UsdShadeMaterialBindingAPI(volumePrim).Bind(matPrim);
+#endif
+
+  return volumePrim;
 }
 
 #ifdef VALUE_CLIP_RETIMING
 void UsdBridgeUsdWriter::UpdateUsdVolumeManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeVolumeData& volumeData)
 {
+  const SdfPath & volumePath = cacheEntry->PrimPath;
+
+  UsdStageRefPtr volumeStage = cacheEntry->ManifestStage.second;
   TimeEvaluator<UsdBridgeVolumeData> timeEval(volumeData);
-  InitializeUsdVolume_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, false,
-    &timeEval);
+
+  InitializeUsdVolume_Impl(volumeStage, volumePath, 
+    false, &timeEval);
+
+#ifdef USE_INDEX_MATERIALS
+  InitializeIndexVolumeMaterial_Impl(volumeStage, volumePath, false, &timeEval);
+#endif
 
   if(this->EnableSaving)
     cacheEntry->ManifestStage.second->Save();
 }
 #endif
 
-void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfPath& volPrimPath, const UsdBridgeVolumeData& volumeData, double timeStep, UsdBridgePrimCache* cacheEntry)
+void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, UsdBridgePrimCache* cacheEntry, const UsdBridgeVolumeData& volumeData, double timeStep)
 {
+  const SdfPath& volPrimPath = cacheEntry->PrimPath;
+  
   // Get the volume and ovdb field prims
   UsdVolVolume uniformVolume = UsdVolVolume::Get(SceneStage, volPrimPath);
   assert(uniformVolume);
@@ -167,13 +129,14 @@ void UsdBridgeUsdWriter::UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfP
   UsdVolOpenVDBAsset timeVarField = UsdVolOpenVDBAsset::Get(timeVarStage, ovdbFieldPath);
   assert(timeVarField);
 
-  // Set field relationships?
-  //BlockFieldRelationships() :Todo
-
   // Set the file path reference in usd
   const std::string& relVolPath = GetResourceFileName(constring::volFolder, cacheEntry->Name.GetString(), timeStep, constring::vdbExtension);
 
   UpdateUsdVolumeAttributes(uniformVolume, timeVarVolume, uniformField, timeVarField, volumeData, timeStep, relVolPath);
+
+#ifdef USE_INDEX_MATERIALS
+  UpdateIndexVolumeMaterial(SceneStage, timeVarStage, volPrimPath, volumeData, timeStep);
+#endif
 
   // Output stream path (relative from connection working dir)
   std::string wdRelVolPath(SessionDirectory + relVolPath);

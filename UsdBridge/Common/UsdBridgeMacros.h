@@ -7,6 +7,7 @@
 
 #define OMNIVERSE_CREATE_WORKAROUNDS
 //#define CUSTOM_PBR_MDL
+#define USE_INDEX_MATERIALS
 
 // To enable output that usdview can digest (just a single float)
 //#define USDBRIDGE_VOL_FLOAT1_OUTPUT

@@ -6,6 +6,7 @@
 #include "UsdDataArray.h"
 #include "UsdDevice.h"
 #include "UsdBridgeUtils.h"
+#include "anari/type_utility.h"
 
 #include <cmath>
 
@@ -597,7 +598,7 @@ namespace
 }
 
 UsdGeometry::UsdGeometry(const char* name, const char* type, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_GEOMETRY, name)
+  : BridgedBaseObjectType(ANARI_GEOMETRY, name, device)
 {
   bool createTempArrays = false;
 
@@ -691,7 +692,7 @@ void UsdGeometry::syncAttributeArrays()
         attributeArray[i].Data = attribArray->getData();
         attributeArray[i].DataType = AnariToUsdBridgeType(attribArray->getType());
         attributeArray[i].PerPrimData = paramData.vertexAttributes[i] ? false : true;
-        attributeArray[i].EltSize = static_cast<uint32_t>(AnariTypeSize(attribArray->getType()));
+        attributeArray[i].EltSize = static_cast<uint32_t>(anari::sizeOf(attribArray->getType()));
       }
       else
       {

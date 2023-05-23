@@ -15,9 +15,7 @@ class UsdDevice;
 class UsdBaseObject : public helium::RefCounted
 {
   public:
-    UsdBaseObject(ANARIDataType t)
-      : type(t)
-    {}
+    UsdBaseObject(ANARIDataType t, UsdDevice* device = nullptr);
 
     virtual void filterSetParam(
       const char *name,

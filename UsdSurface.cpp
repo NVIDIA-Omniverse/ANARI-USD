@@ -22,7 +22,7 @@ DEFINE_PARAMETER_MAP(UsdSurface,
 )
 
 UsdSurface::UsdSurface(const char* name, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_SURFACE, name)
+  : BridgedBaseObjectType(ANARI_SURFACE, name, device)
 {
 }
 

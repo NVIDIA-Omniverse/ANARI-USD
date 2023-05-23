@@ -26,8 +26,8 @@ DEFINE_PARAMETER_MAP(UsdWorld,
   REGISTER_PARAMETER_MACRO("volume", ANARI_ARRAY, volumes)
 )
 
-UsdWorld::UsdWorld(const char* name)
-  : BridgedBaseObjectType(ANARI_WORLD, name)
+UsdWorld::UsdWorld(const char* name, UsdDevice* device)
+  : BridgedBaseObjectType(ANARI_WORLD, name, device)
 {
 }
 

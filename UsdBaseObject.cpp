@@ -4,6 +4,14 @@
 #include "UsdBaseObject.h"
 #include "UsdDevice.h"
 
+UsdBaseObject::UsdBaseObject(ANARIDataType t, UsdDevice* device)
+      : type(t)
+{
+  // The object will not be committed, but handles will be initialized and default data/refs will be transferred 
+  if(device)
+    device->addToCommitList(this, true);
+}
+
 void UsdBaseObject::commit(UsdDevice* device)
 { 
   bool deferDataCommit = !device->isInitialized() || !device->getReadParams().writeAtCommit || deferCommit(device);

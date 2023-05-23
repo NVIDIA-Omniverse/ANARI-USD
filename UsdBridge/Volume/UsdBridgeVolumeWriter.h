@@ -28,6 +28,8 @@ class UsdBridgeVolumeWriterI
 
     virtual void GetSerializedVolumeData(const char*& data, size_t& size) = 0;
 
+    virtual void SetConvertDoubleToFloat(bool convert) = 0;
+
     virtual void Release() = 0; // Accommodate change of CRT
 };
 

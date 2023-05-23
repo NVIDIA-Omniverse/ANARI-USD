@@ -19,7 +19,7 @@ DEFINE_PARAMETER_MAP(UsdInstance,
 
 UsdInstance::UsdInstance(const char* name,
   UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_INSTANCE, name)
+  : BridgedBaseObjectType(ANARI_INSTANCE, name, device)
 {
 }
 

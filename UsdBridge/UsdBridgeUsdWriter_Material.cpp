@@ -109,10 +109,7 @@ namespace
     ClearUsdAttributes(uniformAttrib, timeVarAttrib, timeVaryingUpdate);
 
     // Set the input that requires an update
-    if(timeVaryingUpdate)
-      timeVarInput.Set(value, timeEval.Eval(dataMemberId));
-    else
-      uniformInput.Set(value, timeEval.Eval(dataMemberId));
+    SET_TIMEVARYING_ATTRIB(timeVaryingUpdate, timeVarInput, uniformInput, value);
   }
 
   void InitializePsShaderUniform(UsdShadeShader& shader)
@@ -682,6 +679,63 @@ void UsdBridgeUsdWriter::InitializeUsdSampler(UsdStageRefPtr samplerStage,const 
   InitializeSampler_Impl(samplerStage, samplerPrimPath, type, uniformPrim, Settings);
 }
 
+#ifdef USE_INDEX_MATERIALS
+namespace
+{
+  UsdShadeOutput InitializeIndexShaderUniform(UsdStageRefPtr volumeStage, UsdShadeShader& indexShader, UsdPrim& colorMapPrim)
+  {
+    UsdShadeConnectableAPI colorMapConn(colorMapPrim);
+    UsdShadeOutput colorMapShadOut = colorMapConn.CreateOutput(UsdBridgeTokens->colormap, SdfValueTypeNames->Token);
+
+    colorMapPrim.CreateAttribute(UsdBridgeTokens->domainBoundaryMode , SdfValueTypeNames->Token).Set(UsdBridgeTokens->clampToEdge);
+    colorMapPrim.CreateAttribute(UsdBridgeTokens->colormapSource , SdfValueTypeNames->Token).Set(UsdBridgeTokens->colormapValues);
+
+    indexShader.CreateInput(UsdBridgeTokens->colormap, SdfValueTypeNames->Token).ConnectToSource(colorMapShadOut);
+    return indexShader.CreateOutput(UsdBridgeTokens->volume, SdfValueTypeNames->Token);
+  }
+
+  void InitializeIndexShaderTimeVar(UsdPrim& colorMapPrim, const TimeEvaluator<UsdBridgeVolumeData>* timeEval = nullptr)
+  {
+    typedef UsdBridgeVolumeData::DataMemberId DMI;
+
+    // Value range
+    CREATE_REMOVE_TIMEVARYING_ATTRIB(colorMapPrim, DMI::TFVALUERANGE, UsdBridgeTokens->domain, SdfValueTypeNames->Float2);
+
+    // Colors and opacities are grouped into the same attrib
+    CREATE_REMOVE_TIMEVARYING_ATTRIB(colorMapPrim, (DMI::TFCOLORS | DMI::TFOPACITIES), UsdBridgeTokens->colormapValues, SdfValueTypeNames->Float4Array);
+  }
+}
+
+UsdShadeMaterial UsdBridgeUsdWriter::InitializeIndexVolumeMaterial_Impl(UsdStageRefPtr volumeStage, 
+  const SdfPath& volumePath, bool uniformPrim, const TimeEvaluator<UsdBridgeVolumeData>* timeEval) const
+{
+  SdfPath indexMatPath = volumePath.AppendPath(SdfPath(constring::indexMaterialPf));
+  SdfPath indexShadPath = indexMatPath.AppendPath(SdfPath(constring::indexShaderPf));
+  SdfPath colorMapPath = indexMatPath.AppendPath(SdfPath(constring::indexColorMapPf));
+  
+  UsdShadeMaterial indexMaterial = GetOrDefinePrim<UsdShadeMaterial>(volumeStage, indexMatPath);
+  assert(indexMaterial);
+
+  UsdPrim colorMapPrim = volumeStage->GetPrimAtPath(colorMapPath);
+  if(!colorMapPrim)
+    colorMapPrim = volumeStage->DefinePrim(colorMapPath, UsdBridgeTokens->Colormap);
+  assert(colorMapPrim);
+
+  if(uniformPrim)
+  {
+    UsdShadeShader indexShader = GetOrDefinePrim<UsdShadeShader>(volumeStage, indexShadPath);
+    assert(indexShader);
+
+    UsdShadeOutput indexShaderOutput = InitializeIndexShaderUniform(volumeStage, indexShader, colorMapPrim);
+    indexMaterial.CreateVolumeOutput(UsdBridgeTokens->nvindex).ConnectToSource(indexShaderOutput);
+  }
+  
+  InitializeIndexShaderTimeVar(colorMapPrim, timeEval);
+
+  return indexMaterial;
+}
+#endif
+
 #ifdef VALUE_CLIP_RETIMING
 void UsdBridgeUsdWriter::UpdateUsdMaterialManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeMaterialData& matData)
 {
@@ -736,25 +790,25 @@ void UsdBridgeUsdWriter::UpdateUsdMaterial(UsdStageRefPtr timeVarStage, const Sd
   // Update usd shader
   if(Settings.EnablePreviewSurfaceShader)
   {
-    SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(constring::psShaderPrimPf));
-    this->UpdatePsShader(timeVarStage, matPrimPath, shaderPrimPath, matData, timeStep);
+    this->UpdatePsShader(timeVarStage, matPrimPath, matData, timeStep);
   }
 
   if(Settings.EnableMdlShader)
   {
     // Update mdl shader
-    SdfPath mdlShaderPrimPath = matPrimPath.AppendPath(SdfPath(constring::mdlShaderPrimPf));
-    this->UpdateMdlShader(timeVarStage, matPrimPath, mdlShaderPrimPath, matData, timeStep);
+    this->UpdateMdlShader(timeVarStage, matPrimPath, matData, timeStep);
   }
 }
 
 #define UPDATE_USD_SHADER_INPUT_MACRO(...) \
   UpdateShaderInput<true>(this, SceneStage, timeVarStage, uniformShadPrim, timeVarShadPrim, matPrimPath, timeEval, __VA_ARGS__)
 
-void UsdBridgeUsdWriter::UpdatePsShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep)
+void UsdBridgeUsdWriter::UpdatePsShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, double timeStep)
 {
   TimeEvaluator<UsdBridgeMaterialData> timeEval(matData, timeStep);
   typedef UsdBridgeMaterialData::DataMemberId DMI;
+
+  SdfPath shadPrimPath = matPrimPath.AppendPath(SdfPath(constring::psShaderPrimPf));
 
   UsdShadeShader uniformShadPrim = UsdShadeShader::Get(SceneStage, shadPrimPath);
   assert(uniformShadPrim);
@@ -780,10 +834,12 @@ void UsdBridgeUsdWriter::UpdatePsShader(UsdStageRefPtr timeVarStage, const SdfPa
 #define UPDATE_MDL_SHADER_INPUT_MACRO(...) \
   UpdateShaderInput<false>(this, SceneStage, timeVarStage, uniformShadPrim, timeVarShadPrim, matPrimPath, timeEval, __VA_ARGS__)
 
-void UsdBridgeUsdWriter::UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep)
+void UsdBridgeUsdWriter::UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, double timeStep)
 {
   TimeEvaluator<UsdBridgeMaterialData> timeEval(matData, timeStep);
   typedef UsdBridgeMaterialData::DataMemberId DMI;
+
+  SdfPath shadPrimPath = matPrimPath.AppendPath(SdfPath(constring::mdlShaderPrimPf));
 
   UsdShadeShader uniformShadPrim = UsdShadeShader::Get(SceneStage, shadPrimPath);
   assert(uniformShadPrim);
@@ -814,10 +870,12 @@ void UsdBridgeUsdWriter::UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfP
 #endif
 }
 
-void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry)
+void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, UsdBridgePrimCache* cacheEntry, const UsdBridgeSamplerData& samplerData, double timeStep)
 {
   TimeEvaluator<UsdBridgeSamplerData> timeEval(samplerData, timeStep);
   typedef UsdBridgeSamplerData::DataMemberId DMI;
+
+  const SdfPath& samplerPrimPath = cacheEntry->PrimPath;
 
   // Generate an image url
   const std::string& defaultName = cacheEntry->Name.GetString();
@@ -971,6 +1029,59 @@ void UsdBridgeUsdWriter::UpdateInAttribute(UsdStageRefPtr timeVarStage, const Sd
     UpdateSamplerTcReader<false>(SceneStage, timeVarStage, usdSamplerPrimPath, newNameToken, timeEval);
   }
 }
+
+#ifdef USE_INDEX_MATERIALS
+void UsdBridgeUsdWriter::UpdateIndexVolumeMaterial(UsdStageRefPtr sceneStage, UsdStageRefPtr timeVarStage, const SdfPath& volumePath, const UsdBridgeVolumeData& volumeData, double timeStep)
+{
+  TimeEvaluator<UsdBridgeVolumeData> timeEval(volumeData, timeStep);
+  typedef UsdBridgeVolumeData::DataMemberId DMI;
+
+  SdfPath indexMatPath = volumePath.AppendPath(SdfPath(constring::indexMaterialPf));
+  SdfPath colorMapPath = indexMatPath.AppendPath(SdfPath(constring::indexColorMapPf));
+
+  // Renormalize the value range based on the volume data type (see CopyToGrid in the volumewriter)
+  GfVec2f valueRange(GfVec2d(volumeData.TfData.TfValueRange));
+
+  // Set the transfer function value array from opacities and colors
+  assert(volumeData.TfData.TfOpacitiesType == UsdBridgeType::FLOAT);
+  const float* tfOpacities = static_cast<const float*>(volumeData.TfData.TfOpacities);
+
+  // Set domain and colormap values
+  UsdPrim uniformColorMap = sceneStage->GetPrimAtPath(colorMapPath);
+  assert(uniformColorMap);
+  UsdPrim timeVarColorMap = timeVarStage->GetPrimAtPath(colorMapPath);
+  assert(timeVarColorMap);
+
+  UsdAttribute uniformDomainAttr = uniformColorMap.GetAttribute(UsdBridgeTokens->domain);
+  UsdAttribute timeVarDomainAttr = timeVarColorMap.GetAttribute(UsdBridgeTokens->domain);
+  UsdAttribute uniformTfValueAttr = uniformColorMap.GetAttribute(UsdBridgeTokens->colormapValues);
+  UsdAttribute timeVarTfValueAttr = timeVarColorMap.GetAttribute(UsdBridgeTokens->colormapValues);
+
+  // Timevarying colormaps/domains are currently not supported by index, so keep this switched off
+  bool rangeTimeVarying = false;//timeEval.IsTimeVarying(DMI::TFVALUERANGE); 
+  bool valuesTimeVarying = false;//timeEval.IsTimeVarying(DMI::TFCOLORS) || timeEval.IsTimeVarying(DMI::TFOPACITIES);
+
+  // Clear timevarying attributes if necessary
+  ClearUsdAttributes(uniformDomainAttr, timeVarDomainAttr, rangeTimeVarying);
+  ClearUsdAttributes(uniformTfValueAttr, timeVarTfValueAttr, valuesTimeVarying);
+
+  // Set the attributes
+  UsdAttribute& outAttrib = valuesTimeVarying ? timeVarTfValueAttr : uniformTfValueAttr;
+  UsdTimeCode outTimeCode = valuesTimeVarying ? timeEval.TimeCode : timeEval.Default();
+  VtVec4fArray* outArray = AssignColorArrayToPrimvar(this, volumeData.TfData.TfColors, volumeData.TfData.TfNumColors, volumeData.TfData.TfColorsType, 
+    outTimeCode, 
+    outAttrib,
+    false); // Get the pointer, set the data manually here
+
+  for(size_t i = 0; i < outArray->size() && i < volumeData.TfData.TfNumOpacities; ++i)
+    (*outArray)[i][3] = tfOpacities[i]; // Set the alpha channel
+
+  if(outArray)
+    outAttrib.Set(*outArray, outTimeCode);
+
+  SET_TIMEVARYING_ATTRIB(rangeTimeVarying, timeVarDomainAttr, uniformDomainAttr, valueRange);
+}
+#endif
 
 void ResourceCollectSampler(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter)
 {

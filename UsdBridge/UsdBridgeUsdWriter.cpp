@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdBridgeUsdWriter.h"
-
 #include "UsdBridgeCaches.h"
 #include "UsdBridgeMdlStrings.h"
 #include "UsdBridgeUsdWriter_Common.h"
@@ -16,6 +15,7 @@ TF_DEFINE_PUBLIC_TOKENS(
   MDL_TOKEN_SEQ
   MDL_INPUT_TOKEN_SEQ
   VOLUME_TOKEN_SEQ
+  INDEX_TOKEN_SEQ
   MISC_TOKEN_SEQ
 );
 
@@ -52,6 +52,12 @@ namespace constring
 
   const char* const opaqueMaterialFile = "PBR_Opaque.mdl";
   const char* const transparentMaterialFile = "PBR_Transparent.mdl";
+#endif
+
+#ifdef USE_INDEX_MATERIALS
+  const char* const indexMaterialPf = "indexmaterial";
+  const char* const indexShaderPf = "indexshader";
+  const char* const indexColorMapPf = "indexcolormap";
 #endif
 }
   

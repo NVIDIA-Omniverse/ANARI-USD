@@ -199,7 +199,7 @@ protected:
           destType, destAddress);
 
         const void* srcAddress = rawSrc; //temporary src
-        size_t numBytes = AnariTypeSize(srcType); // Size is determined purely by source data
+        size_t numBytes = anari::sizeOf(srcType); // Size is determined purely by source data
 
         bool contentUpdate = srcType != destType; // Always do a content update if types differ (in case of multitype params)
 

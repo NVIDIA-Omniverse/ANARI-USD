@@ -16,12 +16,35 @@ DEFINE_PARAMETER_MAP(UsdVolume,
   REGISTER_PARAMETER_MACRO("field", ANARI_SPATIAL_FIELD, field)
   REGISTER_PARAMETER_MACRO("color", ANARI_ARRAY, color)
   REGISTER_PARAMETER_MACRO("opacity", ANARI_ARRAY, opacity)
-  REGISTER_PARAMETER_MACRO("valueRange", ANARI_FLOAT32_VEC2, valueRange)
+  REGISTER_PARAMETER_MACRO("valueRange", ANARI_FLOAT32_BOX1, valueRange)
   REGISTER_PARAMETER_MACRO("densityScale", ANARI_FLOAT32, densityScale)
 )
 
+namespace
+{
+  void GatherTfData(const UsdVolumeData& paramData, UsdBridgeTfData& tfData)
+  {
+    // Get transfer function data
+    const UsdDataArray* tfColor = paramData.color;
+    const UsdDataArray* tfOpacity = paramData.opacity;
+
+    UsdBridgeType tfColorType = AnariToUsdBridgeType(tfColor->getType());
+    UsdBridgeType tfOpacityType = AnariToUsdBridgeType(tfOpacity->getType());
+
+    // Write to struct
+    tfData.TfColors = tfColor->getData();
+    tfData.TfColorsType = tfColorType;
+    tfData.TfNumColors = (int)(tfColor->getLayout().numItems1);
+    tfData.TfOpacities = tfOpacity->getData();
+    tfData.TfOpacitiesType = tfOpacityType;
+    tfData.TfNumOpacities = (int)(tfOpacity->getLayout().numItems1);
+    tfData.TfValueRange[0] = paramData.valueRange[0]; 
+    tfData.TfValueRange[1] = paramData.valueRange[1];
+  }
+}
+
 UsdVolume::UsdVolume(const char* name, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_VOLUME, name)
+  : BridgedBaseObjectType(ANARI_VOLUME, name, device)
   , usdDevice(device)
 {
   usdDevice->addToVolumeList(this);
@@ -92,18 +115,24 @@ bool UsdVolume::CheckTfParams(UsdDevice* device)
     return false;
   }
 
-  if (tfColor->getType() != ANARI_FLOAT32_VEC3)
+  if (paramData.preClassified && tfColor->getType() != ANARI_FLOAT32_VEC3)
   {
     device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
-      "UsdVolume '%s' commit failed: transferfunction color array needs to be of type vec3f.", debugName);
+      "UsdVolume '%s' commit failed: transferfunction color array needs to be of type ANARI_FLOAT32_VEC3 when preClassified is set.", debugName);
     return false;
   }
 
   if (tfOpacity->getType() != ANARI_FLOAT32)
   {
     device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
-      "UsdVolume '%s' commit failed: transferfunction opacity array needs to be of type float.", debugName);
+      "UsdVolume '%s' commit failed: transferfunction opacity array needs to be of type ANARI_FLOAT32.", debugName);
     return false;
+  }
+
+  if (tfColor->getLayout().numItems1 != tfOpacity->getLayout().numItems1)
+  {
+    device->reportStatus(this, ANARI_VOLUME, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
+      "UsdVolume '%s' commit warning: transferfunction output merges colors and opacities into one array, so they should contain the same number of elements.", debugName);
   }
 
   return true;
@@ -127,25 +156,10 @@ bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
 
   UsdBridgeType fieldDataType = AnariToUsdBridgeType(fieldDataArray->getType());
 
-  // Get transfer function data
-  const UsdDataArray* tfColor = paramData.color;
-  if(!tfColor) return false; // Enforced in transferfunction commit()
-  const UsdDataArray* tfOpacity = paramData.opacity;
-  if(!tfOpacity) return false;
-
-  UsdBridgeType tfColorType = AnariToUsdBridgeType(tfColor->getType());
-  UsdBridgeType tfOpacityType = AnariToUsdBridgeType(tfOpacity->getType());
-
   //Set bridge volumedata
   UsdBridgeVolumeData volumeData;
   volumeData.Data = fieldDataArray->getData();
   volumeData.DataType = fieldDataType;
-  volumeData.TfColors = tfColor->getData();
-  volumeData.TfColorsType = tfColorType;
-  volumeData.TfNumColors = (int)(tfColor->getLayout().numItems1);
-  volumeData.TfOpacities = tfOpacity->getData();
-  volumeData.TfOpacitiesType = tfOpacityType;
-  volumeData.TfNumOpacities = (int)(tfOpacity->getLayout().numItems1);
 
   size_t* elts = volumeData.NumElements;
   float* ori = volumeData.Origin;
@@ -154,8 +168,8 @@ bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
   ori[0] = fieldParams.gridOrigin[0]; ori[1] = fieldParams.gridOrigin[1]; ori[2] = fieldParams.gridOrigin[2];
   celldims[0] = fieldParams.gridSpacing[0]; celldims[1] = fieldParams.gridSpacing[1]; celldims[2] = fieldParams.gridSpacing[2];
 
-  volumeData.TfValueRange[0] = paramData.valueRange[0]; volumeData.TfValueRange[1] = paramData.valueRange[1];
-
+  GatherTfData(paramData, volumeData.TfData);
+  
   // Set whether we want to output source data or preclassified colored volumes
   volumeData.preClassified = paramData.preClassified;
 

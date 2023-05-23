@@ -411,7 +411,8 @@ bool UsdBridge::CreateSpatialField(const char * name, UsdSpatialFieldHandle& han
     BRIDGE_USDWRITER.InitializeUsdVolume(volPrimStage, cacheEntry->PrimPath, false);
 #endif   
 
-    BRIDGE_USDWRITER.InitializeUsdVolume(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, true);
+    UsdPrim volumePrim = BRIDGE_USDWRITER.InitializeUsdVolume(BRIDGE_USDWRITER.GetSceneStage(), cacheEntry->PrimPath, true);
+    volumePrim.ApplyAPI<UsdShadeMaterialBindingAPI>();
   }
 
   handle.value = cacheEntry;
@@ -808,7 +809,7 @@ void UsdBridge::SetSpatialFieldData(UsdSpatialFieldHandle field, const UsdBridge
   UsdStageRefPtr volumeStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
 
   // To avoid data duplication when using of clip stages, we need to potentially use the scenestage prim for time-uniform data.
-  BRIDGE_USDWRITER.UpdateUsdVolume(volumeStage, cache->PrimPath, volumeData, timeStep, cache);
+  BRIDGE_USDWRITER.UpdateUsdVolume(volumeStage, cache, volumeData, timeStep);
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -843,7 +844,6 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
   if (sampler.value == nullptr) return;
 
   UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(sampler);
-  SdfPath& samplerPrimPath = cache->PrimPath;// .AppendPath(SdfPath(samplerAttribPf));
 
 #ifdef VALUE_CLIP_RETIMING
   if(cache->TimeVarBitsUpdate(samplerData.TimeVarying))
@@ -852,7 +852,7 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
 
   UsdStageRefPtr samplerStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
   
-  BRIDGE_USDWRITER.UpdateUsdSampler(samplerStage, samplerPrimPath, samplerData, timeStep, cache);
+  BRIDGE_USDWRITER.UpdateUsdSampler(samplerStage, cache, samplerData, timeStep);
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)

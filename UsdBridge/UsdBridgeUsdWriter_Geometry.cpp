@@ -4,18 +4,9 @@
 #include "UsdBridgeUsdWriter.h"
 
 #include "UsdBridgeUsdWriter_Common.h"
-#include "UsdBridgeUtils.h"
 
 namespace
 {
-  template<typename ArrayType>
-  ArrayType& GetStaticTempArray()
-  {
-    static ArrayType array;
-    array.resize(0);
-    return array;
-  }
-
   template<typename UsdGeomType>
   UsdAttribute UsdGeomGetPointsAttribute(UsdGeomType& usdGeom) { return UsdAttribute(); }
 
@@ -30,223 +21,6 @@ namespace
 
   template<>
   UsdAttribute UsdGeomGetPointsAttribute(UsdGeomPointInstancer& usdGeom) { return usdGeom.GetPositionsAttr(); }
-
-  // Array assignment
-  template<class ArrayType>
-  void AssignArrayToPrimvar(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    using ElementType = typename ArrayType::ElementType;
-    ElementType* typedData = (ElementType*)data;
-    usdArray->assign(typedData, typedData + numElements);
-
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  template<class ArrayType>
-  void AssignArrayToPrimvarFlatten(const void* data, UsdBridgeType dataType, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    int elementMultiplier = (int)dataType / UsdBridgeNumFundamentalTypes;
-    size_t numFlattenedElements = numElements * elementMultiplier;
-
-    AssignArrayToPrimvar<ArrayType>(data, numFlattenedElements, primvar, timeCode, usdArray);
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarConvert(const void* data, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    using ElementType = typename ArrayType::ElementType;
-    EltType* typedData = (EltType*)data;
-
-    usdArray->resize(numElements);
-    for (int i = 0; i < numElements; ++i)
-    {
-      (*usdArray)[i] = ElementType(typedData[i]);
-    }
-
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarConvertFlatten(const void* data, UsdBridgeType dataType, size_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    int elementMultiplier = (int)dataType / UsdBridgeNumFundamentalTypes;
-    size_t numFlattenedElements = numElements * elementMultiplier;
-
-    AssignArrayToPrimvarConvert<ArrayType, EltType>(data, numFlattenedElements, primvar, timeCode, usdArray);
-  }
-
-  template<typename ArrayType, typename EltType>
-  void Expand1ToVec3(const void* data, uint64_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    usdArray->resize(numElements);
-    const EltType* typedInput = reinterpret_cast<const EltType*>(data);
-    for (int i = 0; i < numElements; ++i)
-    {
-      (*usdArray)[i] = typename ArrayType::ElementType(typedInput[i], typedInput[i], typedInput[i]);
-    }
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  template<typename InputEltType, int numComponents>
-  void ExpandToColor(const void* data, uint64_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, VtVec4fArray* usdArray)
-  {
-    usdArray->resize(numElements);
-    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
-    // No memcopies, as input is not guaranteed to be of float type
-    if(numComponents == 1)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i], 0.0f, 0.0f, 1.0f);
-    if(numComponents == 2)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*2], typedInput[i*2+1], 0.0f, 1.0f);
-    if(numComponents == 3)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*3], typedInput[i*3+1], typedInput[i*3+2], 1.0f);
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  template<typename InputEltType, int numComponents>
-  void ExpandToColorNormalize(const void* data, uint64_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, VtVec4fArray* usdArray)
-  {
-    usdArray->resize(numElements);
-    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
-    double normFactor = 1.0f / (double)std::numeric_limits<InputEltType>::max(); // float may not be enough for uint32_t
-    // No memcopies, as input is not guaranteed to be of float type
-    if(numComponents == 1)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i]*normFactor, 0.0f, 0.0f, 1.0f);
-    if(numComponents == 2)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*2]*normFactor, typedInput[i*2+1]*normFactor, 0.0f, 1.0f);
-    if(numComponents == 3)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*3]*normFactor, typedInput[i*3+1]*normFactor, typedInput[i*3+2]*normFactor, 1.0f);
-    if(numComponents == 4)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*4]*normFactor, typedInput[i*4+1]*normFactor, typedInput[i*4+2]*normFactor, typedInput[i*4+3]*normFactor);
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  template<int numComponents>
-  void ExpandSRGBToColor(const void* data, uint64_t numElements, UsdAttribute& primvar, const UsdTimeCode& timeCode, VtVec4fArray* usdArray)
-  {
-    usdArray->resize(numElements);
-    const unsigned char* typedInput = reinterpret_cast<const unsigned char*>(data);
-    float normFactor = 1.0f / 255.0f;
-    const float* srgbTable = ubutils::SrgbToLinearTable();
-    // No memcopies, as input is not guaranteed to be of float type
-    if(numComponents == 1)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i]], 0.0f, 0.0f, 1.0f);
-    if(numComponents == 2)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i*2]], 0.0f, 0.0f, typedInput[i*2+1]*normFactor); // Alpha is linear
-    if(numComponents == 3)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i*3]], srgbTable[typedInput[i*3+1]], srgbTable[typedInput[i*3+2]], 1.0f);
-    if(numComponents == 4)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i*4]], srgbTable[typedInput[i*4+1]], srgbTable[typedInput[i*4+2]], typedInput[i*4+3]*normFactor);
-    primvar.Set(*usdArray, timeCode);
-  }
-
-  #define ASSIGN_PRIMVAR_MACRO(ArrayType) \
-    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-  #define ASSIGN_PRIMVAR_FLATTEN_MACRO(ArrayType) \
-    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); AssignArrayToPrimvarFlatten<ArrayType>(arrayData, arrayDataType, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-  #define ASSIGN_PRIMVAR_CONVERT_MACRO(ArrayType, EltType) \
-    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-  #define ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(ArrayType, EltType) \
-    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); AssignArrayToPrimvarConvertFlatten<ArrayType, EltType>(arrayData, arrayDataType, arrayNumElements, arrayPrimvar, timeCode, &usdArray)
-  #define ASSIGN_PRIMVAR_CUSTOM_ARRAY_MACRO(ArrayType, customArray) \
-    AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &customArray)
-  #define ASSIGN_PRIMVAR_CONVERT_CUSTOM_ARRAY_MACRO(ArrayType, EltType, customArray) \
-    AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &customArray)
-  #define ASSIGN_PRIMVAR_MACRO_1EXPAND3(ArrayType, EltType) \
-    ArrayType& usdArray = GetStaticTempArray<ArrayType>(); Expand1ToVec3<ArrayType, EltType>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(EltType) \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColor<EltType, 1>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(EltType) \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColor<EltType, 2>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(EltType) \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColor<EltType, 3>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(EltType) \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 1>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(EltType) \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 2>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(EltType) \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 3>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(EltType) \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandToColorNormalize<EltType, 4>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_1EXPAND_SGRB() \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandSRGBToColor<1>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_2EXPAND_SGRB() \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandSRGBToColor<2>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_3EXPAND_SGRB() \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandSRGBToColor<3>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-  #define ASSIGN_PRIMVAR_MACRO_4EXPAND_SGRB() \
-    VtVec4fArray& usdArray = GetStaticTempArray<VtVec4fArray>(); ExpandSRGBToColor<4>(arrayData, arrayNumElements, arrayPrimvar, timeCode, &usdArray);
-
-  void CopyArrayToPrimvar(UsdBridgeUsdWriter* writer, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, UsdAttribute arrayPrimvar, const UsdTimeCode& timeCode)
-  {
-    switch (arrayDataType)
-    {
-      case UsdBridgeType::UCHAR: { ASSIGN_PRIMVAR_MACRO(VtUCharArray); break; }
-      case UsdBridgeType::UCHAR_SRGB_R: { ASSIGN_PRIMVAR_MACRO(VtUCharArray); break; }
-      case UsdBridgeType::CHAR: { ASSIGN_PRIMVAR_MACRO(VtUCharArray); break; }
-      case UsdBridgeType::USHORT: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtUIntArray, short); break; }
-      case UsdBridgeType::SHORT: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, unsigned short); break; }
-      case UsdBridgeType::UINT: { ASSIGN_PRIMVAR_MACRO(VtUIntArray); break; }
-      case UsdBridgeType::INT: { ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
-      case UsdBridgeType::LONG: { ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
-      case UsdBridgeType::ULONG: { ASSIGN_PRIMVAR_MACRO(VtUInt64Array); break; }
-      case UsdBridgeType::HALF: { ASSIGN_PRIMVAR_MACRO(VtHalfArray); break; }
-      case UsdBridgeType::FLOAT: { ASSIGN_PRIMVAR_MACRO(VtFloatArray); break; }
-      case UsdBridgeType::DOUBLE: { ASSIGN_PRIMVAR_MACRO(VtDoubleArray); break; }
-
-      case UsdBridgeType::INT2: { ASSIGN_PRIMVAR_MACRO(VtVec2iArray); break; }
-      case UsdBridgeType::FLOAT2: { ASSIGN_PRIMVAR_MACRO(VtVec2fArray); break; }
-      case UsdBridgeType::DOUBLE2: { ASSIGN_PRIMVAR_MACRO(VtVec2dArray); break; }
-
-      case UsdBridgeType::INT3: { ASSIGN_PRIMVAR_MACRO(VtVec3iArray); break; }
-      case UsdBridgeType::FLOAT3: { ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
-      case UsdBridgeType::DOUBLE3: { ASSIGN_PRIMVAR_MACRO(VtVec3dArray); break; }
-
-      case UsdBridgeType::INT4: { ASSIGN_PRIMVAR_MACRO(VtVec4iArray); break; }
-      case UsdBridgeType::FLOAT4: { ASSIGN_PRIMVAR_MACRO(VtVec4fArray); break; }
-      case UsdBridgeType::DOUBLE4: { ASSIGN_PRIMVAR_MACRO(VtVec4dArray); break; }
-
-      case UsdBridgeType::UCHAR2:
-      case UsdBridgeType::UCHAR3: 
-      case UsdBridgeType::UCHAR4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
-      case UsdBridgeType::UCHAR_SRGB_RA:
-      case UsdBridgeType::UCHAR_SRGB_RGB: 
-      case UsdBridgeType::UCHAR_SRGB_RGBA: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
-      case UsdBridgeType::CHAR2:
-      case UsdBridgeType::CHAR3: 
-      case UsdBridgeType::CHAR4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUCharArray); break; }
-      case UsdBridgeType::USHORT2:
-      case UsdBridgeType::USHORT3:
-      case UsdBridgeType::USHORT4: { ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(VtUIntArray, short); break; }
-      case UsdBridgeType::SHORT2:
-      case UsdBridgeType::SHORT3: 
-      case UsdBridgeType::SHORT4: { ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(VtIntArray, unsigned short); break; }
-      case UsdBridgeType::UINT2:
-      case UsdBridgeType::UINT3: 
-      case UsdBridgeType::UINT4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUIntArray); break; }
-      case UsdBridgeType::LONG2:
-      case UsdBridgeType::LONG3: 
-      case UsdBridgeType::LONG4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtInt64Array); break; }
-      case UsdBridgeType::ULONG2:
-      case UsdBridgeType::ULONG3: 
-      case UsdBridgeType::ULONG4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtUInt64Array); break; }
-      case UsdBridgeType::HALF2:
-      case UsdBridgeType::HALF3: 
-      case UsdBridgeType::HALF4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtHalfArray); break; }
-
-      default: {UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom Attribute<Index> primvar copy does not support source data type: " << arrayDataType) break; }
-    };
-  }
 
   template<typename GeomDataType>
   void CreateUsdGeomColorPrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const UsdBridgeSettings& settings, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
@@ -322,34 +96,14 @@ namespace
     typedef UsdBridgeMeshData::DataMemberId DMI;
     UsdGeomPrimvarsAPI primvarApi(meshGeom);
 
-    UsdPrim meshPrim = meshGeom.GetPrim();
+    UsdGeomMesh& attribCreatePrim = meshGeom;
+    UsdPrim& attribRemovePrim = meshGeom.GetPrim();
 
-    if (!timeEval || timeEval->IsTimeVarying(DMI::POINTS))
-    {
-      meshGeom.CreatePointsAttr();
-      meshGeom.CreateExtentAttr();
-    }
-    else
-    {
-      meshPrim.RemoveProperty(UsdBridgeTokens->points);
-      meshPrim.RemoveProperty(UsdBridgeTokens->extent);
-    }
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::INDICES))
-    {
-      meshGeom.CreateFaceVertexIndicesAttr();
-      meshGeom.CreateFaceVertexCountsAttr();
-    }
-    else
-    {
-      meshPrim.RemoveProperty(UsdBridgeTokens->faceVertexCounts);
-      meshPrim.RemoveProperty(UsdBridgeTokens->faceVertexIndices);
-    }
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::NORMALS))
-      meshGeom.CreateNormalsAttr();
-    else
-      meshPrim.RemoveProperty(UsdBridgeTokens->normals);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreatePointsAttr, UsdBridgeTokens->points);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreateExtentAttr, UsdBridgeTokens->extent);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::INDICES, CreateFaceVertexIndicesAttr, UsdBridgeTokens->faceVertexCounts);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::INDICES, CreateFaceVertexCountsAttr, UsdBridgeTokens->faceVertexIndices);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::NORMALS, CreateNormalsAttr, UsdBridgeTokens->normals);
 
     CreateUsdGeomColorPrimvars(primvarApi, meshData, settings, timeEval);
 
@@ -365,33 +119,14 @@ namespace
     typedef UsdBridgeInstancerData::DataMemberId DMI;
     UsdGeomPrimvarsAPI primvarApi(pointsGeom);
 
-    UsdPrim pointsPrim = pointsGeom.GetPrim();
+    UsdGeomPoints& attribCreatePrim = pointsGeom;
+    UsdPrim& attribRemovePrim = pointsGeom.GetPrim();
 
-    if (!timeEval || timeEval->IsTimeVarying(DMI::POINTS))
-    {
-      pointsGeom.CreatePointsAttr();
-      pointsGeom.CreateExtentAttr();
-    }
-    else
-    {
-      pointsPrim.RemoveProperty(UsdBridgeTokens->points);
-      pointsPrim.RemoveProperty(UsdBridgeTokens->extent);
-    }
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::INSTANCEIDS))
-      pointsGeom.CreateIdsAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->ids);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::ORIENTATIONS))
-      pointsGeom.CreateNormalsAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->normals);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::SCALES))
-      pointsGeom.CreateWidthsAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->widths);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreatePointsAttr, UsdBridgeTokens->points);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreateExtentAttr, UsdBridgeTokens->extent);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::INSTANCEIDS, CreateIdsAttr, UsdBridgeTokens->ids);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::ORIENTATIONS, CreateNormalsAttr, UsdBridgeTokens->normals);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::SCALES, CreateWidthsAttr, UsdBridgeTokens->widths);
 
     CreateUsdGeomColorPrimvars(primvarApi, instancerData, settings, timeEval);
 
@@ -407,38 +142,15 @@ namespace
     typedef UsdBridgeInstancerData::DataMemberId DMI;
     UsdGeomPrimvarsAPI primvarApi(pointsGeom);
 
-    UsdPrim pointsPrim = pointsGeom.GetPrim();
+    UsdGeomPointInstancer& attribCreatePrim = pointsGeom;
+    UsdPrim& attribRemovePrim = pointsGeom.GetPrim();
 
-    if (!timeEval || timeEval->IsTimeVarying(DMI::POINTS))
-    {
-      pointsGeom.CreatePositionsAttr();
-      pointsGeom.CreateExtentAttr();
-    }
-    else
-    {
-      pointsPrim.RemoveProperty(UsdBridgeTokens->positions);
-      pointsPrim.RemoveProperty(UsdBridgeTokens->extent);
-    }
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::SHAPEINDICES))
-      pointsGeom.CreateProtoIndicesAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->protoIndices);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::INSTANCEIDS))
-      pointsGeom.CreateIdsAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->ids);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::ORIENTATIONS))
-      pointsGeom.CreateOrientationsAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->orientations);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::SCALES))
-      pointsGeom.CreateScalesAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->scales);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreatePositionsAttr, UsdBridgeTokens->positions);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreateExtentAttr, UsdBridgeTokens->extent);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::SHAPEINDICES, CreateProtoIndicesAttr, UsdBridgeTokens->protoIndices);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::INSTANCEIDS, CreateIdsAttr, UsdBridgeTokens->ids);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::ORIENTATIONS, CreateOrientationsAttr, UsdBridgeTokens->orientations);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::SCALES, CreateScalesAttr, UsdBridgeTokens->scales);
 
     CreateUsdGeomColorPrimvars(primvarApi, instancerData, settings, timeEval);
 
@@ -446,21 +158,10 @@ namespace
       CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
 
     CreateUsdGeomAttributePrimvars(primvarApi, instancerData, timeEval);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::LINEARVELOCITIES))
-      pointsGeom.CreateVelocitiesAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->velocities);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::ANGULARVELOCITIES))
-      pointsGeom.CreateAngularVelocitiesAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->angularVelocities);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::INVISIBLEIDS))
-      pointsGeom.CreateInvisibleIdsAttr();
-    else
-      pointsPrim.RemoveProperty(UsdBridgeTokens->invisibleIds);
+  	
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::LINEARVELOCITIES, CreateVelocitiesAttr, UsdBridgeTokens->velocities);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::ANGULARVELOCITIES, CreateAngularVelocitiesAttr, UsdBridgeTokens->angularVelocities);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::INVISIBLEIDS, CreateInvisibleIdsAttr, UsdBridgeTokens->invisibleIds);
   }
 
   void InitializeUsdGeometryTimeVar(UsdGeomBasisCurves& curveGeom, const UsdBridgeCurveData& curveData, const UsdBridgeSettings& settings,
@@ -469,33 +170,14 @@ namespace
     typedef UsdBridgeCurveData::DataMemberId DMI;
     UsdGeomPrimvarsAPI primvarApi(curveGeom);
 
-    UsdPrim curvePrim = curveGeom.GetPrim();
+    UsdGeomBasisCurves& attribCreatePrim = curveGeom;
+    UsdPrim& attribRemovePrim = curveGeom.GetPrim();
 
-    if (!timeEval || timeEval->IsTimeVarying(DMI::POINTS))
-    {
-      curveGeom.CreatePointsAttr();
-      curveGeom.CreateExtentAttr();
-    }
-    else
-    {
-      curvePrim.RemoveProperty(UsdBridgeTokens->positions);
-      curvePrim.RemoveProperty(UsdBridgeTokens->extent);
-    }
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::CURVELENGTHS))
-      curveGeom.CreateCurveVertexCountsAttr();
-    else
-      curvePrim.RemoveProperty(UsdBridgeTokens->curveVertexCounts);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::NORMALS))
-      curveGeom.CreateNormalsAttr();
-    else
-      curvePrim.RemoveProperty(UsdBridgeTokens->normals);
-
-    if (!timeEval || timeEval->IsTimeVarying(DMI::SCALES))
-      curveGeom.CreateWidthsAttr();
-    else
-      curvePrim.RemoveProperty(UsdBridgeTokens->widths);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreatePointsAttr, UsdBridgeTokens->positions);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::POINTS, CreateExtentAttr, UsdBridgeTokens->extent);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::CURVELENGTHS, CreateCurveVertexCountsAttr, UsdBridgeTokens->curveVertexCounts);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::NORMALS, CreateNormalsAttr, UsdBridgeTokens->normals);
+    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::SCALES, CreateWidthsAttr, UsdBridgeTokens->widths);
 
     CreateUsdGeomColorPrimvars(primvarApi, curveData, settings, timeEval);
 
@@ -626,6 +308,8 @@ namespace
         size_t arrayNumElements = geomData.NumPoints;
         UsdAttribute arrayPrimvar = pointsAttr;
         VtVec3fArray& usdVerts = GetStaticTempArray<VtVec3fArray>();
+        bool setPrimvar = true;
+
         switch (geomData.PointsType)
         {
         case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_CUSTOM_ARRAY_MACRO(VtVec3fArray, usdVerts); break; }
@@ -690,6 +374,8 @@ namespace
         const void* arrayData = geomData.Indices;
         size_t arrayNumElements = numIndices;
         UsdAttribute arrayPrimvar = outGeom->GetFaceVertexIndicesAttr();
+        bool setPrimvar = true;
+
         switch (geomData.IndicesType)
         {
         case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, uint64_t); break; }
@@ -724,6 +410,8 @@ namespace
         const void* arrayData = geomData.Normals;
         size_t arrayNumElements = geomData.PerPrimNormals ? numPrims : geomData.NumPoints;
         UsdAttribute arrayPrimvar = normalsAttr;
+        bool setPrimvar = true;
+
         switch (geomData.NormalsType)
         {
         case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
@@ -769,6 +457,7 @@ namespace
         const void* arrayData = texCoordAttrib.Data;
         size_t arrayNumElements = texCoordAttrib.PerPrimData ? numPrims : geomData.NumPoints;
         UsdAttribute arrayPrimvar = texcoordPrimvar;
+        bool setPrimvar = true;
 
         switch (texCoordAttrib.DataType)
         {
@@ -824,7 +513,7 @@ namespace
           size_t arrayNumElements = bridgeAttrib.PerPrimData ? numPrims : geomData.NumPoints;
           UsdAttribute arrayPrimvar = attributePrimvar;
 
-          CopyArrayToPrimvar(writer, arrayData, bridgeAttrib.DataType, arrayNumElements, arrayPrimvar, timeCode);
+          AssignAttribArrayToPrimvar(writer, arrayData, bridgeAttrib.DataType, arrayNumElements, arrayPrimvar, timeCode);
     
           // Per face or per-vertex interpolation. This will break timesteps that have been written before.
           TfToken attribInterpolation = bridgeAttrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
@@ -872,43 +561,13 @@ namespace
 
       if (geomData.Colors != nullptr)
       {
-        const void* arrayData = geomData.Colors;
         size_t arrayNumElements = geomData.PerPrimColors ? numPrims : geomData.NumPoints;
-        TfToken colorInterpolation = geomData.PerPrimColors ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
-
         assert(colorPrimvar);
 
-        UsdAttribute arrayPrimvar = colorPrimvar;
-        switch (geomData.ColorsType)
-        {
-        case UsdBridgeType::UCHAR: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint8_t); break; }
-        case UsdBridgeType::UCHAR2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint8_t); break; }
-        case UsdBridgeType::UCHAR3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint8_t); break; }
-        case UsdBridgeType::UCHAR4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint8_t); break; }
-        case UsdBridgeType::UCHAR_SRGB_R: {ASSIGN_PRIMVAR_MACRO_1EXPAND_SGRB(); break; }
-        case UsdBridgeType::UCHAR_SRGB_RA: {ASSIGN_PRIMVAR_MACRO_2EXPAND_SGRB(); break; }
-        case UsdBridgeType::UCHAR_SRGB_RGB: {ASSIGN_PRIMVAR_MACRO_3EXPAND_SGRB(); break; }
-        case UsdBridgeType::UCHAR_SRGB_RGBA: {ASSIGN_PRIMVAR_MACRO_4EXPAND_SGRB(); break; }
-        case UsdBridgeType::USHORT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint16_t); break; }
-        case UsdBridgeType::USHORT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint16_t); break; }
-        case UsdBridgeType::USHORT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint16_t); break; }
-        case UsdBridgeType::USHORT4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint16_t); break; }
-        case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint32_t); break; }
-        case UsdBridgeType::UINT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint32_t); break; }
-        case UsdBridgeType::UINT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint32_t); break; }
-        case UsdBridgeType::UINT4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint32_t); break; }
-        case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(float); break; }
-        case UsdBridgeType::FLOAT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(float); break; }
-        case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(float); break; }
-        case UsdBridgeType::FLOAT4: {ASSIGN_PRIMVAR_MACRO(VtVec4fArray); break; }
-        case UsdBridgeType::DOUBLE: {ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(double) break; }
-        case UsdBridgeType::DOUBLE2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(double); break; }
-        case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(double); break; }
-        case UsdBridgeType::DOUBLE4: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec4fArray, GfVec4d); break; }
-        default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4)."); break; }
-        }
+        AssignColorArrayToPrimvar(writer, geomData.Colors, arrayNumElements, geomData.ColorsType, timeEval.Eval(DMI::COLORS), colorPrimvar.GetAttr());
 
         // Per face or per-vertex interpolation. This will break timesteps that have been written before.
+        TfToken colorInterpolation = geomData.PerPrimColors ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
         uniformDispPrimvar.SetInterpolation(colorInterpolation);
       }
       else
@@ -941,6 +600,8 @@ namespace
         const void* arrayData = geomData.InstanceIds;
         size_t arrayNumElements = geomData.NumPoints;
         UsdAttribute arrayPrimvar = idsAttr;
+        bool setPrimvar = true;
+
         switch (geomData.InstanceIdsType)
         {
         case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
@@ -979,6 +640,8 @@ namespace
         const void* arrayData = geomData.Scales;
         size_t arrayNumElements = geomData.NumPoints;
         UsdAttribute arrayPrimvar = widthsAttribute;
+        bool setPrimvar = true;
+
         switch (geomData.ScalesType)
         {
         case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO(VtFloatArray); break; }
@@ -1018,6 +681,8 @@ namespace
         const void* arrayData = geomData.Scales;
         size_t arrayNumElements = geomData.NumPoints;
         UsdAttribute arrayPrimvar = scalesAttribute;
+        bool setPrimvar = true;
+
         switch (geomData.ScalesType)
         {
         case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO_1EXPAND3(VtVec3fArray, float); break;}
@@ -1061,6 +726,8 @@ namespace
         const void* arrayData = geomData.Orientations;
         size_t arrayNumElements = geomData.NumPoints;
         UsdAttribute arrayPrimvar = normalsAttribute;
+        bool setPrimvar = true;
+
         switch (geomData.OrientationsType)
         {
         case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
@@ -1238,6 +905,8 @@ namespace
         const void* arrayData = geomData.InvisibleIds;
         size_t arrayNumElements = numInvisibleIds;
         UsdAttribute arrayPrimvar = invisIdsAttr;
+        bool setPrimvar = true;
+
         switch (geomData.InvisibleIdsType)
         {
         case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
@@ -1275,6 +944,8 @@ namespace
       const void* arrayData = geomData.CurveLengths;
       size_t arrayNumElements = geomData.NumCurveLengths;
       UsdAttribute arrayPrimvar = vertCountAttr;
+      bool setPrimvar = true;
+      
       { ASSIGN_PRIMVAR_MACRO(VtIntArray); }
     }
   }

@@ -14,7 +14,7 @@ struct UsdSpatialFieldData
   UsdSharedString* usdName = nullptr;
 
   double timeStep = 0.0;
-  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:data, 1:gridSpacing, 2:gridOrigin
+  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:data (includes spacing and origin)
 
   const UsdDataArray* data = nullptr;
   
@@ -28,7 +28,7 @@ struct UsdSpatialFieldData
 class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialFieldData, UsdSpatialFieldHandle>
 {
   public:
-    UsdSpatialField(const char* name, const char* type);
+    UsdSpatialField(const char* name, const char* type, UsdDevice* device);
     ~UsdSpatialField();
 
     void filterSetParam(const char *name,

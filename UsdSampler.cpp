@@ -45,7 +45,7 @@ namespace
 }
 
 UsdSampler::UsdSampler(const char* name, const char* type, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_SAMPLER, name)
+  : BridgedBaseObjectType(ANARI_SAMPLER, name, device)
 {
   if (strEquals(type, "image1D"))
     samplerType = SAMPLER_1D;

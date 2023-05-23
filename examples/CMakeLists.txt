@@ -25,3 +25,8 @@ project(anariTutorialUsdRecreate)
 add_executable(${PROJECT_NAME} anariTutorial_usd_recreate.c)
 target_link_libraries(${PROJECT_NAME} PRIVATE anari::anari stb_image ${PLATFORM_LIBS})
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+project(anariTutorialUsdVolume)
+add_executable(${PROJECT_NAME} anariTutorial_usd_volume.cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE anari::anari stb_image ${PLATFORM_LIBS})
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

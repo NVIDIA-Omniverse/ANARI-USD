@@ -213,6 +213,10 @@ UsdDevice::~UsdDevice()
 
     reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, errstream.str().c_str());
   }
+  else
+  {
+    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR, "Object reference memleak check complete, no issues found.");
+  }
   assert(allocatedObjects.empty());
 #endif
 }
@@ -507,7 +511,7 @@ ANARIGeometry UsdDevice::newGeometry(const char *type)
 ANARISpatialField UsdDevice::newSpatialField(const char * type)
 {
   const char* name = makeUniqueName("SpatialField");
-  UsdSpatialField* object = new UsdSpatialField(name, type);
+  UsdSpatialField* object = new UsdSpatialField(name, type, this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -562,7 +566,7 @@ ANARIInstance UsdDevice::newInstance()
 ANARIWorld UsdDevice::newWorld()
 {
   const char* name = makeUniqueName("World");
-  UsdWorld* object = new UsdWorld(name);
+  UsdWorld* object = new UsdWorld(name, this);
 #ifdef CHECK_MEMLEAKS
   LogAllocation(object);
 #endif
@@ -660,12 +664,12 @@ void UsdDevice::clearCommitList()
 
 void UsdDevice::flushCommitList()
 {
-  // Automatically commit volumes which are not committed yet,
-  // but for which their (writedata) spatial field is in commitlist.
+  // Automatically perform a new commitdata/commitrefs on volumes which are not committed,
+  // but for which their (readdata) spatial field is in commitlist. (to update the previous commit)
   for(UsdVolume* volume : volumeList)
   {
-    const UsdVolumeData& writeParams = volume->getWriteParams();
-    if(writeParams.field)
+    const UsdVolumeData& readParams = volume->getReadParams();
+    if(readParams.field)
     {
       //volume not in commitlist
       auto volEntry = std::find_if(commitList.begin(), commitList.end(),
@@ -673,12 +677,15 @@ void UsdDevice::flushCommitList()
       if(volEntry == commitList.end())
       {
         auto fieldEntry = std::find_if(commitList.begin(), commitList.end(),
-          [&writeParams](const CommitListType& entry) -> bool { return entry.first.ptr == writeParams.field; });
+          [&readParams](const CommitListType& entry) -> bool { return entry.first.ptr == readParams.field; });
 
-        // spatialfield from writeparams is in commit list
+        // spatialfield from readParams is in commit list
         if(fieldEntry != commitList.end())
         {
-          volume->commit(this);
+          UsdBaseObject* baseObject = static_cast<UsdBaseObject*>(volume);
+          bool commitRefs = baseObject->doCommitData(this);
+          if(commitRefs)
+            baseObject->doCommitRefs(this);
         }
       }
     }

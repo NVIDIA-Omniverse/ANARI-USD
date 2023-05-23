@@ -11,7 +11,7 @@ DEFINE_PARAMETER_MAP(UsdLight,
 )
 
 UsdLight::UsdLight(const char* name, UsdDevice* device)
-  : BridgedBaseObjectType(ANARI_LIGHT, name)
+  : BridgedBaseObjectType(ANARI_LIGHT, name, device)
 {}
 
 UsdLight::~UsdLight()

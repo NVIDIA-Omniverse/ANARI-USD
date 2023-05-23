@@ -11,6 +11,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 #include "UsdBridgeCaches.h"
 #include "UsdBridgeVolumeWriter.h"
 #include "UsdBridgeConnection.h"
+#include "UsdBridgeTimeEvaluator.h"
 
 #include <memory>
 #include <functional>
@@ -111,6 +112,11 @@ public:
   void InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, UsdBridgeSamplerData::SamplerType type, bool uniformPrim) const;
   UsdShadeShader GetOrCreateAttributeReader() const;
 
+#ifdef USE_INDEX_MATERIALS
+  UsdShadeMaterial InitializeIndexVolumeMaterial_Impl(UsdStageRefPtr volumeStage, 
+    const SdfPath& volumePath, bool uniformPrim, const UsdBridgeTimeEvaluator<UsdBridgeVolumeData>* timeEval = nullptr) const;
+#endif
+
 #ifdef VALUE_CLIP_RETIMING
   void UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeMeshData& meshData);
   void UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeInstancerData& instancerData);
@@ -131,15 +137,17 @@ public:
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& instancerPath, const UsdBridgeInstancerData& geomData, double timeStep);
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& curvePath, const UsdBridgeCurveData& geomData, double timeStep);
   void UpdateUsdMaterial(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
-  void UpdatePsShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
-  void UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const SdfPath& shadPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
-  void UpdateUsdVolume(UsdStageRefPtr timeVarStage, const SdfPath& volPrimPath, const UsdBridgeVolumeData& volumeData, double timeStep, UsdBridgePrimCache* cacheEntry);
-  void UpdateUsdSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry);
-  void UpdateMdlSampler(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry);
-  void UpdateSamplers(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const UsdBridgeSamplerData& samplerData, double timeStep, UsdBridgePrimCache* cacheEntry);
+  void UpdatePsShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
+  void UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, double timeStep);
+  void UpdateUsdVolume(UsdStageRefPtr timeVarStage, UsdBridgePrimCache* cacheEntry, const UsdBridgeVolumeData& volumeData, double timeStep);
+  void UpdateUsdSampler(UsdStageRefPtr timeVarStage, UsdBridgePrimCache* cacheEntry, const UsdBridgeSamplerData& samplerData, double timeStep);
   void UpdateAttributeReaders(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, MaterialDMI dataMemberId, const char* newName, double timeStep, MaterialDMI timeVarying);
   void UpdateInAttribute(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const char* newName, double timeStep, SamplerDMI timeVarying);
   void UpdateBeginEndTime(double timeStep);
+
+#ifdef USE_INDEX_MATERIALS
+  void UpdateIndexVolumeMaterial(UsdStageRefPtr sceneStage, UsdStageRefPtr timeVarStage, const SdfPath& volumePath, const UsdBridgeVolumeData& volumeData, double timeStep);
+#endif
 
   void* LogUserData;
   UsdBridgeLogCallback LogCallback;

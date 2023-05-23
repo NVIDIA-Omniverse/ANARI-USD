@@ -158,7 +158,7 @@ void UsdDataArray::setLayoutAndSize(uint64_t numItems1,
   uint64_t numItems3,
   int64_t byteStride3)
 {
-  size_t typeSize = AnariTypeSize(type);
+  size_t typeSize = anari::sizeOf(type);
   if (byteStride1 == 0)
     byteStride1 = typeSize;
   if (byteStride2 == 0)
