@@ -4,7 +4,7 @@
 #include "UsdDataArray.h"
 #include "UsdDevice.h"
 #include "UsdAnari.h"
-#include "anari/type_utility.h"
+#include "anari/frontend/type_utility.h"
 
 DEFINE_PARAMETER_MAP(UsdDataArray,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)

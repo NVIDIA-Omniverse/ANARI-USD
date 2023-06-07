@@ -5,7 +5,7 @@
 
 #include "UsdBridgeData.h"
 #include "UsdCommonMacros.h"
-#include "anari/anari_enums.h"
+#include "anari/frontend/anari_enums.h"
 #include "anari/anari_cpp/Traits.h"
 
 #include <cstring>

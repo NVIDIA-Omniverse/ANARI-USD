@@ -6,7 +6,7 @@
 #include "UsdDataArray.h"
 #include "UsdDevice.h"
 #include "UsdBridgeUtils.h"
-#include "anari/type_utility.h"
+#include "anari/frontend/type_utility.h"
 
 #include <cmath>
 

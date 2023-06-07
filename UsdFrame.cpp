@@ -5,7 +5,7 @@
 #include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdDevice.h"
-#include "anari/type_utility.h"
+#include "anari/frontend/type_utility.h"
 
 DEFINE_PARAMETER_MAP(UsdFrame,
   REGISTER_PARAMETER_MACRO("world", ANARI_WORLD, world)

@@ -5,7 +5,7 @@
 
 #include "UsdBaseObject.h"
 #include "UsdParameterizedObject.h"
-#include "anari/anari_enums.h"
+#include "anari/frontend/anari_enums.h"
 
 class UsdDevice;
 

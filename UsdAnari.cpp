@@ -1,7 +1,7 @@
 #include "UsdAnari.h"
 #include "UsdDevice.h"
 #include "UsdDataArray.h"
-#include "anari/type_utility.h"
+#include "anari/frontend/type_utility.h"
 
 UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType)
 {

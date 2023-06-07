@@ -199,20 +199,23 @@ void doTest(TestParameters testParams)
 
 
   // Create a sampler
-  ANARISampler sampler = anariNewSampler(dev, "image2D");
-  anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
-
-  anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
-  anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
-  anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
-  
-  array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
-  //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
-  anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &array);
-  
+  ANARISampler sampler = 0;
   if(useTexture)
+  {
+    sampler = anariNewSampler(dev, "image2D");
+    anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
+
+    anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+    anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
+    anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
+
+    array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
+    //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
+    anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &array);
+
     anariCommitParameters(dev, sampler);
-  anariRelease(dev, array);
+    anariRelease(dev, array);
+  }
 
   // Create a material
   ANARIMaterial mat = anariNewMaterial(dev, "matte");

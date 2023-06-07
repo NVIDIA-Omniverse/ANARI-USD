@@ -13,7 +13,7 @@
 #include "UsdBaseObject.h"
 #include "UsdMultiTypeParameter.h"
 #include "helium/utility/IntrusivePtr.h"
-#include "anari/type_utility.h"
+#include "anari/frontend/type_utility.h"
 
 class UsdDevice;
 class UsdBridge;
