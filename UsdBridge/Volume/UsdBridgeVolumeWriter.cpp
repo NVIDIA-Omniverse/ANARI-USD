@@ -48,13 +48,6 @@ void UsdBridgeVolumeWriter::Release()
 
 #ifdef USE_OPENVDB
 
-// GridTransformer.h->LevelSetRebuild.h->MeshToVolume.h->tbb/enumerable_thread_specific.h->windows_api.h
-#ifdef WIN32
-#define NOMINMAX
-#define _USE_MATH_DEFINES // for C
-#include <math.h>
-#endif
-
 #include "openvdb/openvdb.h"
 #include "openvdb/io/Stream.h"
 #include "openvdb/tools/Dense.h"

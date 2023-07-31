@@ -38,7 +38,7 @@ one can use explicit install dir variables which support `debug/` and `release/`
 
 - `ANARI_ROOT_DIR`: for the ANARI-SDK install directory
 - `USD_ROOT_DIR`: for the USD install directory
-- `OPENVDB_ROOT_DIR`: for the OpenVDB install directory (if not `USE_USD_OPENVDB_BUILD`)
+- `OpenVDB_ROOT`: for the OpenVDB install directory (if not `USE_USD_OPENVDB_BUILD`)
 - `OMNICLIENT_ROOT_DIR`: for the Omniverse (OmniClient) install directory
 - `ZLIB_ROOT`: for the ZLIB install directory, required for Linux builds
 

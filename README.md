@@ -17,7 +17,7 @@ Device for ANARI generating USD+Omniverse output
 
 The best way to build is to run `cmake(-gui)` on the `superbuild` subdir, for detailed instructions see `superbuild/README.md`. 
 
-In short, use the above to set `USD_ROOT_DIR` to the directory containing the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Builds](#debug-builds)), and optionally an `OPENVDB_ROOT_DIR` or `OMNICLIENT_ROOT_DIR`. After configuring and genering the superbuild, the actual projects and dependencies are configured, generated and built with `cmake --build . --config [Release|Debug]`
+In short, use the above to set `USD_ROOT_DIR` to the directory containing the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Builds](#debug-builds)), and optionally an `OpenVDB_ROOT` or `OMNICLIENT_ROOT_DIR`. After configuring and genering the superbuild, the actual projects and dependencies are configured, generated and built with `cmake --build . --config [Release|Debug]`
 
 ### Usage notes #
 
