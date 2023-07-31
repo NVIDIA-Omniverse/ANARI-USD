@@ -4,8 +4,8 @@ Device for ANARI generating USD+Omniverse output
 
 ### Prerequisites #
 
-- For Linux, use GCC-9 or higher, and USD 21.11 (to avoid C++ ABI issues).
-- On Windows this library builds against versions 20.xx and 21.xx
+- For Linux, use GCC-9 or higher, USD 22.xx (to avoid C++ ABI issues), OpenVDB 10.
+- On Windows this library builds against USD versions 22.xx, OpenVDB 10.
 - A USD install in any of the following ways (depending on desired capabilities):
     - Get prebuilt USD packages from https://developer.nvidia.com/usd#bin (No OpenVDB or Omniverse support)
     - Get prebuilt USD + Omniverse packages from Omniverse launcher according to [Downloading the Omniverse libraries](#downloading-the-omniverse-libraries) (no OpenVDB support)
