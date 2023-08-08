@@ -59,7 +59,6 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (r) \
   (rg) \
   (rgb) \
-  (a) \
   (black) \
   (clamp) \
   (repeat) \
@@ -80,16 +79,22 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (varname)
 
 #define MDL_TOKEN_SEQ \
-  (sourceAsset) \
   (mdl) \
   (OmniPBR) \
+  (sourceAsset) \
   (out) \
   (data_lookup_float) \
   (data_lookup_float2) \
   (data_lookup_float3) \
   (data_lookup_color) \
   (lookup_color) \
-  (coord)
+  (lookup_float4) \
+  ((xyz, "xyz(float4)")) \
+  ((w, "w(float4)")) \
+  ((construct_color, "construct_color(float3)")) \
+  ((mul_float, "multiply(float,float)")) \
+  (coord) \
+  (colorSpace)
 
 #define MDL_INPUT_TOKEN_SEQ \
   (reflection_roughness_constant) \
@@ -104,7 +109,9 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (tex) \
   (wrap_u) \
   (wrap_v) \
-  (wrap_w)
+  (wrap_w) \
+  (a) \
+  (b) \
 
 #define VOLUME_TOKEN_SEQ \
   (density) \
@@ -159,6 +166,7 @@ namespace constring
   extern const char* const texCoordReaderPrimPf;
   extern const char* const psShaderPrimPf;
   extern const char* const mdlShaderPrimPf;
+  extern const char* const mdlOpacityMulPrimPf;
   extern const char* const psSamplerPrimPf;
   extern const char* const mdlSamplerPrimPf;
   extern const char* const openVDBPrimPf;
@@ -173,6 +181,7 @@ namespace constring
 
   extern const char* const mdlShaderAssetName;
   extern const char* const mdlSupportAssetName;
+  extern const char* const mdlAuxAssetName;
 
 #ifdef CUSTOM_PBR_MDL
   extern const char* const mdlFolder;
@@ -822,7 +831,7 @@ namespace
       case UsdBridgeType::DOUBLE2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(double); GET_USDARRAY_REF; break; }
       case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(double); GET_USDARRAY_REF; break; }
       case UsdBridgeType::DOUBLE4: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec4fArray, GfVec4d); GET_USDARRAY_REF; break; }
-      default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4)."); break; }
+      default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4) or UCHAR_SRGB_<X>."); break; }
     }
 
     return usdArrayRef;

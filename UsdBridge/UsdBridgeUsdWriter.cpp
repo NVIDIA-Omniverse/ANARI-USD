@@ -36,6 +36,7 @@ namespace constring
   const char* const mdlShaderPrimPf = "mdlshader";
   const char* const psSamplerPrimPf = "pssampler";
   const char* const mdlSamplerPrimPf = "mdlsampler";
+  const char* const mdlOpacityMulPrimPf = "mdlopacitymul";
   const char* const openVDBPrimPf = "ovdbfield";
 
   const char* const imageExtension = ".png";
@@ -46,6 +47,7 @@ namespace constring
 
   const char* const mdlShaderAssetName = "OmniPBR.mdl";
   const char* const mdlSupportAssetName = "nvidia/support_definitions.mdl";
+  const char* const mdlAuxAssetName = "nvidia/aux_definitions.mdl";
 
 #ifdef CUSTOM_PBR_MDL
   const char* const mdlFolder = "mdls/";
