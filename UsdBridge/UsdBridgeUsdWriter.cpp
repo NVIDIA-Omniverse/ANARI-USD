@@ -37,6 +37,13 @@ namespace constring
   const char* const psSamplerPrimPf = "pssampler";
   const char* const mdlSamplerPrimPf = "mdlsampler";
   const char* const mdlOpacityMulPrimPf = "mdlopacitymul";
+  const char* const mdlSamplerOpacityPrimPf = "mdlsampleropacity";
+  const char* const mdlGraphXYZPrimPf = "_xyz_f";
+  const char* const mdlGraphColorPrimPf = "_ftocolor";
+  const char* const mdlGraphXPrimPf = "_x";
+  const char* const mdlGraphYPrimPf = "_y";
+  const char* const mdlGraphZPrimPf = "_z";
+  const char* const mdlGraphWPrimPf = "_w";
   const char* const openVDBPrimPf = "ovdbfield";
 
   const char* const imageExtension = ".png";

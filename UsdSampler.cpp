@@ -190,6 +190,7 @@ bool UsdSampler::doCommitData(UsdDevice* device)
           samplerData.Data = paramData.imageData->getData();
           samplerData.ImageName = UsdSharedString::c_str(paramData.imageData->getName());
           samplerData.ImageNumComponents = numComponents;
+          samplerData.DataType = AnariToUsdBridgeType(paramData.imageData->getType());
           paramData.imageData->getLayout().copyDims(samplerData.ImageDims);
           paramData.imageData->getLayout().copyStride(samplerData.ImageStride);
         }
