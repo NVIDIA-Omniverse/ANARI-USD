@@ -36,8 +36,8 @@ namespace constring
   const char* const mdlShaderPrimPf = "mdlshader";
   const char* const psSamplerPrimPf = "pssampler";
   const char* const mdlSamplerPrimPf = "mdlsampler";
-  const char* const mdlOpacityMulPrimPf = "mdlopacitymul";
-  const char* const mdlSamplerOpacityPrimPf = "mdlsampleropacity";
+  const char* const mdlOpacityMulPrimPf = "opacitymul_mdl";
+  const char* const mdlDiffuseOpacityPrimPf = "diffuseopacity_mdl";
   const char* const mdlGraphXYZPrimPf = "_xyz_f";
   const char* const mdlGraphColorPrimPf = "_ftocolor";
   const char* const mdlGraphXPrimPf = "_x";
@@ -270,7 +270,7 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   return true;
 }
 
-UsdStageRefPtr UsdBridgeUsdWriter::GetSceneStage()
+UsdStageRefPtr UsdBridgeUsdWriter::GetSceneStage() const
 {
   return this->SceneStage;
 }

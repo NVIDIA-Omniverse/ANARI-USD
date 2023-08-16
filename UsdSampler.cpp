@@ -79,14 +79,14 @@ void UsdSampler::filterResetParam(const char *name)
   resetParam(name);
 }
 
-void UsdSampler::setPerInstance(bool enable, UsdDevice* device) 
+void UsdSampler::updateBoundParameters(bool boundToInstance, UsdDevice* device) 
 { 
   UsdBridge* usdBridge = device->getUsdBridge();
 
   if(!usdHandle.value)
     return;
   
-  if(perInstance != enable)
+  if(perInstance != boundToInstance)
   {
     // Fix up the position attribute
     const UsdSamplerData& paramData = getReadParams();
@@ -115,7 +115,7 @@ void UsdSampler::setPerInstance(bool enable, UsdDevice* device)
       usdBridge->ChangeInAttribute(usdHandle, usdAttribName, dataTimeStep, timeVarying);
     }
 
-    perInstance = enable;
+    perInstance = boundToInstance;
   } 
 }
 

@@ -79,6 +79,7 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (varname)
 
 #define USDPREVSURF_OUTPUT_TOKEN_SEQ \
+  (result) \
   (r) \
   (rg) \
   (rgb) \
@@ -188,7 +189,7 @@ namespace constring
   extern const char* const psShaderPrimPf;
   extern const char* const mdlShaderPrimPf;
   extern const char* const mdlOpacityMulPrimPf;
-  extern const char* const mdlSamplerOpacityPrimPf;
+  extern const char* const mdlDiffuseOpacityPrimPf;
   extern const char* const mdlGraphXYZPrimPf;
   extern const char* const mdlGraphColorPrimPf;
   extern const char* const mdlGraphXPrimPf;
@@ -573,13 +574,14 @@ namespace
     return UsdBridgeTokens->data_lookup_float;
   }
 
-  const SdfValueTypeName& GetShaderNodeOutputType(UsdBridgeMaterialData::DataMemberId dataMemberId)
+  const SdfValueTypeName& GetAttributeOutputType(UsdBridgeMaterialData::DataMemberId dataMemberId)
   {
     using DMI = UsdBridgeMaterialData::DataMemberId;
 
+    // An educated guess for the type belonging to a particular attribute bound to material inputs
     switch(dataMemberId)
     {
-      case DMI::DIFFUSE: { return SdfValueTypeNames->Color3f; break; } 
+      case DMI::DIFFUSE: { return SdfValueTypeNames->Float4; break; } // Typically bound to the color array, containing rgb and a information.
       case DMI::OPACITY: { return SdfValueTypeNames->Float; break; } 
       case DMI::EMISSIVECOLOR: { return SdfValueTypeNames->Color3f; break; } 
       case DMI::EMISSIVEINTENSITY: { return SdfValueTypeNames->Float; break; } 

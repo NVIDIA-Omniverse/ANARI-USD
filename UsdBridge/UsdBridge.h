@@ -14,7 +14,7 @@ class UsdBridge
   public:
     using MaterialDMI = UsdBridgeMaterialData::DataMemberId;
     using SamplerDMI = UsdBridgeSamplerData::DataMemberId;
-    using MaterialInputSourceName = std::pair<const char*, MaterialDMI>;
+    using MaterialInputAttribName = std::pair<MaterialDMI, const char*>;
 
     UsdBridge(const UsdBridgeSettings& settings);
     ~UsdBridge();
@@ -79,7 +79,7 @@ class UsdBridge
     void SetMaterialData(UsdMaterialHandle material, const UsdBridgeMaterialData& matData, double timeStep);
     void SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerData& samplerData, double timeStep);
 
-    void ChangeMaterialInputSourceNames(UsdMaterialHandle material, const MaterialInputSourceName* inputNames, size_t numInputNames, double timeStep, MaterialDMI timeVarying);
+    void ChangeMaterialInputAttributes(UsdMaterialHandle material, const MaterialInputAttribName* inputAttribs, size_t numInputAttribs, double timeStep, MaterialDMI timeVarying);
     void ChangeInAttribute(UsdSamplerHandle sampler, const char* newName, double timeStep, SamplerDMI timeVarying);
   
     void SaveScene();

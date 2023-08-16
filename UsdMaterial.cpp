@@ -90,16 +90,19 @@ void UsdMaterial::filterResetParam(const char *name)
 template<typename ValueType>
 bool UsdMaterial::getMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param, MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo)
 {
+  bool hasPositionAttrib = false;
+
   UsdSharedString* anariAttribStr = nullptr;
   param.Get(anariAttribStr);
   const char* anariAttrib = UsdSharedString::c_str(anariAttribStr);
 
-  if(anariAttrib && strEquals(anariAttrib, "objectPosition"))
+  if(anariAttrib)
   {
-    // In case of a per-instance specific attribute name, there can be only one change of the attribute name.
-    // Otherwise there is a risk of the material 
-    if(instanceAttributeAttached)
+    hasPositionAttrib = strEquals(anariAttrib, "objectPosition");
+    if( hasPositionAttrib && instanceAttributeAttached)
     {
+      // In case of a per-instance specific attribute name, there can be only one change of the attribute name.
+      // Otherwise there is a risk of the material attribute being used for two differently named attributes.
       reportStatusThroughDevice(logInfo, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
         "UsdMaterial '%s' binds one of its parameters to %s, but is transitively bound to both an instanced geometry (cones, spheres, cylinders) and regular geometry. \
         This is incompatible with USD, which demands a differently bound name for those categories. \
@@ -109,12 +112,10 @@ bool UsdMaterial::getMaterialInputSourceName(const UsdMaterialMultiTypeParameter
 
     const char* usdAttribName = AnariAttributeToUsdName(anariAttrib, perInstance, logInfo);
 
-    materialInputNames.push_back(UsdBridge::MaterialInputSourceName(usdAttribName, dataMemberId));
-
-    return true;
+    materialInputAttributes.push_back(UsdBridge::MaterialInputAttribName(dataMemberId, usdAttribName));
   }
 
-  return false;
+  return hasPositionAttrib;
 }
 
 template<typename ValueType>
@@ -171,12 +172,12 @@ void UsdMaterial::assignParameterToMaterialInput(const UsdMaterialMultiTypeParam
   matInput.Sampler = param.Get(sampler);
 }
 
-void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
+void UsdMaterial::updateBoundParameters(bool boundToInstance, UsdDevice* device)
 { 
   UsdBridge* usdBridge = device->getUsdBridge();
   const UsdMaterialData& paramData = getReadParams();
   
-  if(perInstance != enable)
+  if(perInstance != boundToInstance)
   {
     UsdLogInfo logInfo = {device, this, ANARI_MATERIAL, getName()};
 
@@ -184,7 +185,7 @@ void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
     double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
 
     // Fix up any parameters that have a geometry-type-dependent name set as source attribute
-    materialInputNames.clear();
+    materialInputAttributes.clear();
 
     bool hasPositionAttrib = 
       getMaterialInputSourceName(paramData.color, DMI::DIFFUSE, device, logInfo) ||
@@ -195,13 +196,14 @@ void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
       getMaterialInputSourceName(paramData.metallic, DMI::METALLIC, device, logInfo) ||
       getMaterialInputSourceName(paramData.ior, DMI::IOR, device, logInfo);
 
-    if(materialInputNames.size())
-      usdBridge->ChangeMaterialInputSourceNames(usdHandle, materialInputNames.data(), materialInputNames.size(), dataTimeStep, (DMI)paramData.timeVarying);
-      
+    // Fixup attribute name and type depending on the newly bound geometry
+    if(materialInputAttributes.size())
+      usdBridge->ChangeMaterialInputAttributes(usdHandle, materialInputAttributes.data(), materialInputAttributes.size(), dataTimeStep, (DMI)paramData.timeVarying);
+
     if(hasPositionAttrib)
       instanceAttributeAttached = true; // As soon as any parameter is set to a position attribute, the geometry type for this material is 'locked-in'
 
-    perInstance = enable; 
+    perInstance = boundToInstance; 
   }
 
   if(paramData.color.type == SamplerType)
@@ -209,7 +211,7 @@ void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
     UsdSampler* colorSampler = nullptr;
     if (paramData.color.Get(colorSampler))
     {
-      colorSampler->setPerInstance(enable, device);
+      colorSampler->updateBoundParameters(boundToInstance, device);
     }
   }
 }

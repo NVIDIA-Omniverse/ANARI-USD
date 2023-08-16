@@ -59,10 +59,10 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
       const char *name) override;
 
     bool isPerInstance() const { return perInstance; }
-    void setPerInstance(bool enable, UsdDevice* device);
+    void updateBoundParameters(bool boundToInstance, UsdDevice* device);
 
   protected:
-    using MaterialInputSourceNamePair = std::pair<const char*, MaterialDMI>;
+    using MaterialInputAttribNamePair = std::pair<MaterialDMI, const char*>;
 
     template<typename ValueType>
     bool getMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param,
@@ -88,7 +88,7 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     bool perInstance = false; // Whether material is attached to a point instancer
     bool instanceAttributeAttached = false; // Whether a value to any parameter has been set which in USD is different between per-instance and regular geometries
 
-    OptionalList<MaterialInputSourceNamePair> materialInputNames;
+    OptionalList<MaterialInputAttribNamePair> materialInputAttributes;
     OptionalList<UsdSamplerHandle> samplerHandles;
     OptionalList<UsdSamplerRefData> samplerRefDatas;
 };

@@ -35,7 +35,7 @@ namespace
 
     if (timeVarChecked)
     {
-      primvarApi.CreatePrimvar(UsdBridgeTokens->color, SdfValueTypeNames->Color4fArray);
+      primvarApi.CreatePrimvar(UsdBridgeTokens->color, SdfValueTypeNames->Float4Array);
     }
     else
     {
