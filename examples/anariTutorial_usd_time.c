@@ -120,7 +120,7 @@ int main(int argc, const char **argv)
   anariCommitParameters(dev, camera); // commit each object to indicate mods are done
 
   // Setup texture array
-  ANARIArray2D texArray = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
+  ANARIArray2D texArray = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1]); // Make sure this matches numTexComponents
 
   printf("done!\n");
   printf("setting up scene...");
@@ -154,25 +154,25 @@ int main(int argc, const char **argv)
       scaledVertex[v] = vertex[v] * (1.0f + timeIdx);
     }
 
-    ANARIArray1D array = anariNewArray1D(dev, scaledVertex, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
+    ANARIArray1D array = anariNewArray1D(dev, scaledVertex, 0, 0, ANARI_FLOAT32_VEC3, 4);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "vertex.position", ANARI_ARRAY, &array);
     anariRelease(dev, array); // we are done using this handle
 
     if (useVertexColors)
     {
-      array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4, 0);
+      array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.color", ANARI_ARRAY, &array);
       anariRelease(dev, array);
     }
 
-    array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
+    array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
     anariRelease(dev, array);
 
-    array = anariNewArray1D(dev, index, 0, 0, ANARI_UINT32_VEC3, 2, 0);
+    array = anariNewArray1D(dev, index, 0, 0, ANARI_UINT32_VEC3, 2);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "primitive.index", ANARI_ARRAY, &array);
     anariRelease(dev, array);
@@ -221,7 +221,7 @@ int main(int argc, const char **argv)
     ANARIGroup group;
     group = anariNewGroup(dev);
     anariSetParameter(dev, group, "name", ANARI_STRING, "tutorialGroup_0");
-    array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1, 0);
+    array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, group, "surface", ANARI_ARRAY, &array);
     anariCommitParameters(dev, group);
@@ -230,7 +230,7 @@ int main(int argc, const char **argv)
 
     // put the group into an instance (give the group a world transform)
     ANARIInstance instance[2];
-    instance[0] = anariNewInstance(dev);
+    instance[0] = anariNewInstance(dev, "transform");
     anariSetParameter(dev, instance[0], "name", ANARI_STRING, "tutorialInstance_0");
     anariSetParameter(dev, instance[0], "transform", ANARI_FLOAT32_MAT3x4, transform);
     anariSetParameter(dev, instance[0], "group", ANARI_GROUP, &group);
@@ -240,7 +240,7 @@ int main(int argc, const char **argv)
     ANARILight light = anariNewLight(dev, "ambient");
     anariSetParameter(dev, light, "name", ANARI_STRING, "tutorialLight");
     anariCommitParameters(dev, light);
-    array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1, 0);
+    array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, world, "light", ANARI_ARRAY, &array);
     anariRelease(dev, light);
@@ -253,25 +253,25 @@ int main(int argc, const char **argv)
       mesh = anariNewGeometry(dev, "sphere");
       anariSetParameter(dev, mesh, "name", ANARI_STRING, "tutorialPoints");
 
-      array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
+      array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.position", ANARI_ARRAY, &array);
       anariRelease(dev, array); // we are done using this handle
 
       if (useVertexColors)
       {
-        array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4, 0);
+        array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4);
         anariCommitParameters(dev, array);
         anariSetParameter(dev, mesh, "vertex.color", ANARI_ARRAY, &array);
         anariRelease(dev, array);
       }
 
-      array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
+      array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
-      array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4, 0);
+      array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
       anariRelease(dev, array);
@@ -313,7 +313,7 @@ int main(int argc, const char **argv)
       // put the surface into a group
       group = anariNewGroup(dev);
       anariSetParameter(dev, group, "name", ANARI_STRING, "tutorialGroup_1");
-      array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1, 0);
+      array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, group, "surface", ANARI_ARRAY, &array);
       anariCommitParameters(dev, group);
@@ -321,7 +321,7 @@ int main(int argc, const char **argv)
       anariRelease(dev, array);
 
       // put the group into an instance (give the group a world transform)
-      instance[1] = anariNewInstance(dev);
+      instance[1] = anariNewInstance(dev, "transform");
       anariSetParameter(dev, instance[1], "name", ANARI_STRING, "tutorialInstance_1");
       anariSetParameter(dev, instance[1], "transform", ANARI_FLOAT32_MAT3x4, transform);
       anariSetParameter(dev, instance[1], "group", ANARI_GROUP, &group);
@@ -332,7 +332,7 @@ int main(int argc, const char **argv)
 
     // put the instance in the world
     anariSetParameter(dev, world, "name", ANARI_STRING, "tutorialWorld");
-    array = anariNewArray1D(dev, instance, 0, 0, ANARI_INSTANCE, (doubleNodes ? 2 : 1), 0);
+    array = anariNewArray1D(dev, instance, 0, 0, ANARI_INSTANCE, (doubleNodes ? 2 : 1));
     anariCommitParameters(dev, array);
     anariSetParameter(dev, world, "instance", ANARI_ARRAY, &array);
     anariRelease(dev, instance[0]);
@@ -414,25 +414,25 @@ int main(int argc, const char **argv)
       mesh = anariNewGeometry(dev, "sphere");
       anariSetParameter(dev, mesh, "name", ANARI_STRING, "tutorialPoints");
 
-      ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
+      ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.position", ANARI_ARRAY, &array);
       anariRelease(dev, array); // we are done using this handle
 
       if (useVertexColors)
       {
-        array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4, 0);
+        array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4);
         anariCommitParameters(dev, array);
         anariSetParameter(dev, mesh, "vertex.color", ANARI_ARRAY, &array);
         anariRelease(dev, array);
       }
 
-      array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
+      array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
-      array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4, 0);
+      array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
       anariRelease(dev, array);
@@ -472,7 +472,7 @@ int main(int argc, const char **argv)
       // put the surface into a group
       group = anariNewGroup(dev);
       anariSetParameter(dev, group, "name", ANARI_STRING, "tutorialGroup_1");
-      array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1, 0);
+      array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, group, "surface", ANARI_ARRAY, &array);
       anariCommitParameters(dev, group);
@@ -480,7 +480,7 @@ int main(int argc, const char **argv)
       anariRelease(dev, array);
 
       // put the group into an instance (give the group a world transform)
-      instance = anariNewInstance(dev);
+      instance = anariNewInstance(dev, "transform");
       anariSetParameter(dev, instance, "name", ANARI_STRING, "tutorialInstance_1");
       anariSetParameter(dev, instance, "transform", ANARI_FLOAT32_MAT3x4, transform);
       anariSetParameter(dev, instance, "group", ANARI_GROUP, &group);
@@ -491,7 +491,7 @@ int main(int argc, const char **argv)
 
     // put the instance in the world
     anariSetParameter(dev, world, "name", ANARI_STRING, "tutorialWorld");
-    array = anariNewArray1D(dev, &instance, 0, 0, ANARI_INSTANCE, 1, 0);
+    array = anariNewArray1D(dev, &instance, 0, 0, ANARI_INSTANCE, 1);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, world, "instance", ANARI_ARRAY, &array);
     anariRelease(dev, instance);

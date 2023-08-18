@@ -17,8 +17,6 @@
 #include "UsdFrame.h"
 #include "UsdLight.h"
 
-#include "anari/ext/debug/DebugObject.h"
-
 #include <cstdarg>
 #include <cstdio>
 #include <set>
@@ -27,24 +25,6 @@
 #include <algorithm>
 
 static char deviceName[] = "usd";
-
-#ifndef USDDevice_INTERFACE
-#define USDDevice_INTERFACE
-#endif
-
-extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_NEW_DEVICE(
-    usd, library, _subtype)
-{
-  if (strEquals(_subtype, "default") || strEquals(_subtype, "usd"))
-    return (ANARIDevice) new UsdDevice(library);
-  return nullptr;
-}
-
-extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_GET_DEVICE_SUBTYPES(usd, libdata)
-{
-  static const char *devices[] = { deviceName, nullptr };
-  return devices;
-}
 
 namespace anari {
 namespace usd {
@@ -61,49 +41,10 @@ const void *query_param_info(ANARIDataType type,
     const char *infoName,
     ANARIDataType infoType);
 
-anari::debug_device::ObjectFactory *getDebugFactory();
 const char **query_extensions();
 
 } // namespace usd
 } // namespace anari
-
-extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_GET_OBJECT_SUBTYPES(
-    usd, library, deviceSubtype, objectType)
-{
-  return anari::usd::query_object_types(objectType);
-}
-
-extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_GET_OBJECT_PROPERTY(
-    usd,
-    library,
-    deviceSubtype,
-    objectSubtype,
-    objectType,
-    propertyName,
-    propertyType)
-{
-  return anari::usd::query_object_info(
-      objectType, objectSubtype, propertyName, propertyType);
-}
-
-extern "C" USDDevice_INTERFACE ANARI_DEFINE_LIBRARY_GET_PARAMETER_PROPERTY(
-    usd,
-    library,
-    deviceSubtype,
-    objectSubtype,
-    objectType,
-    parameterName,
-    parameterType,
-    propertyName,
-    propertyType)
-{
-  return anari::usd::query_param_info(objectType,
-      objectSubtype,
-      parameterName,
-      parameterType,
-      propertyName,
-      propertyType);
-}
 
 template <typename T>
 inline void writeToVoidP(void *_p, T v)
@@ -430,11 +371,10 @@ ANARIArray1D UsdDevice::newArray1D(const void *appMemory,
   ANARIMemoryDeleter deleter,
   const void *userData,
   ANARIDataType type,
-  uint64_t numItems,
-  uint64_t byteStride)
+  uint64_t numItems)
 {
   return (ANARIArray1D)CreateDataArray(appMemory, deleter, userData,
-    type, numItems, byteStride, 1, 0, 1, 0);
+    type, numItems, 0, 1, 0, 1, 0);
 }
 
 ANARIArray2D UsdDevice::newArray2D(const void *appMemory,
@@ -442,12 +382,10 @@ ANARIArray2D UsdDevice::newArray2D(const void *appMemory,
   const void *userData,
   ANARIDataType type,
   uint64_t numItems1,
-  uint64_t numItems2,
-  uint64_t byteStride1,
-  uint64_t byteStride2)
+  uint64_t numItems2)
 {
   return (ANARIArray2D)CreateDataArray(appMemory, deleter, userData,
-    type, numItems1, byteStride1, numItems2, byteStride2, 1, 0);
+    type, numItems1, 0, numItems2, 0, 1, 0);
 }
 
 ANARIArray3D UsdDevice::newArray3D(const void *appMemory,
@@ -456,13 +394,10 @@ ANARIArray3D UsdDevice::newArray3D(const void *appMemory,
   ANARIDataType type,
   uint64_t numItems1,
   uint64_t numItems2,
-  uint64_t numItems3,
-  uint64_t byteStride1,
-  uint64_t byteStride2,
-  uint64_t byteStride3)
+  uint64_t numItems3)
 {
   return (ANARIArray3D)CreateDataArray(appMemory, deleter, userData,
-    type, numItems1, byteStride1, numItems2, byteStride2, numItems3, byteStride3);
+    type, numItems1, 0, numItems2, 0, numItems3, 0);
 }
 
 void * UsdDevice::mapArray(ANARIArray array)
@@ -552,7 +487,7 @@ ANARIGroup UsdDevice::newGroup()
   return (ANARIGroup)(object);
 }
 
-ANARIInstance UsdDevice::newInstance()
+ANARIInstance UsdDevice::newInstance(const char */*type*/)
 {
   const char* name = makeUniqueName("Instance");
   UsdInstance* object = new UsdInstance(name, this);
@@ -573,6 +508,36 @@ ANARIWorld UsdDevice::newWorld()
 
   return (ANARIWorld)(object);
 }
+
+const char **UsdDevice::getObjectSubtypes(ANARIDataType objectType)
+{
+  return anari::usd::query_object_types(objectType);
+}
+
+const void *UsdDevice::getObjectInfo(ANARIDataType objectType,
+    const char *objectSubtype,
+    const char *infoName,
+    ANARIDataType infoType)
+{
+  return anari::usd::query_object_info(
+      objectType, objectSubtype, infoName, infoType);
+}
+
+const void *UsdDevice::getParameterInfo(ANARIDataType objectType,
+    const char *objectSubtype,
+    const char *parameterName,
+    ANARIDataType parameterType,
+    const char *infoName,
+    ANARIDataType infoType)
+{
+  return anari::usd::query_param_info(objectType,
+      objectSubtype,
+      parameterName,
+      parameterType,
+      infoName,
+      infoType);
+}
+
 
 ANARIRenderer UsdDevice::newRenderer(const char *type)
 {
@@ -813,12 +778,7 @@ int UsdDevice::getProperty(ANARIObject object,
       }
       return 1;
     }
-    if (strEquals(name, "debugObjects") && type == ANARI_FUNCTION_POINTER)
-    {
-      writeToVoidP(mem, anari::usd::getDebugFactory);
-      return 1;
-    }
-    if (strEquals(name, "features") && type == ANARI_STRING_LIST)
+    if (strEquals(name, "extension") && type == ANARI_STRING_LIST)
     {
       writeToVoidP(mem, anari::usd::query_extensions());
       return 1;
@@ -876,6 +836,54 @@ void UsdDevice::unsetParameter(ANARIObject object, const char * name)
     deviceUnsetParameter(name);
   else if (object)
     ((UsdBaseObject*)object)->filterResetParam(name);
+}
+
+void UsdDevice::unsetAllParameters(ANARIObject o)
+{
+  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
+    "anariUnsetAllParameters() is not yet implemented");
+}
+
+void *UsdDevice::mapParameterArray1D(ANARIObject o,
+    const char *name,
+    ANARIDataType dataType,
+    uint64_t numElements1,
+    uint64_t *elementStride)
+{
+  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
+    "anariMapParameterArray1D() is not yet implemented");
+  return nullptr;
+}
+
+void *UsdDevice::mapParameterArray2D(ANARIObject o,
+    const char *name,
+    ANARIDataType dataType,
+    uint64_t numElements1,
+    uint64_t numElements2,
+    uint64_t *elementStride)
+{
+  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
+    "anariMapParameterArray2D() is not yet implemented");
+  return nullptr;
+}
+
+void *UsdDevice::mapParameterArray3D(ANARIObject o,
+    const char *name,
+    ANARIDataType dataType,
+    uint64_t numElements1,
+    uint64_t numElements2,
+    uint64_t numElements3,
+    uint64_t *elementStride)
+{
+  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
+    "anariMapParameterArray3D() is not yet implemented");
+  return nullptr;
+}
+
+void UsdDevice::unmapParameterArray(ANARIObject o, const char *name)
+{
+  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
+    "anariUnmapParameterArray() is not yet implemented");
 }
 
 void UsdDevice::release(ANARIObject object)

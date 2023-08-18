@@ -8,7 +8,7 @@
 #include <random>
 
 // anari
-#define ANARI_FEATURE_UTILITY_IMPL
+#define ANARI_EXTENSION_UTILITY_IMPL
 #include "anari/anari_cpp.hpp"
 #include "anari/anari_cpp/ext/std.h"
 
@@ -128,10 +128,10 @@ static std::vector<float> generateVoxels(
 
         for (auto &p : points) {
           vec3 pointCoordinate = logicalToWorldCoordinates(i, j, k);
-          const float distanceSq = 
-            std::powf(pointCoordinate[0] - p.center[0], 2.0f) +
-            std::powf(pointCoordinate[1] - p.center[1], 2.0f) +
-            std::powf(pointCoordinate[2] - p.center[2], 2.0f);
+          const float distanceSq =
+            std::pow(pointCoordinate[0] - p.center[0], 2.0f) +
+            std::pow(pointCoordinate[1] - p.center[1], 2.0f) +
+            std::pow(pointCoordinate[2] - p.center[2], 2.0f);
 
           // contribution proportional to weighted inverse-square distance
           // (i.e. gravity)
@@ -295,16 +295,16 @@ int main(int argc, const char **argv)
 
   anari::Library lib = anari::loadLibrary("usd", statusFunc);
 
-  anari::Features features = anari::feature::getObjectFeatures(
-      lib, "default", "default", ANARI_DEVICE);
+  anari::Extensions extensions =
+    anari::extension::getDeviceExtensionStruct(lib, "default");
 
-  if (!features.ANARI_KHR_GEOMETRY_TRIANGLE)
+  if (!extensions.ANARI_KHR_GEOMETRY_TRIANGLE)
     printf("WARNING: device doesn't support ANARI_KHR_GEOMETRY_TRIANGLE\n");
-  if (!features.ANARI_KHR_CAMERA_PERSPECTIVE)
+  if (!extensions.ANARI_KHR_CAMERA_PERSPECTIVE)
     printf("WARNING: device doesn't support ANARI_KHR_CAMERA_PERSPECTIVE\n");
-  if (!features.ANARI_KHR_LIGHT_DIRECTIONAL)
+  if (!extensions.ANARI_KHR_LIGHT_DIRECTIONAL)
     printf("WARNING: device doesn't support ANARI_KHR_LIGHT_DIRECTIONAL\n");
-  if (!features.ANARI_KHR_MATERIAL_MATTE)
+  if (!extensions.ANARI_KHR_MATERIAL_MATTE)
     printf("WARNING: device doesn't support ANARI_KHR_MATERIAL_MATTE\n");
 
   ANARIDevice d = anariNewDevice(lib, "default");
@@ -369,7 +369,7 @@ int main(int argc, const char **argv)
   anari::unloadLibrary(lib);
 
   printf("done!\n");
-  
+
 
   return 0;
 }

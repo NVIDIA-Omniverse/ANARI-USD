@@ -170,12 +170,12 @@ void doTest(TestParameters testParams)
   ANARIGeometry mesh = anariNewGeometry(dev, "triangle");
   anariSetParameter(dev, mesh, "name", ANARI_STRING, "tutorialMesh");
 
-  ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
+  ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "vertex.position", ANARI_ARRAY, &array);
   anariRelease(dev, array); // we are done using this handle
 
-  array = anariNewArray1D(dev, normal, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
+  array = anariNewArray1D(dev, normal, 0, 0, ANARI_FLOAT32_VEC3, 4);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "vertex.normal", ANARI_ARRAY, &array);
   anariRelease(dev, array);
@@ -183,31 +183,31 @@ void doTest(TestParameters testParams)
   // Set the vertex colors
   if (useVertexColors)
   {
-    array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4, 0);
+    array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "vertex.color", ANARI_ARRAY, &array);
     anariRelease(dev, array);
   }
 
-  array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
+  array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
   anariRelease(dev, array);
 
   if(isTransparent)
   {
-    array = anariNewArray1D(dev, opacities, 0, 0, ANARI_FLOAT32, 4, 0);
+    array = anariNewArray1D(dev, opacities, 0, 0, ANARI_FLOAT32, 4);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "vertex.attribute1", ANARI_ARRAY, &array);
     anariRelease(dev, array);
   }
 
-  //array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4, 0);
+  //array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4);
   //anariCommitParameters(dev, array);
   //anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
   //anariRelease(dev, array);
 
-  array = anariNewArray1D(dev, index, 0, 0, ANARI_UINT32_VEC3, 2, 0);
+  array = anariNewArray1D(dev, index, 0, 0, ANARI_UINT32_VEC3, 2);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "primitive.index", ANARI_ARRAY, &array);
   anariRelease(dev, array);
@@ -226,7 +226,7 @@ void doTest(TestParameters testParams)
     anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
     anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
 
-    array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
+    array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1]); // Make sure this matches numTexComponents
     //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
     anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &array);
 
@@ -244,7 +244,7 @@ void doTest(TestParameters testParams)
     anariSetParameter(dev, opacitySampler, "wrapMode1", ANARI_STRING, wrapS);
     anariSetParameter(dev, opacitySampler, "wrapMode2", ANARI_STRING, wrapT);
 
-    array = anariNewArray2D(dev, opacityTextureData, 0, 0, ANARI_UINT8, textureSize[0], textureSize[1], 0, 0);
+    array = anariNewArray2D(dev, opacityTextureData, 0, 0, ANARI_UINT8, textureSize[0], textureSize[1]);
     anariSetParameter(dev, opacitySampler, "image", ANARI_ARRAY, &array);
 
     anariCommitParameters(dev, opacitySampler);
@@ -296,7 +296,7 @@ void doTest(TestParameters testParams)
   // put the surface into a group
   ANARIGroup group = anariNewGroup(dev);
   anariSetParameter(dev, group, "name", ANARI_STRING, "tutorialGroup");
-  array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1, 0);
+  array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, group, "surface", ANARI_ARRAY, &array);
   anariCommitParameters(dev, group);
@@ -304,7 +304,7 @@ void doTest(TestParameters testParams)
   anariRelease(dev, array);
 
   // put the group into an instance (give the group a world transform)
-  ANARIInstance instance = anariNewInstance(dev);
+  ANARIInstance instance = anariNewInstance(dev, "transform");
   anariSetParameter(dev, instance, "name", ANARI_STRING, "tutorialInstance");
   anariSetParameter(dev, instance, "transform", ANARI_FLOAT32_MAT3x4, transform);
   anariSetParameter(dev, instance, "group", ANARI_GROUP, &group);
@@ -314,7 +314,7 @@ void doTest(TestParameters testParams)
   ANARILight light = anariNewLight(dev, "ambient");
   anariSetParameter(dev, light, "name", ANARI_STRING, "tutorialLight");
   anariCommitParameters(dev, light);
-  array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1, 0);
+  array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, world, "light", ANARI_ARRAY, &array);
   anariRelease(dev, light);
@@ -324,7 +324,7 @@ void doTest(TestParameters testParams)
 
   // put the instance in the world
   anariSetParameter(dev, world, "name", ANARI_STRING, "tutorialWorld");
-  array = anariNewArray1D(dev, &instance, 0, 0, ANARI_INSTANCE, 1, 0);
+  array = anariNewArray1D(dev, &instance, 0, 0, ANARI_INSTANCE, 1);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, world, "instance", ANARI_ARRAY, &array);
   anariRelease(dev, instance);
