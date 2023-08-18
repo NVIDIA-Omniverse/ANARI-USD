@@ -20,14 +20,16 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
   REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("usd::time::color", ANARI_FLOAT64, colorSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::opacity", ANARI_FLOAT64, opacitySamplerTimeStep)
-  REGISTER_PARAMETER_MACRO("usd::time::emissiveColor", ANARI_FLOAT64, emissiveSamplerTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::time::emissive", ANARI_FLOAT64, emissiveSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::emissiveIntensity", ANARI_FLOAT64, emissiveIntensitySamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::roughness", ANARI_FLOAT64, roughnessSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::metallic", ANARI_FLOAT64, metallicSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::ior", ANARI_FLOAT64, iorSamplerTimeStep)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("color", ANARI_FLOAT32_VEC3, color)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("opacity", ANARI_FLOAT32, opacity)
-  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("emissiveColor", ANARI_FLOAT32_VEC3, emissiveColor)
+  REGISTER_PARAMETER_MACRO("alphaMode", ANARI_STRING, alphaMode)
+  REGISTER_PARAMETER_MACRO("alphaCutoff", ANARI_FLOAT32, alphaCutoff)
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("emissive", ANARI_FLOAT32_VEC3, emissiveColor)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("emissiveIntensity", ANARI_FLOAT32, emissiveIntensity)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("roughness", ANARI_FLOAT32, roughness)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("metallic", ANARI_FLOAT32, metallic)
@@ -42,22 +44,10 @@ UsdMaterial::UsdMaterial(const char* name, const char* type, UsdDevice* device)
   if (strEquals(type, "matte"))
   {
     isPbr = false;
-    isTranslucent = false;
   }
-  else if (strEquals(type, "transparentMatte"))
-  {
-    isPbr = false;
-    isTranslucent = true;
-  }
-  else if (strEquals(type, "pbr"))
+  else if (strEquals(type, "physicallyBased"))
   {
     isPbr = true;
-    isTranslucent = false;
-  }
-  else if (strEquals(type, "transparentPbr"))
-  {
-    isPbr = true;
-    isTranslucent = true;
   }
   else
   {
@@ -246,8 +236,9 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
     double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
 
     UsdBridgeMaterialData matData;
-    matData.HasTranslucency = isTranslucent;
     matData.IsPbr = isPbr;
+    matData.AlphaMode = AnariToUsdAlphaMode(UsdSharedString::c_str(paramData.alphaMode));
+    matData.AlphaCutoff = paramData.alphaCutoff;
 
     UsdLogInfo logInfo = {device, this, ANARI_MATERIAL, getName()};
     

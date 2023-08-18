@@ -233,6 +233,8 @@ namespace
     CreateMaterialShaderInput<true>(shader, timeEval, DMI::OPACITY, SdfValueTypeNames->Float);
     CreateMaterialShaderInput<true>(shader, timeEval, DMI::METALLIC, SdfValueTypeNames->Float);
     CreateMaterialShaderInput<true>(shader, timeEval, DMI::IOR, SdfValueTypeNames->Float);
+
+    CreateShaderInput(shader, timeEval, DMI::OPACITY, UsdBridgeTokens->opacityThreshold, QualifiedInputTokens->opacityThreshold, SdfValueTypeNames->Bool);
   }
 
   void InitializeMdlShaderUniform(UsdShadeShader& shader)
@@ -257,6 +259,8 @@ namespace
     CreateMaterialShaderInput<false>(shader, timeEval, DMI::METALLIC, SdfValueTypeNames->Float);
     //CreateMaterialShaderInput<false>(shader, timeEval, DMI::IOR, SdfValueTypeNames->Float); // not supported in OmniPBR.mdl
 
+    CreateShaderInput(shader, timeEval, DMI::OPACITY, UsdBridgeTokens->enable_opacity, QualifiedInputTokens->enable_opacity, SdfValueTypeNames->Bool);
+    CreateShaderInput(shader, timeEval, DMI::OPACITY, UsdBridgeTokens->opacity_threshold, QualifiedInputTokens->opacity_threshold, SdfValueTypeNames->Float);
     CreateShaderInput(shader, timeEval, DMI::EMISSIVEINTENSITY, UsdBridgeTokens->enable_emission, QualifiedInputTokens->enable_emission, SdfValueTypeNames->Bool);
   }
 
@@ -574,7 +578,7 @@ namespace
         }
 
         // Create attribute reader varname, and if timeEval (manifest), can also remove the input
-        //InitializePsAttributeReaderTimeVar(attributeReader, dataMemberId, timeEval); 
+        //InitializePsAttributeReaderTimeVar(attributeReader, dataMemberId, timeEval);
       }
       else
       {
@@ -882,15 +886,21 @@ namespace
     UpdateAttributeReaderName<PreviewSurface>(uniformTcReaderPrim, attributeNameToken);
   }
 
-  void GetShaderAndSampler(UsdStageRefPtr sceneStage, UsdStageRefPtr materialStage, const SdfPath& shaderPrimPath, const SdfPath& refSamplerPrimPath,
-    UsdShadeShader& uniformShader, UsdShadeShader& timeVarShader, UsdShadeShader& refSampler)
+  void GetMaterialCoreShader(UsdStageRefPtr sceneStage, UsdStageRefPtr materialStage, const SdfPath& shaderPrimPath,
+    UsdShadeShader& uniformShader, UsdShadeShader& timeVarShader)
   {
-    refSampler = UsdShadeShader::Get(sceneStage, refSamplerPrimPath);
-    assert(refSampler);
     uniformShader = UsdShadeShader::Get(sceneStage, shaderPrimPath);
     assert(uniformShader);
     timeVarShader = UsdShadeShader::Get(materialStage, shaderPrimPath);
     assert(timeVarShader);
+  }
+
+  template<bool PreviewSurface>
+  void GetRefSamplerPrim(UsdStageRefPtr sceneStage, const SdfPath& refSamplerPrimPath, UsdShadeShader& refSampler)
+  {
+    SdfPath refSamplerPrimPath_Child = refSamplerPrimPath.AppendPath(SdfPath(PreviewSurface ? constring::psSamplerPrimPf : constring::mdlSamplerPrimPf)); // type inherited from sampler prim (in AddRef)
+    refSampler = UsdShadeShader::Get(sceneStage, refSamplerPrimPath_Child);
+    assert(refSampler);
   }
 }
 
@@ -987,66 +997,80 @@ void UsdBridgeUsdWriter::UpdateUsdSamplerManifest(const UsdBridgePrimCache* cach
 }
 #endif
 
-void UsdBridgeUsdWriter::ConnectSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath,
-  const std::string& samplerPrimName, const UsdSamplerRefData& samplerRefData, double worldTimeStep)
+void UsdBridgeUsdWriter::ConnectSamplersToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPrimPathList& refSamplerPrimPaths,
+    const UsdBridgePrimCacheList& samplerCacheEntries, const UsdSamplerRefData* samplerRefDatas, size_t numSamplers, double worldTimeStep)
 {
   typedef UsdBridgeMaterialData::DataMemberId DMI;
-
-  bool affectsOpacity = samplerRefData.DataMemberId == DMI::DIFFUSE && samplerRefData.ImageNumComponents == 4;
 
   // Essentially, this is an extension of UpdateShaderInput() for the case of param.Sampler
   if(Settings.EnablePreviewSurfaceShader)
   {
     SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(constring::psShaderPrimPf));
-    SdfPath refSamplerPrimPath_Child = refSamplerPrimPath.AppendPath(SdfPath(constring::psSamplerPrimPf)); // type inherited from sampler prim (in AddRef)
 
-    UsdShadeShader uniformShad, timeVarShad, refSampler;
-    GetShaderAndSampler(this->SceneStage, materialStage, shaderPrimPath, refSamplerPrimPath_Child,
-      uniformShad, timeVarShad, refSampler);
+    UsdShadeShader uniformShad, timeVarShad;
+    GetMaterialCoreShader(this->SceneStage, materialStage, shaderPrimPath,
+      uniformShad, timeVarShad);
 
-    ShadeGraphTypeConversionNodeContext conversionContext(
-        this->SceneStage, matPrimPath, samplerPrimName.c_str());
+    for(int i = 0; i < numSamplers; ++i)
+    {
+      const char* samplerPrimName = samplerCacheEntries[i]->Name.GetString().c_str();
 
-    UpdateShaderInput_Sampler<true>(uniformShad, timeVarShad, refSampler, samplerRefData, conversionContext);
+      UsdShadeShader refSampler;
+      GetRefSamplerPrim<true>(this->SceneStage, refSamplerPrimPaths[i], refSampler);
 
-    if(affectsOpacity)
-      UpdateShaderInputColorOpacity_Sampler<true>(uniformShad, timeVarShad, refSampler, conversionContext);
+      ShadeGraphTypeConversionNodeContext conversionContext(
+          this->SceneStage, matPrimPath, samplerPrimName);
+
+      UpdateShaderInput_Sampler<true>(uniformShad, timeVarShad, refSampler, samplerRefDatas[i], conversionContext);
+
+      bool affectsOpacity = samplerRefDatas[i].DataMemberId == DMI::DIFFUSE && samplerRefDatas[i].ImageNumComponents == 4;
+      if(affectsOpacity)
+        UpdateShaderInputColorOpacity_Sampler<true>(uniformShad, timeVarShad, refSampler, conversionContext);
+    }
   }
 
   if(Settings.EnableMdlShader)
   {
     // Get shader prims
     SdfPath shaderPrimPath = matPrimPath.AppendPath(SdfPath(constring::mdlShaderPrimPf));
-    SdfPath refSamplerPrimPath_Child = refSamplerPrimPath.AppendPath(SdfPath(constring::mdlSamplerPrimPf));
     SdfPath opMulPrimPath = matPrimPath.AppendPath(SdfPath(constring::mdlOpacityMulPrimPf));
 
-    UsdShadeShader uniformShad, timeVarShad, refSampler;
-    GetShaderAndSampler(this->SceneStage, materialStage, shaderPrimPath, refSamplerPrimPath_Child,
-      uniformShad, timeVarShad, refSampler);
+    UsdShadeShader uniformShad, timeVarShad;
+    GetMaterialCoreShader(this->SceneStage, materialStage, shaderPrimPath,
+      uniformShad, timeVarShad);
 
     UsdShadeShader uniformOpMul = UsdShadeShader::Get(this->SceneStage, opMulPrimPath);
     UsdShadeShader timeVarOpMul = UsdShadeShader::Get(materialStage, opMulPrimPath);
 
-    ShadeGraphTypeConversionNodeContext conversionContext(
-      this->SceneStage, matPrimPath, samplerPrimName.c_str());
-
-    if(samplerRefData.DataMemberId != DMI::OPACITY)
+    for(int i = 0; i < numSamplers; ++i)
     {
-      UpdateShaderInput_Sampler<false>(uniformShad, timeVarShad, refSampler, samplerRefData, conversionContext);
+      const char* samplerPrimName = samplerCacheEntries[i]->Name.GetString().c_str();
 
-      if(affectsOpacity)
+      UsdShadeShader refSampler;
+      GetRefSamplerPrim<false>(this->SceneStage, refSamplerPrimPaths[i], refSampler);
+
+      ShadeGraphTypeConversionNodeContext conversionContext(
+        this->SceneStage, matPrimPath, samplerPrimName);
+
+      if(samplerRefDatas[i].DataMemberId != DMI::OPACITY)
       {
-        conversionContext.ConnectionIdentifier = constring::mdlDiffuseOpacityPrimPf;
-        conversionContext.ChannelSelector = 3; // Select the w channel from the float4 input
+        UpdateShaderInput_Sampler<false>(uniformShad, timeVarShad, refSampler, samplerRefDatas[i], conversionContext);
 
-        // Connect diffuse sampler to the opacity mul node instead of the main shader; see InitializeMdlShader
-        UpdateShaderInputColorOpacity_Sampler<false>(uniformOpMul, timeVarOpMul, refSampler, conversionContext);
+        bool affectsOpacity = samplerRefDatas[i].DataMemberId == DMI::DIFFUSE && samplerRefDatas[i].ImageNumComponents == 4;
+        if(affectsOpacity)
+        {
+          conversionContext.ConnectionIdentifier = constring::mdlDiffuseOpacityPrimPf;
+          conversionContext.ChannelSelector = 3; // Select the w channel from the float4 input
+
+          // Connect diffuse sampler to the opacity mul node instead of the main shader; see InitializeMdlShader
+          UpdateShaderInputColorOpacity_Sampler<false>(uniformOpMul, timeVarOpMul, refSampler, conversionContext);
+        }
       }
-    }
-    else
-    {
-      // Connect opacity sampler to the 'b' input of opacity mul node, similar to UpdateMdlShader (for attribute readers)
-      UpdateShaderInput_ShadeNode<false>( uniformOpMul, timeVarOpMul, UsdBridgeTokens->b, refSampler, UsdBridgeTokens->out, conversionContext);
+      else
+      {
+        // Connect opacity sampler to the 'b' input of opacity mul node, similar to UpdateMdlShader (for attribute readers)
+        UpdateShaderInput_ShadeNode<false>(uniformOpMul, timeVarOpMul, UsdBridgeTokens->b, refSampler, UsdBridgeTokens->out, conversionContext);
+      }
     }
   }
 }
@@ -1095,6 +1119,10 @@ void UsdBridgeUsdWriter::UpdatePsShader(UsdStageRefPtr timeVarStage, const SdfPa
   UPDATE_USD_SHADER_INPUT_MACRO(DMI::OPACITY, matData.Opacity);
   UPDATE_USD_SHADER_INPUT_MACRO(DMI::METALLIC, matData.Metallic);
   UPDATE_USD_SHADER_INPUT_MACRO(DMI::IOR, matData.Ior);
+
+  // Just a value, not connected to attribreaders or samplers
+  float opacityCutoffValue = (matData.AlphaMode == UsdBridgeMaterialData::AlphaModes::MASK) ? matData.AlphaCutoff : 0.0f; // don't enable cutoff when not explicitly specified
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->opacityThreshold, DMI::OPACITY, opacityCutoffValue);
 }
 
 #define UPDATE_MDL_SHADER_INPUT_MACRO(...) \
@@ -1130,13 +1158,19 @@ void UsdBridgeUsdWriter::UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfP
   UPDATE_MDL_SHADER_INPUT_MACRO(DMI::EMISSIVEINTENSITY, matData.EmissiveIntensity);
   UPDATE_MDL_SHADER_INPUT_MACRO(DMI::ROUGHNESS, matData.Roughness);
   UPDATE_MDL_SHADER_INPUT_MACRO(DMI::METALLIC, matData.Metallic);
+  //UPDATE_MDL_SHADER_INPUT_MACRO(DMI::IOR, matData.Ior);
   UpdateShaderInput<false>(this, SceneStage, timeVarStage, uniformOpMulPrim, timeVarOpMulPrim, matPrimPath, boundGeomPrimvars,
     timeEval, DMI::OPACITY, matData.Opacity, UsdBridgeTokens->b, matData.Opacity.Value); // Connect to the mul shader 'b' input, instead of the opacity input directly
-  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->enable_emission, DMI::EMISSIVEINTENSITY, enableEmission); // Just a value, not connected to attribreaders or samplers
-  //UPDATE_MDL_SHADER_INPUT_MACRO(DMI::IOR, matData.Ior);
+
+  // Just a value, not connected to attribreaders or samplers
+  float opacityCutoffValue = (matData.AlphaMode == UsdBridgeMaterialData::AlphaModes::MASK) ? matData.AlphaCutoff : 0.0f; // don't enable cutoff when not explicitly specified
+  bool enableOpacity = matData.AlphaMode != UsdBridgeMaterialData::AlphaModes::NONE;
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->opacity_threshold, DMI::OPACITY, opacityCutoffValue);
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->enable_opacity, DMI::OPACITY, enableOpacity);
+  SetShaderInput(uniformShadPrim, timeVarShadPrim, timeEval, UsdBridgeTokens->enable_emission, DMI::EMISSIVEINTENSITY, enableEmission);
 
 #ifdef CUSTOM_PBR_MDL
-  if (!matData.HasTranslucency)
+  if (!enableOpacity)
     uniformShadPrim.SetSourceAsset(this->MdlOpaqueRelFilePath, UsdBridgeTokens->mdl);
   else
     uniformShadPrim.SetSourceAsset(this->MdlTranslucentRelFilePath, UsdBridgeTokens->mdl);

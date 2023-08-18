@@ -67,6 +67,7 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
 #define USDPREVSURF_INPUT_TOKEN_SEQ \
   (roughness) \
   (opacity) \
+  (opacityThreshold) \
   (metallic) \
   (ior) \
   (diffuseColor) \
@@ -114,6 +115,8 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
 #define MDL_INPUT_TOKEN_SEQ \
   (reflection_roughness_constant) \
   (opacity_constant) \
+  (opacity_threshold) \
+  (enable_opacity) \
   (metallic_constant) \
   (ior_constant) \
   (diffuse_color_constant) \

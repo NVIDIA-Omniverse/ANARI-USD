@@ -30,8 +30,6 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("radius", ANARI_FLOAT32, radiusConstant)
 ) // See .h for usage.
 
-static constexpr int TIMEVAR_ATTRIBUTE_START_BIT = 6;
-
 struct UsdGeometryTempArrays
 {
   UsdGeometryTempArrays(const UsdGeometry::AttributeArray& attributes)
@@ -664,7 +662,7 @@ void UsdGeometry::setAttributeTimeVarying(typename GeomDataType::DataMemberId& t
     DMI attributeId = DMI::ATTRIBUTE0 + attribIdx;
 
     timeVarying = timeVarying &
-      (isBitSet(paramData.timeVarying, TIMEVAR_ATTRIBUTE_START_BIT+(int)attribIdx) ? DMI::ALL : ~attributeId);
+      (isBitSet(paramData.timeVarying, UsdGeometryData::TIMEVAR_ATTRIBUTE_START_BIT+(int)attribIdx) ? DMI::ALL : ~attributeId);
   }
 }
 

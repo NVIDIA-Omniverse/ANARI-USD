@@ -19,12 +19,14 @@ struct UsdMaterialData
   UsdSharedString* usdName = nullptr;
 
   double timeStep = std::numeric_limits<float>::quiet_NaN();
-  int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0: color, 1: opacity, 2: specular, 
+  int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0: color, 1: opacity (+alphamode+alphaCutoff), 2: specular,
     // 3: emissive, 4: specularfactor, 5: emissivefactor, 6: roughness, 7: metallic, 8: ior
 
   // Standard parameters
   UsdMaterialMultiTypeParameter<UsdFloat3> color = {{ 1.0f, 1.0f, 1.0f }, ANARI_FLOAT32_VEC3};
   UsdMaterialMultiTypeParameter<float> opacity = {0.0f, ANARI_FLOAT32};
+  UsdSharedString* alphaMode = nullptr; // Timevarying state linked to opacity
+  float alphaCutoff = 0.5f; // Timevarying state linked to opacity
 
   // Possible PBR parameters
   UsdMaterialMultiTypeParameter<UsdFloat3> emissiveColor = {{ 1.0f, 1.0f, 1.0f }, ANARI_FLOAT32_VEC3};
@@ -82,7 +84,6 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     bool doCommitData(UsdDevice* device) override;
     void doCommitRefs(UsdDevice* device) override;
 
-    bool isTranslucent = false;
     bool isPbr = false;
 
     bool perInstance = false; // Whether material is attached to a point instancer

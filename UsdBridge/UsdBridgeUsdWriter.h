@@ -127,8 +127,8 @@ public:
 #endif
 
   void BindMaterialToGeom(const SdfPath& refGeomPath, const SdfPath& refMatPath);
-  void ConnectSamplerToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPath& refSamplerPrimPath, 
-    const std::string& samplerPrimName, const UsdSamplerRefData& samplerRefData, double worldTimeStep); // Disconnect happens automatically at parameter overwrite
+  void ConnectSamplersToMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, const SdfPrimPathList& refSamplerPrimPaths, 
+    const UsdBridgePrimCacheList& samplerCacheEntries, const UsdSamplerRefData* samplerRefDatas, size_t numSamplers, double worldTimeStep); // Disconnect happens automatically at parameter overwrite
 
   void UnbindMaterialFromGeom(const SdfPath & refGeomPath);
 

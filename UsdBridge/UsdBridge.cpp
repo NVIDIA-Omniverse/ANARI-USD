@@ -163,6 +163,7 @@ struct UsdBridgeInternals
 
   // Temp arrays
   UsdBridgePrimCacheList TempPrimCaches;
+  SdfPrimPathList TempPrimPaths;
 };
 
 
@@ -683,12 +684,13 @@ void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandl
   SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache);
 
+  Internals->TempPrimPaths.resize(numSamplers);
   for (uint64_t i = 0; i < numSamplers; ++i)
   {
-    SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef(matCache, samplerCaches[i], samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerRefData[i].TimeStep, Internals->RefModCallbacks);
-
-    BRIDGE_USDWRITER.ConnectSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, samplerCaches[i]->Name.GetString(), samplerRefData[i], timeStep); // requires world timestep, see implementation
+    Internals->TempPrimPaths[i] = BRIDGE_USDWRITER.AddRef(matCache, samplerCaches[i], samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerRefData[i].TimeStep, Internals->RefModCallbacks);
   }
+
+  BRIDGE_USDWRITER.ConnectSamplersToMaterial(materialStage, matPrimPath, Internals->TempPrimPaths, samplerCaches, samplerRefData, numSamplers, timeStep); // requires world timestep, see implementation
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
