@@ -17,7 +17,7 @@ Device for ANARI generating USD+Omniverse output
 
 The best way to build is to run `cmake(-gui)` on the `superbuild` subdir, for detailed instructions see `superbuild/README.md`. 
 
-In short, use the above to set `USD_ROOT_DIR` to the directory containing the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Builds](#debug-builds)), and optionally an `OpenVDB_ROOT` or `OMNICLIENT_ROOT_DIR`. After configuring and genering the superbuild, the actual projects and dependencies are configured, generated and built with `cmake --build . --config [Release|Debug]`
+In short, use the above to set `USD_ROOT_DIR` to the directory containing the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Builds](#debug-builds)), and optionally an `OpenVDB_ROOT` or `OMNICLIENT_ROOT_DIR` with `OMNIUSDRESOLVER_ROOT_DIR` (typically `omni_client_library` and `omni_usd_resolver` from the connect sample deps). After configuring and generating the superbuild, the actual projects and dependencies are configured, generated and built with `cmake --build . --config [Release|Debug]`
 
 ### Usage notes #
 
@@ -62,11 +62,11 @@ ANARI scene objects:
 - Volumes
     - `color/opacity.position` parameters
 - Materials:
-    - setting a parameter to an attribute string will only produce valid output if the parameter value and connected attribute array type are an exact match 
+    - Setting a parameter to an attribute string will only produce valid output if the parameter value and connected attribute array type are an exact match, unless:
+        - A float4/float3 attribute is bound to a float3/color input.
     - any world-space attribute as parameter argument
-    - the fourth channel of `color` will be ignored (only the `opacity` parameter is used for opacity) 
 - Samplers:
-    - setting `inAttribute` will only produce valid output if the parameter value and connected attribute array type are an exact match 
+    - setting `inAttribute` will only produce valid output if the parameter value type and connected attribute array type are an exact match 
     - any world-space attribute as parameter argument
     - the `<in/out>Transform` parameters
     - anything other than 8-bit-per-component `image` data

@@ -39,7 +39,8 @@ one can use explicit install dir variables which support `debug/` and `release/`
 - `ANARI_ROOT_DIR`: for the ANARI-SDK install directory
 - `USD_ROOT_DIR`: for the USD install directory
 - `OpenVDB_ROOT`: for the OpenVDB install directory (if not `USE_USD_OPENVDB_BUILD`)
-- `OMNICLIENT_ROOT_DIR`: for the Omniverse (OmniClient) install directory
+- `OMNICLIENT_ROOT_DIR`: for the OmniClient install directory (typically `omni_client_library` from the connect sample deps). Requires:
+    - `OMNIUSDRESOLVER_ROOT_DIR`: the Omniverse Resolver install directory (typically `omni_usd_resolver` from the connect sample deps).
 - `ZLIB_ROOT`: for the ZLIB install directory, required for Linux builds
 
 For ease of use, if you want the USD and Omniverse libraries to be copied into the installation's `bin`
