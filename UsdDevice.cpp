@@ -945,6 +945,28 @@ void UsdDevice::LogDeallocation(const UsdBaseObject* ptr)
     }
   }
 }
+
+void UsdDevice::LogRawAllocation(const void* ptr)
+{
+  allocatedRawMemory.push_back(ptr);
+}
+
+void UsdDevice::LogRawDeallocation(const void* ptr)
+{
+  if (ptr)
+  {
+    auto it = std::find(allocatedRawMemory.begin(), allocatedRawMemory.end(), ptr);
+    if(it == allocatedRawMemory.end())
+    {
+      std::stringstream errstream;
+      errstream << "USD Device release of nonexisting or already released/deleted raw memory: 0x" << std::hex << ptr;
+
+      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_FATAL_ERROR, ANARI_STATUS_INVALID_OPERATION, errstream.str().c_str());
+    }
+    else
+      allocatedRawMemory.erase(it);
+  }
+}
 #endif
 
 
