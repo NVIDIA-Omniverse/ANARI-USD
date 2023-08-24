@@ -427,8 +427,16 @@ struct UsdBridgeMaterialData
   };
   DataMemberId TimeVarying = DataMemberId::NONE;
 
-  bool HasTranslucency = false;
   bool IsPbr = true;
+
+  enum class AlphaModes : uint32_t
+  {
+    NONE,
+    BLEND,
+    MASK
+  };
+  AlphaModes AlphaMode = AlphaModes::NONE;
+  float AlphaCutoff = 0.5f;
 
   MaterialInput<UsdFloat3> Diffuse = {{ 1.0f }, nullptr};
   MaterialInput<UsdFloat3> Emissive = {{ 1.0f }, nullptr};

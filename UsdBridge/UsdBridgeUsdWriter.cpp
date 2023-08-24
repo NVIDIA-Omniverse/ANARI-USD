@@ -36,6 +36,14 @@ namespace constring
   const char* const mdlShaderPrimPf = "mdlshader";
   const char* const psSamplerPrimPf = "pssampler";
   const char* const mdlSamplerPrimPf = "mdlsampler";
+  const char* const mdlOpacityMulPrimPf = "opacitymul_mdl";
+  const char* const mdlDiffuseOpacityPrimPf = "diffuseopacity_mdl";
+  const char* const mdlGraphXYZPrimPf = "_xyz_f";
+  const char* const mdlGraphColorPrimPf = "_ftocolor";
+  const char* const mdlGraphXPrimPf = "_x";
+  const char* const mdlGraphYPrimPf = "_y";
+  const char* const mdlGraphZPrimPf = "_z";
+  const char* const mdlGraphWPrimPf = "_w";
   const char* const openVDBPrimPf = "ovdbfield";
 
   const char* const imageExtension = ".png";
@@ -46,6 +54,7 @@ namespace constring
 
   const char* const mdlShaderAssetName = "OmniPBR.mdl";
   const char* const mdlSupportAssetName = "nvidia/support_definitions.mdl";
+  const char* const mdlAuxAssetName = "nvidia/aux_definitions.mdl";
 
 #ifdef CUSTOM_PBR_MDL
   const char* const mdlFolder = "mdls/";
@@ -261,7 +270,7 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   return true;
 }
 
-UsdStageRefPtr UsdBridgeUsdWriter::GetSceneStage()
+UsdStageRefPtr UsdBridgeUsdWriter::GetSceneStage() const
 {
   return this->SceneStage;
 }

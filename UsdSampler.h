@@ -46,7 +46,7 @@ class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSa
       const char *name) override;
 
     bool isPerInstance() const { return perInstance; }
-    void setPerInstance(bool enable, UsdDevice* device);
+    void updateBoundParameters(bool boundToInstance, UsdDevice* device);
 
   protected:
     bool deferCommit(UsdDevice* device) override;

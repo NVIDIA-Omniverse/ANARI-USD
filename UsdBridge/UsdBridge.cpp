@@ -143,11 +143,16 @@ struct UsdBridgeInternals
 
   const UsdBridgePrimCacheList& ToCacheList(UsdBridgePrimCache* primCache);
 
+  UsdGeomPrimvarsAPI GetBoundGeomPrimvars(const UsdBridgeHandle& material) const;
+
   // Cache
   UsdBridgePrimCacheManager Cache;
 
   // USDWriter
   UsdBridgeUsdWriter UsdWriter;
+
+  // Material->geometry binding suggestion
+  std::map<UsdBridgePrimCache*, SdfPath> MaterialToGeometryBinding;
 
   // Callbacks
   UsdBridgeUsdWriter::RefModFuncs RefModCallbacks;
@@ -158,6 +163,7 @@ struct UsdBridgeInternals
 
   // Temp arrays
   UsdBridgePrimCacheList TempPrimCaches;
+  SdfPrimPathList TempPrimPaths;
 };
 
 
@@ -214,6 +220,18 @@ const UsdBridgePrimCacheList& UsdBridgeInternals::ToCacheList(UsdBridgePrimCache
   TempPrimCaches.resize(1);
   TempPrimCaches[0] = primCache;
   return TempPrimCaches;
+}
+
+UsdGeomPrimvarsAPI UsdBridgeInternals::GetBoundGeomPrimvars(const UsdBridgeHandle& material) const
+{
+  auto& it = MaterialToGeometryBinding.find(material.value);
+  if(it != MaterialToGeometryBinding.end())
+  {
+    const SdfPath& boundGeomPrimPath = it->second;
+    UsdPrim boundGeomPrim = UsdWriter.GetSceneStage()->GetPrimAtPath(boundGeomPrimPath);
+    return UsdGeomPrimvarsAPI(boundGeomPrim);
+  }
+  return UsdGeomPrimvarsAPI();
 }
 
 UsdBridge::UsdBridge(const UsdBridgeSettings& settings) 
@@ -530,6 +548,8 @@ void UsdBridge::DeleteMaterial(UsdMaterialHandle handle)
 {
   if (handle.value == nullptr) return;
 
+  Internals->MaterialToGeometryBinding.erase(handle.value);
+
   Internals->FindAndDeletePrim(handle);
 }
 
@@ -624,6 +644,11 @@ void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHand
   SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, true, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the surface.
   SdfPath refMatPath = BRIDGE_USDWRITER.AddRef(surfaceCache, materialCache, materialPathRp, timeVarying, valueClip, false, nullptr, timeStep, matTimeStep, Internals->RefModCallbacks);
 
+  // For updating material attribute reader output types, update the suggested material->geompath mapping.
+  // Since multiple geometries can be bound to a material, only one is taken, so it is up to the user to ensure correct attribute connection types.
+  SdfPath& geomPrimPath = geometryCache->PrimPath;
+  Internals->MaterialToGeometryBinding[material.value] = geomPrimPath;
+
   // Bind the referencing material to the referencing geom prim (as they are within same scope in this usd prim)
   BRIDGE_USDWRITER.BindMaterialToGeom(refGeomPath, refMatPath);
 }
@@ -659,12 +684,13 @@ void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandl
   SdfPath& matPrimPath = matCache->PrimPath;// .AppendPath(SdfPath(materialAttribPf));
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(matCache);
 
+  Internals->TempPrimPaths.resize(numSamplers);
   for (uint64_t i = 0; i < numSamplers; ++i)
   {
-    SdfPath refSamplerPath = BRIDGE_USDWRITER.AddRef(matCache, samplerCaches[i], samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerRefData[i].TimeStep, Internals->RefModCallbacks);
-
-    BRIDGE_USDWRITER.ConnectSamplerToMaterial(materialStage, matPrimPath, refSamplerPath, samplerCaches[i]->Name.GetString(), samplerRefData[i], timeStep); // requires world timestep, see implementation
+    Internals->TempPrimPaths[i] = BRIDGE_USDWRITER.AddRef(matCache, samplerCaches[i], samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerRefData[i].TimeStep, Internals->RefModCallbacks);
   }
+
+  BRIDGE_USDWRITER.ConnectSamplersToMaterial(materialStage, matPrimPath, Internals->TempPrimPaths, samplerCaches, samplerRefData, numSamplers, timeStep); // requires world timestep, see implementation
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -830,8 +856,9 @@ void UsdBridge::SetMaterialData(UsdMaterialHandle material, const UsdBridgeMater
 #endif
 
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
+  UsdGeomPrimvarsAPI boundGeomPrimvars = Internals->GetBoundGeomPrimvars(material);
 
-  BRIDGE_USDWRITER.UpdateUsdMaterial(materialStage, matPrimPath, matData, timeStep);
+  BRIDGE_USDWRITER.UpdateUsdMaterial(materialStage, matPrimPath, matData, boundGeomPrimvars, timeStep);
 
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
@@ -860,7 +887,7 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
 #endif
 }
 
-void UsdBridge::ChangeMaterialInputSourceNames(UsdMaterialHandle material, const MaterialInputSourceName* inputNames, size_t numInputNames, double timeStep, MaterialDMI timeVarying)
+void UsdBridge::ChangeMaterialInputAttributes(UsdMaterialHandle material, const MaterialInputAttribName* inputAttribs, size_t numInputAttribs, double timeStep, MaterialDMI timeVarying)
 {
   if (material.value == nullptr) return;
 
@@ -868,13 +895,14 @@ void UsdBridge::ChangeMaterialInputSourceNames(UsdMaterialHandle material, const
   SdfPath& matPrimPath = cache->PrimPath;// .AppendPath(SdfPath(samplerAttribPf));
 
   UsdStageRefPtr materialStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
+  UsdGeomPrimvarsAPI boundGeomPrimvars = Internals->GetBoundGeomPrimvars(material);
 
-  for(int i = 0; i < numInputNames; ++i)
-    BRIDGE_USDWRITER.UpdateAttributeReaders(materialStage, matPrimPath, inputNames[i].second, inputNames[i].first, timeStep, timeVarying);
+  for(int i = 0; i < numInputAttribs; ++i)
+    BRIDGE_USDWRITER.UpdateAttributeReader(materialStage, matPrimPath, inputAttribs[i].first, inputAttribs[i].second, boundGeomPrimvars, timeStep, timeVarying);
 
 #ifdef VALUE_CLIP_RETIMING
-  if(this->EnableSaving)
-    materialStage->Save();
+  //if(this->EnableSaving)
+  //  materialStage->Save(); // Attrib readers do not have timevarying info at the moment
 #endif
 }
 

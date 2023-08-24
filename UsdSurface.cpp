@@ -96,6 +96,9 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
     {
       double matObjTimeStep = paramData.material->getReadParams().timeStep;
 
+      // The geometry to which a material binds has an effect on attribute reader (geom primvar) names, and output types
+      paramData.material->updateBoundParameters(paramData.geometry->isInstanced(), device);
+
       usdBridge->SetGeometryMaterialRef(usdHandle, 
         paramData.geometry->getUsdHandle(), 
         paramData.material->getUsdHandle(), 
@@ -103,8 +106,6 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
         selectRefTime(paramData.geometryRefTimeStep, geomObjTimeStep, worldTimeStep),
         selectRefTime(paramData.materialRefTimeStep, matObjTimeStep, worldTimeStep)
         );
-
-      paramData.material->setPerInstance(paramData.geometry->isInstanced(), device); // Make sure the material/samplers know whether they are bound to per-instance geometry (has an effect on source primvar names)
     }
     else
     {

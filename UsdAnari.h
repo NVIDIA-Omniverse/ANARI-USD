@@ -73,6 +73,7 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType);
 UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType);
 const char* AnariTypeToString(ANARIDataType anariType);
 const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo);
+UsdBridgeMaterialData::AlphaModes AnariToUsdAlphaMode(const char* alphaMode);
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level);
 
 bool Assert64bitStringLengthProperty(uint64_t size, const UsdLogInfo& logInfo, const char* propName);

@@ -20,12 +20,13 @@ typedef struct TestParameters
   int writeAtCommit;
   int useVertexColors;
   int useTexture;
+  int transparent;
 } TestParameters;
 
 void doTest(TestParameters testParams)
 {
   printf("\n\n--------------  Starting new test iteration \n\n");
-  printf("Parameters: writeatcommit %d, useVertexColors %d, useTexture %d \n", testParams.writeAtCommit, testParams.useVertexColors, testParams.useTexture);
+  printf("Parameters: writeatcommit %d, useVertexColors %d, useTexture %d,  transparent %d \n", testParams.writeAtCommit, testParams.useVertexColors, testParams.useTexture, testParams.transparent);
 
   stbi_flip_vertically_on_write(1);
 
@@ -36,6 +37,9 @@ void doTest(TestParameters testParams)
   uint8_t* textureData = 0;
   int numTexComponents = 3;
   textureData = generateTexture(textureSize, numTexComponents);
+
+  uint8_t* opacityTextureData = 0;
+  opacityTextureData = generateTexture(textureSize, 1);
 
   // camera
   float cam_pos[] = { 0.f, 0.f, 0.f };
@@ -86,6 +90,10 @@ void doTest(TestParameters testParams)
       0.9f,
       0.0f,
       1.0f };
+  float opacities[] = { 0.2f,
+      0.5f,
+      0.7f,
+      1.0f};
   float texcoord[] = {
       0.0f,
       0.0f,
@@ -123,12 +131,13 @@ void doTest(TestParameters testParams)
 
   int useVertexColors = testParams.useVertexColors;
   int useTexture = testParams.useTexture;
+  int isTransparent = testParams.transparent;
 
   anariSetParameter(dev, dev, "usd::connection.logVerbosity", ANARI_INT32, &connLogVerbosity);
 
   if (outputOmniverse)
   {
-    anariSetParameter(dev, dev, "usd::serialize.hostName", ANARI_STRING, "ov-test");
+    anariSetParameter(dev, dev, "usd::serialize.hostName", ANARI_STRING, "localhost");
     anariSetParameter(dev, dev, "usd::serialize.location", ANARI_STRING, "/Users/test/anari");
   }
   anariSetParameter(dev, dev, "usd::serialize.outputBinary", ANARI_BOOL, &outputBinary);
@@ -185,6 +194,14 @@ void doTest(TestParameters testParams)
   anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
   anariRelease(dev, array);
 
+  if(isTransparent)
+  {
+    array = anariNewArray1D(dev, opacities, 0, 0, ANARI_FLOAT32, 4, 0);
+    anariCommitParameters(dev, array);
+    anariSetParameter(dev, mesh, "vertex.attribute1", ANARI_ARRAY, &array);
+    anariRelease(dev, array);
+  }
+
   //array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4, 0);
   //anariCommitParameters(dev, array);
   //anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
@@ -217,23 +234,55 @@ void doTest(TestParameters testParams)
     anariRelease(dev, array);
   }
 
+  ANARISampler opacitySampler = 0;
+  if(isTransparent && useTexture)
+  {
+    opacitySampler = anariNewSampler(dev, "image2D");
+    anariSetParameter(dev, opacitySampler, "name", ANARI_STRING, "tutorialSamplerOpacity");
+
+    anariSetParameter(dev, opacitySampler, "inAttribute", ANARI_STRING, "attribute0");
+    anariSetParameter(dev, opacitySampler, "wrapMode1", ANARI_STRING, wrapS);
+    anariSetParameter(dev, opacitySampler, "wrapMode2", ANARI_STRING, wrapT);
+
+    array = anariNewArray2D(dev, opacityTextureData, 0, 0, ANARI_UINT8, textureSize[0], textureSize[1], 0, 0);
+    anariSetParameter(dev, opacitySampler, "image", ANARI_ARRAY, &array);
+
+    anariCommitParameters(dev, opacitySampler);
+    anariRelease(dev, array);
+  }
+
   // Create a material
   ANARIMaterial mat = anariNewMaterial(dev, "matte");
   anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial");
 
-  float opacity = 1.0f;
   if (useVertexColors)
     anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
   else if(useTexture)
     anariSetParameter(dev, mat, "color", ANARI_SAMPLER, &sampler);
   else
     anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
-  anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
+
+  float opacityConstant = isTransparent ? 0.65f : 1.0f;
+  if(isTransparent)
+  {
+    anariSetParameter(dev, mat, "alphaMode", ANARI_STRING, "blend");
+    if(useVertexColors)
+      anariSetParameter(dev, mat, "opacity", ANARI_STRING, "attribute1");
+    else if(useTexture)
+      anariSetParameter(dev, mat, "opacity", ANARI_SAMPLER, &opacitySampler);
+    else
+      anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacityConstant);
+  }
+  else
+  {
+    anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacityConstant);
+  }
 
   int materialTimeVarying = 1<<3; // Set emissive to timevarying (should appear in material stage under primstages/)
   anariSetParameter(dev, mat, "usd::timeVarying", ANARI_INT32, &materialTimeVarying);
   anariCommitParameters(dev, mat);
   anariRelease(dev, sampler);
+  anariRelease(dev, opacitySampler);
 
   // put the mesh into a surface
   ANARISurface surface = anariNewSurface(dev);
@@ -364,24 +413,49 @@ int main(int argc, const char **argv)
   testParams.writeAtCommit = 0;
   testParams.useVertexColors = 0;
   testParams.useTexture = 1;
+  testParams.transparent = 0;
   doTest(testParams);
 
   // With vertex colors
   testParams.writeAtCommit = 0;
   testParams.useVertexColors = 1;
   testParams.useTexture = 0;
+  testParams.transparent = 0;
   doTest(testParams);
 
   // With color constant
   testParams.writeAtCommit = 0;
   testParams.useVertexColors = 0;
   testParams.useTexture = 0;
+  testParams.transparent = 0;
+  doTest(testParams);
+
+  // Transparency
+  testParams.writeAtCommit = 0;
+  testParams.useVertexColors = 0;
+  testParams.useTexture = 0;
+  testParams.transparent = 1;
+  doTest(testParams);
+
+  // Transparency (vertex)
+  testParams.writeAtCommit = 0;
+  testParams.useVertexColors = 1;
+  testParams.useTexture = 0;
+  testParams.transparent = 1;
+  doTest(testParams);
+
+  // Transparency (sampler)
+  testParams.writeAtCommit = 0;
+  testParams.useVertexColors = 0;
+  testParams.useTexture = 1;
+  testParams.transparent = 1;
   doTest(testParams);
 
   // Test immediate mode writing
   testParams.writeAtCommit = 1;
   testParams.useVertexColors = 0;
   testParams.useTexture = 1;
+  testParams.transparent = 0;
   doTest(testParams);
 
   return 0;

@@ -256,6 +256,23 @@ const char* AnariAttributeToUsdName(const char* param, bool perInstance, const U
   return param; // The generic case just returns the param itself
 }
 
+UsdBridgeMaterialData::AlphaModes AnariToUsdAlphaMode(const char* alphaMode)
+{
+  if(alphaMode)
+  {
+    if(strEquals(alphaMode, "blend"))
+    {
+      return UsdBridgeMaterialData::AlphaModes::BLEND;
+    }
+    else if(strEquals(alphaMode, "mask"))
+    {
+      return UsdBridgeMaterialData::AlphaModes::MASK;
+    }
+  }
+
+  return UsdBridgeMaterialData::AlphaModes::NONE;
+}
+
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level)
 {
   ANARIStatusSeverity severity = ANARI_SEVERITY_INFO;

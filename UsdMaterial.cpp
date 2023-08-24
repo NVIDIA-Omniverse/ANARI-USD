@@ -19,15 +19,19 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
   REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
   REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("usd::time::color", ANARI_FLOAT64, colorSamplerTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::time::baseColor", ANARI_FLOAT64, colorSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::opacity", ANARI_FLOAT64, opacitySamplerTimeStep)
-  REGISTER_PARAMETER_MACRO("usd::time::emissiveColor", ANARI_FLOAT64, emissiveSamplerTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::time::emissive", ANARI_FLOAT64, emissiveSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::emissiveIntensity", ANARI_FLOAT64, emissiveIntensitySamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::roughness", ANARI_FLOAT64, roughnessSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::metallic", ANARI_FLOAT64, metallicSamplerTimeStep)
   REGISTER_PARAMETER_MACRO("usd::time::ior", ANARI_FLOAT64, iorSamplerTimeStep)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("color", ANARI_FLOAT32_VEC3, color)
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("baseColor", ANARI_FLOAT32_VEC3, color)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("opacity", ANARI_FLOAT32, opacity)
-  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("emissiveColor", ANARI_FLOAT32_VEC3, emissiveColor)
+  REGISTER_PARAMETER_MACRO("alphaMode", ANARI_STRING, alphaMode)
+  REGISTER_PARAMETER_MACRO("alphaCutoff", ANARI_FLOAT32, alphaCutoff)
+  REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("emissive", ANARI_FLOAT32_VEC3, emissiveColor)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("emissiveIntensity", ANARI_FLOAT32, emissiveIntensity)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("roughness", ANARI_FLOAT32, roughness)
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("metallic", ANARI_FLOAT32, metallic)
@@ -42,22 +46,10 @@ UsdMaterial::UsdMaterial(const char* name, const char* type, UsdDevice* device)
   if (strEquals(type, "matte"))
   {
     isPbr = false;
-    isTranslucent = false;
   }
-  else if (strEquals(type, "transparentMatte"))
-  {
-    isPbr = false;
-    isTranslucent = true;
-  }
-  else if (strEquals(type, "pbr"))
+  else if (strEquals(type, "physicallyBased"))
   {
     isPbr = true;
-    isTranslucent = false;
-  }
-  else if (strEquals(type, "transparentPbr"))
-  {
-    isPbr = true;
-    isTranslucent = true;
   }
   else
   {
@@ -90,16 +82,19 @@ void UsdMaterial::filterResetParam(const char *name)
 template<typename ValueType>
 bool UsdMaterial::getMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param, MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo)
 {
+  bool hasPositionAttrib = false;
+
   UsdSharedString* anariAttribStr = nullptr;
   param.Get(anariAttribStr);
   const char* anariAttrib = UsdSharedString::c_str(anariAttribStr);
 
-  if(anariAttrib && strEquals(anariAttrib, "objectPosition"))
+  if(anariAttrib)
   {
-    // In case of a per-instance specific attribute name, there can be only one change of the attribute name.
-    // Otherwise there is a risk of the material 
-    if(instanceAttributeAttached)
+    hasPositionAttrib = strEquals(anariAttrib, "objectPosition");
+    if( hasPositionAttrib && instanceAttributeAttached)
     {
+      // In case of a per-instance specific attribute name, there can be only one change of the attribute name.
+      // Otherwise there is a risk of the material attribute being used for two differently named attributes.
       reportStatusThroughDevice(logInfo, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
         "UsdMaterial '%s' binds one of its parameters to %s, but is transitively bound to both an instanced geometry (cones, spheres, cylinders) and regular geometry. \
         This is incompatible with USD, which demands a differently bound name for those categories. \
@@ -109,12 +104,10 @@ bool UsdMaterial::getMaterialInputSourceName(const UsdMaterialMultiTypeParameter
 
     const char* usdAttribName = AnariAttributeToUsdName(anariAttrib, perInstance, logInfo);
 
-    materialInputNames.push_back(UsdBridge::MaterialInputSourceName(usdAttribName, dataMemberId));
-
-    return true;
+    materialInputAttributes.push_back(UsdBridge::MaterialInputAttribName(dataMemberId, usdAttribName));
   }
 
-  return false;
+  return hasPositionAttrib;
 }
 
 template<typename ValueType>
@@ -171,12 +164,12 @@ void UsdMaterial::assignParameterToMaterialInput(const UsdMaterialMultiTypeParam
   matInput.Sampler = param.Get(sampler);
 }
 
-void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
+void UsdMaterial::updateBoundParameters(bool boundToInstance, UsdDevice* device)
 { 
   UsdBridge* usdBridge = device->getUsdBridge();
   const UsdMaterialData& paramData = getReadParams();
   
-  if(perInstance != enable)
+  if(perInstance != boundToInstance)
   {
     UsdLogInfo logInfo = {device, this, ANARI_MATERIAL, getName()};
 
@@ -184,7 +177,7 @@ void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
     double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
 
     // Fix up any parameters that have a geometry-type-dependent name set as source attribute
-    materialInputNames.clear();
+    materialInputAttributes.clear();
 
     bool hasPositionAttrib = 
       getMaterialInputSourceName(paramData.color, DMI::DIFFUSE, device, logInfo) ||
@@ -195,13 +188,14 @@ void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
       getMaterialInputSourceName(paramData.metallic, DMI::METALLIC, device, logInfo) ||
       getMaterialInputSourceName(paramData.ior, DMI::IOR, device, logInfo);
 
-    if(materialInputNames.size())
-      usdBridge->ChangeMaterialInputSourceNames(usdHandle, materialInputNames.data(), materialInputNames.size(), dataTimeStep, (DMI)paramData.timeVarying);
-      
+    // Fixup attribute name and type depending on the newly bound geometry
+    if(materialInputAttributes.size())
+      usdBridge->ChangeMaterialInputAttributes(usdHandle, materialInputAttributes.data(), materialInputAttributes.size(), dataTimeStep, (DMI)paramData.timeVarying);
+
     if(hasPositionAttrib)
       instanceAttributeAttached = true; // As soon as any parameter is set to a position attribute, the geometry type for this material is 'locked-in'
 
-    perInstance = enable; 
+    perInstance = boundToInstance; 
   }
 
   if(paramData.color.type == SamplerType)
@@ -209,7 +203,7 @@ void UsdMaterial::setPerInstance(bool enable, UsdDevice* device)
     UsdSampler* colorSampler = nullptr;
     if (paramData.color.Get(colorSampler))
     {
-      colorSampler->setPerInstance(enable, device);
+      colorSampler->updateBoundParameters(boundToInstance, device);
     }
   }
 }
@@ -244,8 +238,9 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
     double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
 
     UsdBridgeMaterialData matData;
-    matData.HasTranslucency = isTranslucent;
     matData.IsPbr = isPbr;
+    matData.AlphaMode = AnariToUsdAlphaMode(UsdSharedString::c_str(paramData.alphaMode));
+    matData.AlphaCutoff = paramData.alphaCutoff;
 
     UsdLogInfo logInfo = {device, this, ANARI_MATERIAL, getName()};
     

@@ -21,6 +21,7 @@ typedef std::pair<std::pair<bool,bool>, UsdBridgePrimCache*> BoolEntryPair; // P
 typedef void (*ResourceCollectFunc)(UsdBridgePrimCache*, UsdBridgeUsdWriter&);
 typedef std::function<void(UsdBridgePrimCache*)> AtRemoveFunc;
 typedef std::vector<UsdBridgePrimCache*> UsdBridgePrimCacheList;
+typedef std::vector<SdfPath> SdfPrimPathList;
 
 struct UsdBridgeResourceKey
 { 

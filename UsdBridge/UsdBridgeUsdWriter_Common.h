@@ -59,7 +59,6 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (r) \
   (rg) \
   (rgb) \
-  (a) \
   (black) \
   (clamp) \
   (repeat) \
@@ -68,6 +67,7 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
 #define USDPREVSURF_INPUT_TOKEN_SEQ \
   (roughness) \
   (opacity) \
+  (opacityThreshold) \
   (metallic) \
   (ior) \
   (diffuseColor) \
@@ -79,21 +79,49 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (WrapR) \
   (varname)
 
+#define USDPREVSURF_OUTPUT_TOKEN_SEQ \
+  (result) \
+  (r) \
+  (rg) \
+  (rgb) \
+  (a)
+
+#define MDL_OUTPUT_TOKEN_SEQ \
+  (out)
+
 #define MDL_TOKEN_SEQ \
-  (sourceAsset) \
   (mdl) \
   (OmniPBR) \
+  (sourceAsset) \
   (out) \
   (data_lookup_float) \
   (data_lookup_float2) \
   (data_lookup_float3) \
+  (data_lookup_float4) \
+  (data_lookup_int) \
+  (data_lookup_int2) \
+  (data_lookup_int3) \
+  (data_lookup_int4) \
   (data_lookup_color) \
   (lookup_color) \
-  (coord)
+  (lookup_float) \
+  (lookup_float3) \
+  (lookup_float4) \
+  ((xyz, "xyz(float4)")) \
+  ((x, "x(float4)")) \
+  ((y, "y(float4)")) \
+  ((z, "z(float4)")) \
+  ((w, "w(float4)")) \
+  ((construct_color, "construct_color(float3)")) \
+  ((mul_float, "multiply(float,float)")) \
+  (coord) \
+  (colorSpace)
 
 #define MDL_INPUT_TOKEN_SEQ \
   (reflection_roughness_constant) \
   (opacity_constant) \
+  (opacity_threshold) \
+  (enable_opacity) \
   (metallic_constant) \
   (ior_constant) \
   (diffuse_color_constant) \
@@ -104,7 +132,9 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (tex) \
   (wrap_u) \
   (wrap_v) \
-  (wrap_w)
+  (wrap_w) \
+  (a) \
+  (b) \
 
 #define VOLUME_TOKEN_SEQ \
   (density) \
@@ -135,10 +165,17 @@ TF_DECLARE_PUBLIC_TOKENS(
 );
 
 TF_DECLARE_PUBLIC_TOKENS(
-  QualifiedTokens,
+  QualifiedInputTokens,
 
   USDPREVSURF_INPUT_TOKEN_SEQ
   MDL_INPUT_TOKEN_SEQ
+);
+
+TF_DECLARE_PUBLIC_TOKENS(
+  QualifiedOutputTokens,
+
+  USDPREVSURF_OUTPUT_TOKEN_SEQ
+  MDL_OUTPUT_TOKEN_SEQ
 );
 
 namespace constring
@@ -159,6 +196,14 @@ namespace constring
   extern const char* const texCoordReaderPrimPf;
   extern const char* const psShaderPrimPf;
   extern const char* const mdlShaderPrimPf;
+  extern const char* const mdlOpacityMulPrimPf;
+  extern const char* const mdlDiffuseOpacityPrimPf;
+  extern const char* const mdlGraphXYZPrimPf;
+  extern const char* const mdlGraphColorPrimPf;
+  extern const char* const mdlGraphXPrimPf;
+  extern const char* const mdlGraphYPrimPf;
+  extern const char* const mdlGraphZPrimPf;
+  extern const char* const mdlGraphWPrimPf;
   extern const char* const psSamplerPrimPf;
   extern const char* const mdlSamplerPrimPf;
   extern const char* const openVDBPrimPf;
@@ -173,6 +218,7 @@ namespace constring
 
   extern const char* const mdlShaderAssetName;
   extern const char* const mdlSupportAssetName;
+  extern const char* const mdlAuxAssetName;
 
 #ifdef CUSTOM_PBR_MDL
   extern const char* const mdlFolder;
@@ -411,12 +457,12 @@ namespace
     {
       switch(dataMemberId)
       {
-        case DMI::DIFFUSE: { return QualifiedTokens->diffuseColor; break; } 
-        case DMI::OPACITY: { return QualifiedTokens->opacity; break; } 
-        case DMI::EMISSIVECOLOR: { return QualifiedTokens->emissiveColor; break; } 
-        case DMI::ROUGHNESS: { return QualifiedTokens->roughness; break; } 
-        case DMI::METALLIC: { return QualifiedTokens->metallic; break; } 
-        case DMI::IOR: { return QualifiedTokens->ior; break; } 
+        case DMI::DIFFUSE: { return QualifiedInputTokens->diffuseColor; break; }
+        case DMI::OPACITY: { return QualifiedInputTokens->opacity; break; }
+        case DMI::EMISSIVECOLOR: { return QualifiedInputTokens->emissiveColor; break; }
+        case DMI::ROUGHNESS: { return QualifiedInputTokens->roughness; break; }
+        case DMI::METALLIC: { return QualifiedInputTokens->metallic; break; }
+        case DMI::IOR: { return QualifiedInputTokens->ior; break; }
 
         default: assert(false); break;
       };
@@ -425,19 +471,19 @@ namespace
     {
       switch(dataMemberId)
       {
-        case DMI::DIFFUSE: { return QualifiedTokens->diffuse_color_constant; break; } 
-        case DMI::OPACITY: { return QualifiedTokens->opacity_constant; break; } 
-        case DMI::EMISSIVECOLOR: { return QualifiedTokens->emissive_color; break; } 
-        case DMI::EMISSIVEINTENSITY: { return QualifiedTokens->emissive_intensity; break; } 
-        case DMI::ROUGHNESS: { return QualifiedTokens->reflection_roughness_constant; break; } 
-        case DMI::METALLIC: { return QualifiedTokens->metallic_constant; break; } 
-        case DMI::IOR: { return QualifiedTokens->ior_constant; break; } 
+        case DMI::DIFFUSE: { return QualifiedInputTokens->diffuse_color_constant; break; }
+        case DMI::OPACITY: { return QualifiedInputTokens->opacity_constant; break; }
+        case DMI::EMISSIVECOLOR: { return QualifiedInputTokens->emissive_color; break; }
+        case DMI::EMISSIVEINTENSITY: { return QualifiedInputTokens->emissive_intensity; break; }
+        case DMI::ROUGHNESS: { return QualifiedInputTokens->reflection_roughness_constant; break; }
+        case DMI::METALLIC: { return QualifiedInputTokens->metallic_constant; break; }
+        case DMI::IOR: { return QualifiedInputTokens->ior_constant; break; }
 
         default: assert(false); break;
       };
     }
 
-    return QualifiedTokens->diffuseColor;  
+    return QualifiedInputTokens->diffuseColor;
   }
 
   template<bool PreviewSurface>
@@ -516,13 +562,13 @@ namespace
     return UsdBridgeTokens->PrimVarReader_Float;
   }
 
-  const TfToken& GetMdlAttributeReaderId(UsdBridgeMaterialData::DataMemberId dataMemberId)
+  const TfToken& GetMdlAttributeReaderSubId(UsdBridgeMaterialData::DataMemberId dataMemberId)
   {
     using DMI = UsdBridgeMaterialData::DataMemberId;
 
     switch(dataMemberId)
     {
-      case DMI::DIFFUSE: { return UsdBridgeTokens->data_lookup_color; break; }
+      case DMI::DIFFUSE: { return UsdBridgeTokens->data_lookup_float4; break; }
       case DMI::OPACITY: { return UsdBridgeTokens->data_lookup_float; break; } 
       case DMI::EMISSIVECOLOR: { return UsdBridgeTokens->data_lookup_color; break; }
       case DMI::EMISSIVEINTENSITY: { return UsdBridgeTokens->data_lookup_float; break; } 
@@ -533,16 +579,41 @@ namespace
       default: { assert(false); break; }
     };
 
-    return UsdBridgeTokens->data_lookup_float;
+    return UsdBridgeTokens->data_lookup_float4;
   }
 
-  const SdfValueTypeName& GetShaderNodeOutputType(UsdBridgeMaterialData::DataMemberId dataMemberId)
+  const TfToken& GetMdlAttributeReaderSubId(const SdfValueTypeName& readerOutputType)
+  {
+    if(readerOutputType == SdfValueTypeNames->Float4)
+      return UsdBridgeTokens->data_lookup_float4;
+    if(readerOutputType == SdfValueTypeNames->Float3)
+      return UsdBridgeTokens->data_lookup_float3;
+    if(readerOutputType == SdfValueTypeNames->Float2)
+      return UsdBridgeTokens->data_lookup_float2;
+    if(readerOutputType == SdfValueTypeNames->Float)
+      return UsdBridgeTokens->data_lookup_float;
+    if(readerOutputType == SdfValueTypeNames->Int4)
+      return UsdBridgeTokens->data_lookup_int4;
+    if(readerOutputType == SdfValueTypeNames->Int3)
+      return UsdBridgeTokens->data_lookup_int3;
+    if(readerOutputType == SdfValueTypeNames->Int2)
+      return UsdBridgeTokens->data_lookup_int2;
+    if(readerOutputType == SdfValueTypeNames->Int)
+      return UsdBridgeTokens->data_lookup_int;
+    if(readerOutputType == SdfValueTypeNames->Color3f)
+      return UsdBridgeTokens->data_lookup_color;
+
+    return UsdBridgeTokens->data_lookup_float4;
+  }
+
+  const SdfValueTypeName& GetAttributeOutputType(UsdBridgeMaterialData::DataMemberId dataMemberId)
   {
     using DMI = UsdBridgeMaterialData::DataMemberId;
 
+    // An educated guess for the type belonging to a particular attribute bound to material inputs
     switch(dataMemberId)
     {
-      case DMI::DIFFUSE: { return SdfValueTypeNames->Color3f; break; } 
+      case DMI::DIFFUSE: { return SdfValueTypeNames->Float4; break; } // Typically bound to the color array, containing rgb and a information.
       case DMI::OPACITY: { return SdfValueTypeNames->Float; break; } 
       case DMI::EMISSIVECOLOR: { return SdfValueTypeNames->Color3f; break; } 
       case DMI::EMISSIVEINTENSITY: { return SdfValueTypeNames->Float; break; } 
@@ -554,6 +625,19 @@ namespace
     };
     
     return SdfValueTypeNames->Float;
+  }
+
+
+  const TfToken& GetSamplerAssetSubId(int numComponents)
+  {
+    switch(numComponents)
+    {
+      case 1: { return UsdBridgeTokens->lookup_float; break; }
+      case 4: { return UsdBridgeTokens->lookup_float4; break; }
+      default: { return UsdBridgeTokens->lookup_float3; break; }
+    }
+
+    return UsdBridgeTokens->lookup_float3;
   }
 
   template<bool PreviewSurface>
@@ -571,13 +655,26 @@ namespace
     return UsdBridgeTokens->out;
   }
 
+  template<bool PreviewSurface>
   const SdfValueTypeName& GetSamplerOutputColorType(int numComponents)
   {
-    switch(numComponents)
+    if(PreviewSurface)
     {
-      case 1: { return SdfValueTypeNames->Float; break; }
-      case 2: { return SdfValueTypeNames->Float2; break; }
-      default: { return SdfValueTypeNames->Float3; break; } // The alpha component is always separate
+      switch(numComponents)
+      {
+        case 1: { return SdfValueTypeNames->Float; break; }
+        case 2: { return SdfValueTypeNames->Float2; break; }
+        default: { return SdfValueTypeNames->Float3; break; } // The alpha component is always separate
+      }
+    }
+    else
+    {
+      switch(numComponents)
+      {
+        case 1: { return SdfValueTypeNames->Float; break; }
+        case 4: { return SdfValueTypeNames->Float4; break; }
+        default: { return SdfValueTypeNames->Float3; break; }
+      }
     }
     return SdfValueTypeNames->Float3;
   }
@@ -822,7 +919,7 @@ namespace
       case UsdBridgeType::DOUBLE2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(double); GET_USDARRAY_REF; break; }
       case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(double); GET_USDARRAY_REF; break; }
       case UsdBridgeType::DOUBLE4: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec4fArray, GfVec4d); GET_USDARRAY_REF; break; }
-      default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4)."); break; }
+      default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4) or UCHAR_SRGB_<X>."); break; }
     }
 
     return usdArrayRef;
