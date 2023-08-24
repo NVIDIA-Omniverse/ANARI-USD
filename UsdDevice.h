@@ -184,6 +184,10 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
     void LogAllocation(const UsdBaseObject* ptr);
     void LogDeallocation(const UsdBaseObject* ptr);
     std::vector<const UsdBaseObject*> allocatedObjects;
+
+    void LogRawAllocation(const void* ptr);
+    void LogRawDeallocation(const void* ptr);
+    std::vector<const void*> allocatedRawMemory;
 #endif
 
     void reportStatus(void* source,

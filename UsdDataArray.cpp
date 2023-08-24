@@ -51,6 +51,9 @@ UsdDataArray::UsdDataArray(ANARIDataType dataType, uint64_t numItems1, uint64_t 
   : UsdBaseObject(ANARI_ARRAY)
   , type(dataType)
   , isPrivate(true)
+#ifdef CHECK_MEMLEAKS
+  , allocDevice(device)
+#endif
 {
   setLayoutAndSize(numItems1, 0, numItems2, 0, numItems3, 0);
 
@@ -147,8 +150,11 @@ void UsdDataArray::unmap(UsdDevice * device)
 
 void UsdDataArray::privatize()
 {
-  publicToPrivateData();
-  isPrivate = true;
+  if(!isPrivate)
+  {
+    publicToPrivateData();
+    isPrivate = true;
+  }
 }
 
 void UsdDataArray::setLayoutAndSize(uint64_t numItems1,
@@ -221,11 +227,19 @@ void UsdDataArray::allocPrivateData()
   char* newData = new char[dataSizeInBytes];
   memset(newData, 0, dataSizeInBytes);
   data = newData;
+
+#ifdef CHECK_MEMLEAKS
+  allocDevice->LogRawAllocation(newData);
+#endif
 }
 
 void UsdDataArray::freePrivateData(bool mappedCopy)
 {
   const void*& memToFree = mappedCopy ? mappedObjectCopy : data;
+
+#ifdef CHECK_MEMLEAKS
+  allocDevice->LogRawDeallocation(memToFree);
+#endif
 
   // Deallocate owned memory
   delete[](char*)memToFree;
