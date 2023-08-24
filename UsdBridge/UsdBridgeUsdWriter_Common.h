@@ -97,6 +97,11 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (data_lookup_float) \
   (data_lookup_float2) \
   (data_lookup_float3) \
+  (data_lookup_float4) \
+  (data_lookup_int) \
+  (data_lookup_int2) \
+  (data_lookup_int3) \
+  (data_lookup_int4) \
   (data_lookup_color) \
   (lookup_color) \
   (lookup_float) \
@@ -557,13 +562,13 @@ namespace
     return UsdBridgeTokens->PrimVarReader_Float;
   }
 
-  const TfToken& GetMdlAttributeReaderId(UsdBridgeMaterialData::DataMemberId dataMemberId)
+  const TfToken& GetMdlAttributeReaderSubId(UsdBridgeMaterialData::DataMemberId dataMemberId)
   {
     using DMI = UsdBridgeMaterialData::DataMemberId;
 
     switch(dataMemberId)
     {
-      case DMI::DIFFUSE: { return UsdBridgeTokens->data_lookup_color; break; }
+      case DMI::DIFFUSE: { return UsdBridgeTokens->data_lookup_float4; break; }
       case DMI::OPACITY: { return UsdBridgeTokens->data_lookup_float; break; } 
       case DMI::EMISSIVECOLOR: { return UsdBridgeTokens->data_lookup_color; break; }
       case DMI::EMISSIVEINTENSITY: { return UsdBridgeTokens->data_lookup_float; break; } 
@@ -574,7 +579,31 @@ namespace
       default: { assert(false); break; }
     };
 
-    return UsdBridgeTokens->data_lookup_float;
+    return UsdBridgeTokens->data_lookup_float4;
+  }
+
+  const TfToken& GetMdlAttributeReaderSubId(const SdfValueTypeName& readerOutputType)
+  {
+    if(readerOutputType == SdfValueTypeNames->Float4)
+      return UsdBridgeTokens->data_lookup_float4;
+    if(readerOutputType == SdfValueTypeNames->Float3)
+      return UsdBridgeTokens->data_lookup_float3;
+    if(readerOutputType == SdfValueTypeNames->Float2)
+      return UsdBridgeTokens->data_lookup_float2;
+    if(readerOutputType == SdfValueTypeNames->Float)
+      return UsdBridgeTokens->data_lookup_float;
+    if(readerOutputType == SdfValueTypeNames->Int4)
+      return UsdBridgeTokens->data_lookup_int4;
+    if(readerOutputType == SdfValueTypeNames->Int3)
+      return UsdBridgeTokens->data_lookup_int3;
+    if(readerOutputType == SdfValueTypeNames->Int2)
+      return UsdBridgeTokens->data_lookup_int2;
+    if(readerOutputType == SdfValueTypeNames->Int)
+      return UsdBridgeTokens->data_lookup_int;
+    if(readerOutputType == SdfValueTypeNames->Color3f)
+      return UsdBridgeTokens->data_lookup_color;
+
+    return UsdBridgeTokens->data_lookup_float4;
   }
 
   const SdfValueTypeName& GetAttributeOutputType(UsdBridgeMaterialData::DataMemberId dataMemberId)
@@ -599,7 +628,7 @@ namespace
   }
 
 
-  const TfToken& GetSamplerAssetSubidentifier(int numComponents)
+  const TfToken& GetSamplerAssetSubId(int numComponents)
   {
     switch(numComponents)
     {

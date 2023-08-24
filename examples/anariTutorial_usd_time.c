@@ -177,7 +177,7 @@ int main(int argc, const char **argv)
     anariSetParameter(dev, mesh, "primitive.index", ANARI_ARRAY, &array);
     anariRelease(dev, array);
 
-    int timeVarying = 0xFFFFFFDF;// Texcoords are not timeVarying
+    int timeVarying = 0xFFFFFFBF;// Texcoords are not timeVarying
     anariSetParameter(dev, mesh, "usd::timeVarying", ANARI_INT32, &timeVarying);
     anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, geomTimeValues + timeIdx);
 
@@ -296,7 +296,7 @@ int main(int argc, const char **argv)
       else
         anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
       anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
-      timeVarying = 1;// Only colors are timevarying
+      timeVarying = 3;// Only colors and opacities are timevarying
       anariSetParameter(dev, mat, "usd::timeVarying", ANARI_INT32, &timeVarying);
       anariCommitParameters(dev, mat);
       anariRelease(dev, sampler);

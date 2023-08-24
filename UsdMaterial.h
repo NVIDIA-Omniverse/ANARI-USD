@@ -24,7 +24,7 @@ struct UsdMaterialData
 
   // Standard parameters
   UsdMaterialMultiTypeParameter<UsdFloat3> color = {{ 1.0f, 1.0f, 1.0f }, ANARI_FLOAT32_VEC3};
-  UsdMaterialMultiTypeParameter<float> opacity = {0.0f, ANARI_FLOAT32};
+  UsdMaterialMultiTypeParameter<float> opacity = {1.0f, ANARI_FLOAT32};
   UsdSharedString* alphaMode = nullptr; // Timevarying state linked to opacity
   float alphaCutoff = 0.5f; // Timevarying state linked to opacity
 

@@ -66,10 +66,10 @@ int main(int argc, const char **argv)
       {-1.0f, 1.0f, 3.0f},
       {1.0f, -1.0f, 3.0f},
       {0.1f, 0.1f, 0.3f}};
-  vec4 color[] = {{0.9f, 0.5f, 0.5f, 1.0f},
+  vec4 color[] = {{0.9f, 0.0f, 0.0f, 1.0f},
       {0.8f, 0.8f, 0.8f, 1.0f},
       {0.8f, 0.8f, 0.8f, 1.0f},
-      {0.5f, 0.9f, 0.5f, 1.0f}};
+      {0.0f, 0.9f, 0.0f, 1.0f}};
   uvec3 index[] = {{0, 1, 2}, {1, 2, 3}};
 
   printf("initialize ANARI...");
@@ -124,6 +124,9 @@ int main(int argc, const char **argv)
   anari::commitParameters(d, mesh);
 
   auto mat = anari::newObject<anari::Material>(d, "matte");
+
+  anari::setParameter(d, mat, "color", "color");
+  anari::commitParameters(d, mat);
 
   // put the mesh into a surface
   auto surface = anari::newObject<anari::Surface>(d);
