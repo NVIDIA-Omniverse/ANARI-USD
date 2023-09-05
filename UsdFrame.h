@@ -32,6 +32,10 @@ class UsdFrame : public UsdBaseObject, public UsdParameterizedObject<UsdFrame, U
     void filterResetParam(
       const char *name) override;
 
+    void resetAllParams() override;
+
+    void* tempGetParam(const char* name, ANARIDataType& returnType) override;
+
     int getProperty(const char *name,
       ANARIDataType type,
       void *mem,

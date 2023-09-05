@@ -838,36 +838,42 @@ void UsdDevice::unsetParameter(ANARIObject object, const char * name)
     ((UsdBaseObject*)object)->filterResetParam(name);
 }
 
-void UsdDevice::unsetAllParameters(ANARIObject o)
+void UsdDevice::unsetAllParameters(ANARIObject object)
 {
-  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
-    "anariUnsetAllParameters() is not yet implemented");
+  if (handleIsDevice(object))
+    ((UsdDevice*)object)->resetParams();
+  else if (object)
+    ((UsdBaseObject*)object)->resetAllParams();
 }
 
-void *UsdDevice::mapParameterArray1D(ANARIObject o,
+void *UsdDevice::mapParameterArray1D(ANARIObject object,
     const char *name,
     ANARIDataType dataType,
     uint64_t numElements1,
     uint64_t *elementStride)
 {
-  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
-    "anariMapParameterArray1D() is not yet implemented");
-  return nullptr;
+  auto array = newArray1D(nullptr, nullptr, nullptr, dataType, numElements1);
+  setParameter(object, name, ANARI_ARRAY1D, &array);
+  *elementStride = anari::sizeOf(dataType);
+  ((UsdDataArray*)array)->refDec(helium::RefType::PUBLIC);
+  return mapArray(array);
 }
 
-void *UsdDevice::mapParameterArray2D(ANARIObject o,
+void *UsdDevice::mapParameterArray2D(ANARIObject object,
     const char *name,
     ANARIDataType dataType,
     uint64_t numElements1,
     uint64_t numElements2,
     uint64_t *elementStride)
 {
-  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
-    "anariMapParameterArray2D() is not yet implemented");
-  return nullptr;
+  auto array = newArray2D(nullptr, nullptr, nullptr, dataType, numElements1, numElements2);
+  setParameter(object, name, ANARI_ARRAY2D, &array);
+  *elementStride = anari::sizeOf(dataType);
+  ((UsdDataArray*)array)->refDec(helium::RefType::PUBLIC);
+  return mapArray(array);
 }
 
-void *UsdDevice::mapParameterArray3D(ANARIObject o,
+void *UsdDevice::mapParameterArray3D(ANARIObject object,
     const char *name,
     ANARIDataType dataType,
     uint64_t numElements1,
@@ -875,15 +881,33 @@ void *UsdDevice::mapParameterArray3D(ANARIObject o,
     uint64_t numElements3,
     uint64_t *elementStride)
 {
-  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
-    "anariMapParameterArray3D() is not yet implemented");
-  return nullptr;
+  auto array = newArray3D(nullptr,
+      nullptr,
+      nullptr,
+      dataType,
+      numElements1,
+      numElements2,
+      numElements3);
+  setParameter(object, name, ANARI_ARRAY3D, &array);
+  *elementStride = anari::sizeOf(dataType);
+  ((UsdDataArray*)array)->refDec(helium::RefType::PUBLIC);
+  return mapArray(array);
 }
 
-void UsdDevice::unmapParameterArray(ANARIObject o, const char *name)
+void UsdDevice::unmapParameterArray(ANARIObject object, const char *name)
 {
-  this->reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
-    "anariUnmapParameterArray() is not yet implemented");
+  void* paramAddress = nullptr;
+  ANARIDataType paramType = ANARI_UNKNOWN;
+
+  if (handleIsDevice(object))
+    paramAddress = ((UsdDevice*)object)->getParam(name, paramType);
+  else if (object)
+    paramAddress = ((UsdBaseObject*)object)->tempGetParam(name, paramType);
+
+  if(paramAddress && paramType == ANARI_ARRAY)
+  {
+    ((UsdDataArray*)paramAddress)->unmap(this);
+  }
 }
 
 void UsdDevice::release(ANARIObject object)

@@ -108,7 +108,17 @@ void UsdDataArray::filterSetParam(const char *name,
 void UsdDataArray::filterResetParam(
   const char *name)
 {
+  resetParam(name);
+}
 
+void UsdDataArray::resetAllParams()
+{
+  resetParams();
+}
+
+void* UsdDataArray::tempGetParam(const char* name, ANARIDataType& returnType)
+{
+  return getParam(name, returnType);
 }
 
 int UsdDataArray::getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice* device)

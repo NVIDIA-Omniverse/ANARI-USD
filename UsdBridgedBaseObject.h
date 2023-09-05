@@ -61,6 +61,16 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
       return true;
     }
 
+    void resetAllParams() override
+    {
+      resetParams();
+    }
+
+    void* tempGetParam(const char* name, ANARIDataType& returnType) override
+    {
+      return getParam(name, returnType);
+    }
+
     int getProperty(const char *name,
       ANARIDataType type,
       void *mem,

@@ -40,6 +40,16 @@ void UsdFrame::filterResetParam(const char *name)
   resetParam(name);
 }
 
+void UsdFrame::resetAllParams()
+{
+  resetParams();
+}
+
+void* UsdFrame::tempGetParam(const char* name, ANARIDataType& returnType)
+{
+  return getParam(name, returnType);
+}
+
 int UsdFrame::getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice * device)
 {
   return 0;

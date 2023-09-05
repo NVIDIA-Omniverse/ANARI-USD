@@ -25,6 +25,10 @@ class UsdRenderer : public UsdBaseObject, public UsdParameterizedObject<UsdRende
     void filterResetParam(
       const char *name) override;
 
+    void resetAllParams() override;
+
+    void* tempGetParam(const char* name, ANARIDataType& returnType) override;
+
     int getProperty(const char *name,
       ANARIDataType type,
       void *mem,

@@ -26,6 +26,8 @@ class UsdBaseObject : public helium::RefCounted
     virtual void filterResetParam(
       const char *name) = 0;
 
+    virtual void resetAllParams() = 0;
+
     virtual int getProperty(const char *name,
       ANARIDataType type,
       void *mem,
@@ -35,6 +37,9 @@ class UsdBaseObject : public helium::RefCounted
     virtual void commit(UsdDevice* device) = 0;
 
     ANARIDataType getType() const { return type; }
+
+    // Remove this after hierarchy refactor:
+    virtual void* tempGetParam(const char* name, ANARIDataType& returnType) = 0;
 
   protected:
     virtual bool deferCommit(UsdDevice* device) = 0;  // Returns whether data commit has to be deferred
@@ -66,6 +71,8 @@ class UsdRefCountWrapped : public UsdBaseObject
     virtual void filterResetParam(
       const char *name) override {}
 
+    void resetAllParams() override {}
+
     virtual int getProperty(const char *name,
       ANARIDataType type,
       void *mem,
@@ -73,6 +80,8 @@ class UsdRefCountWrapped : public UsdBaseObject
       UsdDevice* device) override { return 0; }
 
     void commit(UsdDevice* device) override {}
+
+    void* tempGetParam(const char* name, ANARIDataType& returnType) override { return nullptr; }
 
     BaseType data;
 

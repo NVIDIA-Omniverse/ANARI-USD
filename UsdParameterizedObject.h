@@ -41,14 +41,32 @@ public:
 
   struct ParamTypeInfo
   {
-    size_t dataOffset;  // offset of data, within paramDataSet D
-    size_t typeOffset;  // offset of type, from data
-    size_t size;        // Total size of data+type
+    size_t dataOffset = 0;  // offset of data, within paramDataSet D
+    size_t typeOffset = 0;  // offset of type, from data
+    size_t size = 0;        // Total size of data+type
     UsdAnariDataTypeStore types;
   };
 
   using ParameterizedClassType = UsdParameterizedObject<T, D>;
   using ParamContainer = std::map<std::string, ParamTypeInfo>;
+
+  void* getParam(const char* name, ANARIDataType& returnType)
+  {
+    // Check if name registered
+    typename ParamContainer::iterator it = registeredParams->find(name);
+    if (it != registeredParams->end())
+    {
+      const ParamTypeInfo& typeInfo = it->second;
+
+      char* destAddress = nullptr;
+      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
+        returnType, destAddress);
+
+      return destAddress;
+    }
+
+    return nullptr;
+  }
 
 protected:
   UsdBaseObject** ptrToBaseObjectPtr(char* address) { return reinterpret_cast<UsdBaseObject**>(address); }
@@ -276,36 +294,52 @@ protected:
     }
   }
 
+  void resetParam(const ParamTypeInfo& typeInfo)
+  {
+    size_t paramSize = typeInfo.size;
+
+    // Copy to existing write param location
+    ANARIDataType destType;
+    char* destAddress = nullptr;
+    getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
+      destType, destAddress);
+
+    // Create temporary default-constructed parameter set and find source param address ((multi-)type is of no concern)
+    D defaultParamData;
+    char* srcAddress = paramAddress(defaultParamData, typeInfo);
+
+    // Make sure to dec existing ptr, as it will be relinquished
+    if(isBaseObject(destType))
+      safeRefDec(destAddress);
+
+    // Just replace contents of the whole parameter structure, single or multiparam
+    std::memcpy(destAddress, srcAddress, paramSize);
+  }
+
   void resetParam(const char* name)
   {
     typename ParamContainer::iterator it = registeredParams->find(name);
     if (it != registeredParams->end())
     {
       const ParamTypeInfo& typeInfo = it->second;
-      size_t paramSize = typeInfo.size;
-
-      // Copy to existing write param location
-      ANARIDataType destType;
-      char* destAddress = nullptr;
-      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
-        destType, destAddress);
-
-      // Create temporary default-constructed parameter set and find source param address ((multi-)type is of no concern)
-      D defaultParamData;
-      char* srcAddress = paramAddress(defaultParamData, typeInfo);
-
-      // Make sure to dec existing ptr, as it will be relinquished
-      if(isBaseObject(destType))
-        safeRefDec(destAddress);
-
-      // Just replace contents of the whole parameter structure, single or multiparam
-      std::memcpy(destAddress, srcAddress, paramSize);
+      resetParam(typeInfo);
 
       if(!strEquals(name, "usd::time"))
       {
         paramChanged = true;
       }
     }
+  }
+
+  void resetParams()
+  {
+    auto it = registeredParams->begin();
+    while (it != registeredParams->end())
+    {
+      resetParam(it->second);
+      ++it;
+    }
+    paramChanged = true;
   }
 
   void transferWriteToReadParams()
