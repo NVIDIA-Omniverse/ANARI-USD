@@ -31,20 +31,6 @@ UsdInstance::~UsdInstance()
 #endif
 }
 
-void UsdInstance::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if (filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdInstance::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
 bool UsdInstance::deferCommit(UsdDevice* device)
 {
   const UsdInstanceData& paramData = getReadParams();

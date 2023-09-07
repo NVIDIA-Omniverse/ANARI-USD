@@ -32,7 +32,7 @@ struct UsdDataArrayParams
   UsdSharedString* usdName = nullptr;
 };
 
-class UsdDataArray : public UsdBaseObject, public UsdParameterizedObject<UsdDataArray, UsdDataArrayParams>
+class UsdDataArray : public UsdParameterizedBaseObject<UsdDataArray, UsdDataArrayParams>
 {
   public:
     UsdDataArray(const void *appMemory,
@@ -60,13 +60,6 @@ class UsdDataArray : public UsdBaseObject, public UsdParameterizedObject<UsdData
       const void *mem,
       UsdDevice* device) override;
 
-    void filterResetParam(
-      const char *name) override;
-
-    void resetAllParams() override;
-
-    void* tempGetParam(const char* name, ANARIDataType& returnType) override;
-
     int getProperty(const char *name,
       ANARIDataType type,
       void *mem,
@@ -80,7 +73,7 @@ class UsdDataArray : public UsdBaseObject, public UsdParameterizedObject<UsdData
 
     void privatize();
 
-    const UsdSharedString* getName() const { return getReadParams().usdName; }
+    const char* getName() const override { return UsdSharedString::c_str(getReadParams().usdName); }
 
     const void* getData() const { return data; }
     ANARIDataType getType() const { return type; }

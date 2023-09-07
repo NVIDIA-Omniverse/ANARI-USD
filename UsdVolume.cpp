@@ -62,20 +62,6 @@ UsdVolume::~UsdVolume()
 #endif
 }
 
-void UsdVolume::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if (filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdVolume::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
 bool UsdVolume::CheckTfParams(UsdDevice* device)
 {
   const UsdVolumeData& paramData = getReadParams();

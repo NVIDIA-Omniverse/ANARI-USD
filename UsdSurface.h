@@ -30,14 +30,6 @@ class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSu
     UsdSurface(const char* name, UsdDevice* device);
     ~UsdSurface();
 
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
-
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;

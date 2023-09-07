@@ -10,40 +10,13 @@ DEFINE_PARAMETER_MAP(UsdRenderer,
 )
 
 UsdRenderer::UsdRenderer()
-  : UsdBaseObject(ANARI_RENDERER)
+  : UsdParameterizedBaseObject<UsdRenderer, UsdRendererData>(ANARI_RENDERER)
 {
 }
 
 UsdRenderer::~UsdRenderer()
 {
 
-}
-
-void UsdRenderer::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-}
-
-void UsdRenderer::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
-void UsdRenderer::resetAllParams()
-{
-  resetParams();
-}
-
-void* UsdRenderer::tempGetParam(const char* name, ANARIDataType& returnType)
-{
-  return getParam(name, returnType);
-}
-
-int UsdRenderer::getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice * device)
-{
-  return 0;
 }
 
 bool UsdRenderer::deferCommit(UsdDevice* device)

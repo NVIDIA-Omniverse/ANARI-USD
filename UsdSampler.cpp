@@ -65,20 +65,6 @@ UsdSampler::~UsdSampler()
 #endif
 }
 
-void UsdSampler::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if (filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdSampler::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
 void UsdSampler::updateBoundParameters(bool boundToInstance, UsdDevice* device) 
 { 
   UsdBridge* usdBridge = device->getUsdBridge();
@@ -158,12 +144,12 @@ bool UsdSampler::doCommitData(UsdDevice* device)
 
         if(numComponents > 4)
           device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, 
-            "UsdSampler '%s' image data has more than 4 components. Anything above the 4th component will be ignored.", UsdSharedString::c_str(paramData.imageData->getName()));
+            "UsdSampler '%s' image data has more than 4 components. Anything above the 4th component will be ignored.", paramData.imageData->getName());
 
         if(anari::sizeOf(paramData.imageData->getType()) != sizeof(int8_t) * numComponents)
         {
           device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, 
-            "UsdSampler '%s' commit failed: image data color channels are not 8 bit.", UsdSharedString::c_str(paramData.imageData->getName()));  
+            "UsdSampler '%s' commit failed: image data color channels are not 8 bit.", paramData.imageData->getName());
           supportedImage = false;
         }
       }
@@ -188,7 +174,7 @@ bool UsdSampler::doCommitData(UsdDevice* device)
         if(paramData.imageData)
         {
           samplerData.Data = paramData.imageData->getData();
-          samplerData.ImageName = UsdSharedString::c_str(paramData.imageData->getName());
+          samplerData.ImageName = paramData.imageData->getName();
           samplerData.ImageNumComponents = numComponents;
           samplerData.DataType = AnariToUsdBridgeType(paramData.imageData->getType());
           paramData.imageData->getLayout().copyDims(samplerData.ImageDims);
@@ -207,7 +193,7 @@ bool UsdSampler::doCommitData(UsdDevice* device)
     else
     {
       device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, 
-        "UsdSampler '%s' commit failed: missing either the 'inAttribute', or both the 'image' and 'usd::imageUrl' parameter", UsdSharedString::c_str(paramData.imageData->getName()));
+        "UsdSampler '%s' commit failed: missing either the 'inAttribute', or both the 'image' and 'usd::imageUrl' parameter", getName());
     }
 
     paramChanged = false;

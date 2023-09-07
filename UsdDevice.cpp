@@ -105,7 +105,7 @@ public:
   std::set<std::string> uniqueNames;
 };
 
-//---- Make sure to update clearDeviceParameters()
+//---- Make sure to update clearDeviceParameters() on refcounted objects
 DEFINE_PARAMETER_MAP(UsdDevice,
   REGISTER_PARAMETER_MACRO("usd::serialize.hostName", ANARI_STRING, hostName)
   REGISTER_PARAMETER_MACRO("usd::serialize.location", ANARI_STRING, outputPath)
@@ -120,18 +120,21 @@ DEFINE_PARAMETER_MAP(UsdDevice,
 
 void UsdDevice::clearDeviceParameters()
 {
-  deviceUnsetParameter("usd::serialize.hostName");
-  deviceUnsetParameter("usd::serialize.location");
+  filterResetParam("usd::serialize.hostName");
+  filterResetParam("usd::serialize.location");
   transferWriteToReadParams();
 }
 //----
 
 UsdDevice::UsdDevice()
-  : internals(std::make_unique<UsdDeviceInternals>())
+  : UsdParameterizedBaseObject<UsdDevice, UsdDeviceData>(ANARI_DEVICE)
+  , internals(std::make_unique<UsdDeviceInternals>())
 {}
 
 UsdDevice::UsdDevice(ANARILibrary library)
-  : DeviceImpl(library), internals(std::make_unique<UsdDeviceInternals>())
+  : DeviceImpl(library)
+  , UsdParameterizedBaseObject<UsdDevice, UsdDeviceData>(ANARI_DEVICE)
+  , internals(std::make_unique<UsdDeviceInternals>())
 {}
 
 UsdDevice::~UsdDevice()
@@ -145,18 +148,22 @@ UsdDevice::~UsdDevice()
   //internals->bridge->SaveScene(); //Uncomment to test cleanup of usd files.
 
 #ifdef CHECK_MEMLEAKS
-  if(!allocatedObjects.empty())
+  if(!allocatedObjects.empty() || !allocatedStrings.empty() || !allocatedRawMemory.empty())
   {
     std::stringstream errstream;
     errstream << "USD Device memleak reported for: ";
     for(auto ptr : allocatedObjects)
-      errstream << "0x" << std::hex << ptr << " of type " << std::dec << ptr->getType() << "; ";
+      errstream << "Object ptr: 0x" << std::hex << ptr << " of type: " << std::dec << ptr->getType() << "; ";
+    for(auto ptr : allocatedStrings)
+      errstream << "String ptr: 0x" << std::hex << ptr << " with content: " << std::dec << ptr->c_str() << "; ";
+    for(auto ptr : allocatedRawMemory)
+      errstream << "Raw ptr: 0x" << std::hex << ptr << std::dec << "; ";
 
     reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION, errstream.str().c_str());
   }
   else
   {
-    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR, "Object reference memleak check complete, no issues found.");
+    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR, "Reference memleak check complete, no issues found.");
   }
   assert(allocatedObjects.empty());
 #endif
@@ -212,30 +219,33 @@ void UsdDevice::reportStatus(void* source,
   }
 }
 
-void UsdDevice::deviceSetParameter(
-  const char *id, ANARIDataType type, const void *mem)
+void UsdDevice::filterSetParam(
+  const char *name,
+  ANARIDataType type,
+  const void *mem,
+  UsdDevice* device)
 {
-  if (strEquals(id, "usd::garbageCollect"))
+  if (strEquals(name, "usd::garbageCollect"))
   {
     // Perform garbage collection on usd objects (needs to move into the user interface)
     if(internals->bridge)
       internals->bridge->GarbageCollect();
   }
-  else if(strEquals(id, "usd::removeUnusedNames"))
+  else if(strEquals(name, "usd::removeUnusedNames"))
   {
     internals->uniqueNames.clear();
   }
-  else if (strEquals(id, "usd::connection.logVerbosity")) // 0 <= verbosity <= 4, with 4 being the loudest
+  else if (strEquals(name, "usd::connection.logVerbosity")) // 0 <= verbosity <= 4, with 4 being the loudest
   {
     if(type == ANARI_INT32)
       UsdBridge::SetConnectionLogVerbosity(*(reinterpret_cast<const int*>(mem)));
   }
-  else if(strEquals(id, "usd::sceneStage"))
+  else if(strEquals(name, "usd::sceneStage"))
   {
     if(type == ANARI_VOID_POINTER)
       internals->externalSceneStage = const_cast<void *>(mem);
   }
-  else if (strEquals(id, "usd::enableSaving"))
+  else if (strEquals(name, "usd::enableSaving"))
   {
     if(type == ANARI_BOOL)
     {
@@ -244,48 +254,38 @@ void UsdDevice::deviceSetParameter(
         internals->bridge->SetEnableSaving(internals->enableSaving);
     }
   }
-  else if (strEquals(id, "statusCallback") && type == ANARI_STATUS_CALLBACK)
+  else if (strEquals(name, "statusCallback") && type == ANARI_STATUS_CALLBACK)
   {
     userSetStatusFunc = (ANARIStatusCallback)mem;
   }
-  else if (strEquals(id, "statusCallbackUserData") && type == ANARI_VOID_POINTER)
+  else if (strEquals(name, "statusCallbackUserData") && type == ANARI_VOID_POINTER)
   {
     userSetStatusUserData = const_cast<void *>(mem);
   }
   else
   {
-    setParam(id, type, mem, this);
+    setParam(name, type, mem, this);
   }
 }
 
-void UsdDevice::deviceUnsetParameter(const char * id)
+void UsdDevice::filterResetParam(const char * name)
 {
-  if (strEquals(id, "statusCallback"))
+  if (strEquals(name, "statusCallback"))
   {
     userSetStatusFunc = nullptr;
   }
-  else if (strEquals(id, "statusCallbackUserData"))
+  else if (strEquals(name, "statusCallbackUserData"))
   {
     userSetStatusUserData = nullptr;
   }
-  else if (!strEquals(id, "usd::garbageCollect")
-    && !strEquals(id, "usd::removeUnusedNames"))
+  else if (!strEquals(name, "usd::garbageCollect")
+    && !strEquals(name, "usd::removeUnusedNames"))
   {
-    resetParam(id);
+    resetParam(name);
   }
 }
 
-void UsdDevice::deviceRetain()
-{
-  this->refInc();
-}
-
-void UsdDevice::deviceRelease()
-{
-  this->refDec();
-}
-
-void UsdDevice::deviceCommit()
+void UsdDevice::commit(UsdDevice* device)
 {
   transferWriteToReadParams();
 
@@ -349,7 +349,7 @@ ANARIArray UsdDevice::CreateDataArray(const void *appMemory,
   {
     UsdDataArray* object = new UsdDataArray(dataType, numItems1, numItems2, numItems3, this);
 #ifdef CHECK_MEMLEAKS
-    LogAllocation(object);
+    LogObjAllocation(object);
 #endif
 
     return (ANARIArray)(object);
@@ -360,7 +360,7 @@ ANARIArray UsdDevice::CreateDataArray(const void *appMemory,
       dataType, numItems1, byteStride1, numItems2, byteStride2, numItems3, byteStride3,
       this);
 #ifdef CHECK_MEMLEAKS
-    LogAllocation(object);
+    LogObjAllocation(object);
 #endif
 
     return (ANARIArray)(object);
@@ -415,7 +415,7 @@ ANARISampler UsdDevice::newSampler(const char *type)
   const char* name = makeUniqueName("Sampler");
   UsdSampler* object = new UsdSampler(name, type, this);
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARISampler)(object);
@@ -426,7 +426,7 @@ ANARIMaterial UsdDevice::newMaterial(const char *material_type)
   const char* name = makeUniqueName("Material");
   UsdMaterial* object = new UsdMaterial(name, material_type, this);
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARIMaterial)(object);
@@ -437,7 +437,7 @@ ANARIGeometry UsdDevice::newGeometry(const char *type)
   const char* name = makeUniqueName("Geometry");
   UsdGeometry* object = new UsdGeometry(name, type, this);
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARIGeometry)(object);
@@ -448,7 +448,7 @@ ANARISpatialField UsdDevice::newSpatialField(const char * type)
   const char* name = makeUniqueName("SpatialField");
   UsdSpatialField* object = new UsdSpatialField(name, type, this);
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARISpatialField)(object);
@@ -459,7 +459,7 @@ ANARISurface UsdDevice::newSurface()
   const char* name = makeUniqueName("Surface");
   UsdSurface* object = new UsdSurface(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARISurface)(object);
@@ -470,7 +470,7 @@ ANARIVolume UsdDevice::newVolume(const char *type)
   const char* name = makeUniqueName("Volume");
   UsdVolume* object = new UsdVolume(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARIVolume)(object);
@@ -481,7 +481,7 @@ ANARIGroup UsdDevice::newGroup()
   const char* name = makeUniqueName("Group");
   UsdGroup* object = new UsdGroup(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARIGroup)(object);
@@ -492,7 +492,7 @@ ANARIInstance UsdDevice::newInstance(const char */*type*/)
   const char* name = makeUniqueName("Instance");
   UsdInstance* object = new UsdInstance(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARIInstance)(object);
@@ -503,7 +503,7 @@ ANARIWorld UsdDevice::newWorld()
   const char* name = makeUniqueName("World");
   UsdWorld* object = new UsdWorld(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARIWorld)(object);
@@ -543,7 +543,7 @@ ANARIRenderer UsdDevice::newRenderer(const char *type)
 {
   UsdRenderer* object = new UsdRenderer();
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARIRenderer)(object);
@@ -620,7 +620,7 @@ void UsdDevice::clearCommitList()
 #ifdef CHECK_MEMLEAKS
   for(auto& commitEntry : commitList)
   {
-    LogDeallocation(commitEntry.first.ptr);
+    LogObjDeallocation(commitEntry.first.ptr);
   }
 #endif
 
@@ -794,7 +794,7 @@ ANARIFrame UsdDevice::newFrame()
 {
   UsdFrame* object = new UsdFrame(internals->bridge.get());
 #ifdef CHECK_MEMLEAKS
-  LogAllocation(object);
+  LogObjAllocation(object);
 #endif
 
   return (ANARIFrame)(object);
@@ -818,32 +818,30 @@ void UsdDevice::frameBufferUnmap(ANARIFrame fb, const char *channel)
     return ((UsdFrame*)fb)->unmapBuffer(channel);
 }
 
+UsdBaseObject* UsdDevice::getBaseObjectPtr(ANARIObject object)
+{
+  return handleIsDevice(object) ? this : (UsdBaseObject*)object;
+}
+
 void UsdDevice::setParameter(ANARIObject object,
   const char *name,
   ANARIDataType type,
   const void *mem)
 {
-  if (handleIsDevice(object)) {
-    deviceSetParameter(name, type, mem);
-    return;
-  } else if (object)
-    ((UsdBaseObject*)object)->filterSetParam(name, type, mem, this);
+  if(object)
+    getBaseObjectPtr(object)->filterSetParam(name, type, mem, this);
 }
 
 void UsdDevice::unsetParameter(ANARIObject object, const char * name)
 {
-  if (handleIsDevice(object))
-    deviceUnsetParameter(name);
-  else if (object)
-    ((UsdBaseObject*)object)->filterResetParam(name);
+  if(object)
+    getBaseObjectPtr(object)->filterResetParam(name);
 }
 
 void UsdDevice::unsetAllParameters(ANARIObject object)
 {
-  if (handleIsDevice(object))
-    ((UsdDevice*)object)->resetParams();
-  else if (object)
-    ((UsdBaseObject*)object)->resetAllParams();
+  if(object)
+    getBaseObjectPtr(object)->resetAllParams();
 }
 
 void *UsdDevice::mapParameterArray1D(ANARIObject object,
@@ -896,13 +894,11 @@ void *UsdDevice::mapParameterArray3D(ANARIObject object,
 
 void UsdDevice::unmapParameterArray(ANARIObject object, const char *name)
 {
-  void* paramAddress = nullptr;
-  ANARIDataType paramType = ANARI_UNKNOWN;
+  if(!object)
+    return;
 
-  if (handleIsDevice(object))
-    paramAddress = ((UsdDevice*)object)->getParam(name, paramType);
-  else if (object)
-    paramAddress = ((UsdBaseObject*)object)->tempGetParam(name, paramType);
+  ANARIDataType paramType = ANARI_UNKNOWN;
+  void* paramAddress = getBaseObjectPtr(object)->getParameter(name, paramType);
 
   if(paramAddress && paramType == ANARI_ARRAY)
   {
@@ -912,22 +908,20 @@ void UsdDevice::unmapParameterArray(ANARIObject object, const char *name)
 
 void UsdDevice::release(ANARIObject object)
 {
-  if (object == nullptr)
+  if(!object)
     return;
-  else if (handleIsDevice(object)) {
-    deviceRelease();
-    return;
-  }
 
-  UsdBaseObject* baseObject = (UsdBaseObject*)object;
+  UsdBaseObject* baseObject = getBaseObjectPtr(object);
 
   bool privatizeArray = baseObject->getType() == ANARI_ARRAY
     && baseObject->useCount(helium::RefType::INTERNAL) > 0
     && baseObject->useCount(helium::RefType::PUBLIC) == 1;
 
 #ifdef CHECK_MEMLEAKS
-    LogDeallocation(baseObject);
+  if(!handleIsDevice(object))
+    LogObjDeallocation(baseObject);
 #endif
+
   if (baseObject)
     baseObject->refDec(helium::RefType::PUBLIC);
 
@@ -937,45 +931,60 @@ void UsdDevice::release(ANARIObject object)
 
 void UsdDevice::retain(ANARIObject object)
 {
-  if (handleIsDevice(object))
-    deviceRetain();
-  else if (object)
-    ((UsdBaseObject*)object)->refInc(helium::RefType::PUBLIC);
+  if(object)
+    getBaseObjectPtr(object)->refInc(helium::RefType::PUBLIC);
 }
 
 void UsdDevice::commitParameters(ANARIObject object)
 {
-  if (handleIsDevice(object))
-    deviceCommit();
-  else if(object)
-    ((UsdBaseObject*)object)->commit(this);
+  if(object)
+    getBaseObjectPtr(object)->commit(this);
 }
 
 #ifdef CHECK_MEMLEAKS
-void UsdDevice::LogAllocation(const UsdBaseObject* ptr)
+namespace
+{
+  template<typename T>
+  void SharedLogDeallocation(const T* ptr, std::vector<const T*>& allocations, UsdDevice* device)
+  {
+    if (ptr)
+    {
+      auto it = std::find(allocations.begin(), allocations.end(), ptr);
+      if(it == allocations.end())
+      {
+        std::stringstream errstream;
+        errstream << "USD Device release of nonexisting or already released/deleted object: 0x" << std::hex << ptr;
+
+        device->reportStatus(device, ANARI_DEVICE, ANARI_SEVERITY_FATAL_ERROR, ANARI_STATUS_INVALID_OPERATION, errstream.str().c_str());
+      }
+
+      if(ptr->useCount() == 1)
+      {
+        assert(it != allocations.end());
+        allocations.erase(it);
+      }
+    }
+  }
+}
+
+void UsdDevice::LogObjAllocation(const UsdBaseObject* ptr)
 {
   allocatedObjects.push_back(ptr);
 }
 
-void UsdDevice::LogDeallocation(const UsdBaseObject* ptr)
+void UsdDevice::LogObjDeallocation(const UsdBaseObject* ptr)
 {
-  if (ptr)
-  {
-    auto it = std::find(allocatedObjects.begin(), allocatedObjects.end(), ptr);
-    if(it == allocatedObjects.end())
-    {
-      std::stringstream errstream;
-      errstream << "USD Device release of nonexisting or already released/deleted object: 0x" << std::hex << ptr;
+  SharedLogDeallocation(ptr, allocatedObjects, this);
+}
 
-      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_FATAL_ERROR, ANARI_STATUS_INVALID_OPERATION, errstream.str().c_str());
-    }
+void UsdDevice::LogStrAllocation(const UsdSharedString* ptr)
+{
+  allocatedStrings.push_back(ptr);
+}
 
-    if(ptr->useCount() == 1)
-    {
-      assert(it != allocatedObjects.end());
-      allocatedObjects.erase(it);
-    }
-  }
+void UsdDevice::LogStrDeallocation(const UsdSharedString* ptr)
+{
+  SharedLogDeallocation(ptr, allocatedStrings, this);
 }
 
 void UsdDevice::LogRawAllocation(const void* ptr)

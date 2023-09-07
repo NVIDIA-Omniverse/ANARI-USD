@@ -24,14 +24,6 @@ class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHan
     UsdWorld(const char* name, UsdDevice* device);
     ~UsdWorld();
 
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
-
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;

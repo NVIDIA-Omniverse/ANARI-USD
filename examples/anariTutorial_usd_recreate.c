@@ -186,13 +186,16 @@ int main(int argc, const char **argv)
 
     anariCommitParameters(dev, mesh);
 
-    ANARISampler sampler = anariNewSampler(dev, "image2D");
-    ANARIMaterial mat = anariNewMaterial(dev, "matte");
-    // The second iteration should not commit samplers/materials and not add it to the surface,
+    ANARIMaterial mat;
+
+    // The second iteration should not create samplers/materials and not add it to the surface,
     // so the material prim itself will remain untouched in the pre-existing stage,
     // while its reference will be removed from the newly committed surface prim
     if(anariPass == 0)
     {
+      mat = anariNewMaterial(dev, "matte");
+      ANARISampler sampler = anariNewSampler(dev, "image2D");
+
       // Create a sampler
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
       //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
@@ -216,8 +219,9 @@ int main(int argc, const char **argv)
         anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
       anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
       anariCommitParameters(dev, mat);
+
+      anariRelease(dev, sampler);
     }
-    anariRelease(dev, sampler);
 
     // put the mesh into a surface
     ANARISurface surface = anariNewSurface(dev);
@@ -227,7 +231,8 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, surface, "material", ANARI_MATERIAL, &mat);
     anariCommitParameters(dev, surface);
     anariRelease(dev, mesh);
-    anariRelease(dev, mat);
+    if (anariPass == 0)
+      anariRelease(dev, mat);
 
     // put the surface into a group
     ANARIGroup group = anariNewGroup(dev);

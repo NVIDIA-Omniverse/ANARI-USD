@@ -31,14 +31,6 @@ class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialF
     UsdSpatialField(const char* name, const char* type, UsdDevice* device);
     ~UsdSpatialField();
 
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
-
     friend class UsdVolume;
 
   protected:

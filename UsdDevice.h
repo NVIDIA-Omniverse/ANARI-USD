@@ -5,7 +5,7 @@
 
 #include "anari/backend/DeviceImpl.h"
 #include "anari/backend/LibraryImpl.h"
-#include "UsdParameterizedObject.h"
+#include "UsdBaseObject.h"
 
 #include <vector>
 #include <memory>
@@ -47,7 +47,7 @@ struct UsdDeviceData
   bool outputMdlShader = true;
 };
 
-class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParameterizedObject<UsdDevice, UsdDeviceData>
+class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<UsdDevice, UsdDeviceData>
 {
   public:
 
@@ -192,6 +192,19 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
     int frameReady(ANARIFrame, ANARIWaitMask) override { return 1; }
     void discardFrame(ANARIFrame) override {}
 
+    // UsdParameterizedBaseObject interface ///////////////////////////////////////////////////////////
+
+    void filterSetParam(
+      const char *name,
+      ANARIDataType type,
+      const void *mem,
+      UsdDevice* device) override;
+
+    void filterResetParam(
+      const char *name) override;
+
+    void commit(UsdDevice* device) override;
+
     // USD Specific ///////////////////////////////////////////////////////////
 
     bool isInitialized() { return getUsdBridge() != nullptr; }
@@ -211,9 +224,13 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
 
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
-    void LogAllocation(const UsdBaseObject* ptr);
-    void LogDeallocation(const UsdBaseObject* ptr);
+    void LogObjAllocation(const UsdBaseObject* ptr);
+    void LogObjDeallocation(const UsdBaseObject* ptr);
     std::vector<const UsdBaseObject*> allocatedObjects;
+
+    void LogStrAllocation(const UsdSharedString* ptr);
+    void LogStrDeallocation(const UsdSharedString* ptr);
+    std::vector<const UsdSharedString*> allocatedStrings;
 
     void LogRawAllocation(const void* ptr);
     void LogRawDeallocation(const void* ptr);
@@ -233,11 +250,13 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
       va_list& arglist);
 
   protected:
-    void deviceSetParameter(const char *id, ANARIDataType type, const void *mem);
-    void deviceUnsetParameter(const char *id);
-    void deviceRetain();
-    void deviceRelease();
-    void deviceCommit();
+    UsdBaseObject* getBaseObjectPtr(ANARIObject object);
+
+    // UsdParameterizedBaseObject interface ///////////////////////////////////////////////////////////
+
+    bool deferCommit(UsdDevice* device) { return false; };
+    bool doCommitData(UsdDevice* device) { return false; };
+    void doCommitRefs(UsdDevice* device) {};
 
     // USD Specific Cleanup /////////////////////////////////////////////////////////////
 

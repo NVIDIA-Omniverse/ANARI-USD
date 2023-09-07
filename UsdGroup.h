@@ -25,14 +25,6 @@ class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHan
     UsdGroup(const char* name, UsdDevice* device);
     ~UsdGroup();
 
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
-
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;

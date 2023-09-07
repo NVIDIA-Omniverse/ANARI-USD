@@ -64,8 +64,8 @@ void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity se
   const char *format, const char* firstArg, const char* secondArg); // In case #include <UsdDevice.h> is undesired
 
 #ifdef CHECK_MEMLEAKS  
-void logAllocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj);
-void logDeallocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj);
+void logAllocationThroughDevice(UsdDevice* device, const void* ptr, ANARIDataType ptrType);
+void logDeallocationThroughDevice(UsdDevice* device, const void* ptr, ANARIDataType ptrType);
 #endif
 
 // Anari <=> USD conversions

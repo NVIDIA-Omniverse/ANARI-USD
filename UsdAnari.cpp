@@ -294,14 +294,24 @@ void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity se
 }
 
 #ifdef CHECK_MEMLEAKS
-void logAllocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj)
+void logAllocationThroughDevice(UsdDevice* device, const void* ptr, ANARIDataType ptrType)
 {
-  device->LogAllocation(obj);
+  if(anari::isObject(ptrType))
+    device->LogObjAllocation((const UsdBaseObject*)ptr);
+  else if(ptrType == ANARI_STRING)
+    device->LogStrAllocation((const UsdSharedString*)ptr);
+  else
+    device->LogRawAllocation(ptr);
 }
 
-void logDeallocationThroughDevice(UsdDevice* device, const UsdBaseObject* obj)
+void logDeallocationThroughDevice(UsdDevice* device, const void* ptr, ANARIDataType ptrType)
 {
-  device->LogDeallocation(obj);
+  if(anari::isObject(ptrType))
+    device->LogObjDeallocation((const UsdBaseObject*)ptr);
+  else if(ptrType == ANARI_STRING)
+    device->LogStrDeallocation((const UsdSharedString*)ptr);
+  else
+    device->LogRawDeallocation(ptr);
 }
 #endif
 

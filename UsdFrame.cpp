@@ -16,7 +16,7 @@ DEFINE_PARAMETER_MAP(UsdFrame,
 )
 
 UsdFrame::UsdFrame(UsdBridge* bridge)
-  : UsdBaseObject(ANARI_FRAME)
+  : UsdParameterizedBaseObject<UsdFrame, UsdFrameData>(ANARI_FRAME)
 {
 }
 
@@ -24,35 +24,6 @@ UsdFrame::~UsdFrame()
 {
   delete[] mappedColorMem;
   delete[] mappedDepthMem;
-}
-
-void UsdFrame::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  // No name parameter, so no filterNameParam check
-  setParam(name, type, mem, device);
-}
-
-void UsdFrame::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
-void UsdFrame::resetAllParams()
-{
-  resetParams();
-}
-
-void* UsdFrame::tempGetParam(const char* name, ANARIDataType& returnType)
-{
-  return getParam(name, returnType);
-}
-
-int UsdFrame::getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice * device)
-{
-  return 0;
 }
 
 bool UsdFrame::deferCommit(UsdDevice* device)
