@@ -14,7 +14,7 @@
 #include "stb_image_write.h"
 
 using uvec2 = std::array<unsigned int, 2>;
-using uvec3 = std::array<unsigned int, 3>;
+using ivec3 = std::array<int, 3>;
 using vec3 = std::array<float, 3>;
 using vec4 = std::array<float, 4>;
 using box3 = std::array<vec3, 2>;
@@ -70,7 +70,7 @@ int main(int argc, const char **argv)
       {0.8f, 0.8f, 0.8f, 1.0f},
       {0.8f, 0.8f, 0.8f, 1.0f},
       {0.0f, 0.9f, 0.0f, 1.0f}};
-  uvec3 index[] = {{0, 1, 2}, {1, 2, 3}};
+  ivec3 index[] = {{0, 1, 2}, {1, 2, 3}};
 
   printf("initialize ANARI...");
 

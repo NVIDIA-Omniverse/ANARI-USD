@@ -179,7 +179,7 @@ int main(int argc, const char **argv)
     //anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
     //anariRelease(dev, array);
 
-    array = anariNewArray1D(dev, index, 0, 0, ANARI_UINT32_VEC3, 2);
+    array = anariNewArray1D(dev, index, 0, 0, ANARI_INT32_VEC3, 2);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "primitive.index", ANARI_ARRAY, &array);
     anariRelease(dev, array);
@@ -312,8 +312,8 @@ int main(int argc, const char **argv)
     ANARIDataType colFormat = ANARI_UFIXED8_RGBA_SRGB;
     ANARIDataType depthFormat = ANARI_FLOAT32;
     anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, frameSize);
-    anariSetParameter(dev, frame, "color", ANARI_DATA_TYPE, &colFormat);
-    anariSetParameter(dev, frame, "depth", ANARI_DATA_TYPE, &depthFormat);
+    anariSetParameter(dev, frame, "channel.color", ANARI_DATA_TYPE, &colFormat);
+    anariSetParameter(dev, frame, "channel.depth", ANARI_DATA_TYPE, &depthFormat);
 
     anariSetParameter(dev, frame, "renderer", ANARI_RENDERER, &renderer);
     anariSetParameter(dev, frame, "camera", ANARI_CAMERA, &camera);

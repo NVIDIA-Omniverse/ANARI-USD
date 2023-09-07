@@ -27,7 +27,7 @@ struct UsdVolumeData
   const UsdDataArray* color = nullptr;
   const UsdDataArray* opacity = nullptr;
   float valueRange[2] = { 0.0f, 1.0f };
-  float densityScale = 1.0f;
+  float unitDistance = 1.0f;
 };
 
 class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolumeHandle>

@@ -11,8 +11,8 @@ DEFINE_PARAMETER_MAP(UsdFrame,
   REGISTER_PARAMETER_MACRO("world", ANARI_WORLD, world)
   REGISTER_PARAMETER_MACRO("renderer", ANARI_RENDERER, renderer)
   REGISTER_PARAMETER_MACRO("size", ANARI_UINT32_VEC2, size)
-  REGISTER_PARAMETER_MACRO("color", ANARI_DATA_TYPE, color)
-  REGISTER_PARAMETER_MACRO("depth", ANARI_DATA_TYPE, depth)
+  REGISTER_PARAMETER_MACRO("channel.color", ANARI_DATA_TYPE, color)
+  REGISTER_PARAMETER_MACRO("channel.depth", ANARI_DATA_TYPE, depth)
 )
 
 UsdFrame::UsdFrame(UsdBridge* bridge)
@@ -47,13 +47,13 @@ const void* UsdFrame::mapBuffer(const char *channel,
   *height = paramData.size[1];
   *pixelType = ANARI_UNKNOWN;
 
-  if (strEquals(channel, "color"))
+  if (strEquals(channel, "channel.color"))
   {
     mappedColorMem = ReserveBuffer(paramData.color);
     *pixelType = paramData.color;
     return mappedColorMem;
   }
-  else if (strEquals(channel, "depth"))
+  else if (strEquals(channel, "channel.depth"))
   {
     mappedDepthMem = ReserveBuffer(paramData.depth);
     *pixelType = paramData.depth;
@@ -68,12 +68,12 @@ const void* UsdFrame::mapBuffer(const char *channel,
 
 void UsdFrame::unmapBuffer(const char *channel)
 {
-  if (strEquals(channel, "color"))
+  if (strEquals(channel, "channel.color"))
   {
     delete[] mappedColorMem;
     mappedColorMem = nullptr;
   }
-  else if (strEquals(channel, "depth"))
+  else if (strEquals(channel, "channel.depth"))
   {
     delete[] mappedDepthMem;
     mappedDepthMem = nullptr;

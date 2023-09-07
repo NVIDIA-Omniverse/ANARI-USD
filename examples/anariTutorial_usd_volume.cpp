@@ -196,7 +196,7 @@ void GravityVolume::commit()
   anari::commitParameters(d, field);
 
   auto volume = anari::newObject<anari::Volume>(d, "scivis");
-  anari::setAndReleaseParameter(d, volume, "field", field);
+  anari::setAndReleaseParameter(d, volume, "value", field);
 
   {
     std::vector<vec3> colors;

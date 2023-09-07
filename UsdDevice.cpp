@@ -769,7 +769,7 @@ int UsdDevice::getProperty(ANARIObject object,
       snprintf((char*)mem, size, "%s", DEVICE_VERSION_NAME);
       return 1;
     }
-    else if (type == ANARI_UINT64 && strEquals(name, "version.name.size"))
+    else if (strEquals(name, "version.name.size") && type == ANARI_UINT64)
     {
       if (Assert64bitStringLengthProperty(size, UsdLogInfo(this, this, ANARI_DEVICE, "UsdDevice"), "version.name.size"))
       {
@@ -778,7 +778,13 @@ int UsdDevice::getProperty(ANARIObject object,
       }
       return 1;
     }
-    if (strEquals(name, "extension") && type == ANARI_STRING_LIST)
+    else if (strEquals(name, "geometryMaxIndex") && type == ANARI_UINT64)
+    {
+      uint64_t maxIndex = std::numeric_limits<uint64_t>::max(); // Only restricted to int for UsdGeomMesh: GetFaceVertexIndicesAttr() takes a VtArray<int>
+      writeToVoidP(mem, maxIndex);
+      return 1;
+    }
+    else if (strEquals(name, "extension") && type == ANARI_STRING_LIST)
     {
       writeToVoidP(mem, anari::usd::query_extensions());
       return 1;

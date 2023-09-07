@@ -7,7 +7,8 @@
 UsdBaseObject::UsdBaseObject(ANARIDataType t, UsdDevice* device)
       : type(t)
 {
-  // The object will not be committed, but handles will be initialized and default data/refs will be transferred 
+  // The object will not be committed (as in, user-written write params will not be set to read params),
+  // but handles will be initialized and the object with its default data/refs will be written out to USD.
   if(device)
     device->addToCommitList(this, true);
 }

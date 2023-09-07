@@ -72,9 +72,9 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
 
     bool isInstanced() const 
     { 
-      return type == GEOM_SPHERE 
-        || type == GEOM_CONE 
-        || type == GEOM_CYLINDER; 
+      return geomType == GEOM_SPHERE
+        || geomType == GEOM_CONE
+        || geomType == GEOM_CYLINDER;
     }
 
   protected:

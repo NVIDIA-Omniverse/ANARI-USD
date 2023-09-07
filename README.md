@@ -57,21 +57,29 @@ ANARI scene objects:
 
 - Geometries:
     - all fixed point color array types will be normalized to float, double will be type-cast
-    - strided arrays
     - attribute arrays and their types are fixed after the first commit (ie. from that point one cannot assign a different array to an attribute parameter)
-- Volumes
-    - `color/opacity.position` parameters
+    - Cones/Cylinders do not support the `caps` parameter, or the `vertex.cap` attribute
+    - For triangles and quads, the `vertex.tangent` attribute is not supported
+- Volumes and SpatialFields:
+    - `unitDistance` has no effect
+    - `filter` has no effect
 - Materials:
     - Setting a parameter to an attribute string will only produce valid output if the parameter value and connected attribute array type are an exact match, unless:
         - A float4/float3 attribute is bound to a float3/color input.
-    - any world-space attribute as parameter argument
+    - Attribute strings `primitiveId`, `worldPosition` and `worldNormal` are unsupported
+    - Beyond the parameters already present in the matte material, the physicallyBased material only supports `emissive`, `metallic`, `roughness` and `ior`
 - Samplers:
     - setting `inAttribute` will only produce valid output if the parameter value type and connected attribute array type are an exact match 
-    - any world-space attribute as parameter argument
-    - the `<in/out>Transform` parameters
+    - Attribute strings `primitiveId`, `worldPosition` and `worldNormal` are unsupported
+    - the `<in/out>Transform` and `<in/out>Offset` parameters
     - anything other than 8-bit-per-component `image` data
-- Lights
-    - completely unsupported
+- Lights:
+    - unsupported for now
+- Camera is not supported
+- Properties:
+    - `extension` not queryable on Renderer
+    - `bounds` property not queryable (World, Instance, etc.)
+- Object introspection is out of date
 
 ### Detailed build info #
 
