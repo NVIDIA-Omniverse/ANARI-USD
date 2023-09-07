@@ -1,8 +1,7 @@
 ## Copyright 2020 The Khronos Group
 ## SPDX-License-Identifier: Apache-2.0
 
-if (WIN32)
-else()
+if (NOT WIN32)
   set (PLATFORM_LIBS m)
 endif()
 

@@ -13,11 +13,11 @@ DEFINE_PARAMETER_MAP(UsdVolume,
   REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("usd::preClassified", ANARI_BOOL, preClassified)
   REGISTER_PARAMETER_MACRO("usd::time::field", ANARI_FLOAT64, fieldRefTimeStep)
-  REGISTER_PARAMETER_MACRO("field", ANARI_SPATIAL_FIELD, field)
+  REGISTER_PARAMETER_MACRO("value", ANARI_SPATIAL_FIELD, field)
   REGISTER_PARAMETER_MACRO("color", ANARI_ARRAY, color)
   REGISTER_PARAMETER_MACRO("opacity", ANARI_ARRAY, opacity)
   REGISTER_PARAMETER_MACRO("valueRange", ANARI_FLOAT32_BOX1, valueRange)
-  REGISTER_PARAMETER_MACRO("densityScale", ANARI_FLOAT32, densityScale)
+  REGISTER_PARAMETER_MACRO("unitDistance", ANARI_FLOAT32, unitDistance)
 )
 
 namespace
@@ -60,20 +60,6 @@ UsdVolume::~UsdVolume()
   if(cachedBridge)
     cachedBridge->DeleteVolume(usdHandle);
 #endif
-}
-
-void UsdVolume::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if (filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdVolume::filterResetParam(const char *name)
-{
-  resetParam(name);
 }
 
 bool UsdVolume::CheckTfParams(UsdDevice* device)

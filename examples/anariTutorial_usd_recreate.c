@@ -150,12 +150,12 @@ int main(int argc, const char **argv)
     ANARIGeometry mesh = anariNewGeometry(dev, "triangle");
     anariSetParameter(dev, mesh, "name", ANARI_STRING, "tutorialMesh");
 
-    ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
+    ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "vertex.position", ANARI_ARRAY, &array);
     anariRelease(dev, array); // we are done using this handle
 
-    array = anariNewArray1D(dev, normal, 0, 0, ANARI_FLOAT32_VEC3, 4, 0);
+    array = anariNewArray1D(dev, normal, 0, 0, ANARI_FLOAT32_VEC3, 4);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "vertex.normal", ANARI_ARRAY, &array);
     anariRelease(dev, array);
@@ -163,40 +163,43 @@ int main(int argc, const char **argv)
     // Set the vertex colors
     if (useVertexColors)
     {
-      array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4, 0);
+      array = anariNewArray1D(dev, color, 0, 0, ANARI_FLOAT32_VEC4, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.color", ANARI_ARRAY, &array);
       anariRelease(dev, array);
     }
 
-    array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4, 0);
+    array = anariNewArray1D(dev, texcoord, 0, 0, ANARI_FLOAT32_VEC2, 4);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
     anariRelease(dev, array);
 
-    //array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4, 0);
+    //array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4);
     //anariCommitParameters(dev, array);
     //anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
     //anariRelease(dev, array);
 
-    array = anariNewArray1D(dev, index, 0, 0, ANARI_UINT32_VEC3, 2, 0);
+    array = anariNewArray1D(dev, index, 0, 0, ANARI_INT32_VEC3, 2);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, mesh, "primitive.index", ANARI_ARRAY, &array);
     anariRelease(dev, array);
 
     anariCommitParameters(dev, mesh);
 
-    ANARISampler sampler = anariNewSampler(dev, "image2D");
-    ANARIMaterial mat = anariNewMaterial(dev, "matte");
-    // The second iteration should not commit samplers/materials and not add it to the surface,
+    ANARIMaterial mat;
+
+    // The second iteration should not create samplers/materials and not add it to the surface,
     // so the material prim itself will remain untouched in the pre-existing stage,
     // while its reference will be removed from the newly committed surface prim
     if(anariPass == 0)
     {
+      mat = anariNewMaterial(dev, "matte");
+      ANARISampler sampler = anariNewSampler(dev, "image2D");
+
       // Create a sampler
       anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
       //anariSetParameter(dev, sampler, "usd::imageUrl", ANARI_STRING, texFile);
-      array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1], 0, 0); // Make sure this matches numTexComponents
+      array = anariNewArray2D(dev, textureData, 0, 0, ANARI_UINT8_VEC3, textureSize[0], textureSize[1]); // Make sure this matches numTexComponents
       anariSetParameter(dev, sampler, "image", ANARI_ARRAY, &array);
       anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
       anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
@@ -216,8 +219,9 @@ int main(int argc, const char **argv)
         anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
       anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacity);
       anariCommitParameters(dev, mat);
+
+      anariRelease(dev, sampler);
     }
-    anariRelease(dev, sampler);
 
     // put the mesh into a surface
     ANARISurface surface = anariNewSurface(dev);
@@ -227,12 +231,13 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, surface, "material", ANARI_MATERIAL, &mat);
     anariCommitParameters(dev, surface);
     anariRelease(dev, mesh);
-    anariRelease(dev, mat);
+    if (anariPass == 0)
+      anariRelease(dev, mat);
 
     // put the surface into a group
     ANARIGroup group = anariNewGroup(dev);
     anariSetParameter(dev, group, "name", ANARI_STRING, "tutorialGroup");
-    array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1, 0);
+    array = anariNewArray1D(dev, &surface, 0, 0, ANARI_SURFACE, 1);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, group, "surface", ANARI_ARRAY, &array);
     anariCommitParameters(dev, group);
@@ -240,7 +245,7 @@ int main(int argc, const char **argv)
     anariRelease(dev, array);
 
     // put the group into an instance (give the group a world transform)
-    ANARIInstance instance = anariNewInstance(dev);
+    ANARIInstance instance = anariNewInstance(dev, "transform");
     anariSetParameter(dev, instance, "name", ANARI_STRING, "tutorialInstance");
     anariSetParameter(dev, instance, "transform", ANARI_FLOAT32_MAT3x4, transform);
     anariSetParameter(dev, instance, "group", ANARI_GROUP, &group);
@@ -250,7 +255,7 @@ int main(int argc, const char **argv)
     ANARILight light = anariNewLight(dev, "ambient");
     anariSetParameter(dev, light, "name", ANARI_STRING, "tutorialLight");
     anariCommitParameters(dev, light);
-    array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1, 0);
+    array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, world, "light", ANARI_ARRAY, &array);
     anariRelease(dev, light);
@@ -260,7 +265,7 @@ int main(int argc, const char **argv)
 
     // put the instance in the world
     anariSetParameter(dev, world, "name", ANARI_STRING, "tutorialWorld");
-    array = anariNewArray1D(dev, &instance, 0, 0, ANARI_INSTANCE, 1, 0);
+    array = anariNewArray1D(dev, &instance, 0, 0, ANARI_INSTANCE, 1);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, world, "instance", ANARI_ARRAY, &array);
     anariRelease(dev, instance);
@@ -307,8 +312,8 @@ int main(int argc, const char **argv)
     ANARIDataType colFormat = ANARI_UFIXED8_RGBA_SRGB;
     ANARIDataType depthFormat = ANARI_FLOAT32;
     anariSetParameter(dev, frame, "size", ANARI_UINT32_VEC2, frameSize);
-    anariSetParameter(dev, frame, "color", ANARI_DATA_TYPE, &colFormat);
-    anariSetParameter(dev, frame, "depth", ANARI_DATA_TYPE, &depthFormat);
+    anariSetParameter(dev, frame, "channel.color", ANARI_DATA_TYPE, &colFormat);
+    anariSetParameter(dev, frame, "channel.depth", ANARI_DATA_TYPE, &depthFormat);
 
     anariSetParameter(dev, frame, "renderer", ANARI_RENDERER, &renderer);
     anariSetParameter(dev, frame, "camera", ANARI_CAMERA, &camera);

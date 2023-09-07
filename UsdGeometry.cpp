@@ -333,7 +333,7 @@ namespace
     ANARIDataType vertexType = vertexArray->getType();
 
     const UsdDataArray* indexArray = paramData.indices;
-    uint64_t numSticks = indexArray ? indexArray->getLayout().numItems1 : numVertices;
+    uint64_t numSticks = indexArray ? indexArray->getLayout().numItems1 : numVertices/2;
     uint64_t numIndices = numSticks * 2; // Indices are 2-element vectors in ANARI
     const void* indices = indexArray ? indexArray->getData() : nullptr;
     ANARIDataType indexType = indexArray ? indexArray->getType() : ANARI_UINT32;
@@ -636,21 +636,6 @@ UsdGeometry::~UsdGeometry()
 #endif
 }
 
-void UsdGeometry::filterSetParam(
-  const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if(filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdGeometry::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
 template<typename GeomDataType>
 void UsdGeometry::setAttributeTimeVarying(typename GeomDataType::DataMemberId& timeVarying)
 {
@@ -862,6 +847,14 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
   if (paramData.indices)
   {
     ANARIDataType indexType = paramData.indices->getType();
+
+    UsdBridgeType flattenedType = AnariToUsdBridgeType_Flattened(indexType);
+    if( (geomType == GEOM_TRIANGLE || geomType == GEOM_QUAD) &&
+      (flattenedType == UsdBridgeType::UINT || flattenedType == UsdBridgeType::ULONG || flattenedType == UsdBridgeType::LONG))
+    {
+      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' has 'primitive.index' of type other than ANARI_INT32, which may result in an overflow for FaceVertexIndicesAttr of UsdGeomMesh.", debugName);
+    }
+
     if (geomType == GEOM_SPHERE || geomType == GEOM_CURVE)
     {
       if(geomType == GEOM_SPHERE && !paramData.UseUsdGeomPointInstancer)
@@ -989,6 +982,10 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
     {
       meshData.IndicesType = AnariToUsdBridgeType(indices->getType());
     }
+  }
+  else
+  {
+    meshData.NumIndices = meshData.NumPoints;
   }
 
   //meshData.UpdatesToPerform = Still to be implemented

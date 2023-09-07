@@ -52,14 +52,6 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     UsdMaterial(const char* name, const char* type, UsdDevice* device);
     ~UsdMaterial();
 
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
-
     bool isPerInstance() const { return perInstance; }
     void updateBoundParameters(bool boundToInstance, UsdDevice* device);
 

@@ -5,16 +5,15 @@
 
 #include "helium/utility/IntrusivePtr.h"
 #include "UsdCommonMacros.h"
-#include "UsdAnari.h"
-
-#include <algorithm>
-#include <string>
+#include "UsdParameterizedObject.h"
 
 class UsdDevice;
 
+// Base parameterized class without being derived as such - nontemplated to allow for polymorphic use
 class UsdBaseObject : public helium::RefCounted
 {
   public:
+    // If device != 0, the object is added to the commit list
     UsdBaseObject(ANARIDataType t, UsdDevice* device = nullptr);
 
     virtual void filterSetParam(
@@ -25,6 +24,10 @@ class UsdBaseObject : public helium::RefCounted
 
     virtual void filterResetParam(
       const char *name) = 0;
+
+    virtual void resetAllParams() = 0;
+
+    virtual void* getParameter(const char* name, ANARIDataType& returnType) = 0;
 
     virtual int getProperty(const char *name,
       ANARIDataType type,
@@ -46,49 +49,116 @@ class UsdBaseObject : public helium::RefCounted
     friend class UsdDevice;
 };
 
-template<typename BaseType, typename InitType>
-class UsdRefCountWrapped : public UsdBaseObject
+// Templated base implementation of parameterized object
+template<typename T, typename D>
+class UsdParameterizedBaseObject : public UsdBaseObject, public UsdParameterizedObject<T, D>
 {
   public:
-    UsdRefCountWrapped(ANARIDataType t, InitType i)
-        : UsdBaseObject(t)
-        , data(i)
+    typedef UsdParameterizedObject<T, D> ParamClass;
+
+    UsdParameterizedBaseObject(ANARIDataType t, UsdDevice* device = nullptr)
+      : UsdBaseObject(t, device)
     {}
 
-    // We should split the refcounted+type into its own class instead of overriding
-    // functions that are meaningless
-    virtual void filterSetParam(
+    void filterSetParam(
       const char *name,
       ANARIDataType type,
       const void *mem,
-      UsdDevice* device) override {}
+      UsdDevice* device) override
+    {
+      setParam(name, type, mem, device);
+    }
 
-    virtual void filterResetParam(
-      const char *name) override {}
+    void filterResetParam(
+      const char *name) override
+    {
+      resetParam(name);
+    }
 
-    virtual int getProperty(const char *name,
+    void resetAllParams() override
+    {
+      resetParams();
+    }
+
+    void* getParameter(const char* name, ANARIDataType& returnType) override
+    {
+      return getParam(name, returnType);
+    }
+
+    int getProperty(const char *name,
       ANARIDataType type,
       void *mem,
       uint64_t size,
-      UsdDevice* device) override { return 0; }
+      UsdDevice* device) override
+    {
+      return 0;
+    }
 
-    void commit(UsdDevice* device) override {}
+    void commit(UsdDevice* device) override
+    {
+      transferWriteToReadParams();
+      UsdBaseObject::commit(device);
+    }
 
-    BaseType data;
+    // Convenience functions for commonly used name property
+    virtual const char* getName() const { return ""; }
 
   protected:
-    virtual bool deferCommit(UsdDevice* device) { return false; }
-    virtual bool doCommitData(UsdDevice* device) { return false; }
-    virtual void doCommitRefs(UsdDevice* device) {}
-};
+    // Convenience functions for commonly used name property
+    bool setNameParam(const char *name,
+      ANARIDataType type,
+      const void *mem,
+      UsdDevice* device)
+    {
+      const char* objectName = static_cast<const char*>(mem);
 
-class UsdSharedString : public UsdRefCountWrapped<std::string, const char*>
-{
-  public:
-    UsdSharedString(const char* cStr)
-      : UsdRefCountWrapped<std::string, const char*>(ANARI_STRING, cStr)
-    {}
+      if (type == ANARI_STRING)
+      {
+        if (strEquals(name, "name"))
+        {
+          if (!objectName || strEquals(objectName, ""))
+          {
+            reportStatusThroughDevice(UsdLogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
+              "%s: ANARI object %s cannot be an empty string, using auto-generated name instead.", getName(), "name");
+          }
+          else
+          {
+            ParamClass::setParam(name, type, mem, device);
+            ParamClass::setParam("usd::name", type, mem, device);
+            this->formatUsdName(this->getWriteParams().usdName);
+          }
+          return true;
+        }
+        else if (strEquals(name, "usd::name"))
+        {
+          reportStatusThroughDevice(UsdLogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
+            "%s parameter '%s' cannot be set, only read with getProperty().", getName(), "usd::name");
+          return true;
+        }
+      }
+      return false;
+    }
 
-    static const char* c_str(const UsdSharedString* string) { return string ? string->c_str() : nullptr; }
-    const char* c_str() const { return data.c_str(); }
+    int getNameProperty(const char *name,
+      ANARIDataType type,
+      void *mem,
+      uint64_t size,
+      UsdDevice* device)
+    {
+      if (type == ANARI_STRING && strEquals(name, "usd::name"))
+      {
+        snprintf((char*)mem, size, "%s", UsdSharedString::c_str(this->getReadParams().usdName));
+        return 1;
+      }
+      else if (type == ANARI_UINT64 && strEquals(name, "usd::name.size"))
+      {
+        if (Assert64bitStringLengthProperty(size, UsdLogInfo(device, this, ANARI_ARRAY, this->getName()), "usd::name.size"))
+        {
+          uint64_t nameLen = this->getReadParams().usdName ? strlen(this->getReadParams().usdName->c_str())+1 : 0;
+          memcpy(mem, &nameLen, size);
+        }
+        return 1;
+      }
+      return 0;
+    }
 };

@@ -67,7 +67,7 @@ else()
 endif()
 
 # Search in config mode
-find_package(anari 0.4.0 REQUIRED
+find_package(anari 0.7.0 REQUIRED
   PATHS ${ANARI_ROOT_DIR}
 )
 
@@ -89,22 +89,8 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
     DEPENDS usd_device.json usd_device_features.json
   )
 
-  add_custom_target(generate_usd_debug_objects
-    COMMAND ${Python3_EXECUTABLE} ${ANARI_CODE_GEN_ROOT}/generate_debug_objects.py
-      --json ${ANARI_CODE_GEN_ROOT}
-      --json ${CMAKE_CURRENT_SOURCE_DIR}
-      --device ${CMAKE_CURRENT_SOURCE_DIR}/usd_device.json
-      --prefix UsdDevice
-      --namespace anari::usd
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS usd_device.json usd_device_features.json
-  )
-
   add_custom_target(generate_all)
-  add_dependencies(generate_all
-    generate_usd_queries
-    generate_usd_debug_objects
-  )
+  add_dependencies(generate_all generate_usd_queries)
 endif()
 
 ## Core UsdBridge ##
@@ -138,14 +124,14 @@ set(USDModule_SOURCES
   UsdSpatialField.cpp
   UsdVolume.cpp
   UsdInstance.cpp
+  UsdLibrary.cpp
   UsdSampler.cpp
   UsdMaterial.cpp
   UsdWorld.cpp
   UsdRenderer.cpp
   UsdFrame.cpp
   UsdLight.cpp
-  UsdDeviceQueries.cpp
-  UsdDeviceDebugFactory.cpp)
+  UsdDeviceQueries.cpp)
 
 set(USDModule_HEADERS
   UsdCommonMacros.h
@@ -155,6 +141,7 @@ set(USDModule_HEADERS
   UsdParameterizedObject.h
   UsdDevice.h
   UsdBaseObject.h
+  UsdSharedObjects.h
   UsdBridgedBaseObject.h
   UsdDataArray.h
   UsdGeometry.h
@@ -189,7 +176,8 @@ endif()
 
 target_link_libraries(anari_library_usd
 	PUBLIC anari::anari
-	PRIVATE anari::anari_library_debug anari::helium UsdBridge)
+	PRIVATE anari::helium UsdBridge
+)
 
 option(USD_DEVICE_BUILD_EXAMPLES "Build USD device examples" OFF)
 if(USD_DEVICE_BUILD_EXAMPLES)

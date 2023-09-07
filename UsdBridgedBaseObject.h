@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "UsdParameterizedObject.h"
+#include "UsdBaseObject.h"
 #include "UsdBridge/UsdBridge.h"
 #include "UsdDataArray.h"
 
@@ -11,54 +11,27 @@
 
 class UsdDevice;
 
-template<class T, class D, class H>
-class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject<T, D>
+template<typename T, typename D, typename H>
+class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
 {
   public:
-    typedef UsdParameterizedObject<T, D> ParamClass;
-
     UsdBridgedBaseObject(ANARIDataType t, const char* name, UsdDevice* device)
-      : UsdBaseObject(t, device)
+      : UsdParameterizedBaseObject<T, D>(t, device)
       , uniqueName(name)
     {
     }
 
     H getUsdHandle() const { return usdHandle; }
 
-    const char* getName() const { return this->getReadParams().usdName ? this->getReadParams().usdName->c_str() : uniqueName; }
+    const char* getName() const override { return this->getReadParams().usdName ? this->getReadParams().usdName->c_str() : uniqueName; }
 
-    bool filterNameParam(const char *name,
+    void filterSetParam(const char *name,
       ANARIDataType type,
       const void *mem,
-      UsdDevice* device)
+      UsdDevice* device) override
     {
-      const char* objectName = static_cast<const char*>(mem);
-
-      if (type == ANARI_STRING)
-      {
-        if (strEquals(name, "name"))
-        {
-          if (strEquals(objectName, ""))
-          {
-            reportStatusThroughDevice(UsdLogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
-              "%s: ANARI object %s cannot be an empty string, using auto-generated name instead.", getName(), "name");
-          }
-          else
-          {
-            ParamClass::setParam(name, type, mem, device);
-            ParamClass::setParam("usd::name", type, mem, device);
-            this->formatUsdName(this->getWriteParams().usdName);
-          }
-          return false;
-        }
-        else if (strEquals(name, "usd::name"))
-        {
-          reportStatusThroughDevice(UsdLogInfo(device, this, ANARI_OBJECT, nullptr), ANARI_SEVERITY_WARNING, ANARI_STATUS_NO_ERROR,
-            "%s parameter '%s' cannot be set, only read with getProperty().", getName(), "usd::name");
-          return false;
-        }
-      }
-      return true;
+      if (!setNameParam(name, type, mem, device))
+        setParam(name, type, mem, device);
     }
 
     int getProperty(const char *name,
@@ -67,21 +40,8 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
       uint64_t size,
       UsdDevice* device) override
     {
-      if (type == ANARI_STRING && strEquals(name, "usd::name"))
-      {
-        snprintf((char*)mem, size, "%s", UsdSharedString::c_str(this->getReadParams().usdName));
-        return 1;
-      }
-      else if (type == ANARI_UINT64 && strEquals(name, "usd::name.size"))
-      {
-        if (Assert64bitStringLengthProperty(size, UsdLogInfo(device, this, ANARI_OBJECT, this->getName()), "usd::name.size"))
-        {
-          uint64_t nameLen = this->getReadParams().usdName ? strlen(this->getReadParams().usdName->c_str())+1 : 0;
-          memcpy(mem, &nameLen, size);
-        }
-        return 1;
-      }
-      else
+      int nameResult = getNameProperty(name, type, mem, size, device);
+      if(!nameResult)
       {
         UsdBridge* usdBridge = device->getUsdBridge();
         if(!usdBridge)
@@ -107,7 +67,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
           return 1;
         }
       }
-      return 0;
+      return nameResult;
     }
 
     virtual void commit(UsdDevice* device) override
@@ -115,8 +75,7 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
       cachedBridge = device->getUsdBridge();
 #endif
-      this->transferWriteToReadParams();
-      UsdBaseObject::commit(device);
+      UsdParameterizedBaseObject<T, D>::commit(device);
     }
 
     double selectObjTime(double objTimeStep, double worldTimeStep)
@@ -150,13 +109,13 @@ class UsdBridgedBaseObject : public UsdBaseObject, public UsdParameterizedObject
 #endif
 };
 
-template<class T, class D, class H>
+template<typename T, typename D, typename H>
 inline bool UsdObjectNotInitialized(const UsdBridgedBaseObject<T,D,H>* obj)
 {
   return obj && !obj->getUsdHandle().value;
 }
 
-template<class T>
+template<typename T>
 inline bool UsdObjectNotInitialized(UsdDataArray* objects)
 {
   if (!objects)

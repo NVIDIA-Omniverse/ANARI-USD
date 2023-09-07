@@ -65,20 +65,6 @@ UsdMaterial::~UsdMaterial()
 #endif
 }
 
-void UsdMaterial::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if (filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdMaterial::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
 template<typename ValueType>
 bool UsdMaterial::getMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param, MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo)
 {

@@ -27,7 +27,7 @@ struct UsdVolumeData
   const UsdDataArray* color = nullptr;
   const UsdDataArray* opacity = nullptr;
   float valueRange[2] = { 0.0f, 1.0f };
-  float densityScale = 1.0f;
+  float unitDistance = 1.0f;
 };
 
 class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolumeHandle>
@@ -35,14 +35,6 @@ class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolum
   public:
     UsdVolume(const char* name, UsdDevice* device);
     ~UsdVolume();
-
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
 
   protected:
     bool deferCommit(UsdDevice* device) override;

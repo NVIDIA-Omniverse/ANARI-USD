@@ -32,21 +32,6 @@ UsdSpatialField::~UsdSpatialField()
 #endif
 }
 
-void UsdSpatialField::filterSetParam(
-  const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if(filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdSpatialField::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
 bool UsdSpatialField::deferCommit(UsdDevice* device)
 {
   // Always defer until flushing of commit list, to give parent volumes the possibility to detect which of its child fields have been committed,

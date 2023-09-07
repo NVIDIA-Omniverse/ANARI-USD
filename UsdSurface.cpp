@@ -36,20 +36,6 @@ UsdSurface::~UsdSurface()
 #endif
 }
 
-void UsdSurface::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if (filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdSurface::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
 bool UsdSurface::deferCommit(UsdDevice* device)
 {
   // Given that all handles/data are used in doCommitRefs, which is always executed deferred, we don't need to check for initialization

@@ -11,30 +11,11 @@ struct UsdRendererData
 
 };
 
-class UsdRenderer : public UsdBaseObject, public UsdParameterizedObject<UsdRenderer, UsdRendererData>
+class UsdRenderer : public UsdParameterizedBaseObject<UsdRenderer, UsdRendererData>
 {
   public:
     UsdRenderer();
     ~UsdRenderer();
-
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
-
-    int getProperty(const char *name,
-      ANARIDataType type,
-      void *mem,
-      uint64_t size,
-      UsdDevice* device) override;
-
-    virtual void commit(UsdDevice* device) override
-    {
-      transferWriteToReadParams();
-    }
 
     void saveUsd(UsdDevice* device);
 

@@ -35,20 +35,6 @@ UsdGroup::~UsdGroup()
 #endif
 }
 
-void UsdGroup::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if (filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdGroup::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
 bool UsdGroup::deferCommit(UsdDevice* device)
 {
   const UsdGroupData& paramData = getReadParams();

@@ -39,20 +39,6 @@ UsdWorld::~UsdWorld()
 #endif
 }
 
-void UsdWorld::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device)
-{
-  if (filterNameParam(name, type, mem, device))
-    setParam(name, type, mem, device);
-}
-
-void UsdWorld::filterResetParam(const char *name)
-{
-  resetParam(name);
-}
-
 bool UsdWorld::deferCommit(UsdDevice* device)
 {
   const UsdWorldData& paramData = getReadParams();

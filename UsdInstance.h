@@ -24,14 +24,6 @@ class UsdInstance : public UsdBridgedBaseObject<UsdInstance, UsdInstanceData, Us
       UsdDevice* device);
     ~UsdInstance();
 
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
-
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;

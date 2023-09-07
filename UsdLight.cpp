@@ -17,16 +17,6 @@ UsdLight::UsdLight(const char* name, UsdDevice* device)
 UsdLight::~UsdLight()
 {}
 
-void UsdLight::filterSetParam(const char *name,
-  ANARIDataType type,
-  const void *mem,
-  UsdDevice* device) 
-{}
-
-void UsdLight::filterResetParam(
-  const char *name) 
-{}
-
 bool UsdLight::deferCommit(UsdDevice* device) 
 { 
   return false; 

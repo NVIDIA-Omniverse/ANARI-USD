@@ -18,30 +18,11 @@ struct UsdFrameData
   ANARIDataType depth = ANARI_UNKNOWN;
 };
 
-class UsdFrame : public UsdBaseObject, public UsdParameterizedObject<UsdFrame, UsdFrameData>
+class UsdFrame : public UsdParameterizedBaseObject<UsdFrame, UsdFrameData>
 {
   public:
     UsdFrame(UsdBridge* bridge);
     ~UsdFrame();
-
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
-
-    int getProperty(const char *name,
-      ANARIDataType type,
-      void *mem,
-      uint64_t size,
-      UsdDevice* device) override;
-
-    virtual void commit(UsdDevice* device) override
-    {
-      transferWriteToReadParams();
-    }
 
     const void* mapBuffer(const char* channel,
       uint32_t *width,

@@ -5,7 +5,7 @@
 
 #include "anari/backend/DeviceImpl.h"
 #include "anari/backend/LibraryImpl.h"
-#include "UsdParameterizedObject.h"
+#include "UsdBaseObject.h"
 
 #include <vector>
 #include <memory>
@@ -47,7 +47,7 @@ struct UsdDeviceData
   bool outputMdlShader = true;
 };
 
-class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParameterizedObject<UsdDevice, UsdDeviceData>
+class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<UsdDevice, UsdDeviceData>
 {
   public:
 
@@ -55,27 +55,24 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
     UsdDevice(ANARILibrary library);
     ~UsdDevice();
 
-    /////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
     // Main virtual interface to accepting API calls
-    /////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
 
-    // Data Arrays //////////////////////////////////////////////////////////////
+    // Data Arrays ////////////////////////////////////////////////////////////
 
     ANARIArray1D newArray1D(const void *appMemory,
       ANARIMemoryDeleter deleter,
       const void *userdata,
       ANARIDataType,
-      uint64_t numItems1,
-      uint64_t byteStride1) override;
+      uint64_t numItems1) override;
 
     ANARIArray2D newArray2D(const void *appMemory,
       ANARIMemoryDeleter deleter,
       const void *userdata,
       ANARIDataType,
       uint64_t numItems1,
-      uint64_t numItems2,
-      uint64_t byteStride1,
-      uint64_t byteStride2) override;
+      uint64_t numItems2) override;
 
     ANARIArray3D newArray3D(const void *appMemory,
       ANARIMemoryDeleter deleter,
@@ -83,15 +80,12 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
       ANARIDataType,
       uint64_t numItems1,
       uint64_t numItems2,
-      uint64_t numItems3,
-      uint64_t byteStride1,
-      uint64_t byteStride2,
-      uint64_t byteStride3) override;
+      uint64_t numItems3) override;
 
     void* mapArray(ANARIArray) override;
     void unmapArray(ANARIArray) override;
 
-    // Renderable Objects ///////////////////////////////////////////////////////
+    // Renderable Objects /////////////////////////////////////////////////////
 
     ANARILight newLight(const char *type) override { return nullptr; }
 
@@ -103,23 +97,37 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
     ANARISurface newSurface() override;
     ANARIVolume newVolume(const char *type) override;
 
-    // Model Meta-Data //////////////////////////////////////////////////////////
+    // Model Meta-Data ////////////////////////////////////////////////////////
 
     ANARIMaterial newMaterial(const char *material_type) override;
 
     ANARISampler newSampler(const char *type) override;
 
-    // Instancing ///////////////////////////////////////////////////////////////
+    // Instancing /////////////////////////////////////////////////////////////
 
     ANARIGroup newGroup() override;
 
-    ANARIInstance newInstance() override;
+    ANARIInstance newInstance(const char *type) override;
 
-    // Top-level Worlds /////////////////////////////////////////////////////////
+    // Top-level Worlds ///////////////////////////////////////////////////////
 
     ANARIWorld newWorld() override;
 
-    // Object + Parameter Lifetime Management ///////////////////////////////////
+    // Query functions ////////////////////////////////////////////////////////
+
+    const char ** getObjectSubtypes(ANARIDataType objectType) override;
+    const void* getObjectInfo(ANARIDataType objectType,
+        const char* objectSubtype,
+        const char* infoName,
+        ANARIDataType infoType) override;
+    const void* getParameterInfo(ANARIDataType objectType,
+        const char* objectSubtype,
+        const char* parameterName,
+        ANARIDataType parameterType,
+        const char* infoName,
+        ANARIDataType infoType) override;
+
+    // Object + Parameter Lifetime Management /////////////////////////////////
 
     void setParameter(ANARIObject object,
       const char *name,
@@ -127,13 +135,35 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
       const void *mem) override;
 
     void unsetParameter(ANARIObject object, const char *name) override;
+    void unsetAllParameters(ANARIObject o) override;
+
+    void* mapParameterArray1D(ANARIObject o,
+        const char* name,
+        ANARIDataType dataType,
+        uint64_t numElements1,
+        uint64_t *elementStride) override;
+    void* mapParameterArray2D(ANARIObject o,
+        const char* name,
+        ANARIDataType dataType,
+        uint64_t numElements1,
+        uint64_t numElements2,
+        uint64_t *elementStride) override;
+    void* mapParameterArray3D(ANARIObject o,
+        const char* name,
+        ANARIDataType dataType,
+        uint64_t numElements1,
+        uint64_t numElements2,
+        uint64_t numElements3,
+        uint64_t *elementStride) override;
+    void unmapParameterArray(ANARIObject o,
+        const char* name) override;
 
     void commitParameters(ANARIObject object) override;
 
     void release(ANARIObject _obj) override;
     void retain(ANARIObject _obj) override;
 
-    // Object Query Interface ///////////////////////////////////////////////////
+    // Object Query Interface /////////////////////////////////////////////////
 
     int getProperty(ANARIObject object,
       const char *name,
@@ -142,7 +172,7 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
       uint64_t size,
       uint32_t mask) override;
 
-    // FrameBuffer Manipulation /////////////////////////////////////////////////
+    // FrameBuffer Manipulation ///////////////////////////////////////////////
 
     ANARIFrame newFrame() override;
 
@@ -154,7 +184,7 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
 
     void frameBufferUnmap(ANARIFrame fb, const char *channel) override;
 
-    // Frame Rendering //////////////////////////////////////////////////////////
+    // Frame Rendering ////////////////////////////////////////////////////////
 
     ANARIRenderer newRenderer(const char *type) override;
 
@@ -162,7 +192,20 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
     int frameReady(ANARIFrame, ANARIWaitMask) override { return 1; }
     void discardFrame(ANARIFrame) override {}
 
-    // USD Specific /////////////////////////////////////////////////////////////
+    // UsdParameterizedBaseObject interface ///////////////////////////////////////////////////////////
+
+    void filterSetParam(
+      const char *name,
+      ANARIDataType type,
+      const void *mem,
+      UsdDevice* device) override;
+
+    void filterResetParam(
+      const char *name) override;
+
+    void commit(UsdDevice* device) override;
+
+    // USD Specific ///////////////////////////////////////////////////////////
 
     bool isInitialized() { return getUsdBridge() != nullptr; }
     UsdBridge* getUsdBridge();
@@ -181,9 +224,13 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
 
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
-    void LogAllocation(const UsdBaseObject* ptr);
-    void LogDeallocation(const UsdBaseObject* ptr);
+    void LogObjAllocation(const UsdBaseObject* ptr);
+    void LogObjDeallocation(const UsdBaseObject* ptr);
     std::vector<const UsdBaseObject*> allocatedObjects;
+
+    void LogStrAllocation(const UsdSharedString* ptr);
+    void LogStrDeallocation(const UsdSharedString* ptr);
+    std::vector<const UsdSharedString*> allocatedStrings;
 
     void LogRawAllocation(const void* ptr);
     void LogRawDeallocation(const void* ptr);
@@ -203,11 +250,13 @@ class UsdDevice : public anari::DeviceImpl, helium::RefCounted, public UsdParame
       va_list& arglist);
 
   protected:
-    void deviceSetParameter(const char *id, ANARIDataType type, const void *mem);
-    void deviceUnsetParameter(const char *id);
-    void deviceRetain();
-    void deviceRelease();
-    void deviceCommit();
+    UsdBaseObject* getBaseObjectPtr(ANARIObject object);
+
+    // UsdParameterizedBaseObject interface ///////////////////////////////////////////////////////////
+
+    bool deferCommit(UsdDevice* device) { return false; };
+    bool doCommitData(UsdDevice* device) { return false; };
+    void doCommitRefs(UsdDevice* device) {};
 
     // USD Specific Cleanup /////////////////////////////////////////////////////////////
 

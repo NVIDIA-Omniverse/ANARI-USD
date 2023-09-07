@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <array>
 // anari
-#define ANARI_FEATURE_UTILITY_IMPL
+#define ANARI_EXTENSION_UTILITY_IMPL
 #include "anari/anari_cpp.hpp"
 #include "anari/anari_cpp/ext/std.h"
 
@@ -14,7 +14,7 @@
 #include "stb_image_write.h"
 
 using uvec2 = std::array<unsigned int, 2>;
-using uvec3 = std::array<unsigned int, 3>;
+using ivec3 = std::array<int, 3>;
 using vec3 = std::array<float, 3>;
 using vec4 = std::array<float, 4>;
 using box3 = std::array<vec3, 2>;
@@ -70,22 +70,22 @@ int main(int argc, const char **argv)
       {0.8f, 0.8f, 0.8f, 1.0f},
       {0.8f, 0.8f, 0.8f, 1.0f},
       {0.0f, 0.9f, 0.0f, 1.0f}};
-  uvec3 index[] = {{0, 1, 2}, {1, 2, 3}};
+  ivec3 index[] = {{0, 1, 2}, {1, 2, 3}};
 
   printf("initialize ANARI...");
 
   anari::Library lib = anari::loadLibrary("usd", statusFunc);
 
-  anari::Features features = anari::feature::getObjectFeatures(
-      lib, "default", "default", ANARI_DEVICE);
+  anari::Extensions extensions =
+    anari::extension::getDeviceExtensionStruct(lib, "default");
 
-  if (!features.ANARI_KHR_GEOMETRY_TRIANGLE)
+  if (!extensions.ANARI_KHR_GEOMETRY_TRIANGLE)
     printf("WARNING: device doesn't support ANARI_KHR_GEOMETRY_TRIANGLE\n");
-  if (!features.ANARI_KHR_CAMERA_PERSPECTIVE)
+  if (!extensions.ANARI_KHR_CAMERA_PERSPECTIVE)
     printf("WARNING: device doesn't support ANARI_KHR_CAMERA_PERSPECTIVE\n");
-  if (!features.ANARI_KHR_LIGHT_DIRECTIONAL)
+  if (!extensions.ANARI_KHR_LIGHT_DIRECTIONAL)
     printf("WARNING: device doesn't support ANARI_KHR_LIGHT_DIRECTIONAL\n");
-  if (!features.ANARI_KHR_MATERIAL_MATTE)
+  if (!extensions.ANARI_KHR_MATERIAL_MATTE)
     printf("WARNING: device doesn't support ANARI_KHR_MATERIAL_MATTE\n");
 
   ANARIDevice d = anariNewDevice(lib, "default");

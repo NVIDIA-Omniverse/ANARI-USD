@@ -70,19 +70,11 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
     UsdGeometry(const char* name, const char* type, UsdDevice* device);
     ~UsdGeometry();
 
-    void filterSetParam(const char *name,
-      ANARIDataType type,
-      const void *mem,
-      UsdDevice* device) override;
-
-    void filterResetParam(
-      const char *name) override;
-
     bool isInstanced() const 
     { 
-      return type == GEOM_SPHERE 
-        || type == GEOM_CONE 
-        || type == GEOM_CYLINDER; 
+      return geomType == GEOM_SPHERE
+        || geomType == GEOM_CONE
+        || geomType == GEOM_CYLINDER;
     }
 
   protected:

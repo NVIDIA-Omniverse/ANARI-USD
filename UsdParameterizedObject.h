@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <vector>
 #include "UsdAnari.h"
-#include "UsdBaseObject.h"
+#include "UsdSharedObjects.h"
 #include "UsdMultiTypeParameter.h"
 #include "helium/utility/IntrusivePtr.h"
 #include "anari/frontend/type_utility.h"
@@ -20,7 +20,7 @@ class UsdBridge;
 
 // When deriving from UsdParameterizedObject<T>, define a a struct T::Data and
 // a static void T::registerParams() that registers any member of T::Data using REGISTER_PARAMETER_MACRO()
-template<class T, class D>
+template<typename T, typename D>
 class UsdParameterizedObject
 {
 public:
@@ -41,39 +41,57 @@ public:
 
   struct ParamTypeInfo
   {
-    size_t dataOffset;  // offset of data, within paramDataSet D
-    size_t typeOffset;  // offset of type, from data
-    size_t size;        // Total size of data+type
+    size_t dataOffset = 0;  // offset of data, within paramDataSet D
+    size_t typeOffset = 0;  // offset of type, from data
+    size_t size = 0;        // Total size of data+type
     UsdAnariDataTypeStore types;
   };
 
   using ParameterizedClassType = UsdParameterizedObject<T, D>;
   using ParamContainer = std::map<std::string, ParamTypeInfo>;
 
-protected:
-  UsdBaseObject** ptrToBaseObjectPtr(char* address) { return reinterpret_cast<UsdBaseObject**>(address); }
-  ANARIDataType* toAnariDataTypePtr(char* address) { return reinterpret_cast<ANARIDataType*>(address); }
-
-  bool isBaseObject(ANARIDataType type) const { return anari::isObject(type) || type == ANARI_STRING; }
-
-  void safeRefInc(char* paramPtr) // Pointer to the parameter address which holds a UsdBaseObject*
+  void* getParam(const char* name, ANARIDataType& returnType)
   {
-    UsdBaseObject** baseObj = ptrToBaseObjectPtr(paramPtr);
-    if (*baseObj)
-      (*baseObj)->refInc(helium::RefType::INTERNAL);
+    // Check if name registered
+    typename ParamContainer::iterator it = registeredParams->find(name);
+    if (it != registeredParams->end())
+    {
+      const ParamTypeInfo& typeInfo = it->second;
+
+      char* destAddress = nullptr;
+      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
+        returnType, destAddress);
+
+      return destAddress;
+    }
+
+    return nullptr;
   }
 
-  void safeRefDec(char* paramPtr) // Pointer to the parameter address which holds a UsdBaseObject*
+protected:
+  helium::RefCounted** ptrToRefCountedPtr(char* address) { return reinterpret_cast<helium::RefCounted**>(address); }
+  ANARIDataType* toAnariDataTypePtr(char* address) { return reinterpret_cast<ANARIDataType*>(address); }
+
+  bool isRefCounted(ANARIDataType type) const { return anari::isObject(type) || type == ANARI_STRING; }
+
+  void safeRefInc(char* paramPtr) // Pointer to the parameter address which holds a helium::RefCounted*
   {
-    UsdBaseObject** baseObj = ptrToBaseObjectPtr(paramPtr);
-    if (*baseObj)
+    helium::RefCounted** refCounted = ptrToRefCountedPtr(paramPtr);
+    if (*refCounted)
+      (*refCounted)->refInc(helium::RefType::INTERNAL);
+  }
+
+  void safeRefDec(char* paramPtr, ANARIDataType paramType) // Pointer to the parameter address which holds a helium::RefCounted*
+  {
+    helium::RefCounted** refCounted = ptrToRefCountedPtr(paramPtr);
+    if (*refCounted)
     {
 #ifdef CHECK_MEMLEAKS
-      logDeallocationThroughDevice(allocDevice, *baseObj);
+      logDeallocationThroughDevice(allocDevice, *refCounted, paramType);
 #endif
-      assert((*baseObj)->useCount(helium::RefType::INTERNAL) > 0);
-      (*baseObj)->refDec(helium::RefType::INTERNAL);
-      *baseObj = nullptr; // Explicitly clear the pointer (see destructor)
+      assert((*refCounted)->useCount(helium::RefType::INTERNAL) > 0);
+      (*refCounted)->refDec(helium::RefType::INTERNAL);
+      *refCounted = nullptr; // Explicitly clear the pointer (see destructor)
     }
   }
 
@@ -150,10 +168,10 @@ public:
         writeParamType, writeParamAddress);
 
       // Works even if two parameters point to the same object, as the object pointers are set to null
-      if(isBaseObject(readParamType))
-        safeRefDec(readParamAddress);
-      if(isBaseObject(writeParamType))
-        safeRefDec(writeParamAddress);
+      if(isRefCounted(readParamType))
+        safeRefDec(readParamAddress, readParamType);
+      if(isRefCounted(writeParamType))
+        safeRefDec(writeParamAddress, writeParamType);
 
       ++it;
     }
@@ -176,9 +194,7 @@ protected:
           "Attempting to set param %s with type %s", name, AnariTypeToString(srcType));
       return;
     }
-    else if( srcType == ANARI_ARRAY1D
-      || srcType == ANARI_ARRAY2D
-      || srcType == ANARI_ARRAY3D)
+    else if(anari::isArray(srcType))
     {
       // Flatten the source type in case of array
       srcType = ANARI_ARRAY;
@@ -219,8 +235,8 @@ protected:
           if (srcType == ANARI_STRING)
           {
             // Wrap strings to make them refcounted,
-            // from that point they are considered normal UsdBaseObjects.
-            UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*ptrToBaseObjectPtr(destAddress));
+            // from that point they are considered normal RefCounteds.
+            UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*ptrToRefCountedPtr(destAddress));
             const char* srcCstr = reinterpret_cast<const char*>(srcAddress);
 
             contentUpdate = contentUpdate || !destStr || !strEquals(destStr->c_str(), srcCstr); // Note that execution of strEquals => (srcType == destType)
@@ -231,7 +247,7 @@ protected:
               numBytes = sizeof(void*);
               srcAddress = &sharedStr;
 #ifdef CHECK_MEMLEAKS
-              logAllocationThroughDevice(allocDevice, sharedStr);
+              logAllocationThroughDevice(allocDevice, sharedStr, ANARI_STRING);
 #endif
             }
           }
@@ -240,12 +256,12 @@ protected:
 
           if(contentUpdate)
           {
-            if(isBaseObject(destType))
-              safeRefDec(destAddress);
+            if(isRefCounted(destType))
+              safeRefDec(destAddress, destType);
 
             std::memcpy(destAddress, srcAddress, numBytes);
 
-            if(isBaseObject(srcType))
+            if(isRefCounted(srcType))
               safeRefInc(destAddress);
           }
 
@@ -276,36 +292,52 @@ protected:
     }
   }
 
+  void resetParam(const ParamTypeInfo& typeInfo)
+  {
+    size_t paramSize = typeInfo.size;
+
+    // Copy to existing write param location
+    ANARIDataType destType;
+    char* destAddress = nullptr;
+    getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
+      destType, destAddress);
+
+    // Create temporary default-constructed parameter set and find source param address ((multi-)type is of no concern)
+    D defaultParamData;
+    char* srcAddress = paramAddress(defaultParamData, typeInfo);
+
+    // Make sure to dec existing ptr, as it will be relinquished
+    if(isRefCounted(destType))
+      safeRefDec(destAddress, destType);
+
+    // Just replace contents of the whole parameter structure, single or multiparam
+    std::memcpy(destAddress, srcAddress, paramSize);
+  }
+
   void resetParam(const char* name)
   {
     typename ParamContainer::iterator it = registeredParams->find(name);
     if (it != registeredParams->end())
     {
       const ParamTypeInfo& typeInfo = it->second;
-      size_t paramSize = typeInfo.size;
-
-      // Copy to existing write param location
-      ANARIDataType destType;
-      char* destAddress = nullptr;
-      getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
-        destType, destAddress);
-
-      // Create temporary default-constructed parameter set and find source param address ((multi-)type is of no concern)
-      D defaultParamData;
-      char* srcAddress = paramAddress(defaultParamData, typeInfo);
-
-      // Make sure to dec existing ptr, as it will be relinquished
-      if(isBaseObject(destType))
-        safeRefDec(destAddress);
-
-      // Just replace contents of the whole parameter structure, single or multiparam
-      std::memcpy(destAddress, srcAddress, paramSize);
+      resetParam(typeInfo);
 
       if(!strEquals(name, "usd::time"))
       {
         paramChanged = true;
       }
     }
+  }
+
+  void resetParams()
+  {
+    auto it = registeredParams->begin();
+    while (it != registeredParams->end())
+    {
+      resetParam(it->second);
+      ++it;
+    }
+    paramChanged = true;
   }
 
   void transferWriteToReadParams()
@@ -331,10 +363,10 @@ protected:
       if(std::memcmp(destAddress, srcAddress, typeInfo.size))
       {
         // First inc, then dec (in case branch is taken out and the pointed to object is the same)
-        if (isBaseObject(srcType))
+        if (isRefCounted(srcType))
           safeRefInc(srcAddress);
-        if (isBaseObject(destType))
-          safeRefDec(destAddress);
+        if (isRefCounted(destType))
+          safeRefDec(destAddress, destType);
 
         // Perform assignment immediately; there may be multiple parameters with the same object target,
         // which will be branched out at the compare the second time around

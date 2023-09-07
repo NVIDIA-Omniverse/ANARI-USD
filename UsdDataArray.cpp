@@ -25,7 +25,7 @@ UsdDataArray::UsdDataArray(const void *appMemory,
   int64_t byteStride3,
   UsdDevice* device
 )
-  : UsdBaseObject(ANARI_ARRAY)
+  : UsdParameterizedBaseObject<UsdDataArray, UsdDataArrayParams>(ANARI_ARRAY)
   , data(appMemory)
   , dataDeleter(deleter)
   , deleterUserData(userData)
@@ -48,7 +48,7 @@ UsdDataArray::UsdDataArray(const void *appMemory,
 }
 
 UsdDataArray::UsdDataArray(ANARIDataType dataType, uint64_t numItems1, uint64_t numItems2, uint64_t numItems3, UsdDevice* device)
-  : UsdBaseObject(ANARI_ARRAY)
+  : UsdParameterizedBaseObject<UsdDataArray, UsdDataArrayParams>(ANARI_ARRAY)
   , type(dataType)
   , isPrivate(true)
 #ifdef CHECK_MEMLEAKS
@@ -86,48 +86,23 @@ void UsdDataArray::filterSetParam(const char *name,
   const void *mem,
   UsdDevice* device)
 {
-  if(strEquals(name, "name"))
-  {
-    const char* srcCstr = reinterpret_cast<const char*>(mem);
-
-    if(srcCstr != 0 && strlen(srcCstr) > 0)
-    {
-      setParam(name, type, mem, device);
-      setParam("usd::name", type, mem, device);
-      formatUsdName(getWriteParams().usdName);
-
-      //Name is kept for the lifetime of the device (to allow using pointer for shared resource caching)
-      device->addToSharedStringList(getWriteParams().usdName);
-    }
-    else
-      device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
-        "UsdDataArray name parameter set failed: name of zero length.");
-  }
-}
-
-void UsdDataArray::filterResetParam(
-  const char *name)
-{
-
+  if(setNameParam(name, type, mem, device))
+    device->addToSharedStringList(getWriteParams().usdName);
 }
 
 int UsdDataArray::getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice* device)
 {
-  if (strEquals(name, "usd::name"))
-  {
-    device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
-      "UsdDataArray does not have a usd::name property, as it is not represented in the USD output.");
-  }
-  return 0;
+  int nameResult = getNameProperty(name, type, mem, size, device);
+  return nameResult;
 }
 
 void UsdDataArray::commit(UsdDevice* device)
 {
-  transferWriteToReadParams();
-
   if (anari::isObject(type) && (layout.numItems2 != 1 || layout.numItems3 != 1))
     device->reportStatus(this, ANARI_ARRAY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
       "UsdDataArray only supports one-dimensional ANARI_OBJECT arrays");
+
+  UsdParameterizedBaseObject<UsdDataArray, UsdDataArrayParams>::commit(device);
 }
 
 void * UsdDataArray::map(UsdDevice * device)
@@ -211,7 +186,7 @@ void UsdDataArray::decRef(const ANARIObject* anariObjects, uint64_t numAnariObje
   {
     const UsdBaseObject* baseObj = (reinterpret_cast<const UsdBaseObject*>(anariObjects[i]));
 #ifdef CHECK_MEMLEAKS
-    allocDevice->LogDeallocation(baseObj);
+    allocDevice->LogObjDeallocation(baseObj);
 #endif
     if (baseObj)
     {
@@ -303,7 +278,7 @@ void UsdDataArray::TransferAndRemoveMappedObjectCopy()
     if (newObj != oldObj && oldObj)
     {
 #ifdef CHECK_MEMLEAKS
-      allocDevice->LogDeallocation(oldObj);
+      allocDevice->LogObjDeallocation(oldObj);
 #endif
       oldObj->refDec(helium::RefType::INTERNAL);
     }
