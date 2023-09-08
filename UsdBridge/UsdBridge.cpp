@@ -224,7 +224,7 @@ const UsdBridgePrimCacheList& UsdBridgeInternals::ToCacheList(UsdBridgePrimCache
 
 UsdGeomPrimvarsAPI UsdBridgeInternals::GetBoundGeomPrimvars(const UsdBridgeHandle& material) const
 {
-  auto& it = MaterialToGeometryBinding.find(material.value);
+  auto it = MaterialToGeometryBinding.find(material.value);
   if(it != MaterialToGeometryBinding.end())
   {
     const SdfPath& boundGeomPrimPath = it->second;
