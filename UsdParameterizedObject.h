@@ -58,7 +58,7 @@ public:
     {
       const ParamTypeInfo& typeInfo = it->second;
 
-      char* destAddress = nullptr;
+      void* destAddress = nullptr;
       getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
         returnType, destAddress);
 
@@ -69,53 +69,54 @@ public:
   }
 
 protected:
-  helium::RefCounted** ptrToRefCountedPtr(char* address) { return reinterpret_cast<helium::RefCounted**>(address); }
-  ANARIDataType* toAnariDataTypePtr(char* address) { return reinterpret_cast<ANARIDataType*>(address); }
+  helium::RefCounted** ptrToRefCountedPtr(void* address) { return reinterpret_cast<helium::RefCounted**>(address); }
+  ANARIDataType* toAnariDataTypePtr(void* address) { return reinterpret_cast<ANARIDataType*>(address); }
 
   bool isRefCounted(ANARIDataType type) const { return anari::isObject(type) || type == ANARI_STRING; }
 
-  void safeRefInc(char* paramPtr) // Pointer to the parameter address which holds a helium::RefCounted*
+  void safeRefInc(void* paramPtr) // Pointer to the parameter address which holds a helium::RefCounted*
   {
-    helium::RefCounted** refCounted = ptrToRefCountedPtr(paramPtr);
-    if (*refCounted)
-      (*refCounted)->refInc(helium::RefType::INTERNAL);
+    helium::RefCounted** refCountedPP = ptrToRefCountedPtr(paramPtr);
+    if (*refCountedPP)
+      (*refCountedPP)->refInc(helium::RefType::INTERNAL);
   }
 
-  void safeRefDec(char* paramPtr, ANARIDataType paramType) // Pointer to the parameter address which holds a helium::RefCounted*
+  void safeRefDec(void* paramPtr, ANARIDataType paramType) // Pointer to the parameter address which holds a helium::RefCounted*
   {
-    helium::RefCounted** refCounted = ptrToRefCountedPtr(paramPtr);
-    if (*refCounted)
+    helium::RefCounted** refCountedPP = ptrToRefCountedPtr(paramPtr);
+    if (*refCountedPP)
     {
+      helium::RefCounted*& refCountedP = *refCountedPP;
 #ifdef CHECK_MEMLEAKS
-      logDeallocationThroughDevice(allocDevice, *refCounted, paramType);
+      logDeallocationThroughDevice(allocDevice, refCountedP, paramType);
 #endif
-      assert((*refCounted)->useCount(helium::RefType::INTERNAL) > 0);
-      (*refCounted)->refDec(helium::RefType::INTERNAL);
-      *refCounted = nullptr; // Explicitly clear the pointer (see destructor)
+      assert(refCountedP->useCount(helium::RefType::INTERNAL) > 0);
+      refCountedP->refDec(helium::RefType::INTERNAL);
+      refCountedP = nullptr; // Explicitly clear the pointer (see destructor)
     }
   }
 
-  char* paramAddress(D& paramData, const ParamTypeInfo& typeInfo)
+  void* paramAddress(D& paramData, const ParamTypeInfo& typeInfo)
   {
     return reinterpret_cast<char*>(&paramData) + typeInfo.dataOffset;
   }
 
-  ANARIDataType paramType(char* paramAddress, const ParamTypeInfo& typeInfo)
+  ANARIDataType paramType(void* paramAddress, const ParamTypeInfo& typeInfo)
   {
     if(typeInfo.types.isMultiType())
-      return *toAnariDataTypePtr(paramAddress + typeInfo.typeOffset);
+      return *toAnariDataTypePtr(static_cast<char*>(paramAddress) + typeInfo.typeOffset);
     else
       return typeInfo.types.singleType();
   }
 
-  void setMultiParamType(char* paramAddress, const ParamTypeInfo& typeInfo, ANARIDataType newType)
+  void setMultiParamType(void* paramAddress, const ParamTypeInfo& typeInfo, ANARIDataType newType)
   {
     if(typeInfo.types.isMultiType())
-      *toAnariDataTypePtr(paramAddress + typeInfo.typeOffset) = newType;
+      *toAnariDataTypePtr(static_cast<char*>(paramAddress) + typeInfo.typeOffset) = newType;
   }
 
   void getParamTypeAndAddress(D& paramData, const ParamTypeInfo& typeInfo,
-        ANARIDataType& returnType, char*& returnAddress)
+        ANARIDataType& returnType, void*& returnAddress)
   {
     returnAddress = paramAddress(paramData, typeInfo);
     returnType = paramType(returnAddress, typeInfo);
@@ -159,8 +160,8 @@ public:
       const ParamTypeInfo& typeInfo = it->second;
 
       ANARIDataType readParamType, writeParamType;
-      char* readParamAddress = nullptr;
-      char* writeParamAddress = nullptr;
+      void* readParamAddress = nullptr;
+      void* writeParamAddress = nullptr;
 
       getParamTypeAndAddress(paramDataSets[paramReadIdx], typeInfo,
         readParamType, readParamAddress);
@@ -210,7 +211,7 @@ protected:
       if (typeInfo.types.typeMatches(srcType))
       {
         ANARIDataType destType;
-        char* destAddress = nullptr;
+        void* destAddress = nullptr;
         getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
           destType, destAddress);
 
@@ -298,13 +299,13 @@ protected:
 
     // Copy to existing write param location
     ANARIDataType destType;
-    char* destAddress = nullptr;
+    void* destAddress = nullptr;
     getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
       destType, destAddress);
 
     // Create temporary default-constructed parameter set and find source param address ((multi-)type is of no concern)
     D defaultParamData;
-    char* srcAddress = paramAddress(defaultParamData, typeInfo);
+    void* srcAddress = paramAddress(defaultParamData, typeInfo);
 
     // Make sure to dec existing ptr, as it will be relinquished
     if(isRefCounted(destType))
@@ -350,8 +351,8 @@ protected:
       const ParamTypeInfo& typeInfo = it->second;
 
       ANARIDataType srcType, destType;
-      char* srcAddress = nullptr;
-      char* destAddress = nullptr;
+      void* srcAddress = nullptr;
+      void* destAddress = nullptr;
 
       getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
         srcType, srcAddress);

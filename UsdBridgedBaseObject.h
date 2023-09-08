@@ -5,11 +5,10 @@
 
 #include "UsdBaseObject.h"
 #include "UsdBridge/UsdBridge.h"
+#include "UsdDevice.h"
 #include "UsdDataArray.h"
 
 #include <cmath>
-
-class UsdDevice;
 
 template<typename T, typename D, typename H>
 class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
@@ -30,8 +29,8 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
       const void *mem,
       UsdDevice* device) override
     {
-      if (!setNameParam(name, type, mem, device))
-        setParam(name, type, mem, device);
+      if (!this->setNameParam(name, type, mem, device))
+        this->setParam(name, type, mem, device);
     }
 
     int getProperty(const char *name,
@@ -40,7 +39,7 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
       uint64_t size,
       UsdDevice* device) override
     {
-      int nameResult = getNameProperty(name, type, mem, size, device);
+      int nameResult = this->getNameProperty(name, type, mem, size, device);
       if(!nameResult)
       {
         UsdBridge* usdBridge = device->getUsdBridge();

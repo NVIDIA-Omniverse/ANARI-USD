@@ -66,23 +66,23 @@ class UsdParameterizedBaseObject : public UsdBaseObject, public UsdParameterized
       const void *mem,
       UsdDevice* device) override
     {
-      setParam(name, type, mem, device);
+      ParamClass::setParam(name, type, mem, device);
     }
 
     void filterResetParam(
       const char *name) override
     {
-      resetParam(name);
+      ParamClass::resetParam(name);
     }
 
     void resetAllParams() override
     {
-      resetParams();
+      ParamClass::resetParams();
     }
 
     void* getParameter(const char* name, ANARIDataType& returnType) override
     {
-      return getParam(name, returnType);
+      return ParamClass::getParam(name, returnType);
     }
 
     int getProperty(const char *name,
@@ -96,7 +96,7 @@ class UsdParameterizedBaseObject : public UsdBaseObject, public UsdParameterized
 
     void commit(UsdDevice* device) override
     {
-      transferWriteToReadParams();
+      ParamClass::transferWriteToReadParams();
       UsdBaseObject::commit(device);
     }
 
