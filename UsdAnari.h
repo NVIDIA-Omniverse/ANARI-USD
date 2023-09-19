@@ -42,6 +42,13 @@ namespace
   {
     return strcmp(arg0, arg1) == 0;
   }
+
+  template <typename T>
+  inline void writeToVoidP(void *_p, T v)
+  {
+    T *p = (T *)_p;
+    *p = v;
+  }
 }
 
 // Standard log info

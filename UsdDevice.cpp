@@ -16,6 +16,7 @@
 #include "UsdRenderer.h"
 #include "UsdFrame.h"
 #include "UsdLight.h"
+#include "UsdDeviceQueries.h"
 
 #include <cstdarg>
 #include <cstdio>
@@ -25,33 +26,6 @@
 #include <algorithm>
 
 static char deviceName[] = "usd";
-
-namespace anari {
-namespace usd {
-
-const char **query_object_types(ANARIDataType type);
-const void *query_object_info(ANARIDataType type,
-    const char *subtype,
-    const char *infoName,
-    ANARIDataType infoType);
-const void *query_param_info(ANARIDataType type,
-    const char *subtype,
-    const char *paramName,
-    ANARIDataType paramType,
-    const char *infoName,
-    ANARIDataType infoType);
-
-const char **query_extensions();
-
-} // namespace usd
-} // namespace anari
-
-template <typename T>
-inline void writeToVoidP(void *_p, T v)
-{
-  T *p = (T *)_p;
-  *p = v;
-}
 
 class UsdDeviceInternals
 {

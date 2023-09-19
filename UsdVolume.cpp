@@ -12,7 +12,7 @@ DEFINE_PARAMETER_MAP(UsdVolume,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
   REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("usd::preClassified", ANARI_BOOL, preClassified)
-  REGISTER_PARAMETER_MACRO("usd::time::field", ANARI_FLOAT64, fieldRefTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::time::value", ANARI_FLOAT64, fieldRefTimeStep)
   REGISTER_PARAMETER_MACRO("value", ANARI_SPATIAL_FIELD, field)
   REGISTER_PARAMETER_MACRO("color", ANARI_ARRAY, color)
   REGISTER_PARAMETER_MACRO("opacity", ANARI_ARRAY, opacity)

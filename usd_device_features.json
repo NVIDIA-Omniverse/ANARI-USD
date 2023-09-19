@@ -1,7 +1,7 @@
 {
     "info" : {
         "name" : "USD_DEVICE",
-        "type" : "feature",
+        "type" : "extension",
         "dependencies" : []
     },
 
@@ -13,47 +13,73 @@
                     "name" : "usd::serialize.hostName",
                     "types" : ["ANARI_STRING"],
                     "tags" : [],
-                    "description" : "Omniverse server name"
+                    "description" : "Nucleus server name. If not present, output will be routed to local disk."
                 }, {
                     "name" : "usd::serialize.location",
                     "types" : ["ANARI_STRING"],
                     "tags" : [],
+                    "default" : "./",
                     "description" : "USD output path"
+                }, {
+                    "name" : "usd::serialize.newSession",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Is a new session directory created on device commit, or the last (ie. highest numbered) one reused."
                 }, {
                     "name" : "usd::serialize.outputBinary",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
-                    "description" : "Enable binary USD output"
-                }, {
-                    "name" : "usd::newSession",
-                    "types" : ["ANARI_BOOL"],
-                    "tags" : [],
-                    "description" : "TBD"
+                    "default" : false,
+                    "description" : "Enable binary .usd output, or ascii-based .usda"
                 }, {
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Global timestep"
+                    "default" : 0.0,
+                    "description" : "Global scene timestep"
                 }, {
                     "name" : "usd::writeAtCommit",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
-                    "description" : "TBD"
+                    "default" : false,
+                    "description" : "(Experimental) Output USD as much as possible at commit of objects instead of anariRenderFrame"
                 }, {
                     "name" : "usd::output.material",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
-                    "description" : "TBD"
+                    "default" : true,
+                    "description" : "Output material objects."
                 }, {
-                    "name" : "usd::output.prieviewSurfaceShader",
+                    "name" : "usd::output.previewSurfaceShader",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
-                    "description" : "TBD"
+                    "default" : true,
+                    "description" : "Output materials according to the USD preview surface schema"
                 }, {
                     "name" : "usd::output.mdlShader",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
-                    "description" : "TBD"
+                    "default" : true,
+                    "description" : "Output materials according to the Omniverse MDL schema"
+                }, {
+                    "name" : "usd::garbageCollect",
+                    "types" : [],
+                    "tags" : [],
+                    "description" : "Instruct the USD device to remove USD output of objects that are not referenced within USD by other objects"
+                }, {
+                    "name" : "usd::removeUnusedNames",
+                    "types" : [],
+                    "tags" : [],
+                    "description" : "Clean up the name cache for object name generation and uniqueness checks"
+                }, {
+                    "name" : "usd::connection.logVerbosity",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "default" : 0,
+                    "minimum" : 0,
+                    "maximum" : 4,
+                    "description" : "Verbosity of logging information from the Nucleus connection, with the highest value being the loudest, similar to debug."
                 }, {
                     "name" : "usd::sceneStage",
                     "types" : ["ANARI_VOID_POINTER"],
@@ -63,7 +89,8 @@
                     "name" : "usd::enableSaving",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
-                    "description" : "TBD"
+                    "default" : true,
+                    "description" : "Allows the USD output to be written out, or just updated in memory if disabled. Useful in conjunction with usd::sceneStage."
                 }
             ]
         }, {
@@ -74,7 +101,8 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the geometry object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
@@ -90,7 +118,8 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the geometry object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
@@ -106,12 +135,19 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the geometry object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::usePointInstancer",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Use UsdGeomPointInstancer instead of UsdGeomPoints to represent the spheres"
                 }
             ]
         }, {
@@ -122,7 +158,8 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the geometry object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
@@ -138,7 +175,8 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the geometry object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
@@ -154,7 +192,8 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the geometry object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
@@ -170,28 +209,70 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the material object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::time::sampler::color",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the sampler object attached to the color parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                }, {
+                    "name" : "usd::time::sampler::opacity",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the sampler object attached to the opacity parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
                 }
             ]
         }, {
             "type" : "ANARI_MATERIAL",
-            "name" : "transparentMatte",
+            "name" : "physicallyBased",
             "parameters" : [
                 {
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the material object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::time::sampler::baseColor",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the sampler object attached to the baseColor parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                }, {
+                    "name" : "usd::time::sampler::opacity",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the sampler object attached to the opacity parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                }, {
+                    "name" : "usd::time::sampler::emissive",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the sampler object attached to the emissive parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                }, {
+                    "name" : "usd::time::sampler::roughness",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the sampler object attached to the roughness parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                }, {
+                    "name" : "usd::time::sampler::metallic",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the sampler object attached to the metallic parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                }, {
+                    "name" : "usd::time::sampler::ior",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the sampler object attached to the ior parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
                 }
             ]
         }, {
@@ -202,7 +283,8 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the spatialfield object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
@@ -218,12 +300,18 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the sampler object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::imageUrl",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "Location of an image which will directly be written into the USD sampler"
                 }
             ]
         }, {
@@ -234,12 +322,18 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the sampler object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::imageUrl",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "Location of an image which will directly be written into the USD sampler"
                 }
             ]
         }, {
@@ -250,23 +344,40 @@
                     "name" : "usd::time",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "Timestep"
+                    "default" : 0.0,
+                    "description" : "Timestep of the sampler object"
                 }, {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::imageUrl",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "Location of an image which will directly be written into the USD sampler"
                 }
             ]
         }, {
             "type" : "ANARI_VOLUME",
-            "name" : "scivis",
+            "name" : "transferFunction1D",
             "parameters" : [
                 {
                     "name" : "usd::timeVarying",
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::preClassified",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Use preclassification to produce a VDB grid with a color and opacity field, instead of a density field"
+                }, {
+                    "name" : "usd::time::value",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the object attached to the value parameter of the volume, at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
                 }
             ]
         }, {
@@ -307,6 +418,16 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::time::geometry",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the object attached to the geometry parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                }, {
+                    "name" : "usd::time::material",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "description" : "The timestep of the object attached to the material parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
                 }
             ]
         }

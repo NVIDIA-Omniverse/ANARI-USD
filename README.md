@@ -77,9 +77,7 @@ ANARI scene objects:
     - unsupported for now
 - Camera is not supported
 - Properties:
-    - `extension` not queryable on Renderer
     - `bounds` property not queryable (World, Instance, etc.)
-- Object introspection is out of date
 
 ### Detailed build info #
 
