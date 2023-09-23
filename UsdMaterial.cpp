@@ -271,7 +271,7 @@ void UsdMaterial::doCommitRefs(UsdDevice* device)
   getSamplerRefData(paramData.ior, paramData.iorSamplerTimeStep, DMI::IOR, device, logInfo);
 
   if(samplerHandles.size())
-    usdBridge->SetSamplerRefs(usdHandle, samplerHandles.data(), samplerRefDatas.data(), samplerHandles.size(), worldTimeStep);
+    usdBridge->SetSamplerRefs(usdHandle, samplerHandles.data(), samplerHandles.size(), worldTimeStep, samplerRefDatas.data());
   else
     usdBridge->DeleteSamplerRefs(usdHandle, worldTimeStep);
 }

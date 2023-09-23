@@ -143,11 +143,11 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::usePointInstancer",
+                    "name" : "usd::useUsdGeomPoints",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
-                    "description" : "Use UsdGeomPointInstancer instead of UsdGeomPoints to represent the spheres"
+                    "description" : "For sphere geometries, use UsdGeomPoints instead of UsdGeomPointInstancer to represent the spheres. Cannot be changed after the first commit."
                 }
             ]
         }, {

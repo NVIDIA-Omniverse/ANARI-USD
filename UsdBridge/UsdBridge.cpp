@@ -29,10 +29,12 @@ namespace
   const char* const instancePathRp = "instances";
   const char* const surfacePathRp = "surfaces";
   const char* const volumePathRp = "volumes";
-  const char* const geometryPathRp = "geometry"; // created in surfaces parent class
-  const char* const fieldPathRp = "spatialfield"; // created in volumes parent class
-  const char* const materialPathRp = "material"; // created in surfaces parent class
+  const char* const geometryPathRp = "geometry"; // created in surface parent class
+  const char* const fieldPathRp = "spatialfield"; // created in volume parent class
+  const char* const materialPathRp = "material"; // created in surface parent class
   const char* const samplerPathRp = "samplers"; // created in material parent class (separation from other UsdShader prims in material)
+  const char* const protoShapePathRp = "protoshapes"; // created in geometry parent class
+  const char* const protoGeometryPathRp = "protogeometries"; // created in geometry parent class
 
   // Postfixes for prim stage names, also used for manifests
   const char* const geomPrimStagePf = "_Geom";
@@ -164,6 +166,7 @@ struct UsdBridgeInternals
   // Temp arrays
   UsdBridgePrimCacheList TempPrimCaches;
   SdfPrimPathList TempPrimPaths;
+  SdfPrimPathList ProtoPrimPaths;
 };
 
 
@@ -619,9 +622,11 @@ void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geome
   UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
   UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
 
-  bool timeVarying = false;
+  bool timeVarying = false; // On a surface, the path to the geometry cannot change over time (ie. is uniformly set), since material is not timevarying either (due to the material binding path rel from the geometry) and the geometry contents itself are already timevarying.
+  bool valueClip = true;
+  bool clipStages = true;
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, true, true, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks);
+  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, clipStages, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks);
 
   BRIDGE_USDWRITER.UnbindMaterialFromGeom(refGeomPath);
 }
@@ -661,19 +666,21 @@ void UsdBridge::SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle
   UsdBridgePrimCache* fieldCache = BRIDGE_CACHE.ConvertToPrimCache(field);
 
   bool timeVarying = false;
+  bool valueClip = true;
+  bool clipStages = false;
   BRIDGE_USDWRITER.ManageUnusedRefs(volumeCache, Internals->ToCacheList(fieldCache), fieldPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
-  SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, timeVarying, true, false, nullptr, timeStep, fieldTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
+  SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, fieldTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
 }
 
-void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandle* samplers, const UsdSamplerRefData* samplerRefData, size_t numSamplers, double timeStep)
+void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandle* samplers, size_t numSamplers, double timeStep, const UsdSamplerRefData* samplerRefData)
 {
   if (material.value == nullptr) return;
 
   UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
   const UsdBridgePrimCacheList& samplerCaches = Internals->ExtractPrimCaches<UsdSamplerHandle>(samplers, numSamplers);
 
-  // Sampler references cannot be time-varying (connectToSource doesn't allow for that), and are set on the scenestage prim (so they inherit the type of the sampler prim)
+  // Sampler references cannot be time-varying (ie. path to sampler cannot change over time - connectToSource doesn't allow for that), and are set on the scenestage prim (so they inherit the type of the sampler prim)
   // However, they do allow value clip retiming.
   bool timeVarying = false;
   bool valueClip = true;
@@ -696,6 +703,26 @@ void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandl
   if(this->EnableSaving)
     materialStage->Save();
 #endif
+}
+
+void UsdBridge::SetPrototypeRefs(UsdGeometryHandle geometry, const UsdGeometryHandle* protoGeometries, size_t numProtoGeometries, double timeStep, double* protoTimeSteps)
+{
+  if (geometry.value == nullptr) return;
+
+  UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
+  const UsdBridgePrimCacheList& protoGeomCaches = Internals->ExtractPrimCaches<UsdGeometryHandle>(protoGeometries, numProtoGeometries);
+
+  // Due to prototype rel paths, the path to the prototype itself cannot change. Also, the contents of the prototype itself can already timevary.
+  bool timeVarying = false;
+  bool valueClip = true;
+  bool clipStages = true;
+  BRIDGE_USDWRITER.ManageUnusedRefs(geometryCache, protoGeomCaches, protoGeometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+
+  Internals->ProtoPrimPaths.resize(numProtoGeometries);
+  for(uint64_t i = 0; i < numProtoGeometries; ++i)
+  {
+    Internals->ProtoPrimPaths[i] = BRIDGE_USDWRITER.AddRef(geometryCache, protoGeomCaches[i], protoGeometryPathRp, timeVarying, valueClip, clipStages, geomClipPf, timeStep, protoTimeSteps[i], Internals->RefModCallbacks);
+  }
 }
 
 template<typename ParentHandleType>
@@ -756,6 +783,12 @@ void UsdBridge::DeleteMaterialRef(UsdSurfaceHandle surface, double timeStep)
 void UsdBridge::DeleteSamplerRefs(UsdMaterialHandle material, double timeStep)
 {
   DeleteAllRefs(material, samplerPathRp, false, timeStep);
+}
+
+void UsdBridge::DeletePrototypeRefs(UsdGeometryHandle geometry, double timeStep)
+{
+  Internals->ProtoPrimPaths.resize(0);
+  DeleteAllRefs(geometry, protoGeometryPathRp, false, timeStep);
 }
 
 void UsdBridge::UpdateBeginEndTime(double timeStep)
@@ -885,6 +918,17 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
   if(this->EnableSaving)
     samplerStage->Save();
 #endif
+}
+
+void UsdBridge::SetPrototypeData(UsdGeometryHandle geometry, const UsdBridgeInstancerRefData& instancerRefData)
+{
+  if (geometry.value == nullptr) return;
+
+  UsdBridgePrimCache* geomCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
+
+  SdfPath& geomPath = geomCache->PrimPath;
+
+  BRIDGE_USDWRITER.UpdateUsdInstancerPrototypes(geomPath, instancerRefData, Internals->ProtoPrimPaths, protoShapePathRp); // The geometry reference path is already merged into ProtoPrimPaths
 }
 
 void UsdBridge::ChangeMaterialInputAttributes(UsdMaterialHandle material, const MaterialInputAttribName* inputAttribs, size_t numInputAttribs, double timeStep, MaterialDMI timeVarying)

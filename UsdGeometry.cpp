@@ -15,19 +15,26 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
   REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
   REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
-  REGISTER_PARAMETER_MACRO("usd::usePointInstancer", ANARI_INT32, UseUsdGeomPointInstancer) // Use UsdGeomPointInstancer instead of UsdGeomPoints
+  REGISTER_PARAMETER_MACRO("usd::time::shapeGeometry", ANARI_FLOAT64, shapeGeometryRefTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::useUsdGeomPoints", ANARI_INT32, UseUsdGeomPoints)
   REGISTER_PARAMETER_MACRO("primitive.index", ANARI_ARRAY, indices)
   REGISTER_PARAMETER_MACRO("primitive.normal", ANARI_ARRAY, primitiveNormals)
   REGISTER_PARAMETER_MACRO("primitive.color", ANARI_ARRAY, primitiveColors)
   REGISTER_PARAMETER_MACRO("primitive.radius", ANARI_ARRAY, primitiveRadii)
+  REGISTER_PARAMETER_MACRO("primitive.scale", ANARI_ARRAY, primitiveScales)
+  REGISTER_PARAMETER_MACRO("primitive.orientation", ANARI_ARRAY, primitiveOrientations)
   REGISTER_PARAMETER_ARRAY_MACRO("primitive.attribute", ANARI_ARRAY, primitiveAttributes, MAX_ATTRIBS)
   REGISTER_PARAMETER_MACRO("primitive.id", ANARI_ARRAY, primitiveIds)
   REGISTER_PARAMETER_MACRO("vertex.position", ANARI_ARRAY, vertexPositions)
   REGISTER_PARAMETER_MACRO("vertex.normal", ANARI_ARRAY, vertexNormals)
   REGISTER_PARAMETER_MACRO("vertex.color", ANARI_ARRAY, vertexColors)
   REGISTER_PARAMETER_MACRO("vertex.radius", ANARI_ARRAY, vertexRadii)
+  REGISTER_PARAMETER_MACRO("vertex.scale", ANARI_ARRAY, vertexScales)
+  REGISTER_PARAMETER_MACRO("vertex.orientation", ANARI_ARRAY, vertexOrientations)
   REGISTER_PARAMETER_ARRAY_MACRO("vertex.attribute", ANARI_ARRAY, vertexAttributes, MAX_ATTRIBS)
   REGISTER_PARAMETER_MACRO("radius", ANARI_FLOAT32, radiusConstant)
+  REGISTER_PARAMETER_MACRO("shapeType", ANARI_STRING, shapeType)
+  REGISTER_PARAMETER_MACRO("shapeGeometry", ANARI_GEOMETRY, shapeGeometry)
 ) // See .h for usage.
 
 struct UsdGeometryTempArrays
@@ -39,6 +46,7 @@ struct UsdGeometryTempArrays
   std::vector<int> CurveLengths;
   std::vector<float> PointsArray;
   std::vector<float> NormalsArray;
+  std::vector<float> RadiiArray;
   std::vector<float> ScalesArray;
   std::vector<float> OrientationsArray;
   std::vector<int64_t> IdsArray;
@@ -127,6 +135,35 @@ struct UsdGeometryTempArrays
 
 namespace
 {
+  struct UsdGeometryDebugData
+  {
+    UsdDevice* device = nullptr;
+    UsdGeometry* geometry = nullptr;
+    const char* debugName = nullptr;
+  };
+
+  UsdGeometry::GeomType GetGeomType(const char* type)
+  {
+    UsdGeometry::GeomType geomType;
+
+    if (strEquals(type, "sphere"))
+      geomType = UsdGeometry::GEOM_SPHERE;
+    else if (strEquals(type, "cylinder"))
+      geomType = UsdGeometry::GEOM_CYLINDER;
+    else if (strEquals(type, "cone"))
+      geomType = UsdGeometry::GEOM_CONE;
+    else if (strEquals(type, "curve"))
+      geomType = UsdGeometry::GEOM_CURVE;
+    else if(strEquals(type, "triangle"))
+      geomType = UsdGeometry::GEOM_TRIANGLE;
+    else if (strEquals(type, "quad"))
+      geomType = UsdGeometry::GEOM_QUAD;
+    else
+      geomType = UsdGeometry::GEOM_UNKNOWN;
+
+    return geomType;
+  }
+
   bool isBitSet(int value, int bit)
   {
     return (bool)(value & (1 << bit));
@@ -237,15 +274,23 @@ namespace
 
       uint64_t numVertices = paramData.vertexPositions->getLayout().numItems1;
 
+      ANARIDataType scaleType = paramData.vertexScales ? paramData.vertexScales->getType()
+        : (paramData.primitiveScales ? paramData.primitiveScales->getType() : ANARI_UNKNOWN);
+      size_t scaleComps = anari::componentsOf(scaleType);
+
       bool perPrimNormals = !paramData.vertexNormals && paramData.primitiveNormals;
-      bool perPrimScales = !paramData.vertexRadii && paramData.primitiveRadii;
+      bool perPrimRadii = !paramData.vertexRadii && paramData.primitiveRadii;
+      bool perPrimScales = !paramData.vertexScales && paramData.primitiveScales;
       bool perPrimColors = !paramData.vertexColors && paramData.primitiveColors;
+      bool perPrimOrientations = !paramData.vertexOrientations && paramData.primitiveOrientations;
 
       ANARIDataType colorType = perPrimColors ? paramData.primitiveColors->getType() : ANARI_UINT8; // Vertex colors aren't reordered
 
       // Effectively only has to reorder if the source array is perPrim, otherwise this function effectively falls through and the source array is assigned directly at parent scope.
       tempArrays->NormalsArray.resize(perPrimNormals ? numVertices*3 : 0);
-      tempArrays->ScalesArray.resize(perPrimScales ?  numVertices : 0);
+      tempArrays->RadiiArray.resize(perPrimScales ?  numVertices : 0);
+      tempArrays->ScalesArray.resize(perPrimScales ?  numVertices*scaleComps : 0);
+      tempArrays->OrientationsArray.resize(perPrimOrientations ? numVertices*4 : 0);
       tempArrays->IdsArray.resize(numVertices, -1); // Always filled, since indices implies necessity for invisibleIds, and therefore also an Id array
       tempArrays->resetColorsArray(perPrimColors ?  numVertices : 0, colorType);
       for(size_t attribIdx = 0; attribIdx < attribDataArrays.size(); ++attribIdx)
@@ -266,14 +311,31 @@ namespace
         if (perPrimNormals)
         {
           float* normalsDest = &tempArrays->NormalsArray[vertIdx * 3];
-          getValues2(paramData.primitiveNormals->getData(), paramData.primitiveNormals->getType(), primIdx, normalsDest);
+          getValues3(paramData.primitiveNormals->getData(), paramData.primitiveNormals->getType(), primIdx, normalsDest);
+        }
+
+        // Orientations
+        if (perPrimOrientations)
+        {
+          float* orientsDest = &tempArrays->OrientationsArray[vertIdx*4];
+          getValues4(paramData.primitiveOrientations->getData(), paramData.primitiveOrientations->getType(), primIdx, orientsDest);
+        }
+
+        // Radii
+        if (perPrimRadii)
+        {
+          float* radiiDest = &tempArrays->RadiiArray[vertIdx];
+          getValues1(paramData.primitiveRadii->getData(), paramData.primitiveRadii->getType(), primIdx, radiiDest);
         }
 
         // Scales
         if (perPrimScales)
         {
-          float* scalesDest = &tempArrays->ScalesArray[vertIdx];
-          getValues2(paramData.primitiveRadii->getData(), paramData.primitiveRadii->getType(), primIdx, scalesDest);
+          float* scalesDest = &tempArrays->ScalesArray[vertIdx*scaleComps];
+          if(scaleComps == 1)
+            getValues1(paramData.primitiveScales->getData(), paramData.primitiveScales->getType(), primIdx, scalesDest);
+          else if(scaleComps == 3)
+            getValues3(paramData.primitiveScales->getData(), paramData.primitiveScales->getType(), primIdx, scalesDest);
         }
 
         // Colors 
@@ -593,6 +655,32 @@ namespace
       tempArrays->CurveLengths.push_back(curveLength);
     }
   }
+
+  template<typename T>
+  void setInstancerDataArray(const char* arrayName, const UsdDataArray* vertArray, const UsdDataArray* primArray, const std::vector<T>& tmpArray, UsdBridgeType tmpArrayType,
+    void const*& instancerDataArray, UsdBridgeType& instancerDataArrayType, const UsdGeometryData& paramData, const UsdGeometryDebugData& dbgData)
+  {
+    // Normals
+    if (paramData.indices && tmpArray.size())
+    {
+      instancerDataArray = tmpArray.data();
+      instancerDataArrayType = tmpArrayType;
+    }
+    else
+    {
+      const UsdDataArray* normals = vertArray;
+      if (normals)
+      {
+        instancerDataArray = normals->getData();
+        instancerDataArrayType = AnariToUsdBridgeType(normals->getType());
+      }
+      else if(primArray)
+      {
+        dbgData.device->reportStatus(dbgData.geometry, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+          "UsdGeometry '%s' primitive.%s not transferred: per-primitive arrays provided without setting primitive.index", dbgData.debugName, arrayName);
+      }
+    }
+  }
 }
 
 UsdGeometry::UsdGeometry(const char* name, const char* type, UsdDevice* device)
@@ -600,28 +688,12 @@ UsdGeometry::UsdGeometry(const char* name, const char* type, UsdDevice* device)
 {
   bool createTempArrays = false;
 
-  if (strEquals(type, "sphere"))
-    geomType = GEOM_SPHERE;
-  else if (strEquals(type, "cylinder"))
-  {
-    geomType = GEOM_CYLINDER;
+  geomType = GetGeomType(type);
+
+  if(isInstanced() || geomType == GEOM_CURVE)
     createTempArrays = true;
-  }
-  else if (strEquals(type, "cone"))
-  {
-    geomType = GEOM_CONE;
-    createTempArrays = true;
-  }
-  else if (strEquals(type, "curve"))
-  {
-    geomType = GEOM_CURVE;
-    createTempArrays = true;
-  }
-  else if(strEquals(type, "triangle"))
-    geomType = GEOM_TRIANGLE;
-  else if (strEquals(type, "quad"))
-    geomType = GEOM_QUAD;
-  else
+
+  if(geomType == GEOM_UNKNOWN)
     device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' construction failed: type %s not supported", getName(), name);
 
   if(createTempArrays)
@@ -634,6 +706,23 @@ UsdGeometry::~UsdGeometry()
   if(cachedBridge)
     cachedBridge->DeleteGeometry(usdHandle);
 #endif
+}
+
+void UsdGeometry::filterSetParam(const char *name,
+      ANARIDataType type,
+      const void *mem,
+      UsdDevice* device)
+{
+  if(geomType == GEOM_GLYPH && strEquals(name, "shapeType") || strEquals(name, "shapeGeometry"))
+    protoShapeChanged = true;
+
+  if(usdHandle.value && strEquals(name, "usd::useUsdGeomPoints"))
+  {
+    device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' filterSetParam failed: 'usd::useUsdGeomPoints' parameter cannot be changed after the first commit", getName());
+    return;
+  }
+
+  BridgedBaseObjectType::filterSetParam(name, type, mem, device);
 }
 
 template<typename GeomDataType>
@@ -739,20 +828,8 @@ void UsdGeometry::initializeGeomData(UsdBridgeInstancerData& geomData)
     & (isBitSet(paramData.timeVarying, 2) ? DMI::ALL : ~DMI::COLORS)
     & (isBitSet(paramData.timeVarying, 5) ? DMI::ALL : ~DMI::INSTANCEIDS);
   setAttributeTimeVarying<UsdBridgeInstancerData>(geomData.TimeVarying);
-  geomData.UsePointInstancer = paramData.UseUsdGeomPointInstancer;
 
-  switch (geomType)
-  {
-    case GEOM_CYLINDER:
-      geomData.DefaultShape = UsdBridgeInstancerData::SHAPE_CYLINDER;
-      break;
-    case GEOM_CONE:
-      geomData.DefaultShape = UsdBridgeInstancerData::SHAPE_CONE;
-      break;
-    default:
-      geomData.DefaultShape = UsdBridgeInstancerData::SHAPE_SPHERE;
-      break;
-  };
+  geomData.UseUsdGeomPoints = geomType == GEOM_SPHERE && paramData.UseUsdGeomPoints;
 }
 
 void UsdGeometry::initializeGeomData(UsdBridgeCurveData& geomData)
@@ -768,6 +845,32 @@ void UsdGeometry::initializeGeomData(UsdBridgeCurveData& geomData)
     & (isBitSet(paramData.timeVarying, 2) ? DMI::ALL : ~DMI::COLORS)
     & ((isBitSet(paramData.timeVarying, 0) || isBitSet(paramData.timeVarying, 3)) ? DMI::ALL : ~DMI::CURVELENGTHS);
   setAttributeTimeVarying<UsdBridgeCurveData>(geomData.TimeVarying);
+}
+
+void UsdGeometry::initializeGeomRefData(UsdBridgeInstancerRefData& geomRefData)
+{
+  const UsdGeometryData& paramData = getReadParams();
+
+  // The anari side currently only supports only one shape, so just set DefaultShape
+  bool isGlyph = geomType == GEOM_GLYPH;
+  if(isGlyph && paramData.shapeGeometry)
+    geomRefData.DefaultShape = UsdBridgeInstancerRefData::SHAPE_MESH;
+  else
+  {
+    UsdGeometry::GeomType defaultShape = (isGlyph && paramData.shapeType) ? GetGeomType(paramData.shapeType->c_str()) : geomType;
+    switch (defaultShape)
+    {
+      case GEOM_CYLINDER:
+        geomRefData.DefaultShape = UsdBridgeInstancerRefData::SHAPE_CYLINDER;
+        break;
+      case GEOM_CONE:
+        geomRefData.DefaultShape = UsdBridgeInstancerRefData::SHAPE_CONE;
+        break;
+      default:
+        geomRefData.DefaultShape = UsdBridgeInstancerRefData::SHAPE_SPHERE;
+        break;
+    };
+  }
 }
 
 bool UsdGeometry::checkArrayConstraints(const UsdDataArray* vertexArray, const UsdDataArray* primArray,
@@ -832,6 +935,8 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
     success = success && checkArrayConstraints(paramData.vertexAttributes[i], paramData.primitiveAttributes[i], "vertex/primitive.attribute", device, debugName, i);
   success = success && checkArrayConstraints(paramData.vertexColors, paramData.primitiveColors, "vertex/primitive.color", device, debugName);
   success = success && checkArrayConstraints(paramData.vertexRadii, paramData.primitiveRadii, "vertex/primitive.radius", device, debugName);
+  success = success && checkArrayConstraints(paramData.vertexScales, paramData.primitiveScales, "vertex/primitive.scale", device, debugName);
+  success = success && checkArrayConstraints(paramData.vertexOrientations, paramData.primitiveOrientations, "vertex/primitive.orientation", device, debugName);
   success = success && checkArrayConstraints(nullptr, paramData.primitiveIds, "primitive.id", device, debugName);
 
   if (!success)
@@ -855,14 +960,14 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
       device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' has 'primitive.index' of type other than ANARI_INT32, which may result in an overflow for FaceVertexIndicesAttr of UsdGeomMesh.", debugName);
     }
 
-    if (geomType == GEOM_SPHERE || geomType == GEOM_CURVE)
+    if (geomType == GEOM_SPHERE || geomType == GEOM_CURVE || geomType == GEOM_GLYPH)
     {
-      if(geomType == GEOM_SPHERE && !paramData.UseUsdGeomPointInstancer)
-        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' is a sphere geometry with indices, but the usd::usePointInstancer parameter is not set, so all vertices will show as spheres.", debugName);
+      if(geomType == GEOM_SPHERE && paramData.UseUsdGeomPoints)
+        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' is a sphere geometry with indices, but the usd::useUsdGeomPoints parameter is not set, so all vertices will show as spheres.", debugName);
 
       if (indexType != ANARI_INT32 && indexType != ANARI_UINT32 && indexType != ANARI_INT64 && indexType != ANARI_UINT64)
       {
-        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: 'primitive.index' parameter should be of type ANARI_(U)INT.", debugName);
+        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: 'primitive.index' parameter should be of type ANARI_(U)INT32/64.", debugName);
         return false;
       }
     }
@@ -898,7 +1003,7 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
     ANARIDataType arrayType = normals->getType();
     if (arrayType != ANARI_FLOAT32_VEC3 && arrayType != ANARI_FLOAT64_VEC3)
     {
-      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: 'vertex/primitive.normal' parameter should be of type ANARI_FLOAT32 or ANARI_FLOAT64.", debugName);
+      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: 'vertex/primitive.normal' parameter should be of type ANARI_FLOAT32_VEC3 or ANARI_FLOAT64_VEC3.", debugName);
       return false;
     }
   }
@@ -925,6 +1030,28 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
     }
   }
 
+  const UsdDataArray* scales = paramData.vertexScales ? paramData.vertexScales : paramData.primitiveScales;
+  if (scales)
+  {
+    ANARIDataType arrayType = scales->getType();
+    if (arrayType != ANARI_FLOAT32 && arrayType != ANARI_FLOAT64 && arrayType != ANARI_FLOAT32_VEC3 && arrayType != ANARI_FLOAT64_VEC3)
+    {
+      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: 'vertex/primitive.scale' parameter should be of type ANARI_FLOAT32(_VEC3) or ANARI_FLOAT64(_VEC3).", debugName);
+      return false;
+    }
+  }
+
+  const UsdDataArray* orientations = paramData.vertexOrientations ? paramData.vertexOrientations : paramData.primitiveOrientations;
+  if (orientations)
+  {
+    ANARIDataType arrayType = orientations->getType();
+    if (arrayType != ANARI_FLOAT32_QUAT_IJKW)
+    {
+      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: 'vertex/primitive.orientation' parameter should be of type ANARI_FLOAT32_QUAT_IJKW.", debugName);
+      return false;
+    }
+  }
+
   if (paramData.primitiveIds)
   {
     ANARIDataType idType = paramData.primitiveIds->getType();
@@ -938,7 +1065,7 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
   return true;
 }
 
-void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeMeshData& meshData)
+void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeMeshData& meshData, bool isNew)
 {
   const UsdGeometryData& paramData = getReadParams();
 
@@ -995,12 +1122,12 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
   usdBridge->SetGeometryData(usdHandle, meshData, dataTimeStep);
 }
 
-void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeInstancerData& instancerData)
+void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeInstancerData& instancerData, bool isNew)
 {
   const UsdGeometryData& paramData = getReadParams();
   const char* debugName = getName();
 
-  if (geomType == GEOM_SPHERE)
+  if (geomType == GEOM_SPHERE || geomType == GEOM_GLYPH)
   {
     // The paramData.indices array (primitive-indexed spheres) is ignored, because:
     // - A sphere/instance index array is not supported in USD
@@ -1014,47 +1141,48 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
     instancerData.Points = vertices->getData();
     instancerData.PointsType = AnariToUsdBridgeType(vertices->getType());
 
-    // Normals
-    if (paramData.indices && tempArrays->NormalsArray.size())
+    UsdGeometryDebugData dbgData = { device, this, debugName };
+
+    // Orientations
+    // are a bit extended beyond the spec: even spheres can set them, and the use of normals is also supported
+    if(paramData.vertexOrientations || paramData.primitiveOrientations)
     {
-      instancerData.Orientations = tempArrays->NormalsArray.data();
-      instancerData.OrientationsType = UsdBridgeType::FLOAT3;
+      setInstancerDataArray("orientation", paramData.vertexOrientations, paramData.primitiveOrientations, tempArrays->OrientationsArray, UsdBridgeType::FLOAT4,
+        instancerData.Orientations, instancerData.OrientationsType,
+        paramData, dbgData);
     }
     else
     {
-      const UsdDataArray* normals = paramData.vertexNormals;
-      if (normals)
-      {
-        instancerData.Orientations = normals->getData();
-        instancerData.OrientationsType = AnariToUsdBridgeType(normals->getType());
-      }
-      else if(paramData.primitiveNormals)
-      {
-        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, 
-          "UsdGeometry '%s' primitive.normal not transferred: per-primitive arrays provided without setting primitive.index", debugName);
-      }
+      setInstancerDataArray("normal", paramData.vertexNormals, paramData.primitiveNormals, tempArrays->NormalsArray, UsdBridgeType::FLOAT3,
+        instancerData.Orientations, instancerData.OrientationsType,
+        paramData, dbgData);
+    }
+
+    // Scales
+    if(geomType == GEOM_SPHERE)
+    {
+      setInstancerDataArray("radius", paramData.vertexRadii, paramData.primitiveRadii,
+        tempArrays->RadiiArray, UsdBridgeType::FLOAT,
+        instancerData.Scales, instancerData.ScalesType,
+        paramData, dbgData);
+    }
+    else
+    {
+      size_t numTmpScales = tempArrays->ScalesArray.size();
+      bool scalarScale = (numTmpScales == instancerData.NumPoints);
+      assert(scalarScale || numTmpScales == instancerData.NumPoints*3);
+
+      setInstancerDataArray("scale", paramData.vertexScales, paramData.primitiveScales,
+        tempArrays->ScalesArray, scalarScale ? UsdBridgeType::FLOAT : UsdBridgeType::FLOAT3,
+        instancerData.Scales, instancerData.ScalesType,
+        paramData, dbgData);
     }
 
     // Colors
-    if (paramData.indices && tempArrays->ColorsArray.size())
-    {
-      instancerData.Colors = tempArrays->ColorsArray.data();
-      instancerData.ColorsType = AnariToUsdBridgeType(tempArrays->ColorsArrayType);
-    }
-    else 
-    {
-      const UsdDataArray* colors = paramData.vertexColors;
-      if (colors)
-      {
-        instancerData.Colors = colors->getData();
-        instancerData.ColorsType = AnariToUsdBridgeType(colors->getType());
-      }
-      else if(paramData.primitiveColors)
-      {
-        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, 
-          "UsdGeometry '%s' primitive.color not transferred: per-primitive arrays provided without setting primitive.index", debugName);
-      }
-    }
+    setInstancerDataArray("color", paramData.vertexColors, paramData.primitiveColors,
+      tempArrays->ColorsArray, AnariToUsdBridgeType(tempArrays->ColorsArrayType),
+      instancerData.Colors, instancerData.ColorsType,
+      paramData, dbgData);
 
     // Attributes
     // By default, syncAttributeArrays and initializeGeomData already set up instancerData.Attributes
@@ -1075,27 +1203,6 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
           device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, 
             "UsdGeometry '%s' primitive.attribute%i not transferred: per-primitive arrays provided without setting primitive.index", debugName, static_cast<int>(attribIdx));
         }
-      }
-    }
-
-    // Scales
-    if (paramData.indices && tempArrays->ScalesArray.size())
-    {
-      instancerData.Scales = tempArrays->ScalesArray.data();
-      instancerData.ScalesType = UsdBridgeType::FLOAT;
-    }
-    else
-    {
-      const UsdDataArray* radii = paramData.vertexRadii;
-      if (radii)
-      {
-        instancerData.Scales = radii->getData();
-        instancerData.ScalesType = AnariToUsdBridgeType(radii->getType());
-      }
-      else if(paramData.primitiveRadii)
-      {
-        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, 
-          "UsdGeometry '%s' primitive.radius not transferred: per-primitive arrays provided without setting primitive.index", debugName);
       }
     }
 
@@ -1166,9 +1273,12 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
   double worldTimeStep = device->getReadParams().timeStep;
   double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
   usdBridge->SetGeometryData(usdHandle, instancerData, dataTimeStep);
+
+  if(isNew && geomType != GEOM_GLYPH && !instancerData.UseUsdGeomPoints)
+    commitPrototypes(usdBridge); // Also initialize the prototype shape on the instancer geom
 }
 
-void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeCurveData& curveData)
+void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeCurveData& curveData, bool isNew)
 {
   const UsdGeometryData& paramData = getReadParams();
 
@@ -1238,7 +1348,7 @@ void UsdGeometry::commitTemplate(UsdDevice* device)
     if (paramData.vertexPositions)
     {
       if(checkGeomParams(device))
-        updateGeomData(device, usdBridge, geomData);
+        updateGeomData(device, usdBridge, geomData, isNew);
     }
     else
     {
@@ -1247,6 +1357,13 @@ void UsdGeometry::commitTemplate(UsdDevice* device)
   
     paramChanged = false;
   }
+}
+
+void UsdGeometry::commitPrototypes(UsdBridge* usdBridge)
+{
+  UsdBridgeInstancerRefData instancerRefData;
+  initializeGeomRefData(instancerRefData);
+  usdBridge->SetPrototypeData(usdHandle, instancerRefData);
 }
 
 bool UsdGeometry::deferCommit(UsdDevice* device)
@@ -1266,9 +1383,47 @@ bool UsdGeometry::doCommitData(UsdDevice* device)
     case GEOM_SPHERE: commitTemplate<UsdBridgeInstancerData>(device); break;
     case GEOM_CYLINDER: commitTemplate<UsdBridgeInstancerData>(device); break;
     case GEOM_CONE: commitTemplate<UsdBridgeInstancerData>(device); break;
+    case GEOM_GLYPH: commitTemplate<UsdBridgeInstancerData>(device); break;
     case GEOM_CURVE: commitTemplate<UsdBridgeCurveData>(device); break;
     default: break;
   }
 
-  return false;
+  return geomType == GEOM_GLYPH && protoShapeChanged; // Defer commit of prototypes until the geometry refs are in place
+}
+
+void UsdGeometry::doCommitRefs(UsdDevice* device)
+{
+  assert(geomType == GEOM_GLYPH && protoShapeChanged);
+
+  UsdBridge* usdBridge = device->getUsdBridge();
+  const UsdGeometryData& paramData = getReadParams();
+
+  double worldTimeStep = device->getReadParams().timeStep;
+
+  // Make sure the references are updated on the Bridge side.
+  if (paramData.shapeGeometry)
+  {
+    double geomObjTimeStep = paramData.shapeGeometry->getReadParams().timeStep;
+
+    UsdGeometryHandle protoGeomHandle = paramData.shapeGeometry->getUsdHandle();
+    size_t numHandles = 1;
+
+    double protoTimestep = selectRefTime(paramData.shapeGeometryRefTimeStep, geomObjTimeStep, worldTimeStep);
+
+    usdBridge->SetPrototypeRefs(usdHandle,
+      &protoGeomHandle,
+      numHandles,
+      worldTimeStep,
+      &protoTimestep
+    );
+  }
+  else
+  {
+    usdBridge->DeletePrototypeRefs(usdHandle, worldTimeStep);
+  }
+
+  // Now set the prototype relations to the reference paths (Bridge uses paths from SetPrototypeRefs)
+  commitPrototypes(usdBridge);
+
+  protoShapeChanged = false;
 }

@@ -207,6 +207,7 @@ namespace constring
   extern const char* const psSamplerPrimPf;
   extern const char* const mdlSamplerPrimPf;
   extern const char* const openVDBPrimPf;
+  extern const char* const protoShapePf;
 
   // Extensions
   extern const char* const imageExtension;
@@ -273,13 +274,6 @@ namespace
       const GfQuaternion& quat = rot.GetQuaternion();
       quaternions[i] = GfQuath((float)(quat.GetReal()), GfVec3h(quat.GetImaginary()));
     }
-  }
-
-  bool UsesUsdGeomPoints(const UsdBridgeInstancerData& geomData)
-  {
-    assert(geomData.NumShapes == 1); // Only single shapes supported
-    bool simpleSphereInstancer = geomData.Shapes[0] == UsdBridgeInstancerData::SHAPE_SPHERE;
-    return !geomData.UsePointInstancer && simpleSphereInstancer;
   }
 
   template<typename GeomDataType>

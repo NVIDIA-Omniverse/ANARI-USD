@@ -57,7 +57,8 @@ class UsdBridge
     void SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep);
     void SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep);
     void SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle field, double timeStep, double fieldTimeStep);
-    void SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandle* samplers, const UsdSamplerRefData* samplerRefData, size_t numSamplers, double timeStep);
+    void SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandle* samplers, size_t numSamplers, double timeStep, const UsdSamplerRefData* samplerRefData);
+    void SetPrototypeRefs(UsdGeometryHandle geometry, const UsdGeometryHandle* protoGeometries, size_t numProtoGeometries, double timeStep, double* protoTimeSteps);
   
     void DeleteInstanceRefs(UsdWorldHandle world, bool timeVarying, double timeStep);
     void DeleteGroupRef(UsdInstanceHandle instance, bool timeVarying, double timeStep);
@@ -69,6 +70,7 @@ class UsdBridge
     void DeleteSpatialFieldRef(UsdVolumeHandle volume, double timeStep);
     void DeleteMaterialRef(UsdSurfaceHandle surface, double timeStep);
     void DeleteSamplerRefs(UsdMaterialHandle material, double timeStep);
+    void DeletePrototypeRefs(UsdGeometryHandle geometry, double timeStep);
   
     void UpdateBeginEndTime(double timeStep);
     void SetInstanceTransform(UsdInstanceHandle instance, float* transform, bool timeVarying, double timeStep);
@@ -78,6 +80,7 @@ class UsdBridge
     void SetSpatialFieldData(UsdSpatialFieldHandle field, const UsdBridgeVolumeData& volumeData, double timeStep);
     void SetMaterialData(UsdMaterialHandle material, const UsdBridgeMaterialData& matData, double timeStep);
     void SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerData& samplerData, double timeStep);
+    void SetPrototypeData(UsdGeometryHandle geometry, const UsdBridgeInstancerRefData& instancerRefData); // UsdBridgeInstancerRefData::Shapes used to index into refs from last SetPrototypeRefs (if SHAPE_MESH)
 
     void ChangeMaterialInputAttributes(UsdMaterialHandle material, const MaterialInputAttribName* inputAttribs, size_t numInputAttribs, double timeStep, MaterialDMI timeVarying);
     void ChangeInAttribute(UsdSamplerHandle sampler, const char* newName, double timeStep, SamplerDMI timeVarying);

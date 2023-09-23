@@ -209,7 +209,7 @@ namespace
     const UsdBridgeSettings& settings,
     TimeEvaluator<UsdBridgeInstancerData>* timeEval = nullptr)
   {
-    if (UsesUsdGeomPoints(instancerData))
+    if (instancerData.UseUsdGeomPoints)
     {
       UsdGeomPoints geomPoints = GetOrDefinePrim<UsdGeomPoints>(geometryStage, geomPath);
       
@@ -227,36 +227,6 @@ namespace
       UsdGeomPointInstancer geomPoints = GetOrDefinePrim<UsdGeomPointInstancer>(geometryStage, geomPath);
       
       InitializeUsdGeometryTimeVar(geomPoints, instancerData, settings, timeEval);
-
-      if (uniformPrim)
-      {
-        // Initialize the point instancer with a sphere shape
-        SdfPath shapePath;
-        switch (instancerData.Shapes[0])
-        {
-          case UsdBridgeInstancerData::SHAPE_SPHERE:
-          {
-            shapePath = geomPath.AppendPath(SdfPath("sphere"));
-            UsdGeomSphere::Define(geometryStage, shapePath);
-            break;
-          }
-          case UsdBridgeInstancerData::SHAPE_CYLINDER:
-          {
-            shapePath = geomPath.AppendPath(SdfPath("cylinder"));
-            UsdGeomCylinder::Define(geometryStage, shapePath);
-            break;
-          }
-          case UsdBridgeInstancerData::SHAPE_CONE:
-          {
-            shapePath = geomPath.AppendPath(SdfPath("cone"));
-            UsdGeomCone::Define(geometryStage, shapePath);
-            break;
-          }
-        }
-
-        UsdRelationship protoRel = geomPoints.GetPrototypesRel();
-        protoRel.AddTarget(shapePath);
-      }
 
       return geomPoints.GetPrim();
     }
@@ -949,6 +919,56 @@ namespace
       { ASSIGN_PRIMVAR_MACRO(VtIntArray); }
     }
   }
+
+  void UpdateUsdGeomPrototypes(UsdBridgeUsdWriter* writer, const UsdStagePtr& sceneStage, UsdGeomPointInstancer& uniformGeom,
+    const UsdBridgeInstancerRefData& geomRefData, const SdfPrimPathList& protoGeomPaths,
+    const char* protoShapePathRp)
+  {
+    using DMI = typename UsdBridgeInstancerData::DataMemberId;
+
+    SdfPath protoBasePath = uniformGeom.GetPath().AppendPath(SdfPath(protoShapePathRp));
+    sceneStage->RemovePrim(protoBasePath);
+
+    UsdRelationship protoRel = uniformGeom.GetPrototypesRel();
+
+    for(int shapeIdx = 0; shapeIdx < geomRefData.NumShapes; ++shapeIdx)
+    {
+      SdfPath shapePath;
+      if(geomRefData.Shapes[shapeIdx] != UsdBridgeInstancerRefData::SHAPE_MESH)
+      {
+        std::string protoName = constring::protoShapePf + std::to_string(shapeIdx);
+        shapePath = protoBasePath.AppendPath(SdfPath(protoName.c_str()));
+      }
+      else
+      {
+        int protoGeomIdx = static_cast<int>(geomRefData.Shapes[shapeIdx]); // The mesh shape value is an index into protoGeomPaths
+        assert(protoGeomIdx < protoGeomPaths.size());
+        shapePath = protoGeomPaths[protoGeomIdx];
+      }
+
+      switch (geomRefData.Shapes[shapeIdx])
+      {
+        case UsdBridgeInstancerRefData::SHAPE_SPHERE:
+        {
+          UsdGeomSphere::Define(sceneStage, shapePath);
+          break;
+        }
+        case UsdBridgeInstancerRefData::SHAPE_CYLINDER:
+        {
+          UsdGeomCylinder::Define(sceneStage, shapePath);
+          break;
+        }
+        case UsdBridgeInstancerRefData::SHAPE_CONE:
+        {
+          UsdGeomCone::Define(sceneStage, shapePath);
+          break;
+        }
+        default: break;
+      }
+
+      protoRel.AddTarget(shapePath);
+    }
+  }
 }
 
 UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim) const
@@ -1036,7 +1056,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
   UsdBridgeUpdateEvaluator<const UsdBridgeInstancerData> updateEval(geomData);
   TimeEvaluator<UsdBridgeInstancerData> timeEval(geomData, timeStep);
 
-  bool useGeomPoints = UsesUsdGeomPoints(geomData);
+  bool useGeomPoints = geomData.UseUsdGeomPoints;
 
   uint64_t numPrims = geomData.NumPoints;
 
@@ -1109,4 +1129,18 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
   UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomWidths);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomCurveLengths);
+}
+
+void UsdBridgeUsdWriter::UpdateUsdInstancerPrototypes(const SdfPath& instancerPath, const UsdBridgeInstancerRefData& geomRefData,
+  const SdfPrimPathList& refProtoGeomPrimPaths, const char* protoShapePathRp)
+{
+  UsdGeomPointInstancer uniformGeom = UsdGeomPointInstancer::Get(this->SceneStage, instancerPath);
+  if(!uniformGeom)
+  {
+    UsdBridgeLogMacro(this, UsdBridgeLogLevel::WARNING, "Attempt to perform update of prototypes on a prim that is not a UsdGeomPointInstancer.");
+    return;
+  }
+
+  // Very basic rel update, without any timevarying aspects
+  UpdateUsdGeomPrototypes(this, this->SceneStage, uniformGeom, geomRefData, refProtoGeomPrimPaths, protoShapePathRp);
 }
