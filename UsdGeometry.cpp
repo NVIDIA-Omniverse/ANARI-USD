@@ -16,7 +16,7 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
   REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("usd::time::shapeGeometry", ANARI_FLOAT64, shapeGeometryRefTimeStep)
-  REGISTER_PARAMETER_MACRO("usd::useUsdGeomPoints", ANARI_INT32, UseUsdGeomPoints)
+  REGISTER_PARAMETER_MACRO("usd::useUsdGeomPoints", ANARI_BOOL, UseUsdGeomPoints)
   REGISTER_PARAMETER_MACRO("primitive.index", ANARI_ARRAY, indices)
   REGISTER_PARAMETER_MACRO("primitive.normal", ANARI_ARRAY, primitiveNormals)
   REGISTER_PARAMETER_MACRO("primitive.color", ANARI_ARRAY, primitiveColors)
@@ -33,6 +33,7 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("vertex.orientation", ANARI_ARRAY, vertexOrientations)
   REGISTER_PARAMETER_ARRAY_MACRO("vertex.attribute", ANARI_ARRAY, vertexAttributes, MAX_ATTRIBS)
   REGISTER_PARAMETER_MACRO("radius", ANARI_FLOAT32, radiusConstant)
+  REGISTER_PARAMETER_MACRO("scale", ANARI_FLOAT32, scaleConstant)
   REGISTER_PARAMETER_MACRO("shapeType", ANARI_STRING, shapeType)
   REGISTER_PARAMETER_MACRO("shapeGeometry", ANARI_GEOMETRY, shapeGeometry)
 ) // See .h for usage.
@@ -158,6 +159,8 @@ namespace
       geomType = UsdGeometry::GEOM_TRIANGLE;
     else if (strEquals(type, "quad"))
       geomType = UsdGeometry::GEOM_QUAD;
+    else if (strEquals(type, "glyph"))
+      geomType = UsdGeometry::GEOM_GLYPH;
     else
       geomType = UsdGeometry::GEOM_UNKNOWN;
 
@@ -694,7 +697,7 @@ UsdGeometry::UsdGeometry(const char* name, const char* type, UsdDevice* device)
     createTempArrays = true;
 
   if(geomType == GEOM_UNKNOWN)
-    device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' construction failed: type %s not supported", getName(), name);
+    device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' construction failed: type %s not supported", getName(), type);
 
   if(createTempArrays)
     tempArrays = std::make_unique<UsdGeometryTempArrays>(attributeArray);
@@ -826,7 +829,8 @@ void UsdGeometry::initializeGeomData(UsdBridgeInstancerData& geomData)
     & (isBitSet(paramData.timeVarying, 4) ? DMI::ALL : ~DMI::SCALES)
     & (isBitSet(paramData.timeVarying, 3) ? DMI::ALL : ~DMI::INVISIBLEIDS)
     & (isBitSet(paramData.timeVarying, 2) ? DMI::ALL : ~DMI::COLORS)
-    & (isBitSet(paramData.timeVarying, 5) ? DMI::ALL : ~DMI::INSTANCEIDS);
+    & (isBitSet(paramData.timeVarying, 5) ? DMI::ALL : ~DMI::INSTANCEIDS)
+    & ~DMI::SHAPEINDICES; // Shapeindices are always the same, and USD clients typically do not support timevarying shapes
   setAttributeTimeVarying<UsdBridgeInstancerData>(geomData.TimeVarying);
 
   geomData.UseUsdGeomPoints = geomType == GEOM_SPHERE && paramData.UseUsdGeomPoints;
@@ -1170,7 +1174,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
     {
       size_t numTmpScales = tempArrays->ScalesArray.size();
       bool scalarScale = (numTmpScales == instancerData.NumPoints);
-      assert(scalarScale || numTmpScales == instancerData.NumPoints*3);
+      assert(!numTmpScales || scalarScale || numTmpScales == instancerData.NumPoints*3);
 
       setInstancerDataArray("scale", paramData.vertexScales, paramData.primitiveScales,
         tempArrays->ScalesArray, scalarScale ? UsdBridgeType::FLOAT : UsdBridgeType::FLOAT3,
@@ -1230,7 +1234,8 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
       instancerData.NumInvisibleIds = tempArrays->InvisIdsArray.size();
     }
 
-    instancerData.UniformScale = paramData.radiusConstant;
+    for(int i = 0; i < 3; ++i)
+      instancerData.Scale[i] = (geomType == GEOM_SPHERE) ? paramData.radiusConstant : paramData.scaleConstant.Data[i];
   }
   else
   {
@@ -1325,7 +1330,7 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
 }
 
 template<typename UsdGeomType>
-void UsdGeometry::commitTemplate(UsdDevice* device)
+bool UsdGeometry::commitTemplate(UsdDevice* device)
 {
   UsdBridge* usdBridge = device->getUsdBridge();
   const UsdGeometryData& paramData = getReadParams();
@@ -1357,6 +1362,8 @@ void UsdGeometry::commitTemplate(UsdDevice* device)
   
     paramChanged = false;
   }
+
+  return isNew;
 }
 
 void UsdGeometry::commitPrototypes(UsdBridge* usdBridge)
@@ -1376,19 +1383,20 @@ bool UsdGeometry::doCommitData(UsdDevice* device)
   if(geomType == GEOM_UNKNOWN)
     return false;
 
+  bool isNew = false;
   switch (geomType)
   {
-    case GEOM_TRIANGLE: commitTemplate<UsdBridgeMeshData>(device); break;
-    case GEOM_QUAD: commitTemplate<UsdBridgeMeshData>(device); break;
-    case GEOM_SPHERE: commitTemplate<UsdBridgeInstancerData>(device); break;
-    case GEOM_CYLINDER: commitTemplate<UsdBridgeInstancerData>(device); break;
-    case GEOM_CONE: commitTemplate<UsdBridgeInstancerData>(device); break;
-    case GEOM_GLYPH: commitTemplate<UsdBridgeInstancerData>(device); break;
-    case GEOM_CURVE: commitTemplate<UsdBridgeCurveData>(device); break;
+    case GEOM_TRIANGLE: isNew = commitTemplate<UsdBridgeMeshData>(device); break;
+    case GEOM_QUAD: isNew = commitTemplate<UsdBridgeMeshData>(device); break;
+    case GEOM_SPHERE: isNew = commitTemplate<UsdBridgeInstancerData>(device); break;
+    case GEOM_CYLINDER: isNew = commitTemplate<UsdBridgeInstancerData>(device); break;
+    case GEOM_CONE: isNew = commitTemplate<UsdBridgeInstancerData>(device); break;
+    case GEOM_GLYPH: isNew = commitTemplate<UsdBridgeInstancerData>(device); break;
+    case GEOM_CURVE: isNew = commitTemplate<UsdBridgeCurveData>(device); break;
     default: break;
   }
 
-  return geomType == GEOM_GLYPH && protoShapeChanged; // Defer commit of prototypes until the geometry refs are in place
+  return geomType == GEOM_GLYPH && (isNew || protoShapeChanged); // Defer commit of prototypes until the geometry refs are in place
 }
 
 void UsdGeometry::doCommitRefs(UsdDevice* device)

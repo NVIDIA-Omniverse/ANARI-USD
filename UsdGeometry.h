@@ -52,6 +52,8 @@ struct UsdGeometryData
   const UsdDataArray* vertexOrientations = nullptr;
   const UsdDataArray* primitiveOrientations = nullptr;
 
+  UsdFloat3 scaleConstant = {1.0f, 1.0f, 1.0f};
+
   UsdSharedString* shapeType = nullptr;
   UsdGeometry* shapeGeometry = nullptr;
 
@@ -114,7 +116,7 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
     void updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBridgeCurveData& curveData, bool isNew);
 
     template<typename UsdGeomType>
-    void commitTemplate(UsdDevice* device);
+    bool commitTemplate(UsdDevice* device);
 
     void commitPrototypes(UsdBridge* usdBridge);
 
@@ -129,7 +131,7 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
     void assignTempDataToAttributes(bool perPrimInterpolation);
 
     GeomType geomType = GEOM_UNKNOWN;
-    bool protoShapeChanged = true;
+    bool protoShapeChanged = false; // Do not automatically commit shapes (the object may have been recreated onto an already existing USD prim)
 
     std::unique_ptr<UsdGeometryTempArrays> tempArrays;
 

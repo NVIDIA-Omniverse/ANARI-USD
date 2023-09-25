@@ -159,8 +159,8 @@ namespace
 
     CreateUsdGeomAttributePrimvars(primvarApi, instancerData, timeEval);
   	
-    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::LINEARVELOCITIES, CreateVelocitiesAttr, UsdBridgeTokens->velocities);
-    CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::ANGULARVELOCITIES, CreateAngularVelocitiesAttr, UsdBridgeTokens->angularVelocities);
+    //CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::LINEARVELOCITIES, CreateVelocitiesAttr, UsdBridgeTokens->velocities);
+    //CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::ANGULARVELOCITIES, CreateAngularVelocitiesAttr, UsdBridgeTokens->angularVelocities);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::INVISIBLEIDS, CreateInvisibleIdsAttr, UsdBridgeTokens->invisibleIds);
   }
 
@@ -623,7 +623,7 @@ namespace
       {
         VtFloatArray& usdWidths = GetStaticTempArray<VtFloatArray>();
         usdWidths.resize(geomData.NumPoints);
-        for(auto& x : usdWidths) x = (float)geomData.UniformScale;
+        for(auto& x : usdWidths) x = (float)geomData.getUniformScale();
         widthsAttribute.Set(usdWidths, timeCode);
       }
     }
@@ -664,8 +664,7 @@ namespace
       }
       else
       {
-        double pointScale = geomData.UniformScale;
-        GfVec3f defaultScale((float)pointScale, (float)pointScale, (float)pointScale);
+        GfVec3f defaultScale((float)geomData.Scale[0], (float)geomData.Scale[1], (float)geomData.Scale[2]);
         VtVec3fArray& usdScales = GetStaticTempArray<VtVec3fArray>();
         usdScales.resize(geomData.NumPoints);
         for(auto& x : usdScales) x = defaultScale;
@@ -769,20 +768,44 @@ namespace
   }
 
   template<typename UsdGeomType, typename GeomDataType>
-  void UpdateUsdGeomShapeIndices(UsdBridgeUsdWriter* writer, UsdGeomType& timeVarGeom, UsdGeomType& uniformGeom, const GeomDataType& geomData, uint64_t numPrims,
+  void UpdateUsdGeomProtoIndices(UsdBridgeUsdWriter* writer, UsdGeomType& timeVarGeom, UsdGeomType& uniformGeom, const GeomDataType& geomData, uint64_t numPrims,
     UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
   {
     using DMI = typename GeomDataType::DataMemberId;
+    bool performsUpdate = updateEval.PerformsUpdate(DMI::SHAPEINDICES);
+    bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::SHAPEINDICES);
 
-    UsdTimeCode timeCode = timeEval.Eval(DMI::SHAPEINDICES);
-    UsdGeomType* outGeom = timeCode.IsDefault() ? &uniformGeom : &timeVarGeom;
-    
-    //Shape indices
-    UsdAttribute protoIndexAttr = outGeom->GetProtoIndicesAttr();
-    VtIntArray& protoIndices = GetStaticTempArray<VtIntArray>();
-    protoIndices.resize(geomData.NumPoints);
-    for(auto& x : protoIndices) x = 0;
-    protoIndexAttr.Set(protoIndices, timeCode);
+
+    if (performsUpdate)
+    {
+      UsdTimeCode timeCode = timeEval.Eval(DMI::SHAPEINDICES);
+      UsdGeomType* outGeom = timeCode.IsDefault() ? &uniformGeom : &timeVarGeom;
+      
+      UsdAttribute protoIndexAttr = outGeom->GetProtoIndicesAttr();
+      assert(protoIndexAttr);
+
+      //Shape indices
+      if(geomData.ShapeIndices)
+      {
+        const void* arrayData = geomData.ShapeIndices;
+        size_t arrayNumElements = geomData.NumPoints;
+        UsdAttribute arrayPrimvar = protoIndexAttr;
+        bool setPrimvar = true;
+
+        switch (geomData.OrientationsType)
+        {
+        case UsdBridgeType::INT: {ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
+        default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom ProtoIndicesAttr (ShapeIndices) should be INT."); break; }
+        }
+      }
+      else
+      {
+        VtIntArray& protoIndices = GetStaticTempArray<VtIntArray>();
+        protoIndices.resize(geomData.NumPoints);
+        for(auto& x : protoIndices) x = 0;
+        protoIndexAttr.Set(protoIndices, timeCode);
+      }
+    }
   }
 
   template<typename UsdGeomType, typename GeomDataType>
@@ -1097,9 +1120,9 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
       { UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomTexCoords); }
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomAttributes);
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);
-    UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomShapeIndices);
-    UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomLinearVelocities);
-    UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAngularVelocities);
+    UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomProtoIndices);
+    //UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomLinearVelocities);
+    //UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomAngularVelocities);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomInvisibleIds);
   }
 }

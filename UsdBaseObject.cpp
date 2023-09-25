@@ -8,7 +8,8 @@ UsdBaseObject::UsdBaseObject(ANARIDataType t, UsdDevice* device)
       : type(t)
 {
   // The object will not be committed (as in, user-written write params will not be set to read params),
-  // but handles will be initialized and the object with its default data/refs will be written out to USD.
+  // but handles will be initialized and the object with its default data/refs will be written out to USD
+  // (but only if the prim wasn't yet written to USD before, see 'isNew' in doCommit implementations).
   if(device)
     device->addToCommitList(this, true);
 }

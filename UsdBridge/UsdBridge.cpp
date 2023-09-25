@@ -237,6 +237,15 @@ UsdGeomPrimvarsAPI UsdBridgeInternals::GetBoundGeomPrimvars(const UsdBridgeHandl
   return UsdGeomPrimvarsAPI();
 }
 
+template<typename HandleType>
+bool HasNullHandles(const HandleType* handles, uint64_t numHandles)
+{
+  for(uint64_t i = 0; i < numHandles; ++i)
+    if(handles[i].value == nullptr)
+      return true;
+  return false;
+}
+
 UsdBridge::UsdBridge(const UsdBridgeSettings& settings) 
   : Internals(new UsdBridgeInternals(settings))
   , SessionValid(false)
@@ -568,6 +577,7 @@ void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleTy
   const char* refPathExt, bool timeVarying, double timeStep)
 {
   if (parentHandle.value == nullptr) return;
+  if(HasNullHandles(childHandles, numChildren)) return;
 
   UsdBridgePrimCache* parentCache = BRIDGE_CACHE.ConvertToPrimCache(parentHandle);
   const UsdBridgePrimCacheList& childCaches = Internals->ExtractPrimCaches<ChildHandleType>(childHandles, numChildren);
@@ -587,6 +597,7 @@ void UsdBridge::SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* i
 void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep)
 {
   if (instance.value == nullptr) return;
+  if (group.value == nullptr) return;
 
   UsdBridgePrimCache* instanceCache = BRIDGE_CACHE.ConvertToPrimCache(instance);
   UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
@@ -618,6 +629,7 @@ void UsdBridge::SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volum
 void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep)
 {
   if (surface.value == nullptr) return;
+  if (geometry.value == nullptr) return;
 
   UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
   UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
@@ -634,6 +646,7 @@ void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geome
 void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep)
 {
   if (surface.value == nullptr) return;
+  if (geometry.value == nullptr || material.value == nullptr) return;
 
   UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
   UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
@@ -661,6 +674,7 @@ void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHand
 void UsdBridge::SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle field, double timeStep, double fieldTimeStep)
 {
   if (volume.value == nullptr) return;
+  if (field.value == nullptr) return;
 
   UsdBridgePrimCache* volumeCache = BRIDGE_CACHE.ConvertToPrimCache(volume);
   UsdBridgePrimCache* fieldCache = BRIDGE_CACHE.ConvertToPrimCache(field);
@@ -676,6 +690,7 @@ void UsdBridge::SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle
 void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandle* samplers, size_t numSamplers, double timeStep, const UsdSamplerRefData* samplerRefData)
 {
   if (material.value == nullptr) return;
+  if(HasNullHandles(samplers, numSamplers)) return;
 
   UsdBridgePrimCache* matCache = BRIDGE_CACHE.ConvertToPrimCache(material);
   const UsdBridgePrimCacheList& samplerCaches = Internals->ExtractPrimCaches<UsdSamplerHandle>(samplers, numSamplers);
@@ -708,6 +723,7 @@ void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandl
 void UsdBridge::SetPrototypeRefs(UsdGeometryHandle geometry, const UsdGeometryHandle* protoGeometries, size_t numProtoGeometries, double timeStep, double* protoTimeSteps)
 {
   if (geometry.value == nullptr) return;
+  if(HasNullHandles(protoGeometries, numProtoGeometries)) return;
 
   UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
   const UsdBridgePrimCacheList& protoGeomCaches = Internals->ExtractPrimCaches<UsdGeometryHandle>(protoGeometries, numProtoGeometries);

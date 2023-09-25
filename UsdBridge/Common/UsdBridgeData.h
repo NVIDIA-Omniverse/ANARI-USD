@@ -275,6 +275,8 @@ struct UsdBridgeInstancerData
   DataMemberId UpdatesToPerform = DataMemberId::ALL;
   DataMemberId TimeVarying = DataMemberId::ALL;
 
+  bool getUniformScale() const { return Scale[0]; }
+
   bool UseUsdGeomPoints = true; // Shape is sphere and geomPoints is desired
 
   uint64_t NumPoints = 0;
@@ -283,7 +285,7 @@ struct UsdBridgeInstancerData
   const int* ShapeIndices = nullptr; //if set, one for every point
   const void* Scales = nullptr;// 3-vector scale
   UsdBridgeType ScalesType = UsdBridgeType::UNDEFINED;
-  double UniformScale = 1;// In case no scales are given
+  double Scale[3] = {1, 1, 1};// In case no scales are given
   const void* Orientations = nullptr;
   UsdBridgeType OrientationsType = UsdBridgeType::UNDEFINED;
   const void* Colors = nullptr;
@@ -340,6 +342,7 @@ struct UsdBridgeCurveData
   DataMemberId TimeVarying = DataMemberId::ALL;
 
   bool isEmpty() { return Points == NULL; }
+  bool getUniformScale() const { return UniformScale; }
 
   uint64_t NumPoints = 0;
 
