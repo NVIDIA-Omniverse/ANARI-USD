@@ -275,7 +275,7 @@ struct UsdBridgeInstancerData
   DataMemberId UpdatesToPerform = DataMemberId::ALL;
   DataMemberId TimeVarying = DataMemberId::ALL;
 
-  bool getUniformScale() const { return Scale[0]; }
+  float getUniformScale() const { return Scale.Data[0]; }
 
   bool UseUsdGeomPoints = true; // Shape is sphere and geomPoints is desired
 
@@ -285,9 +285,10 @@ struct UsdBridgeInstancerData
   const int* ShapeIndices = nullptr; //if set, one for every point
   const void* Scales = nullptr;// 3-vector scale
   UsdBridgeType ScalesType = UsdBridgeType::UNDEFINED;
-  double Scale[3] = {1, 1, 1};// In case no scales are given
+  UsdFloat3 Scale = {1, 1, 1};// In case no scales are given
   const void* Orientations = nullptr;
   UsdBridgeType OrientationsType = UsdBridgeType::UNDEFINED;
+  UsdQuaternion Orientation;// In case no orientations are given
   const void* Colors = nullptr;
   UsdBridgeType ColorsType = UsdBridgeType::UNDEFINED;
   static constexpr bool PerPrimColors = false; // For compatibility
@@ -316,6 +317,7 @@ struct UsdBridgeInstancerRefData
   InstanceShape DefaultShape = SHAPE_SPHERE;
   InstanceShape* Shapes = &DefaultShape;
   int NumShapes = 1;
+  UsdFloatMat4 ShapeTransform;
 };
 
 struct UsdBridgeCurveData
@@ -342,7 +344,7 @@ struct UsdBridgeCurveData
   DataMemberId TimeVarying = DataMemberId::ALL;
 
   bool isEmpty() { return Points == NULL; }
-  bool getUniformScale() const { return UniformScale; }
+  float getUniformScale() const { return UniformScale; }
 
   uint64_t NumPoints = 0;
 
@@ -356,7 +358,7 @@ struct UsdBridgeCurveData
   bool PerPrimColors = false; // One prim would be a full curve
   const void* Scales = nullptr; // Used for line width, typically 1-component
   UsdBridgeType ScalesType = UsdBridgeType::UNDEFINED;
-  double UniformScale = 1;// In case no scales are given
+  float UniformScale = 1;// In case no scales are given
   const UsdBridgeAttribute* Attributes = nullptr; // Pointer to externally managed attribute array
   uint32_t NumAttributes = 0;
 

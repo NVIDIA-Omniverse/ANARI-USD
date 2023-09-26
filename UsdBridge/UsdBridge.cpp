@@ -814,7 +814,7 @@ void UsdBridge::UpdateBeginEndTime(double timeStep)
   BRIDGE_USDWRITER.UpdateBeginEndTime(timeStep);
 }
 
-void UsdBridge::SetInstanceTransform(UsdInstanceHandle instance, float* transform, bool timeVarying, double timeStep)
+void UsdBridge::SetInstanceTransform(UsdInstanceHandle instance, const float* transform, bool timeVarying, double timeStep)
 {
   if (instance.value == nullptr) return;
 

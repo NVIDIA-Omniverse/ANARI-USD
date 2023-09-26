@@ -132,7 +132,7 @@ public:
 
   void UnbindMaterialFromGeom(const SdfPath & refGeomPath);
 
-  void UpdateUsdTransform(const SdfPath& transPrimPath, float* transform, bool timeVarying, double timeStep);
+  void UpdateUsdTransform(const SdfPath& transPrimPath, const float* transform, bool timeVarying, double timeStep);
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& meshPath, const UsdBridgeMeshData& geomData, double timeStep);
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& instancerPath, const UsdBridgeInstancerData& geomData, double timeStep);
   void UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& curvePath, const UsdBridgeCurveData& geomData, double timeStep);

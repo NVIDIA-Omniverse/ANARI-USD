@@ -149,6 +149,11 @@
                     "types" : ["ANARI_GEOMETRY"],
                     "tags" : [],
                     "description" : "glyph shape geometry"
+                }, {
+                    "name" : "shapeTransform",
+                    "types" : ["ANARI_FLOAT32_MAT4"],
+                    "tags" : [],
+                    "description" : "glyph shape transform"
                 }
             ]
         }

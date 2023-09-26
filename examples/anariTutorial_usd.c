@@ -46,7 +46,11 @@ void doTest(TestParameters testParams)
   float cam_up[] = { 0.f, 1.f, 0.f };
   float cam_view[] = { 0.1f, 0.f, 1.f };
 
-  float transform[12] = { 3.0f, 0.0f, 0.0f, 0.0f, 3.0f, 0.0f, 0.0f, 0.0f, 3.0f, 2.0f, 3.0f, 4.0f };
+  float transform[16] = {
+    3.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 3.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 3.0f, 0.0f,
+    2.0f, 3.0f, 4.0f, 1.0f };
 
   // triangle mesh data
   float vertex[] = { -1.0f,
@@ -306,7 +310,7 @@ void doTest(TestParameters testParams)
   // put the group into an instance (give the group a world transform)
   ANARIInstance instance = anariNewInstance(dev, "transform");
   anariSetParameter(dev, instance, "name", ANARI_STRING, "tutorialInstance");
-  anariSetParameter(dev, instance, "transform", ANARI_FLOAT32_MAT3x4, transform);
+  anariSetParameter(dev, instance, "transform", ANARI_FLOAT32_MAT4, transform);
   anariSetParameter(dev, instance, "group", ANARI_GROUP, &group);
   anariRelease(dev, group);
 

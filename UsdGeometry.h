@@ -53,9 +53,12 @@ struct UsdGeometryData
   const UsdDataArray* primitiveOrientations = nullptr;
 
   UsdFloat3 scaleConstant = {1.0f, 1.0f, 1.0f};
+  UsdQuaternion orientationConstant;
 
   UsdSharedString* shapeType = nullptr;
   UsdGeometry* shapeGeometry = nullptr;
+
+  UsdFloatMat4 shapeTransform;
 
   double shapeGeometryRefTimeStep = std::numeric_limits<float>::quiet_NaN();
 };

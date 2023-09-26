@@ -14,7 +14,7 @@ DEFINE_PARAMETER_MAP(UsdInstance,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
   REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
   REGISTER_PARAMETER_MACRO("group", GroupType, group)
-  REGISTER_PARAMETER_MACRO("transform", ANARI_FLOAT32_MAT3x4, transform)
+  REGISTER_PARAMETER_MACRO("transform", ANARI_FLOAT32_MAT4, transform)
 )
 
 UsdInstance::UsdInstance(const char* name,
@@ -80,14 +80,5 @@ void UsdInstance::doCommitRefs(UsdDevice* device)
     usdBridge->DeleteGroupRef(usdHandle, groupTimeVarying, timeStep);
   }
 
-  {
-    float bridgeTransform[16] = { 0.0f };
-    memcpy(&bridgeTransform[0], &paramData.transform[0], 3 * sizeof(float));
-    memcpy(&bridgeTransform[4], &paramData.transform[3], 3 * sizeof(float));
-    memcpy(&bridgeTransform[8], &paramData.transform[6], 3 * sizeof(float));
-    memcpy(&bridgeTransform[12], &paramData.transform[9], 3 * sizeof(float));
-    bridgeTransform[15] = 1.0f;
-
-    usdBridge->SetInstanceTransform(usdHandle, bridgeTransform, transformTimeVarying, timeStep);
-  }
+  usdBridge->SetInstanceTransform(usdHandle, paramData.transform.Data, transformTimeVarying, timeStep);
 }

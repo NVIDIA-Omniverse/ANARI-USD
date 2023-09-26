@@ -14,7 +14,7 @@ struct UsdInstanceData
 
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:group, 1:transform
   UsdGroup* group = nullptr;
-  float transform[12] = { 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 };
+  UsdFloatMat4 transform;
 };
 
 class UsdInstance : public UsdBridgedBaseObject<UsdInstance, UsdInstanceData, UsdInstanceHandle>

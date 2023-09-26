@@ -32,7 +32,11 @@ int main(int argc, const char **argv)
   float cam_up[] = {0.f, 1.f, 0.f};
   float cam_view[] = {0.1f, 0.f, 1.f};
 
-  float transform[12] = { 3.0f, 0.0f, 0.0f, 0.0f, 3.0f, 0.0f, 0.0f, 0.0f, 3.0f, 2.0f, 3.0f, 4.0f };
+  float transform[16] = {
+    3.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 3.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 3.0f, 0.0f,
+    2.0f, 3.0f, 4.0f, 1.0f };
 
   // triangle mesh data
   float vertex[] = {-1.0f,
@@ -77,6 +81,86 @@ int main(int argc, const char **argv)
       0.3f,
       0.05f };
   int32_t index[] = {0, 1, 2, 1, 2, 3};
+
+  float protoVertex[] = {-3.0f,
+      -1.0f,
+      -1.0f,
+      3.0f,
+      -1.0f,
+      -1.0f,
+      -3.0f,
+      1.0f,
+      -1.0f,
+      3.0f,
+      1.0f,
+      -1.0f,
+      -3.0f,
+      -1.0f,
+      1.0f,
+      3.0f,
+      -1.0f,
+      1.0f,
+      -3.0f,
+      1.0f,
+      1.0f,
+      3.0f,
+      1.0f,
+      1.0f};
+  float protoColor[] = {0.0f,
+      0.0f,
+      0.9f,
+      1.0f,
+      0.8f,
+      0.8f,
+      0.8f,
+      1.0f,
+      0.8f,
+      0.8f,
+      0.8f,
+      1.0f,
+      0.0f,
+      0.9f,
+      0.0f,
+      1.0f,
+      0.0f,
+      0.0f,
+      0.9f,
+      1.0f,
+      0.8f,
+      0.8f,
+      0.8f,
+      1.0f,
+      0.8f,
+      0.8f,
+      0.8f,
+      1.0f,
+      0.0f,
+      0.9f,
+      0.0f,
+      1.0f};
+  float protoTexcoord[] = {
+      0.0f,
+      0.0f,
+      0.0f,
+      1.0f,
+      0.25f,
+      0.0f,
+      0.25f,
+      1.0f,
+      0.5f,
+      0.0f,
+      0.5f,
+      1.0f,
+      0.75f,
+      0.0f,
+      0.75f,
+      1.0f};
+  int32_t protoIndex[] = {0, 1, 2, 2, 1, 3, 2, 3, 4, 4, 3, 5, 4, 5, 6, 6, 5, 7, 6, 7, 0, 0, 7, 1};
+  float protoTransform[16] = {
+    0.2f, 0.0f, 0.0f, 0.0f,
+    0.0f, 0.2f, 0.0f, 0.0f,
+    0.0f, 0.0f, 0.2f, 0.0f,
+    0.0f, 0.0f, 0.0f, 1.0f };
 
   float kd[] = { 0.0f, 0.0f, 1.0f };
 
@@ -132,6 +216,7 @@ int main(int argc, const char **argv)
 
   int useVertexColors = 0;
   int useTexture = 1;
+  int useUsdGeomPoints = 0;
 
   // CREATE ALL TIMESTEPS:
 
@@ -232,7 +317,7 @@ int main(int argc, const char **argv)
     ANARIInstance instance[2];
     instance[0] = anariNewInstance(dev, "transform");
     anariSetParameter(dev, instance[0], "name", ANARI_STRING, "tutorialInstance_0");
-    anariSetParameter(dev, instance[0], "transform", ANARI_FLOAT32_MAT3x4, transform);
+    anariSetParameter(dev, instance[0], "transform", ANARI_FLOAT32_MAT4, transform);
     anariSetParameter(dev, instance[0], "group", ANARI_GROUP, &group);
     anariRelease(dev, group);
 
@@ -250,8 +335,41 @@ int main(int argc, const char **argv)
 
     if (doubleNodes)
     {
+      //ANARIGeometry protoMesh = anariNewGeometry(dev, "triangle");
+      //anariSetParameter(dev, protoMesh, "name", ANARI_STRING, "tutorialProtoMesh");
+//
+      //ANARIArray1D array = anariNewArray1D(dev, protoVertex, 0, 0, ANARI_FLOAT32_VEC3, 8);
+      //anariCommitParameters(dev, array);
+      //anariSetParameter(dev, protoMesh, "vertex.position", ANARI_ARRAY, &array);
+      //anariRelease(dev, array); // we are done using this handle
+//
+      //if (useVertexColors)
+      //{
+      //  array = anariNewArray1D(dev, protoColor, 0, 0, ANARI_FLOAT32_VEC4, 8);
+      //  anariCommitParameters(dev, array);
+      //  anariSetParameter(dev, protoMesh, "vertex.color", ANARI_ARRAY, &array);
+      //  anariRelease(dev, array);
+      //}
+//
+      //array = anariNewArray1D(dev, protoTexcoord, 0, 0, ANARI_FLOAT32_VEC2, 8);
+      //anariCommitParameters(dev, array);
+      //anariSetParameter(dev, protoMesh, "vertex.attribute0", ANARI_ARRAY, &array);
+      //anariRelease(dev, array);
+//
+      //array = anariNewArray1D(dev, protoIndex, 0, 0, ANARI_INT32_VEC3, 8);
+      //anariCommitParameters(dev, array);
+      //anariSetParameter(dev, protoMesh, "primitive.index", ANARI_ARRAY, &array);
+      //anariRelease(dev, array);
+//
+      //anariCommitParameters(dev, protoMesh);
+
       mesh = anariNewGeometry(dev, "sphere");
       anariSetParameter(dev, mesh, "name", ANARI_STRING, "tutorialPoints");
+      //anariSetParameter(dev, mesh, "usd::useUsdGeomPoints", ANARI_BOOL, &useUsdGeomPoints);
+      //anariSetParameter(dev, mesh, "shapeType", ANARI_STRING, "cylinder");
+      //anariSetParameter(dev, mesh, "shapeGeometry", ANARI_GEOMETRY, &protoMesh);
+      //anariSetParameter(dev, mesh, "shapeTransform", ANARI_FLOAT32_MAT4, protoTransform);
+      //anariRelease(dev, protoMesh);
 
       array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4);
       anariCommitParameters(dev, array);
@@ -274,6 +392,7 @@ int main(int argc, const char **argv)
       array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
+      //anariSetParameter(dev, mesh, "vertex.scale", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
       anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
@@ -293,6 +412,8 @@ int main(int argc, const char **argv)
       anariSetParameter(dev, mat, "name", ANARI_STRING, "tutorialMaterial_1");
       if (useVertexColors)
         anariSetParameter(dev, mat, "color", ANARI_STRING, "color");
+      else if(useTexture)
+        anariSetParameter(dev, mat, "color", ANARI_SAMPLER, &sampler);
       else
         anariSetParameter(dev, mat, "color", ANARI_FLOAT32_VEC3, kd);
       anariSetParameter(dev, mat, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
@@ -323,7 +444,7 @@ int main(int argc, const char **argv)
       // put the group into an instance (give the group a world transform)
       instance[1] = anariNewInstance(dev, "transform");
       anariSetParameter(dev, instance[1], "name", ANARI_STRING, "tutorialInstance_1");
-      anariSetParameter(dev, instance[1], "transform", ANARI_FLOAT32_MAT3x4, transform);
+      anariSetParameter(dev, instance[1], "transform", ANARI_FLOAT32_MAT4, transform);
       anariSetParameter(dev, instance[1], "group", ANARI_GROUP, &group);
       anariRelease(dev, group);
 
@@ -413,6 +534,7 @@ int main(int argc, const char **argv)
     {
       mesh = anariNewGeometry(dev, "sphere");
       anariSetParameter(dev, mesh, "name", ANARI_STRING, "tutorialPoints");
+      //anariSetParameter(dev, mesh, "usd::useUsdGeomPoints", ANARI_BOOL, &useUsdGeomPoints);
 
       ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4);
       anariCommitParameters(dev, array);
@@ -435,6 +557,7 @@ int main(int argc, const char **argv)
       array = anariNewArray1D(dev, sphereSizes, 0, 0, ANARI_FLOAT32, 4);
       anariCommitParameters(dev, array);
       anariSetParameter(dev, mesh, "vertex.radius", ANARI_ARRAY, &array);
+      //anariSetParameter(dev, mesh, "vertex.scale", ANARI_ARRAY, &array);
       anariRelease(dev, array);
 
       anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, timeValues + timeIdx*2); // Switch the child timestep for something else
@@ -482,7 +605,7 @@ int main(int argc, const char **argv)
       // put the group into an instance (give the group a world transform)
       instance = anariNewInstance(dev, "transform");
       anariSetParameter(dev, instance, "name", ANARI_STRING, "tutorialInstance_1");
-      anariSetParameter(dev, instance, "transform", ANARI_FLOAT32_MAT3x4, transform);
+      anariSetParameter(dev, instance, "transform", ANARI_FLOAT32_MAT4, transform);
       anariSetParameter(dev, instance, "group", ANARI_GROUP, &group);
       anariRelease(dev, group);
 

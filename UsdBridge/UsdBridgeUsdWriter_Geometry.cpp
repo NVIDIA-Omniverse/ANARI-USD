@@ -90,7 +90,7 @@ namespace
     }
   }
 
-  void InitializeUsdGeometryTimeVar(UsdGeomMesh& meshGeom, const UsdBridgeMeshData& meshData, const UsdBridgeSettings& settings, 
+  void InitializeUsdGeometryTimeVar(UsdGeomMesh& meshGeom, const UsdBridgeMeshData& meshData, const UsdBridgeSettings& settings,
     const TimeEvaluator<UsdBridgeMeshData>* timeEval = nullptr)
   {
     typedef UsdBridgeMeshData::DataMemberId DMI;
@@ -112,7 +112,7 @@ namespace
 
     CreateUsdGeomAttributePrimvars(primvarApi, meshData, timeEval);
   }
-  
+
   void InitializeUsdGeometryTimeVar(UsdGeomPoints& pointsGeom, const UsdBridgeInstancerData& instancerData, const UsdBridgeSettings& settings,
     const TimeEvaluator<UsdBridgeInstancerData>* timeEval = nullptr)
   {
@@ -158,7 +158,7 @@ namespace
       CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
 
     CreateUsdGeomAttributePrimvars(primvarApi, instancerData, timeEval);
-  	
+
     //CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::LINEARVELOCITIES, CreateVelocitiesAttr, UsdBridgeTokens->velocities);
     //CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::ANGULARVELOCITIES, CreateAngularVelocitiesAttr, UsdBridgeTokens->angularVelocities);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::INVISIBLEIDS, CreateInvisibleIdsAttr, UsdBridgeTokens->invisibleIds);
@@ -193,7 +193,7 @@ namespace
     TimeEvaluator<UsdBridgeMeshData>* timeEval = nullptr)
   {
     UsdGeomMesh geomMesh = GetOrDefinePrim<UsdGeomMesh>(geometryStage, geomPath);
-    
+
     InitializeUsdGeometryTimeVar(geomMesh, meshData, settings, timeEval);
 
     if (uniformPrim)
@@ -212,7 +212,7 @@ namespace
     if (instancerData.UseUsdGeomPoints)
     {
       UsdGeomPoints geomPoints = GetOrDefinePrim<UsdGeomPoints>(geometryStage, geomPath);
-      
+
       InitializeUsdGeometryTimeVar(geomPoints, instancerData, settings, timeEval);
 
       if (uniformPrim)
@@ -225,7 +225,7 @@ namespace
     else
     {
       UsdGeomPointInstancer geomPoints = GetOrDefinePrim<UsdGeomPointInstancer>(geometryStage, geomPath);
-      
+
       InitializeUsdGeometryTimeVar(geomPoints, instancerData, settings, timeEval);
 
       return geomPoints.GetPrim();
@@ -318,7 +318,7 @@ namespace
       UsdTimeCode timeCode = timeEval.Eval(DMI::INDICES);
 
       uint64_t numIndices = geomData.NumIndices;
-    
+
       VtArray<int>& usdVertexCounts = GetStaticTempArray<VtArray<int>>();
       usdVertexCounts.resize(numPrims);
       int vertexCount = numIndices / numPrims;
@@ -435,7 +435,7 @@ namespace
         case UsdBridgeType::DOUBLE2: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec2fArray, GfVec2d); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom st primvar should be FLOAT2 or DOUBLE2."); break; }
         }
-  
+
         // Per face or per-vertex interpolation. This will break timesteps that have been written before.
         TfToken texcoordInterpolation = texCoordAttrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
         uniformPrimvar.SetInterpolation(texcoordInterpolation);
@@ -484,7 +484,7 @@ namespace
           UsdAttribute arrayPrimvar = attributePrimvar;
 
           AssignAttribArrayToPrimvar(writer, arrayData, bridgeAttrib.DataType, arrayNumElements, arrayPrimvar, timeCode);
-    
+
           // Per face or per-vertex interpolation. This will break timesteps that have been written before.
           TfToken attribInterpolation = bridgeAttrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
           uniformPrimvar.SetInterpolation(attribInterpolation);
@@ -623,7 +623,7 @@ namespace
       {
         VtFloatArray& usdWidths = GetStaticTempArray<VtFloatArray>();
         usdWidths.resize(geomData.NumPoints);
-        for(auto& x : usdWidths) x = (float)geomData.getUniformScale();
+        for(auto& x : usdWidths) x = geomData.getUniformScale();
         widthsAttribute.Set(usdWidths, timeCode);
       }
     }
@@ -664,7 +664,8 @@ namespace
       }
       else
       {
-        GfVec3f defaultScale((float)geomData.Scale[0], (float)geomData.Scale[1], (float)geomData.Scale[2]);
+        // Before making the default optional, check whether it's supported
+        GfVec3f defaultScale(geomData.Scale.Data);
         VtVec3fArray& usdScales = GetStaticTempArray<VtVec3fArray>();
         usdScales.resize(geomData.NumPoints);
         for(auto& x : usdScales) x = defaultScale;
@@ -706,7 +707,7 @@ namespace
       }
       else
       {
-        //Always provide a default orientation
+        // Before making the default optional, check whether it's supported
         GfVec3f defaultNormal(1, 0, 0);
         VtVec3fArray& usdNormals = GetStaticTempArray<VtVec3fArray>();
         usdNormals.resize(geomData.NumPoints);
@@ -742,15 +743,15 @@ namespace
         {
         case UsdBridgeType::FLOAT3: { ConvertNormalsToQuaternions<float>(usdOrients, geomData.Orientations, geomData.NumPoints); break; }
         case UsdBridgeType::DOUBLE3: { ConvertNormalsToQuaternions<double>(usdOrients, geomData.Orientations, geomData.NumPoints); break; }
-        case UsdBridgeType::FLOAT4: 
-          { 
+        case UsdBridgeType::FLOAT4:
+          {
             for (uint64_t i = 0; i < geomData.NumPoints; ++i)
             {
               const float* orients = reinterpret_cast<const float*>(geomData.Orientations);
               usdOrients[i] = GfQuath(orients[i * 4], orients[i * 4 + 1], orients[i * 4 + 2], orients[i * 4 + 3]);
             }
             orientationsAttribute.Set(usdOrients, timeCode);
-            break; 
+            break;
           }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom OrientationsAttribute should be FLOAT3, DOUBLE3 or FLOAT4."); break; }
         }
@@ -758,8 +759,8 @@ namespace
       }
       else
       {
-        //Always provide a default orientation
-        GfQuath defaultOrient(1, 0, 0, 0);
+        // Before making the default optional, check whether it's supported
+        GfQuath defaultOrient(geomData.Orientation.Data[0], geomData.Orientation.Data[1], geomData.Orientation.Data[2], geomData.Orientation.Data[3]);
         usdOrients.resize(geomData.NumPoints);
         for(auto& x : usdOrients) x = defaultOrient;
         orientationsAttribute.Set(usdOrients, timeCode);
@@ -780,7 +781,7 @@ namespace
     {
       UsdTimeCode timeCode = timeEval.Eval(DMI::SHAPEINDICES);
       UsdGeomType* outGeom = timeCode.IsDefault() ? &uniformGeom : &timeVarGeom;
-      
+
       UsdAttribute protoIndexAttr = outGeom->GetProtoIndicesAttr();
       assert(protoIndexAttr);
 
@@ -938,7 +939,7 @@ namespace
       size_t arrayNumElements = geomData.NumCurveLengths;
       UsdAttribute arrayPrimvar = vertCountAttr;
       bool setPrimvar = true;
-      
+
       { ASSIGN_PRIMVAR_MACRO(VtIntArray); }
     }
   }
@@ -969,24 +970,43 @@ namespace
         shapePath = protoGeomPaths[protoGeomIdx];
       }
 
+      UsdGeomXformable geomXformable;
       switch (geomRefData.Shapes[shapeIdx])
       {
         case UsdBridgeInstancerRefData::SHAPE_SPHERE:
         {
-          UsdGeomSphere::Define(sceneStage, shapePath);
+          geomXformable = UsdGeomSphere::Define(sceneStage, shapePath);
           break;
         }
         case UsdBridgeInstancerRefData::SHAPE_CYLINDER:
         {
-          UsdGeomCylinder::Define(sceneStage, shapePath);
+          geomXformable = UsdGeomCylinder::Define(sceneStage, shapePath);
           break;
         }
         case UsdBridgeInstancerRefData::SHAPE_CONE:
         {
-          UsdGeomCone::Define(sceneStage, shapePath);
+          geomXformable = UsdGeomCone::Define(sceneStage, shapePath);
           break;
         }
-        default: break;
+        default:
+        {
+          geomXformable = UsdGeomXformable::Get(sceneStage, shapePath);
+          break;
+        }
+      }
+
+      // Add a transform
+      geomXformable.ClearXformOpOrder();
+      if(!usdbridgenumerics::isIdentity(geomRefData.ShapeTransform))
+      {
+        const float* transform = geomRefData.ShapeTransform.Data;
+        GfMatrix4d transMat;
+        transMat.SetRow(0, GfVec4d(GfVec4f(&transform[0])));
+        transMat.SetRow(1, GfVec4d(GfVec4f(&transform[4])));
+        transMat.SetRow(2, GfVec4d(GfVec4f(&transform[8])));
+        transMat.SetRow(3, GfVec4d(GfVec4f(&transform[12])));
+
+        geomXformable.AddTransformOp().Set(transMat);
       }
 
       protoRel.AddTarget(shapePath);
@@ -1013,7 +1033,7 @@ UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, 
 void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeMeshData& meshData)
 {
   TimeEvaluator<UsdBridgeMeshData> timeEval(meshData);
-  InitializeUsdGeometry_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, meshData, false, 
+  InitializeUsdGeometry_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, meshData, false,
     Settings, &timeEval);
 
   if(this->EnableSaving)
@@ -1023,7 +1043,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cac
 void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeInstancerData& instancerData)
 {
   TimeEvaluator<UsdBridgeInstancerData> timeEval(instancerData);
-  InitializeUsdGeometry_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, instancerData, false, 
+  InitializeUsdGeometry_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, instancerData, false,
     Settings, &timeEval);
 
   if(this->EnableSaving)
@@ -1033,7 +1053,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cac
 void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeCurveData& curveData)
 {
   TimeEvaluator<UsdBridgeCurveData> timeEval(curveData);
-  InitializeUsdGeometry_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, curveData, false, 
+  InitializeUsdGeometry_Impl(cacheEntry->ManifestStage.second, cacheEntry->PrimPath, curveData, false,
     Settings, &timeEval);
 
   if(this->EnableSaving)
@@ -1067,7 +1087,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
 
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomPoints);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomNormals);
-  if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) ) 
+  if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) )
     { UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomTexCoords); }
   UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomAttributes);
   UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);
@@ -1097,7 +1117,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomInstanceIds);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomWidths);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomOrientNormals);
-    if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) ) 
+    if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) )
       { UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomTexCoords); }
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomAttributes);
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);
@@ -1116,7 +1136,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomInstanceIds);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomScales);
     UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomOrientations);
-    if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) ) 
+    if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) )
       { UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomTexCoords); }
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomAttributes);
     UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);
@@ -1146,7 +1166,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
 
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomPoints);
   UPDATE_USDGEOM_ARRAYS(UpdateUsdGeomNormals);
-  if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) ) 
+  if( Settings.EnableStTexCoords && UsdGeomDataHasTexCoords(geomData) )
     { UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomTexCoords); }
   UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomAttributes);
   UPDATE_USDGEOM_PRIMVAR_ARRAYS(UpdateUsdGeomColors);

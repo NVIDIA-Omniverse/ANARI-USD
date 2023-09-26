@@ -889,7 +889,7 @@ void UsdBridgeUsdWriter::UnbindMaterialFromGeom(const SdfPath & refGeomPath)
   UsdShadeMaterialBindingAPI(refGeomPrim).UnbindDirectBinding();
 }
 
-void UsdBridgeUsdWriter::UpdateUsdTransform(const SdfPath& transPrimPath, float* transform, bool timeVarying, double timeStep)
+void UsdBridgeUsdWriter::UpdateUsdTransform(const SdfPath& transPrimPath, const float* transform, bool timeVarying, double timeStep)
 {
   TimeEvaluator<bool> timeEval(timeVarying, timeStep);
 

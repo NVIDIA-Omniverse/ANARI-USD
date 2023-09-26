@@ -73,7 +73,7 @@ class UsdBridge
     void DeletePrototypeRefs(UsdGeometryHandle geometry, double timeStep);
   
     void UpdateBeginEndTime(double timeStep);
-    void SetInstanceTransform(UsdInstanceHandle instance, float* transform, bool timeVarying, double timeStep);
+    void SetInstanceTransform(UsdInstanceHandle instance, const float* transform, bool timeVarying, double timeStep);
     void SetGeometryData(UsdGeometryHandle geometry, const UsdBridgeMeshData& meshData, double timeStep);
     void SetGeometryData(UsdGeometryHandle geometry, const UsdBridgeInstancerData& instancerData, double timeStep);
     void SetGeometryData(UsdGeometryHandle geometry, const UsdBridgeCurveData& curveData, double timeStep);
