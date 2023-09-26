@@ -1133,11 +1133,9 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
 
   if (geomType == GEOM_SPHERE || geomType == GEOM_GLYPH)
   {
-    // The paramData.indices array (primitive-indexed spheres) is ignored, because:
-    // - A sphere/instance index array is not supported in USD
-    // - Duplicate spheres make no sense
-    // Instead, Ids/InvisibleIds are used to emulate sparsely indexed spheres (sourced from paramData.primitiveIds if available),
-    // and any per-prim arrays are explicitly converted to per-vertex via the tempArrays.
+    // A paramData.indices (primitive-indexed spheres) array, is not supported in USD, also duplicate spheres make no sense.
+    // Instead, Ids/InvisibleIds are assigned to emulate sparsely indexed spheres (sourced from paramData.primitiveIds if available),
+    // with the per-vertex arrays remaining intact. Any per-prim arrays are explicitly converted to per-vertex via the tempArrays.
     generateIndexedSphereData(paramData, attributeArray, tempArrays.get());
 
     const UsdDataArray* vertices = paramData.vertexPositions;

@@ -1,0 +1,156 @@
+{
+    "info" : {
+        "name" : "KHR_GEOMETRY_GLYPH",
+        "type" : "extension",
+        "dependencies" : []
+    },
+
+    "objects" : [
+        {
+            "type" : "ANARI_GEOMETRY",
+            "name" : "glyph",
+            "description" : "glyph geometry object",
+            "parameters" : [
+                {
+                    "name" : "name",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "optional object name"
+                }, {
+                    "name" : "primitive.color",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : [
+                        "ANARI_UFIXED8", "ANARI_UFIXED8_VEC2", "ANARI_UFIXED8_VEC3", "ANARI_UFIXED8_VEC4",
+                        "ANARI_UFIXED8_R_SRGB", "ANARI_UFIXED8_RA_SRGB", "ANARI_UFIXED8_RGB_SRGB", "ANARI_UFIXED8_RGBA_SRGB",
+                        "ANARI_UFIXED16", "ANARI_UFIXED16_VEC2", "ANARI_UFIXED16_VEC3", "ANARI_UFIXED16_VEC4",
+                        "ANARI_UFIXED32", "ANARI_UFIXED32_VEC2", "ANARI_UFIXED32_VEC3", "ANARI_UFIXED32_VEC4",
+                        "ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "per primitive color"
+                }, {
+                    "name" : "primitive.attribute0",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "per primitive attribute0"
+                }, {
+                    "name" : "primitive.attribute1",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "per primitive attribute1"
+                }, {
+                    "name" : "primitive.attribute2",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "per primitive attribute2"
+                }, {
+                    "name" : "primitive.attribute3",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "per primitive attribute3"
+                }, {
+                    "name" : "primitive.id",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_UINT32", "ANARI_UINT64"],
+                    "tags" : [],
+                    "description" : "primitive id"
+                }, {
+                    "name" : "vertex.position",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32_VEC3"],
+                    "tags" : ["required"],
+                    "description" : "glyph position"
+                }, {
+                    "name" : "vertex.scale",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32", "ANARI_FLOAT32_VEC3"],
+                    "tags" : [],
+                    "description" : "glyph scale"
+                }, {
+                    "name" : "vertex.orientation",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32_QUAT_IJKW"],
+                    "tags" : [],
+                    "description" : "glyph orientation"
+                }, {
+                    "name" : "vertex.cap",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_UINT8"],
+                    "tags" : [],
+                    "description" : "glyph cap type for cylinders and cones"
+                }, {
+                    "name" : "vertex.color",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : [
+                        "ANARI_UFIXED8", "ANARI_UFIXED8_VEC2", "ANARI_UFIXED8_VEC3", "ANARI_UFIXED8_VEC4",
+                        "ANARI_UFIXED8_R_SRGB", "ANARI_UFIXED8_RA_SRGB", "ANARI_UFIXED8_RGB_SRGB", "ANARI_UFIXED8_RGBA_SRGB",
+                        "ANARI_UFIXED16", "ANARI_UFIXED16_VEC2", "ANARI_UFIXED16_VEC3", "ANARI_UFIXED16_VEC4",
+                        "ANARI_UFIXED32", "ANARI_UFIXED32_VEC2", "ANARI_UFIXED32_VEC3", "ANARI_UFIXED32_VEC4",
+                        "ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "vertex color"
+                }, {
+                    "name" : "vertex.attribute0",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "vertex attribute0"
+                }, {
+                    "name" : "vertex.attribute1",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "vertex attribute1"
+                }, {
+                    "name" : "vertex.attribute2",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "vertex attribute2"
+                }, {
+                    "name" : "vertex.attribute3",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32", "ANARI_FLOAT32_VEC2", "ANARI_FLOAT32_VEC3", "ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "vertex attribute3"
+                }, {
+                    "name" : "primitive.index",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_UINT32", "ANARI_UINT64"],
+                    "tags" : [],
+                    "description" : "index array"
+                }, {
+                    "name" : "scale",
+                    "types" : ["ANARI_FLOAT32_VEC3"],
+                    "tags" : [],
+                    "description" : "global glyph scale"
+                }, {
+                    "name" : "orientation",
+                    "types" : ["ANARI_FLOAT32_QUAT_IJKW"],
+                    "tags" : [],
+                    "description" : "global glyph orientation"
+                }, {
+                    "name" : "caps",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "default" : "none",
+                    "values" : ["none", "first", "second", "both"],
+                    "description" : "global cap type for cylinders and cones"
+                }, {
+                    "name" : "shapeType",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "glyph shape geometry type"
+                }, {
+                    "name" : "shapeGeometry",
+                    "types" : ["ANARI_GEOMETRY"],
+                    "tags" : [],
+                    "description" : "glyph shape geometry"
+                }
+            ]
+        }
+    ]
+}
