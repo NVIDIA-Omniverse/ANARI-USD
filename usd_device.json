@@ -11,6 +11,7 @@
             "khr_geometry_quad",
             "khr_geometry_sphere",
             "khr_geometry_triangle",
+            "khr_geometry_glyph",
             "khr_instance_transform",
             "khr_material_matte",
             "khr_material_physically_based",

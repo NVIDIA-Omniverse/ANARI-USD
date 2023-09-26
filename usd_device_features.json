@@ -143,11 +143,11 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::usePointInstancer",
+                    "name" : "usd::useUsdGeomPoints",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
-                    "description" : "Use UsdGeomPointInstancer instead of UsdGeomPoints to represent the spheres"
+                    "description" : "For sphere geometries, use UsdGeomPoints instead of UsdGeomPointInstancer to represent the spheres. Cannot be changed after the first commit."
                 }
             ]
         }, {
@@ -202,6 +202,28 @@
                 }
             ]
         }, {
+            "type" : "ANARI_GEOMETRY",
+            "name" : "glyph",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "default" : 0.0,
+                    "description" : "Timestep of the geometry object"
+                }, {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::time::shapeGeometry",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "The timestep of the object attached to the shapeGeometry parameter of the glyph geometry, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
+                }
+            ]
+        }, {
             "type" : "ANARI_MATERIAL",
             "name" : "matte",
             "parameters" : [
@@ -220,12 +242,12 @@
                     "name" : "usd::time::sampler::color",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the sampler object attached to the color parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the sampler object attached to the color parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
                     "name" : "usd::time::sampler::opacity",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the sampler object attached to the opacity parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the sampler object attached to the opacity parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }
             ]
         }, {
@@ -247,32 +269,32 @@
                     "name" : "usd::time::sampler::baseColor",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the sampler object attached to the baseColor parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the sampler object attached to the baseColor parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
                     "name" : "usd::time::sampler::opacity",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the sampler object attached to the opacity parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the sampler object attached to the opacity parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
                     "name" : "usd::time::sampler::emissive",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the sampler object attached to the emissive parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the sampler object attached to the emissive parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
                     "name" : "usd::time::sampler::roughness",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the sampler object attached to the roughness parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the sampler object attached to the roughness parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
                     "name" : "usd::time::sampler::metallic",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the sampler object attached to the metallic parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the sampler object attached to the metallic parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
                     "name" : "usd::time::sampler::ior",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the sampler object attached to the ior parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the sampler object attached to the ior parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }
             ]
         }, {
@@ -377,7 +399,7 @@
                     "name" : "usd::time::value",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the object attached to the value parameter of the volume, at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the object attached to the value parameter of the volume, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }
             ]
         }, {
@@ -422,12 +444,12 @@
                     "name" : "usd::time::geometry",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the object attached to the geometry parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the object attached to the geometry parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
                     "name" : "usd::time::material",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
-                    "description" : "The timestep of the object attached to the material parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the device value if left unset."
+                    "description" : "The timestep of the object attached to the material parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }
             ]
         }

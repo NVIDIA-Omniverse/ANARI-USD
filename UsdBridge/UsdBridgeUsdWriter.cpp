@@ -45,6 +45,7 @@ namespace constring
   const char* const mdlGraphZPrimPf = "_z";
   const char* const mdlGraphWPrimPf = "_w";
   const char* const openVDBPrimPf = "ovdbfield";
+  const char* const protoShapePf = "proto_";
 
   const char* const imageExtension = ".png";
   const char* const vdbExtension = ".vdb";

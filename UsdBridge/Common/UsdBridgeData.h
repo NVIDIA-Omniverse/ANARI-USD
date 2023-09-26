@@ -253,42 +253,31 @@ struct UsdBridgeInstancerData
   static const UsdBridgeGeomType GeomType = UsdBridgeGeomType::INSTANCER;
 
   //Class definitions
-  enum InstanceShape
-  {
-    SHAPE_SPHERE = -1,
-    SHAPE_CYLINDER = -2,
-    SHAPE_CONE = -3,
-    SHAPE_MESH = 0 // Positive values denote meshes (specific meshes can be referenced by id)
-  };
-
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
     POINTS = (1 << 0), // Goes together with extent
-    SHAPES = (1 << 1), // Cannot be timevarying
-    SHAPEINDICES = (1 << 2),
-    SCALES = (1 << 3),
-    ORIENTATIONS = (1 << 4),
-    LINEARVELOCITIES = (1 << 5),
-    ANGULARVELOCITIES = (1 << 6),
-    INSTANCEIDS = (1 << 7),
-    COLORS = (1 << 8),
-    INVISIBLEIDS = (1 << 9),
-    ATTRIBUTE0 = (1 << 10),
-    ATTRIBUTE1 = (1 << 11),
-    ATTRIBUTE2 = (1 << 12),
-    ATTRIBUTE3 = (1 << 13),
-    ALL = (1 << 14) - 1
+    SHAPEINDICES = (1 << 1),
+    SCALES = (1 << 2),
+    ORIENTATIONS = (1 << 3),
+    LINEARVELOCITIES = (1 << 4),
+    ANGULARVELOCITIES = (1 << 5),
+    INSTANCEIDS = (1 << 6),
+    COLORS = (1 << 7),
+    INVISIBLEIDS = (1 << 8),
+    ATTRIBUTE0 = (1 << 9),
+    ATTRIBUTE1 = (1 << 10),
+    ATTRIBUTE2 = (1 << 11),
+    ATTRIBUTE3 = (1 << 12),
+    ALL = (1 << 13) - 1
   };
 
   DataMemberId UpdatesToPerform = DataMemberId::ALL;
   DataMemberId TimeVarying = DataMemberId::ALL;
 
-  InstanceShape DefaultShape = SHAPE_SPHERE;
-  InstanceShape* Shapes = &DefaultShape; //no duplicate entries allowed.
-  int NumShapes = 1;
+  bool getUniformScale() const { return Scale[0]; }
 
-  bool UsePointInstancer = true;
+  bool UseUsdGeomPoints = true; // Shape is sphere and geomPoints is desired
 
   uint64_t NumPoints = 0;
   const void* Points = nullptr;
@@ -296,7 +285,7 @@ struct UsdBridgeInstancerData
   const int* ShapeIndices = nullptr; //if set, one for every point
   const void* Scales = nullptr;// 3-vector scale
   UsdBridgeType ScalesType = UsdBridgeType::UNDEFINED;
-  double UniformScale = 1;// In case no scales are given
+  double Scale[3] = {1, 1, 1};// In case no scales are given
   const void* Orientations = nullptr;
   UsdBridgeType OrientationsType = UsdBridgeType::UNDEFINED;
   const void* Colors = nullptr;
@@ -312,6 +301,21 @@ struct UsdBridgeInstancerData
   const void* InvisibleIds = nullptr; //Index into points
   uint64_t NumInvisibleIds = 0;
   UsdBridgeType InvisibleIdsType = UsdBridgeType::UNDEFINED;
+};
+
+struct UsdBridgeInstancerRefData
+{
+  enum InstanceShape
+  {
+    SHAPE_SPHERE = -1,
+    SHAPE_CYLINDER = -2,
+    SHAPE_CONE = -3,
+    SHAPE_MESH = 0 // Positive values denote meshes (allows for indices into a list of meshes passed along with a list of shapes)
+  };
+
+  InstanceShape DefaultShape = SHAPE_SPHERE;
+  InstanceShape* Shapes = &DefaultShape;
+  int NumShapes = 1;
 };
 
 struct UsdBridgeCurveData
@@ -338,6 +342,7 @@ struct UsdBridgeCurveData
   DataMemberId TimeVarying = DataMemberId::ALL;
 
   bool isEmpty() { return Points == NULL; }
+  bool getUniformScale() const { return UniformScale; }
 
   uint64_t NumPoints = 0;
 

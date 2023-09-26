@@ -58,7 +58,7 @@ ANARI scene objects:
 - Geometries:
     - all fixed point color array types will be normalized to float, double will be type-cast
     - attribute arrays and their types are fixed after the first commit (ie. from that point one cannot assign a different array to an attribute parameter)
-    - Cones/Cylinders do not support the `caps` parameter, or the `vertex.cap` attribute
+    - Cones/Cylinders/Glyphs do not support the `caps` parameter, or the `vertex.cap` attribute
     - For triangles and quads, the `vertex.tangent` attribute is not supported
 - Volumes and SpatialFields:
     - `unitDistance` has no effect
