@@ -10,7 +10,7 @@
 struct UsdFloat3
 {
   using DataType = float;
-  DataType Data[3];
+  DataType Data[3] = { 1.0, 1.0, 1.0 };
 };
 
 struct UsdFloatMat4

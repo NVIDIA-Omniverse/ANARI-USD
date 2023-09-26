@@ -610,21 +610,30 @@ namespace
         const void* arrayData = geomData.Scales;
         size_t arrayNumElements = geomData.NumPoints;
         UsdAttribute arrayPrimvar = widthsAttribute;
-        bool setPrimvar = true;
+        bool setPrimvar = false;
 
+        auto doubleFn = [](VtFloatArray& usdArray) { for(auto& x : usdArray) { x *= 2.0f; } };
         switch (geomData.ScalesType)
         {
-        case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO(VtFloatArray); break; }
-        case UsdBridgeType::DOUBLE: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtFloatArray, double); break; }
+        case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO(VtFloatArray); doubleFn(usdArray); arrayPrimvar.Set(usdArray, timeCode); break; }
+        case UsdBridgeType::DOUBLE: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtFloatArray, double); doubleFn(usdArray); arrayPrimvar.Set(usdArray, timeCode); break; }
         default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom WidthsAttribute should be FLOAT or DOUBLE."); break; }
         }
       }
       else
       {
-        VtFloatArray& usdWidths = GetStaticTempArray<VtFloatArray>();
-        usdWidths.resize(geomData.NumPoints);
-        for(auto& x : usdWidths) x = geomData.getUniformScale();
-        widthsAttribute.Set(usdWidths, timeCode);
+        // Remember that widths define a diameter, so a default width (1.0) corresponds to a scale of 0.5.
+        if(geomData.getUniformScale() != 0.5f)
+        {
+          VtFloatArray& usdWidths = GetStaticTempArray<VtFloatArray>();
+          usdWidths.resize(geomData.NumPoints);
+          for(auto& x : usdWidths) x = geomData.getUniformScale() * 2.0f;
+          widthsAttribute.Set(usdWidths, timeCode);
+        }
+        else
+        {
+          widthsAttribute.Set(SdfValueBlock(), timeCode);
+        }
       }
     }
   }
@@ -664,12 +673,18 @@ namespace
       }
       else
       {
-        // Before making the default optional, check whether it's supported
-        GfVec3f defaultScale(geomData.Scale.Data);
-        VtVec3fArray& usdScales = GetStaticTempArray<VtVec3fArray>();
-        usdScales.resize(geomData.NumPoints);
-        for(auto& x : usdScales) x = defaultScale;
-        scalesAttribute.Set(usdScales, timeCode);
+        if(!usdbridgenumerics::isIdentity(geomData.Scale))
+        {
+          GfVec3f defaultScale(geomData.Scale.Data);
+          VtVec3fArray& usdScales = GetStaticTempArray<VtVec3fArray>();
+          usdScales.resize(geomData.NumPoints);
+          for(auto& x : usdScales) x = defaultScale;
+          scalesAttribute.Set(usdScales, timeCode);
+        }
+        else
+        {
+          scalesAttribute.Set(SdfValueBlock(), timeCode);
+        }
       }
     }
   }
@@ -707,12 +722,12 @@ namespace
       }
       else
       {
-        // Before making the default optional, check whether it's supported
-        GfVec3f defaultNormal(1, 0, 0);
-        VtVec3fArray& usdNormals = GetStaticTempArray<VtVec3fArray>();
-        usdNormals.resize(geomData.NumPoints);
-        for(auto& x : usdNormals) x = defaultNormal;
-        normalsAttribute.Set(usdNormals, timeCode);
+        //GfVec3f defaultNormal(1, 0, 0);
+        //VtVec3fArray& usdNormals = GetStaticTempArray<VtVec3fArray>();
+        //usdNormals.resize(geomData.NumPoints);
+        //for(auto& x : usdNormals) x = defaultNormal;
+        //normalsAttribute.Set(usdNormals, timeCode);
+        normalsAttribute.Set(SdfValueBlock(), timeCode);
       }
     }
   }
@@ -759,11 +774,17 @@ namespace
       }
       else
       {
-        // Before making the default optional, check whether it's supported
-        GfQuath defaultOrient(geomData.Orientation.Data[0], geomData.Orientation.Data[1], geomData.Orientation.Data[2], geomData.Orientation.Data[3]);
-        usdOrients.resize(geomData.NumPoints);
-        for(auto& x : usdOrients) x = defaultOrient;
-        orientationsAttribute.Set(usdOrients, timeCode);
+        if(!usdbridgenumerics::isIdentity(geomData.Orientation))
+        {
+          GfQuath defaultOrient(geomData.Orientation.Data[0], geomData.Orientation.Data[1], geomData.Orientation.Data[2], geomData.Orientation.Data[3]);
+          usdOrients.resize(geomData.NumPoints);
+          for(auto& x : usdOrients) x = defaultOrient;
+          orientationsAttribute.Set(usdOrients, timeCode);
+        }
+        else
+        {
+          orientationsAttribute.Set(SdfValueBlock(), timeCode);
+        }
       }
     }
   }

@@ -365,7 +365,7 @@ int main(int argc, const char **argv)
 
       mesh = anariNewGeometry(dev, "sphere");
       anariSetParameter(dev, mesh, "name", ANARI_STRING, "tutorialPoints");
-      //anariSetParameter(dev, mesh, "usd::useUsdGeomPoints", ANARI_BOOL, &useUsdGeomPoints);
+      anariSetParameter(dev, mesh, "usd::useUsdGeomPoints", ANARI_BOOL, &useUsdGeomPoints);
       //anariSetParameter(dev, mesh, "shapeType", ANARI_STRING, "cylinder");
       //anariSetParameter(dev, mesh, "shapeGeometry", ANARI_GEOMETRY, &protoMesh);
       //anariSetParameter(dev, mesh, "shapeTransform", ANARI_FLOAT32_MAT4, protoTransform);
@@ -534,7 +534,7 @@ int main(int argc, const char **argv)
     {
       mesh = anariNewGeometry(dev, "sphere");
       anariSetParameter(dev, mesh, "name", ANARI_STRING, "tutorialPoints");
-      //anariSetParameter(dev, mesh, "usd::useUsdGeomPoints", ANARI_BOOL, &useUsdGeomPoints);
+      anariSetParameter(dev, mesh, "usd::useUsdGeomPoints", ANARI_BOOL, &useUsdGeomPoints);
 
       ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4);
       anariCommitParameters(dev, array);
