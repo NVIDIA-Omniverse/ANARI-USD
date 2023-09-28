@@ -24,6 +24,7 @@
 #include <memory>
 #include <sstream>
 #include <algorithm>
+#include <limits>
 
 static char deviceName[] = "usd";
 

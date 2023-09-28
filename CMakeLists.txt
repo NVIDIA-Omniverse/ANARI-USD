@@ -67,7 +67,7 @@ else()
 endif()
 
 # Search in config mode
-find_package(anari 0.7.0 REQUIRED
+find_package(anari 0.7 REQUIRED
   PATHS ${ANARI_ROOT_DIR}
 )
 

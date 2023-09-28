@@ -6,6 +6,7 @@
 #include "UsdBridgedBaseObject.h"
 
 #include <memory>
+#include <limits>
 
 class UsdDataArray;
 struct UsdBridgeMeshData;
