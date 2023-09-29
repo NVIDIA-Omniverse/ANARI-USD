@@ -130,7 +130,16 @@ target_compile_definitions(UsdBridge
 # Platform-dependent operations
 
 if (WIN32)
-  add_definitions("-DBOOST_ALL_DYN_LINK")
+  target_compile_definitions(UsdBridge PRIVATE "-DBOOST_ALL_DYN_LINK")
+  # Figure out the vc toolset of the boost libs included with the USD install
+  file(GLOB Boost_libfiles "${USD_ROOT_DIR_RELEASE}/lib/boost*")
+  if(Boost_libfiles)
+    list(GET Boost_libfiles 0 Boost_libfile)
+    get_filename_component(Boost_libfile_name ${Boost_libfile} NAME)
+    string(REGEX MATCH "vc[0-9]*" Boost_lib_toolset ${Boost_libfile_name})
+    message(STATUS "Usd-boost VC toolset: ${Boost_lib_toolset}")
+    target_compile_definitions(UsdBridge PRIVATE "-DBOOST_LIB_TOOLSET=\"${Boost_lib_toolset}\"")
+  endif()
   # Combination of boost and python causes pragma linking issues for both libraries.
   message(STATUS "Python link dirs: ${USD_PYTHON_LINK_DIRS}")
   # Make sure to set link dirs public, since this is a static lib, so the dynamic boost libs will propagate to the parent project. 
