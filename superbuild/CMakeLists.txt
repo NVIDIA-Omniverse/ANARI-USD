@@ -50,7 +50,7 @@ option(USD_DEVICE_INSTALL_DEPS "Install USD (and Omniverse) dependencies along w
 
 if (BUILD_USD)
 
-  find_package(Python3 REQUIRED Interpreter Development)
+  find_package(Python REQUIRED Interpreter Development)
 
   #if(WIN32)
   #  set(TBB_URL "https://github.com/oneapi-src/oneTBB/releases/download/2018_U6/tbb2018_20180822oss_win.zip")

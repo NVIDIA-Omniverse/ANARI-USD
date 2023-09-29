@@ -86,7 +86,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
       --device ${CMAKE_CURRENT_SOURCE_DIR}/usd_device.json
       --namespace anari::usd
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS usd_device.json usd_device_features.json
+    DEPENDS usd_device.json usd_device_features.json khr_geometry_glyph.json
   )
 
   add_custom_target(generate_all)
