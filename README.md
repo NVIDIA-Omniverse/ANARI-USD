@@ -4,26 +4,37 @@ Device for ANARI generating USD+Omniverse output
 
 ### Prerequisites #
 
-- For Linux, use GCC-9 or higher, USD 22.xx (to avoid C++ ABI issues), OpenVDB 10.
-- On Windows this library builds against USD versions 22.xx, OpenVDB 10.
-- A USD install in any of the following ways (depending on desired capabilities):
-    - Get prebuilt USD packages from https://developer.nvidia.com/usd#bin (No OpenVDB or Omniverse support)
-    - Get prebuilt USD + Omniverse packages from Omniverse launcher according to [Downloading the Omniverse libraries](#downloading-the-omniverse-libraries) (no OpenVDB support)
-    - Automatic installation of USD as part of the superbuild, see `superbuild/README.md` (Experimental, no Omniverse support)
-    - Build USD from source (https://github.com/PixarAnimationStudios/USD/) with OpenVDB support according to [Building USD Manually](#building-usd-manually) (no Omniverse support)
+On Windows and Linux this library builds against USD versions 22.xx, OpenVDB 10.
+
+USD can be built/installed in any of the following ways (depending on desired capabilities):
+    - Get prebuilt USD + Omniverse packages from Omniverse launcher according to [Downloading the Omniverse libraries](#downloading-the-omniverse-libraries)
+    - Build USD from source (https://github.com/PixarAnimationStudios/USD/), optionally with OpenVDB support according to [Building USD Manually](#building-usd-manually)
         - For release/debug versions, observe the directory structure guidelines in [Debug Builds](#debug-builds) section
+    - Get prebuilt USD packages from https://developer.nvidia.com/usd#bin (No OpenVDB or Omniverse support)
+    - Automatic installation of USD as part of the superbuild, see `superbuild/README.md` (Experimental)
+
+Note that on Linux, GCC only guarantees forward ABI-compatibility, so libraries downloaded from external sources built with newer versions of GCC than the USD device may not link to it properly.
 
 ### Building the ANARI USD device #
 
-The best way to build is to run `cmake(-gui)` on the `superbuild` subdir, for detailed instructions see `superbuild/README.md`. 
+From this directory, run `mkdir _build && cd _build`, after which there are two ways to build the USD Device:
 
-In short, use the above to set `USD_ROOT_DIR` to the directory containing the `/include` and `/lib` subfolders (or `/debug` and `/release`, see [Debug Builds](#debug-builds)), and optionally an `OpenVDB_ROOT` or `OMNICLIENT_ROOT_DIR` with `OMNIUSDRESOLVER_ROOT_DIR` (typically `omni_client_library` and `omni_usd_resolver` from the connect sample deps). After configuring and generating the superbuild, the actual projects and dependencies are configured, generated and built with `cmake --build . --config [Release|Debug]`
+- Superbuild: run `(c)cmake(-gui)` on the `../superbuild` subdir, for detailed instructions see `superbuild/README.md`.
+- Regular build: Directly run `(c)cmake(-gui)` on the root directory.
+    - Example with Omniverse support, without OpenVDB: `ccmake .. -DUSD_DEVICE_USE_OMNIVERSE=ON -DANARI_ROOT_DIR=<anari_install_path> -DUSD_ROOT_DIR=<usd_install_path> -DOMNIUSDRESOLVER_ROOT_DIR=<omni_usd_resolver_install_path> -DOMNICLIENT_ROOT_DIR=<omni_client_install_path> -DPython_ROOT_DIR=<python_install_path> -DPython_FIND_STRATEGY_LOCATION=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON`
+
+After configuring and generating any of the above builds, run `cmake --build . --config [Release|Debug]`
 
 ### Usage notes #
 
-- Device name is `usd`
+- Library and device names are both `usd`
 - All device-specific parameters are prefixed with `usd::`
+- See `usd_device_features.json` for parameter names and descriptions
 - Examples in `examples/anariTutorial_usd(_time).c`
+
+More details about specific parameters and unsupported features follow below.
+
+### Basic parameters #
 
 Specific ANARIDevice object parameters:
 - Set `usd::serialize.location` string to the output location on disk, `usd::serialize.outputBinary` bool for binary or text output. These parameters are **immutable** (after first `anariCommit`).
@@ -40,6 +51,7 @@ Specific ANARI timed object parameters (Geometry, Material, Spatialfield, Sample
 - A `usd::time` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`, regardless of the global timestep set for the ANARIDevice object. The effect of setting this parameter is that the parent objects referencing these "timed objects" will keep a USD-based time-mapping per global timestep. This way, a child reference defined at a particular global timestep will point to the data output of the child object at its `usd::time`, thereby avoiding data duplication. This parameter is applied like any other parameter during `anariCommit`.
 
 ### Advanced parameters #
+
 ANARIDevice object parameters:
 - Device parameter `usd::sceneStage` allows the user to provide a pre-constructed stage, into which the USD output will be constructed. For correct operation, make sure that `anariSetParameter` for `usd::sceneStage` takes a `UsdStage*` (ie. the `mem` argument is directly of `UsdStage*` type) with `ANARI_VOID_POINTER` as type enumeration. This parameter is **immutable**.
 - Device parameter `usd::enableSaving` of type `ANARI_BOOL` (default `ON`) allows the user to explicitly control whether USD output is written out to disk, or kept in memory. Assets that are not stored in USD format, such as MDL materials, texture images and volumes, will always be written to disk regardless of the value of this parameter. In order for no files to be written at all, additionally pass the special string `"void"` to `usd::serialize.location`. This parameter can be changed at any time and **applies immediately**.
@@ -91,8 +103,8 @@ If you have separate release and debug versions of USD, (or standalone OpenVDB, 
 - Go to the `Exchange` tab and navigate to the `Connectors` section. Install the Connect Sample (version 102.1.5 is known to work).
 - Go to the install directory of the connect sample, which is typically in `~/.local/share/ov/pkg/` or `<userdir>/AppData/local/ov/pkg/` but can also be found in the launcher by looking at your installed apps, a triple-stack on the right side of the connector sample entry -> settings
 - Build the connect sample by running `build.sh/.bat` in its folder
-- Locate the `nv_usd`, `omni_client_library` and `python` folders in the `_build/target-deps` subfolder
-- The location of the previous three subfolders respectively can directly be set as `USD_ROOT_DIR`, `OMNICLIENT_ROOT_DIR`, `Python_ROOT_DIR` in the ANARI CMake superbuild configuration
+- Locate the `usd`, `omni_usd_resolver`, `omni_client_library` and `python` folders in the `_build/target-deps` subfolder
+- The location of the previous four subfolders respectively can directly be set as `USD_ROOT_DIR`, `OMNIUSDRESOLVER_ROOT_DIR`, `OMNICLIENT_ROOT_DIR`, `Python_ROOT_DIR` in the ANARI CMake superbuild configuration
 
 #### Building USD Manually #
 
@@ -110,5 +122,5 @@ If you have separate release and debug versions of USD, (or standalone OpenVDB, 
 - Build and install USD by running the buildscript `python <usd_source_dir>/build_scripts/build_usd.py <USD_ROOT_DIR>/<config>` (where `USD_ROOT_DIR` is the desired installation location)
     - Add `--debug` (v21.08-) or `--build-variant debug` (v21.11+) for debug builds
     - For OpenVDB on Windows, run **in a developer command prompt** and add the following flags: `--openvdb --build-args openvdb,"-DCMAKE_CXX_FLAGS=\"-D__TBB_NO_IMPLICIT_LINKAGE /EHsc\""`
-        - OpenVDB's FindIlmBase.cmake is broken for debug builds, so make sure that the `_d` suffix is removed from `<USD_ROOT_DIR>/<config>/lib/Half-X_X_d.lib` and `<USD_ROOT_DIR>/<config>/bin/Half-X_X_d.dll` after running the build once, then run it again.
+        - OpenVDB's FindIlmBase.cmake might be broken for debug builds; make sure that the `_d` suffix is removed from `<USD_ROOT_DIR>/<config>/lib/Half-X_X_d.lib` and `<USD_ROOT_DIR>/<config>/bin/Half-X_X_d.dll` after running the build once, then run it again.
     - For OpenVDB on Linux, add the following flags: `--openvdb --build-args openvdb,"-D CMAKE_CXX_FLAGS:STRING=-fPIC $CMAKE_ZLIB_ARGS" blosc,"-D CMAKE_C_FLAGS:STRING=-fPIC -D CMAKE_CXX_FLAGS:STRING=-fPIC" openexr,"$CMAKE_ZLIB_ARGS"`

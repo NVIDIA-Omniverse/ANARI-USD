@@ -32,7 +32,7 @@ following variables control which items are to be built, and with which capabili
 - `USD_DEVICE_USE_OMNIVERSE`: Add Omniverse output capability for generated USD output
 
 If `BUILD_USD` or `BUILD_ANARI_SDK` are set to `OFF`, then those dependencies
-will need to be found on in the host environment. Use `CMAKE_PREFIX_PATH` to
+will need to be found in the host environment. Use `CMAKE_PREFIX_PATH` to
 point to your USD + ANARI-SDK (+ OpenVDB + Omniverse) installations respectively. Alternatively,
 one can use explicit install dir variables which support `debug/` and `release/` subdirs:
 
