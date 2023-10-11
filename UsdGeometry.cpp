@@ -391,6 +391,8 @@ namespace
 
   void convertLinesToSticks(const UsdGeometryData& paramData, const UsdGeometry::AttributeArray& attributeArray, UsdGeometryTempArrays* tempArrays)
   {
+    // Converts arrays of vertex endpoint 2-tuples (optionally obtained via index 2-tuples) into center vertices with correct seglengths.
+
     auto& attribDataArrays = tempArrays->AttributeDataArrays;
     assert(attribDataArrays.size() == attributeArray.size());
 
@@ -454,40 +456,8 @@ namespace
       tempArrays->ScalesArray[primIdx * 3 + 2] = segLength * 0.5f;
 
       // Rotation
-
-      // (dot(|segDir|, zAxis), cross(|segDir|, zAxis)) gives (cos(th), axis*sin(th)),
-      // but rotation is represented by cos(th/2), axis*sin(th/2), ie. half the amount of rotation.
-      // So calculate (dot(|halfVec|, zAxis), cross(|halfVec|, zAxis)) instead.
-      float invSegLength = 1.0f / segLength;
-      float halfVec[3] = {
-        segDir[0] * invSegLength,
-        segDir[1] * invSegLength,
-        segDir[2] * invSegLength + 1.0f
-      };
-      float halfNorm = sqrtf(halfVec[0] * halfVec[0] + halfVec[1] * halfVec[1] + halfVec[2] * halfVec[2]);
-      if (halfNorm != 0.0f)
-      {
-        float invHalfNorm = 1.0f / halfNorm;
-        halfVec[0] *= invHalfNorm;
-        halfVec[1] *= invHalfNorm;
-        halfVec[2] *= invHalfNorm;
-      }
-
-      // Cross zAxis (0,0,1) with segment direction (new Z axis) to get rotation axis * sin(angle)
-      float rotAxis[3] = { -halfVec[1], halfVec[0], 0.0f };
-      // Dot for cos(angle)
-      float cosAngle = halfVec[2];
-
-      if (halfNorm == 0.0f) // In this case there is a 180 degree rotation
-      {
-        rotAxis[1] = 1.0f; //rotAxis (0,1,0)*sin(pi/2)
-        // cosAngle = cos(pi/2) = 0.0f;
-      }
-
-      tempArrays->OrientationsArray[primIdx * 4] = cosAngle;
-      tempArrays->OrientationsArray[primIdx * 4 + 1] = rotAxis[0];
-      tempArrays->OrientationsArray[primIdx * 4 + 2] = rotAxis[1];
-      tempArrays->OrientationsArray[primIdx * 4 + 3] = rotAxis[2];
+      // USD shapes are always lengthwise-oriented along the z axis
+      usdbridgenumerics::DirectionToQuaternionZ(segDir, segLength, tempArrays->OrientationsArray.data() + primIdx*4);
 
       //Colors
       if (paramData.vertexColors)
