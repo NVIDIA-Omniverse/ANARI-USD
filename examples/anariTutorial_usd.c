@@ -89,9 +89,8 @@ float color[] = { 0.0f,
   0.9f,
   0.0f,
   1.0f };
-float opacities[] = { 0.2f,
+float opacities[] = {
   0.5f,
-  0.7f,
   1.0f};
 float texcoord[] = {
   0.0f,
@@ -205,9 +204,9 @@ ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams, T
 
   if(isTransparent)
   {
-    array = anariNewArray1D(dev, opacities, 0, 0, ANARI_FLOAT32, 4);
+    array = anariNewArray1D(dev, opacities, 0, 0, ANARI_FLOAT32, 2);
     anariCommitParameters(dev, array);
-    anariSetParameter(dev, mesh, "vertex.attribute1", ANARI_ARRAY, &array);
+    anariSetParameter(dev, mesh, "primitive.attribute1", ANARI_ARRAY, &array);
     anariRelease(dev, array);
   }
 
@@ -372,9 +371,10 @@ ANARIInstance createConesInstance(ANARIDevice dev, TestParameters_t testParams, 
     anariRelease(dev, array);
   }
 
-  array = anariNewArray1D(dev, testData.gridRadius, 0, 0, ANARI_FLOAT32, numVertices);
+  // Use per-primitive radii when not using indices, to test that codepath too
+  array = anariNewArray1D(dev, testData.gridRadius, 0, 0, ANARI_FLOAT32, testParams.useIndices ? numVertices : numVertices/2); // per-primitive is half the vertex count
   anariCommitParameters(dev, array);
-  anariSetParameter(dev, cones, "vertex.radius", ANARI_ARRAY, &array);
+  anariSetParameter(dev, cones, testParams.useIndices ? "vertex.radius" : "primitive.radius", ANARI_ARRAY, &array);
   anariRelease(dev, array);
 
   anariCommitParameters(dev, cones);
@@ -821,6 +821,7 @@ int main(int argc, const char **argv)
 
   // Using indices (and vertex colors)
   testParams.useIndices = 1;
+  testParams.useVertexColors = 1;
   doTest(testParams);
 
   // Glyphs tests

@@ -169,6 +169,32 @@ namespace
     return geomType;
   }
 
+  uint64_t GetNumberOfPrims(bool hasIndices, const UsdDataLayout& indexLayout, UsdGeometry::GeomType geomType)
+  {
+    if(geomType == UsdGeometry::GEOM_CURVE)
+      return indexLayout.numItems1 - 1;
+    else if(hasIndices)
+      return indexLayout.numItems1;
+
+    int perPrimVertexCount = 1;
+    switch(geomType)
+    {
+    case UsdGeometry::GEOM_CYLINDER:
+    case UsdGeometry::GEOM_CONE:
+      perPrimVertexCount = 2;
+      break;
+    case UsdGeometry::GEOM_TRIANGLE:
+      perPrimVertexCount = 3;
+      break;
+    case UsdGeometry::GEOM_QUAD:
+      perPrimVertexCount = 4;
+      break;
+    default: break;
+    };
+
+    return indexLayout.numItems1 / perPrimVertexCount;
+  }
+
   bool isBitSet(int value, int bit)
   {
     return (bool)(value & (1 << bit));
@@ -876,21 +902,22 @@ bool UsdGeometry::checkArrayConstraints(const UsdDataArray* vertexArray, const U
     return false;
   }
 
-  if (perVertLayout.numItems1 != vertLayout.numItems1)
+  if (vertexArray && vertexArray->getLayout().numItems1 < vertLayout.numItems1)
   {
     if(attribIndex == -1)
-      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: all 'vertex.X' array elements should same size as vertex.positions", debugName);
+      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: all 'vertex.X' array elements should at least be the size of vertex.positions", debugName);
     else
-      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: all 'vertex.attribute%i' array elements should same size as vertex.positions", debugName, attribIndex);
+      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: all 'vertex.attribute%i' array elements should at least be the size of vertex.positions", debugName, attribIndex);
     return false;
   }
 
-  if (perPrimLayout.numItems1 != indexLayout.numItems1)
+  uint64_t numPrims = GetNumberOfPrims(indices, indexLayout, geomType);
+  if (primArray && primArray->getLayout().numItems1 < numPrims)
   {
     if(attribIndex == -1)
-      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: all 'primitive.X' array elements should have same size as vertex.indices (if exists) or vertex.positions (otherwise)", debugName);
+      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: size of 'primitive.X' array too small", debugName);
     else
-      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: all 'primitive.attribute%i' array elements should have same size as vertex.indices (if exists) or vertex.positions (otherwise)", debugName, attribIndex);
+      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' commit failed: size of 'primitive.attribute%i' array too small", debugName, attribIndex);
     return false;
   }
 
@@ -935,7 +962,12 @@ bool UsdGeometry::checkGeomParams(UsdDevice* device)
     if( (geomType == GEOM_TRIANGLE || geomType == GEOM_QUAD) &&
       (flattenedType == UsdBridgeType::UINT || flattenedType == UsdBridgeType::ULONG || flattenedType == UsdBridgeType::LONG))
     {
-      device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' has 'primitive.index' of type other than ANARI_INT32, which may result in an overflow for FaceVertexIndicesAttr of UsdGeomMesh.", debugName);
+      static bool reported = false; // Hardcode this to show only once to make sure developers get to see it, without spamming the console.
+      if(!reported)
+      {
+        device->reportStatus(this, ANARI_GEOMETRY, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, "UsdGeometry '%s' has 'primitive.index' of type other than ANARI_INT32, which may result in an overflow for FaceVertexIndicesAttr of UsdGeomMesh.", debugName);
+        reported = true;
+      }
     }
 
     if (geomType == GEOM_SPHERE || geomType == GEOM_CURVE || geomType == GEOM_GLYPH)
@@ -1070,27 +1102,14 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
   const UsdDataArray* indices = paramData.indices;
   if (indices)
   {
-    meshData.NumIndices = indices->getLayout().numItems1;
-    meshData.Indices = indices->getData();
     ANARIDataType indexType = indices->getType();
-    if (indexType == ANARI_UINT32_VEC3 || indexType == ANARI_INT32_VEC3 || indexType == ANARI_UINT64_VEC3 || indexType == ANARI_INT64_VEC3)
-    {
-      meshData.IndicesType = AnariToUsdBridgeType_Flattened(indices->getType());
-      meshData.NumIndices *= 3;
-    }
-    else if (indexType == ANARI_UINT32_VEC4 || indexType == ANARI_INT32_VEC4 || indexType == ANARI_UINT64_VEC4 || indexType == ANARI_INT64_VEC4)
-    {
-      meshData.IndicesType = AnariToUsdBridgeType_Flattened(indices->getType());
-      meshData.NumIndices *= 4;
-    }
-    else
-    {
-      meshData.IndicesType = AnariToUsdBridgeType(indices->getType());
-    }
+    meshData.NumIndices = indices->getLayout().numItems1 * anari::componentsOf(indexType);
+    meshData.Indices = indices->getData();
+    meshData.IndicesType = AnariToUsdBridgeType_Flattened(indexType);
   }
   else
   {
-    meshData.NumIndices = meshData.NumPoints;
+    meshData.NumIndices = meshData.NumPoints; // Vertices are implicitly indexed consecutively (FaceVertexCount determines how many prims)
   }
 
   //meshData.UpdatesToPerform = Still to be implemented
