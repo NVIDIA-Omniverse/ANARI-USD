@@ -377,12 +377,12 @@ ANARIArray3D UsdDevice::newArray3D(const void *appMemory,
 
 void * UsdDevice::mapArray(ANARIArray array)
 {
-  return ((UsdDataArray*)array)->map(this);
+  return AnariToUsdObjectPtr(array)->map(this);
 }
 
 void UsdDevice::unmapArray(ANARIArray array)
 {
-  ((UsdDataArray*)array)->unmap(this);
+  AnariToUsdObjectPtr(array)->unmap(this);
 }
 
 ANARISampler UsdDevice::newSampler(const char *type)
@@ -542,7 +542,7 @@ void UsdDevice::renderFrame(ANARIFrame frame)
 
   internals->bridge->ResetResourceUpdateState(); // Reset the modified flags for committed shared resources
 
-  UsdRenderer* ren = ((UsdFrame*)frame)->getRenderer();
+  UsdRenderer* ren = AnariToUsdObjectPtr(frame)->getRenderer();
   if(ren)
     ren->saveUsd(this);
 }
@@ -766,7 +766,7 @@ int UsdDevice::getProperty(ANARIObject object,
     }
   }
   else
-    return ((UsdBaseObject*)object)->getProperty(name, type, mem, size, this);
+    return AnariToUsdObjectPtr(object)->getProperty(name, type, mem, size, this);
 
   return 0;
 }
@@ -789,14 +789,14 @@ const void * UsdDevice::frameBufferMap(
   ANARIDataType *pixelType)
 {
   if (fb)
-    return ((UsdFrame*)fb)->mapBuffer(channel, width, height, pixelType);
+    return AnariToUsdObjectPtr(fb)->mapBuffer(channel, width, height, pixelType);
   return nullptr;
 }
 
 void UsdDevice::frameBufferUnmap(ANARIFrame fb, const char *channel)
 {
   if (fb)
-    return ((UsdFrame*)fb)->unmapBuffer(channel);
+    return AnariToUsdObjectPtr(fb)->unmapBuffer(channel);
 }
 
 UsdBaseObject* UsdDevice::getBaseObjectPtr(ANARIObject object)
@@ -834,7 +834,7 @@ void *UsdDevice::mapParameterArray1D(ANARIObject object,
   auto array = newArray1D(nullptr, nullptr, nullptr, dataType, numElements1);
   setParameter(object, name, ANARI_ARRAY1D, &array);
   *elementStride = anari::sizeOf(dataType);
-  ((UsdDataArray*)array)->refDec(helium::RefType::PUBLIC);
+  AnariToUsdObjectPtr(array)->refDec(helium::RefType::PUBLIC);
   return mapArray(array);
 }
 
@@ -848,7 +848,7 @@ void *UsdDevice::mapParameterArray2D(ANARIObject object,
   auto array = newArray2D(nullptr, nullptr, nullptr, dataType, numElements1, numElements2);
   setParameter(object, name, ANARI_ARRAY2D, &array);
   *elementStride = anari::sizeOf(dataType);
-  ((UsdDataArray*)array)->refDec(helium::RefType::PUBLIC);
+  AnariToUsdObjectPtr(array)->refDec(helium::RefType::PUBLIC);
   return mapArray(array);
 }
 
@@ -869,7 +869,7 @@ void *UsdDevice::mapParameterArray3D(ANARIObject object,
       numElements3);
   setParameter(object, name, ANARI_ARRAY3D, &array);
   *elementStride = anari::sizeOf(dataType);
-  ((UsdDataArray*)array)->refDec(helium::RefType::PUBLIC);
+  AnariToUsdObjectPtr(array)->refDec(helium::RefType::PUBLIC);
   return mapArray(array);
 }
 
@@ -883,7 +883,8 @@ void UsdDevice::unmapParameterArray(ANARIObject object, const char *name)
 
   if(paramAddress && paramType == ANARI_ARRAY)
   {
-    ((UsdDataArray*)paramAddress)->unmap(this);
+    auto arrayAddress = (ANARIArray*)paramAddress;
+    AnariToUsdObjectPtr(*arrayAddress)->unmap(this);
   }
 }
 
@@ -907,7 +908,7 @@ void UsdDevice::release(ANARIObject object)
     baseObject->refDec(helium::RefType::PUBLIC);
 
   if (privatizeArray)
-    ((UsdDataArray*)baseObject)->privatize();
+    AnariToUsdObjectPtr((ANARIArray)object)->privatize();
 }
 
 void UsdDevice::retain(ANARIObject object)
