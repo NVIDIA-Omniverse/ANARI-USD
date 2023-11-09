@@ -377,12 +377,13 @@ ANARIArray3D UsdDevice::newArray3D(const void *appMemory,
 
 void * UsdDevice::mapArray(ANARIArray array)
 {
-  return AnariToUsdObjectPtr(array)->map(this);
+  return array ? AnariToUsdObjectPtr(array)->map(this) : nullptr;
 }
 
 void UsdDevice::unmapArray(ANARIArray array)
 {
-  AnariToUsdObjectPtr(array)->unmap(this);
+  if(array)
+    AnariToUsdObjectPtr(array)->unmap(this);
 }
 
 ANARISampler UsdDevice::newSampler(const char *type)
@@ -542,9 +543,8 @@ void UsdDevice::renderFrame(ANARIFrame frame)
 
   internals->bridge->ResetResourceUpdateState(); // Reset the modified flags for committed shared resources
 
-  UsdRenderer* ren = AnariToUsdObjectPtr(frame)->getRenderer();
-  if(ren)
-    ren->saveUsd(this);
+  if(frame)
+    AnariToUsdObjectPtr(frame)->saveUsd(this);
 }
 
 const char* UsdDevice::makeUniqueName(const char* name)
@@ -765,7 +765,7 @@ int UsdDevice::getProperty(ANARIObject object,
       return 1;
     }
   }
-  else
+  else if(object)
     return AnariToUsdObjectPtr(object)->getProperty(name, type, mem, size, this);
 
   return 0;
@@ -884,7 +884,8 @@ void UsdDevice::unmapParameterArray(ANARIObject object, const char *name)
   if(paramAddress && paramType == ANARI_ARRAY)
   {
     auto arrayAddress = (ANARIArray*)paramAddress;
-    AnariToUsdObjectPtr(*arrayAddress)->unmap(this);
+    if(*arrayAddress)
+      AnariToUsdObjectPtr(*arrayAddress)->unmap(this);
   }
 }
 

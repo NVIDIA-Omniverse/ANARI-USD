@@ -30,7 +30,7 @@ class UsdFrame : public UsdParameterizedBaseObject<UsdFrame, UsdFrameData>
       ANARIDataType *pixelType);
     void unmapBuffer(const char* channel);
 
-    UsdRenderer* getRenderer();
+    void saveUsd(UsdDevice* device);
 
   protected:
     bool deferCommit(UsdDevice* device) override;

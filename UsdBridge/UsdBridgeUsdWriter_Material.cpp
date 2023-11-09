@@ -6,6 +6,8 @@
 #include "UsdBridgeUsdWriter_Common.h"
 #include "stb_image_write.h"
 
+#include <limits>
+
 _TF_TOKENS_STRUCT_NAME(QualifiedInputTokens)::_TF_TOKENS_STRUCT_NAME(QualifiedInputTokens)()
   : roughness(TfToken("inputs:roughness", TfToken::Immortal))
   , opacity(TfToken("inputs:opacity", TfToken::Immortal))
@@ -71,6 +73,58 @@ namespace
       output->imageSize = size;
 
       memcpy(output->imageData, data, size);
+    }
+  }
+
+  template<typename CType>
+  void ConvertSamplerData_Inner(const UsdBridgeSamplerData& samplerData, double normFactor, std::vector<unsigned char>& imageData)
+  {
+    int numComponents = samplerData.ImageNumComponents;
+    uint64_t imageDimX = samplerData.ImageDims[0];
+    uint64_t imageDimY = samplerData.ImageDims[1];
+    int64_t yStride = samplerData.ImageStride[1];
+    const char* samplerDataPtr = reinterpret_cast<const char*>(samplerData.Data);
+
+    int64_t baseAddr = 0;
+    for(uint64_t pY = 0; pY < imageDimY; ++pY, baseAddr += yStride)
+    {
+      const CType* lineAddr = reinterpret_cast<const CType*>(samplerDataPtr + baseAddr);
+      for(uint64_t flatX = 0; flatX < imageDimX*numComponents; ++flatX) //flattened X index
+      {
+        uint64_t dstElt = numComponents*pY*imageDimX + flatX;
+
+        double result = *(lineAddr+flatX)*normFactor;
+        result = (result < 0.0) ? 0.0 : ((result > 255.0) ? 255.0 : result);
+
+        imageData[dstElt] = static_cast<unsigned char>(result);
+      }
+    }
+  }
+
+  void ConvertSamplerDataToImage(const UsdBridgeSamplerData& samplerData, std::vector<unsigned char>& imageData)
+  {
+    UsdBridgeType flattenedType = ubutils::UsdBridgeTypeFlatten(samplerData.DataType);
+    int numComponents = samplerData.ImageNumComponents;
+    uint64_t imageDimX = samplerData.ImageDims[0];
+    uint64_t imageDimY = samplerData.ImageDims[1];
+
+    bool normalizedFp = (flattenedType == UsdBridgeType::FLOAT) || (flattenedType == UsdBridgeType::DOUBLE);
+    bool fixedPoint = (flattenedType == UsdBridgeType::USHORT) || (flattenedType == UsdBridgeType::UINT);
+
+    if(normalizedFp || fixedPoint)
+    {
+      imageData.resize(numComponents*imageDimX*imageDimY);
+
+      switch(flattenedType)
+      {
+        case UsdBridgeType::FLOAT: ConvertSamplerData_Inner<float>(samplerData, 255.0, imageData); break;
+        case UsdBridgeType::DOUBLE: ConvertSamplerData_Inner<double>(samplerData, 255.0, imageData); break;
+        case UsdBridgeType::USHORT: ConvertSamplerData_Inner<unsigned short>(samplerData,
+          255.0 / static_cast<double>(std::numeric_limits<unsigned short>::max()), imageData); break;
+        case UsdBridgeType::UINT: ConvertSamplerData_Inner<unsigned int>(samplerData,
+          255.0 / static_cast<double>(std::numeric_limits<unsigned int>::max()), imageData); break;
+        default: break;
+      }
     }
   }
 
@@ -187,7 +241,7 @@ namespace
       if(shadeInput.GetTypeName() == SdfValueTypeNames->Float)
       {
         const char* componentPrimPf = constring::mdlGraphWPrimPf;
-        TfToken componentAssetIdent = UsdBridgeTokens->w;
+        TfToken componentAssetIdent = (nodeOutput.GetTypeName() == SdfValueTypeNames->Float4) ? UsdBridgeTokens->w : UsdBridgeTokens->x;
         switch(ChannelSelector)
         {
           case 0: componentPrimPf = constring::mdlGraphXPrimPf; componentAssetIdent = UsdBridgeTokens->x; break;
@@ -324,9 +378,9 @@ namespace
   {
     sampler.CreateImplementationSourceAttr(VtValue(UsdBridgeTokens->sourceAsset));
     sampler.SetSourceAsset(SdfAssetPath(constring::mdlSupportAssetName), UsdBridgeTokens->mdl);
-    sampler.SetSourceAssetSubIdentifier(UsdBridgeTokens->lookup_float3, UsdBridgeTokens->mdl);
+    sampler.SetSourceAssetSubIdentifier(UsdBridgeTokens->lookup_float4, UsdBridgeTokens->mdl);
 
-    sampler.CreateOutput(UsdBridgeTokens->out, SdfValueTypeNames->Float3);
+    sampler.CreateOutput(UsdBridgeTokens->out, SdfValueTypeNames->Float4);
 
     // Bind the texcoord reader's output to the sampler's coord input
     sampler.CreateInput(UsdBridgeTokens->coord, coordType).ConnectToSource(tcrOutput);
@@ -677,12 +731,12 @@ namespace
     const UsdShadeShader& shadeNodeOut, const TfToken& outputToken,
     const ShadeGraphTypeConversionNodeContext& conversionContext)
   {
-    //Bind the sampler to the input of the uniform shader, so remove any existing values from the timeVar prim
+    //Bind the shade node to the input of the uniform shader, so remove any existing values from the timeVar prim
     UsdShadeInput timeVarInput = timeVarShaderIn.GetInput(inputToken);
     if(timeVarInput)
       timeVarInput.GetAttr().Clear();
 
-    // Connect refSampler output to uniformShad input
+    // Connect shadeNode output to uniformShad input
     UsdShadeOutput nodeOutput = shadeNodeOut.GetOutput(outputToken);
     assert(nodeOutput);
 
@@ -1255,19 +1309,36 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, UsdBridge
     assert(samplerData.Data);
     if(!isSharedResource || !IsSharedResourceModified(key))
     {
-      if( samplerData.DataType == UsdBridgeType::UCHAR
-      || samplerData.DataType == UsdBridgeType::UCHAR3
-      || samplerData.DataType == UsdBridgeType::UCHAR4
-      || samplerData.DataType == UsdBridgeType::UCHAR_SRGB_R
-      || samplerData.DataType == UsdBridgeType::UCHAR_SRGB_RGB
-      || samplerData.DataType == UsdBridgeType::UCHAR_SRGB_RGBA)
+      TempImageData.resize(0);
+
+      const void* convertedSamplerData = nullptr;
+      int64_t convertedSamplerStride = samplerData.ImageStride[1];
+      int numComponents = samplerData.ImageNumComponents;
+
+      UsdBridgeType flattenedType = ubutils::UsdBridgeTypeFlatten(samplerData.DataType);
+      if( !(flattenedType == UsdBridgeType::UCHAR || flattenedType == UsdBridgeType::UCHAR_SRGB_R))
+      {
+        // Convert to 8-bit image data
+        ConvertSamplerDataToImage(samplerData, TempImageData);
+
+        if(TempImageData.size())
+        {
+          convertedSamplerData = TempImageData.data();
+          convertedSamplerStride = samplerData.ImageDims[0]*numComponents;
+        }
+      }
+      else
+      {
+        convertedSamplerData = samplerData.Data;
+      }
+
+      if(numComponents <= 4 && convertedSamplerData)
       {
         StbWriteOutput writeOutput;
 
-        int numComponents = std::min(samplerData.ImageNumComponents, 4);
         stbi_write_png_to_func(StbWriteToBuffer, &writeOutput,
           static_cast<int>(samplerData.ImageDims[0]), static_cast<int>(samplerData.ImageDims[1]),
-          numComponents, samplerData.Data, samplerData.ImageStride[1]);
+          numComponents, convertedSamplerData, convertedSamplerStride);
 
         // Filename, relative from connection working dir
         std::string wdRelFilename(SessionDirectory + imgFileName);
@@ -1275,7 +1346,7 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, UsdBridge
       }
       else
       {
-        UsdBridgeLogMacro(this, UsdBridgeLogLevel::WARNING, "Image file not written out, format not supported (should be 1/3/4 component unsigned char): " << samplerData.ImageName);
+        UsdBridgeLogMacro(this, UsdBridgeLogLevel::WARNING, "Image file not written out, format not supported (should be 1-4 component unsigned char/short/int or float/double): " << samplerData.ImageName);
       }
     }
   }

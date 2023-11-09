@@ -17,8 +17,6 @@ class UsdRenderer : public UsdParameterizedBaseObject<UsdRenderer, UsdRendererDa
     UsdRenderer();
     ~UsdRenderer();
 
-    void saveUsd(UsdDevice* device);
-
     int getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice* device) override;
 
   protected:

@@ -11,7 +11,7 @@ namespace ubutils
   const char* UsdBridgeTypeToString(UsdBridgeType type)
   {
     const char* typeStr = nullptr;
-    switch(type)  
+    switch(type)
     {
       case UsdBridgeType::BOOL: typeStr = "BOOL"; break;
       case UsdBridgeType::UCHAR: typeStr = "UCHAR"; break;
@@ -62,13 +62,113 @@ namespace ubutils
       case UsdBridgeType::HALF4: typeStr = "HALF4"; break;
       case UsdBridgeType::FLOAT4: typeStr = "FLOAT4"; break;
       case UsdBridgeType::DOUBLE4: typeStr = "DOUBLE4"; break;
-      case UsdBridgeType::UNDEFINED: 
-      default: typeStr = "UNDEFINED"; break;
+      case UsdBridgeType::INT_PAIR: typeStr = "INT_PAIR"; break;
+      case UsdBridgeType::INT_PAIR2: typeStr = "INT_PAIR2"; break;
+      case UsdBridgeType::INT_PAIR3: typeStr = "INT_PAIR3"; break;
+      case UsdBridgeType::INT_PAIR4: typeStr = "INT_PAIR4"; break;
+      case UsdBridgeType::FLOAT_PAIR: typeStr = "FLOAT_PAIR"; break;
+      case UsdBridgeType::FLOAT_PAIR2: typeStr = "FLOAT_PAIR2"; break;
+      case UsdBridgeType::FLOAT_PAIR3: typeStr = "FLOAT_PAIR3"; break;
+      case UsdBridgeType::FLOAT_PAIR4: typeStr = "FLOAT_PAIR4"; break;
+      case UsdBridgeType::DOUBLE_PAIR: typeStr = "DOUBLE_PAIR"; break;
+      case UsdBridgeType::DOUBLE_PAIR2: typeStr = "DOUBLE_PAIR2"; break;
+      case UsdBridgeType::DOUBLE_PAIR3: typeStr = "DOUBLE_PAIR3"; break;
+      case UsdBridgeType::DOUBLE_PAIR4: typeStr = "DOUBLE_PAIR4"; break;
+      case UsdBridgeType::ULONG_PAIR: typeStr = "ULONG_PAIR"; break;
+      case UsdBridgeType::ULONG_PAIR2: typeStr = "ULONG_PAIR2"; break;
+      case UsdBridgeType::ULONG_PAIR3: typeStr = "ULONG_PAIR3"; break;
+      case UsdBridgeType::ULONG_PAIR4: typeStr = "ULONG_PAIR4"; break;
+      case UsdBridgeType::FLOAT_MAT2: typeStr = "FLOAT_MAT2"; break;
+      case UsdBridgeType::FLOAT_MAT3: typeStr = "FLOAT_MAT3"; break;
+      case UsdBridgeType::FLOAT_MAT4: typeStr = "FLOAT_MAT4"; break;
+      case UsdBridgeType::FLOAT_MAT2x3: typeStr = "FLOAT_MAT2x3"; break;
+      case UsdBridgeType::FLOAT_MAT3x4: typeStr = "FLOAT_MAT3x4"; break;
+      case UsdBridgeType::UNDEFINED: default: typeStr = "UNDEFINED"; break;
     }
     return typeStr;
   }
 
-  const unsigned int SRGBTable[] = 
+  UsdBridgeType UsdBridgeTypeFlatten(UsdBridgeType type)
+  {
+    UsdBridgeType flatType = UsdBridgeType::UNDEFINED;
+    switch(type)
+    {
+      case UsdBridgeType::BOOL:
+      case UsdBridgeType::UCHAR:
+      case UsdBridgeType::UCHAR_SRGB_R:
+      case UsdBridgeType::CHAR:
+      case UsdBridgeType::USHORT:
+      case UsdBridgeType::SHORT:
+      case UsdBridgeType::UINT:
+      case UsdBridgeType::INT:
+      case UsdBridgeType::ULONG:
+      case UsdBridgeType::LONG:
+      case UsdBridgeType::HALF:
+      case UsdBridgeType::FLOAT:
+      case UsdBridgeType::DOUBLE: flatType = type; break;
+      case UsdBridgeType::UCHAR2: flatType = UsdBridgeType::UCHAR; break;
+      case UsdBridgeType::UCHAR_SRGB_RA: flatType = UsdBridgeType::UCHAR_SRGB_R; break;
+      case UsdBridgeType::CHAR2: flatType = UsdBridgeType::CHAR; break;
+      case UsdBridgeType::USHORT2: flatType = UsdBridgeType::USHORT; break;
+      case UsdBridgeType::SHORT2: flatType = UsdBridgeType::SHORT; break;
+      case UsdBridgeType::UINT2: flatType = UsdBridgeType::UINT; break;
+      case UsdBridgeType::INT2: flatType = UsdBridgeType::INT; break;
+      case UsdBridgeType::ULONG2: flatType = UsdBridgeType::ULONG; break;
+      case UsdBridgeType::LONG2: flatType = UsdBridgeType::LONG; break;
+      case UsdBridgeType::HALF2: flatType = UsdBridgeType::HALF; break;
+      case UsdBridgeType::FLOAT2: flatType = UsdBridgeType::FLOAT; break;
+      case UsdBridgeType::DOUBLE2: flatType = UsdBridgeType::DOUBLE; break;
+      case UsdBridgeType::UCHAR3: flatType = UsdBridgeType::UCHAR; break;
+      case UsdBridgeType::UCHAR_SRGB_RGB: flatType = UsdBridgeType::UCHAR_SRGB_R; break;
+      case UsdBridgeType::CHAR3: flatType = UsdBridgeType::CHAR; break;
+      case UsdBridgeType::USHORT3:flatType = UsdBridgeType::USHORT; break;
+      case UsdBridgeType::SHORT3: flatType = UsdBridgeType::SHORT; break;
+      case UsdBridgeType::UINT3: flatType = UsdBridgeType::UINT; break;
+      case UsdBridgeType::INT3: flatType = UsdBridgeType::INT; break;
+      case UsdBridgeType::ULONG3: flatType = UsdBridgeType::ULONG; break;
+      case UsdBridgeType::LONG3: flatType = UsdBridgeType::LONG; break;
+      case UsdBridgeType::HALF3: flatType = UsdBridgeType::HALF; break;
+      case UsdBridgeType::FLOAT3: flatType = UsdBridgeType::FLOAT; break;
+      case UsdBridgeType::DOUBLE3: flatType = UsdBridgeType::DOUBLE; break;
+      case UsdBridgeType::UCHAR4: flatType = UsdBridgeType::UCHAR; break;
+      case UsdBridgeType::UCHAR_SRGB_RGBA: flatType = UsdBridgeType::UCHAR_SRGB_R; break;
+      case UsdBridgeType::CHAR4: flatType = UsdBridgeType::CHAR; break;
+      case UsdBridgeType::USHORT4: flatType = UsdBridgeType::USHORT; break;
+      case UsdBridgeType::SHORT4: flatType = UsdBridgeType::SHORT; break;
+      case UsdBridgeType::UINT4: flatType = UsdBridgeType::UINT; break;
+      case UsdBridgeType::INT4: flatType = UsdBridgeType::INT; break;
+      case UsdBridgeType::ULONG4: flatType = UsdBridgeType::ULONG; break;
+      case UsdBridgeType::LONG4: flatType = UsdBridgeType::LONG; break;
+      case UsdBridgeType::HALF4: flatType = UsdBridgeType::HALF; break;
+      case UsdBridgeType::FLOAT4: flatType = UsdBridgeType::FLOAT; break;
+      case UsdBridgeType::DOUBLE4: flatType = UsdBridgeType::DOUBLE; break;
+      case UsdBridgeType::INT_PAIR:
+      case UsdBridgeType::INT_PAIR2:
+      case UsdBridgeType::INT_PAIR3:
+      case UsdBridgeType::INT_PAIR4: flatType = UsdBridgeType::INT; break;
+      case UsdBridgeType::FLOAT_PAIR:
+      case UsdBridgeType::FLOAT_PAIR2:
+      case UsdBridgeType::FLOAT_PAIR3:
+      case UsdBridgeType::FLOAT_PAIR4: flatType = UsdBridgeType::FLOAT; break;
+      case UsdBridgeType::DOUBLE_PAIR:
+      case UsdBridgeType::DOUBLE_PAIR2:
+      case UsdBridgeType::DOUBLE_PAIR3:
+      case UsdBridgeType::DOUBLE_PAIR4: flatType = UsdBridgeType::DOUBLE; break;
+      case UsdBridgeType::ULONG_PAIR:
+      case UsdBridgeType::ULONG_PAIR2:
+      case UsdBridgeType::ULONG_PAIR3:
+      case UsdBridgeType::ULONG_PAIR4: flatType = UsdBridgeType::ULONG; break;
+      case UsdBridgeType::FLOAT_MAT2:
+      case UsdBridgeType::FLOAT_MAT3:
+      case UsdBridgeType::FLOAT_MAT4:
+      case UsdBridgeType::FLOAT_MAT2x3:
+      case UsdBridgeType::FLOAT_MAT3x4: flatType = UsdBridgeType::FLOAT; break;
+      case UsdBridgeType::UNDEFINED: default: flatType = UsdBridgeType::UNDEFINED; break;
+    }
+    return flatType;
+  }
+
+  const unsigned int SRGBTable[] =
   {
       0x00000000,0x399f22b4,0x3a1f22b4,0x3a6eb40e,0x3a9f22b4,0x3ac6eb61,0x3aeeb40e,0x3b0b3e5d,
       0x3b1f22b4,0x3b33070b,0x3b46eb61,0x3b5b518d,0x3b70f18d,0x3b83e1c6,0x3b8fe616,0x3b9c87fd,
@@ -123,6 +223,6 @@ namespace ubutils
     color[0] = SrgbToLinear(color[0]);
     color[1] = SrgbToLinear(color[1]);
     color[2] = SrgbToLinear(color[2]);
-  } 
+  }
 
 }

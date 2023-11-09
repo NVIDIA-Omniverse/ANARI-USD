@@ -80,16 +80,15 @@ void UsdFrame::unmapBuffer(const char *channel)
   }
 }
 
-UsdRenderer* UsdFrame::getRenderer()
-{
-  const UsdFrameData& paramData = getReadParams();
-  return paramData.renderer;
-}
-
 char* UsdFrame::ReserveBuffer(ANARIDataType format)
 {
   const UsdFrameData& paramData = getReadParams();
   size_t formatSize = anari::sizeOf(format);
   size_t memSize = formatSize * paramData.size[0] * paramData.size[1];
   return new char[memSize];
+}
+
+void UsdFrame::saveUsd(UsdDevice* device)
+{
+  device->getUsdBridge()->SaveScene();
 }

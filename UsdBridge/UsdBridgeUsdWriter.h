@@ -206,6 +206,7 @@ protected:
   double EndTime = 0.0;
 
   std::string TempNameStr;
+  std::vector<unsigned char> TempImageData;
 };
 
 void RemoveResourceFiles(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter, 

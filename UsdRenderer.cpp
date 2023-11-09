@@ -17,7 +17,6 @@ UsdRenderer::UsdRenderer()
 
 UsdRenderer::~UsdRenderer()
 {
-
 }
 
 int UsdRenderer::getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice* device)
@@ -39,9 +38,4 @@ bool UsdRenderer::deferCommit(UsdDevice* device)
 bool UsdRenderer::doCommitData(UsdDevice* device)
 {
   return false;
-}
-
-void UsdRenderer::saveUsd(UsdDevice* device)
-{
-  device->getUsdBridge()->SaveScene();
 }

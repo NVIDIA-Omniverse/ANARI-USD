@@ -145,13 +145,6 @@ bool UsdSampler::doCommitData(UsdDevice* device)
         if(numComponents > 4)
           device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, 
             "UsdSampler '%s' image data has more than 4 components. Anything above the 4th component will be ignored.", paramData.imageData->getName());
-
-        if(anari::sizeOf(paramData.imageData->getType()) != sizeof(int8_t) * numComponents)
-        {
-          device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT, 
-            "UsdSampler '%s' commit failed: image data color channels are not 8 bit.", paramData.imageData->getName());
-          supportedImage = false;
-        }
       }
 
       if(supportedImage)

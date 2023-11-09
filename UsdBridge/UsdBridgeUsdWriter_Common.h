@@ -784,7 +784,7 @@ namespace
   {
     usdArray->resize(numElements);
     const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
-    double normFactor = 1.0f / (double)std::numeric_limits<InputEltType>::max(); // float may not be enough for uint32_t
+    double normFactor = 1.0 / (double)std::numeric_limits<InputEltType>::max(); // float may not be enough for uint32_t
     // No memcopies, as input is not guaranteed to be of float type
     if(numComponents == 1)
       for (int i = 0; i < numElements; ++i)

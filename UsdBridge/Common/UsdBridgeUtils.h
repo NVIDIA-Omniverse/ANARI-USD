@@ -11,6 +11,7 @@
 namespace ubutils
 {
   const char* UsdBridgeTypeToString(UsdBridgeType type);
+  UsdBridgeType UsdBridgeTypeFlatten(UsdBridgeType type);
 
   const float* SrgbToLinearTable(); // returns a float[256] array
   float SrgbToLinear(float val);
