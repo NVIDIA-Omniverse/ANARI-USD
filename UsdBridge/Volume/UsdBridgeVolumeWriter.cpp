@@ -13,7 +13,7 @@ class UsdBridgeVolumeWriter : public UsdBridgeVolumeWriterI
     UsdBridgeVolumeWriter();
     ~UsdBridgeVolumeWriter();
 
-    bool Initialize(UsdBridgeLogCallback logCallback, void* logUserData) override;
+    bool Initialize(const UsdBridgeLogObject& logObj) override;
 
     void ToVDB(const UsdBridgeVolumeData& volumeData) override;
 
@@ -23,8 +23,7 @@ class UsdBridgeVolumeWriter : public UsdBridgeVolumeWriterI
 
     void Release() override;
 
-    static UsdBridgeLogCallback LogCallback;
-    static void* LogUserData;
+    UsdBridgeLogObject LogObject;
 
   protected:
 
@@ -59,15 +58,6 @@ void UsdBridgeVolumeWriter::Release()
 #include <sstream>
 
 #include "UsdBridgeUtils.h"
-
-#define UsdBridgeLogMacro(level, message) \
-  { std::stringstream logStream; \
-    logStream << message; \
-    std::string logString = logStream.str(); \
-    UsdBridgeVolumeWriter::LogCallback(level, UsdBridgeVolumeWriter::LogUserData, logString.c_str()); } 
-
-UsdBridgeLogCallback UsdBridgeVolumeWriter::LogCallback = nullptr;
-void* UsdBridgeVolumeWriter::LogUserData = nullptr;
 
 #ifdef USDBRIDGE_VOL_FLOAT1_OUTPUT
 using ColorGridOutType = openvdb::FloatGrid;
@@ -258,7 +248,7 @@ void TfTransformCall(TfTransformInput& tfTransformInput)
   openvdb::tools::foreach(tfTransformInput.opacityGrid->beginValueOn(), tfOpacityTransform);
 }
 
-static void SelectTfTransform(TfTransformInput& tfTransformInput)
+static void SelectTfTransform(const UsdBridgeLogObject& logObj, TfTransformInput& tfTransformInput)
 {
   // Transform the float data to color data
   switch (tfTransformInput.volumeData.DataType)
@@ -296,7 +286,7 @@ static void SelectTfTransform(TfTransformInput& tfTransformInput)
   default:
     {
       const char* typeStr = ubutils::UsdBridgeTypeToString(tfTransformInput.volumeData.DataType);
-      UsdBridgeLogMacro(UsdBridgeLogLevel::ERR, "Volume writer preclassified copy does not support source data type: " << typeStr);
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Volume writer preclassified copy does not support source data type: " << typeStr);
       break;
     }
   }
@@ -446,7 +436,7 @@ openvdb::GridBase::Ptr CopyToGridTemplate(const CopyToGridInput& copyInput)
   return scalarGrid;
 }
 
-static openvdb::GridBase::Ptr CopyToGrid(const CopyToGridInput& copyInput, bool convertDoubleToFloat)
+static openvdb::GridBase::Ptr CopyToGrid(const UsdBridgeLogObject& logObj, const CopyToGridInput& copyInput, bool convertDoubleToFloat)
 {
   openvdb::GridBase::Ptr scalarGrid;
   // Transform the float data to color data
@@ -497,18 +487,18 @@ static openvdb::GridBase::Ptr CopyToGrid(const CopyToGridInput& copyInput, bool 
   default:
     {
       const char* typeStr = ubutils::UsdBridgeTypeToString(copyInput.volumeData.DataType);
-      UsdBridgeLogMacro(UsdBridgeLogLevel::ERR, "Volume writer source data copy does not support source data type: " << typeStr);
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Volume writer source data copy does not support source data type: " << typeStr);
     }
     break;
   }
   return scalarGrid;
 }
 
-static void CreateGridAndAdd(const UsdBridgeVolumeData& volumeData, const openvdb::CoordBBox& bBox, const char* gridName,
+static void CreateGridAndAdd(const UsdBridgeLogObject& logObj, const UsdBridgeVolumeData& volumeData, const openvdb::CoordBBox& bBox, const char* gridName,
   openvdb::math::Transform::Ptr linTrans, bool convertDoubleToFloat, openvdb::GridPtrVecPtr grids)
 {
   CopyToGridInput copyToGridInput = { volumeData, bBox };
-  openvdb::GridBase::Ptr outGrid = CopyToGrid(copyToGridInput, convertDoubleToFloat);
+  openvdb::GridBase::Ptr outGrid = CopyToGrid(logObj, copyToGridInput, convertDoubleToFloat);
 
   if (outGrid)
   {
@@ -531,12 +521,11 @@ UsdBridgeVolumeWriter::~UsdBridgeVolumeWriter()
 {
 }
 
-bool UsdBridgeVolumeWriter::Initialize(UsdBridgeLogCallback logCallback, void* logUserData)
+bool UsdBridgeVolumeWriter::Initialize(const UsdBridgeLogObject& logObj)
 {
   openvdb::initialize();
 
-  UsdBridgeVolumeWriter::LogCallback = logCallback;
-  UsdBridgeVolumeWriter::LogUserData = logUserData;
+  this->LogObject = logObj;
 
   return true;
 }
@@ -579,7 +568,7 @@ void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData& volumeData)
 
     // Transform the volumedata and output into color grid
     TfTransformInput tfTransformInput = { colorGrid, opacityGrid, volumeData, bBox };
-    SelectTfTransform(tfTransformInput);
+    SelectTfTransform(this->LogObject, tfTransformInput);
 
     // Set grid names
     opacityGrid->setName(densityGridName);
@@ -595,7 +584,7 @@ void UsdBridgeVolumeWriter::ToVDB(const UsdBridgeVolumeData& volumeData)
   }
   else
   {
-    CreateGridAndAdd(volumeData, bBox, densityGridName, linTrans, ConvertDoubleToFloat, grids); 
+    CreateGridAndAdd(this->LogObject, volumeData, bBox, densityGridName, linTrans, ConvertDoubleToFloat, grids); 
   }
 
   // Must write all grids at once
@@ -620,7 +609,7 @@ UsdBridgeVolumeWriter::~UsdBridgeVolumeWriter()
 
 }
 
-bool UsdBridgeVolumeWriter::Initialize(UsdBridgeLogCallback logCallback, void* logUserData)
+bool UsdBridgeVolumeWriter::Initialize(const UsdBridgeLogObject& logObj)
 {
   return true;
 }

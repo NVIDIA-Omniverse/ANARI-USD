@@ -558,8 +558,8 @@ namespace
       SdfValueTypeName valueType;
       if(type == UsdBridgeSamplerData::SamplerType::SAMPLER_1D)
       {
-        idAttrib = UsdBridgeTokens->data_lookup_float;
-        valueType = SdfValueTypeNames->Float;
+        idAttrib = UsdBridgeTokens->data_lookup_float2; // Currently, there is no 1D lookup
+        valueType = SdfValueTypeNames->Float2;
       }
       else if (type == UsdBridgeSamplerData::SamplerType::SAMPLER_2D)
       {
@@ -1346,7 +1346,7 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, UsdBridge
       }
       else
       {
-        UsdBridgeLogMacro(this, UsdBridgeLogLevel::WARNING, "Image file not written out, format not supported (should be 1-4 component unsigned char/short/int or float/double): " << samplerData.ImageName);
+        UsdBridgeLogMacro(this->LogObject, UsdBridgeLogLevel::WARNING, "Image file not written out, format not supported (should be 1-4 component unsigned char/short/int or float/double): " << samplerData.ImageName);
       }
     }
   }
@@ -1357,7 +1357,7 @@ namespace
   template<bool PreviewSurface>
   void UpdateAttributeReader_Impl(UsdStageRefPtr sceneStage, UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath,
     UsdBridgeMaterialData::DataMemberId dataMemberId, const TfToken& newNameToken, const UsdGeomPrimvarsAPI& boundGeomPrimvars,
-    const TimeEvaluator<UsdBridgeMaterialData>& timeEval, UsdBridgeUsdWriter* writer)
+    const TimeEvaluator<UsdBridgeMaterialData>& timeEval, const UsdBridgeLogObject& logObj)
   {
     typedef UsdBridgeMaterialData::DataMemberId DMI;
 
@@ -1370,7 +1370,7 @@ namespace
     UsdShadeShader uniformAttribReader = UsdShadeShader::Get(sceneStage, attributeReaderPath);
     if(!uniformAttribReader)
     {
-      UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "In UsdBridgeUsdWriter::UpdateAttributeReader(): requesting an attribute reader that hasn't been created during fixup of name token.");
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "In UpdateAttributeReader_Impl(): requesting an attribute reader that hasn't been created during fixup of name token.");
       return;
     }
 
@@ -1406,12 +1406,12 @@ void UsdBridgeUsdWriter::UpdateAttributeReader(UsdStageRefPtr timeVarStage, cons
 
   if(Settings.EnablePreviewSurfaceShader)
   {
-    UpdateAttributeReader_Impl<true>(SceneStage, timeVarStage, matPrimPath, dataMemberId, newNameToken, boundGeomPrimvars, timeEval, this);
+    UpdateAttributeReader_Impl<true>(SceneStage, timeVarStage, matPrimPath, dataMemberId, newNameToken, boundGeomPrimvars, timeEval, this->LogObject);
   }
 
   if(Settings.EnableMdlShader)
   {
-    UpdateAttributeReader_Impl<false>(SceneStage, timeVarStage, matPrimPath, dataMemberId, newNameToken, boundGeomPrimvars, timeEval, this);
+    UpdateAttributeReader_Impl<false>(SceneStage, timeVarStage, matPrimPath, dataMemberId, newNameToken, boundGeomPrimvars, timeEval, this->LogObject);
   }
 }
 
@@ -1476,7 +1476,7 @@ void UsdBridgeUsdWriter::UpdateIndexVolumeMaterial(UsdStageRefPtr sceneStage, Us
   // Set the attributes
   UsdAttribute& outAttrib = valuesTimeVarying ? timeVarTfValueAttr : uniformTfValueAttr;
   UsdTimeCode outTimeCode = valuesTimeVarying ? timeEval.TimeCode : timeEval.Default();
-  VtVec4fArray* outArray = AssignColorArrayToPrimvar(this, volumeData.TfData.TfColors, volumeData.TfData.TfNumColors, volumeData.TfData.TfColorsType,
+  VtVec4fArray* outArray = AssignColorArrayToPrimvar(LogObject, volumeData.TfData.TfColors, volumeData.TfData.TfNumColors, volumeData.TfData.TfColorsType,
     outTimeCode,
     outAttrib,
     false); // Get the pointer, set the data manually here

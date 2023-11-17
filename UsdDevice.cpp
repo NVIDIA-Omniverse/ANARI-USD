@@ -52,6 +52,7 @@ public:
     bridge = std::make_unique<UsdBridge>(bridgeSettings);
 
     bridge->SetExternalSceneStage(externalSceneStage);
+    bridge->SetEnableSaving(this->enableSaving);
 
     bridgeStatusFunc(UsdBridgeLogLevel::STATUS, userData, "Initializing UsdBridge Session");
 
@@ -65,8 +66,6 @@ public:
     else
     {
       bridgeStatusFunc(UsdBridgeLogLevel::STATUS, userData, "UsdBridge Session initialization successful.");
-
-      bridge->SetEnableSaving(this->enableSaving);
     }
 
     return createSuccess;

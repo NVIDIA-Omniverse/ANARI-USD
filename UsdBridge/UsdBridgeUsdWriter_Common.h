@@ -13,12 +13,6 @@
 template<typename T>
 using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
 
-#define UsdBridgeLogMacro(obj, level, message) \
-  { std::stringstream logStream; \
-    logStream << message; \
-    std::string logString = logStream.str(); \
-    obj->LogCallback(level, obj->LogUserData, logString.c_str()); } 
-
 #define MISC_TOKEN_SEQ \
   (Root) \
   (extent)
@@ -345,12 +339,12 @@ namespace
   {
     assert(eltType != UsdBridgeType::UNDEFINED);
 
-    SdfValueTypeName result = SdfValueTypeNames->UCharArray;
+    SdfValueTypeName result = SdfValueTypeNames->BoolArray;
 
     switch (eltType)
     {
       case UsdBridgeType::UCHAR: 
-      case UsdBridgeType::CHAR: { break;}
+      case UsdBridgeType::CHAR: { result = SdfValueTypeNames->UCharArray; break;}
       case UsdBridgeType::USHORT: { result = SdfValueTypeNames->UIntArray; break; }
       case UsdBridgeType::SHORT: { result = SdfValueTypeNames->IntArray; break; }
       case UsdBridgeType::UINT: { result = SdfValueTypeNames->UIntArray; break; }
@@ -398,7 +392,7 @@ namespace
       case UsdBridgeType::ULONG3:
       case UsdBridgeType::ULONG4: { result = SdfValueTypeNames->UInt64Array; break; }
 
-      default: assert(false); break;
+      default: break; //unsupported defaults to bool
     };
 
     return result;
@@ -884,7 +878,7 @@ namespace
 namespace
 {
   // Assigns color data array to VtVec4fArray primvar
-  VtVec4fArray* AssignColorArrayToPrimvar(UsdBridgeUsdWriter* writer, const void* arrayData, size_t arrayNumElements, UsdBridgeType arrayType, UsdTimeCode timeCode, const UsdAttribute& arrayPrimvar, bool setPrimvar = true)
+  VtVec4fArray* AssignColorArrayToPrimvar(const UsdBridgeLogObject& logObj, const void* arrayData, size_t arrayNumElements, UsdBridgeType arrayType, UsdTimeCode timeCode, const UsdAttribute& arrayPrimvar, bool setPrimvar = true)
   {
     VtVec4fArray* usdArrayRef = nullptr;
     switch (arrayType)
@@ -913,13 +907,13 @@ namespace
       case UsdBridgeType::DOUBLE2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(double); GET_USDARRAY_REF; break; }
       case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(double); GET_USDARRAY_REF; break; }
       case UsdBridgeType::DOUBLE4: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec4fArray, GfVec4d); GET_USDARRAY_REF; break; }
-      default: { UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4) or UCHAR_SRGB_<X>."); break; }
+      default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4) or UCHAR_SRGB_<X>."); break; }
     }
 
     return usdArrayRef;
   }
 
-  void AssignAttribArrayToPrimvar(UsdBridgeUsdWriter* writer, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, const UsdAttribute& arrayPrimvar, const UsdTimeCode& timeCode)
+  void AssignAttribArrayToPrimvar(const UsdBridgeLogObject& logObj, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, const UsdAttribute& arrayPrimvar, const UsdTimeCode& timeCode)
   {
     bool setPrimvar = true;
     switch (arrayDataType)
@@ -977,7 +971,7 @@ namespace
       case UsdBridgeType::HALF3: 
       case UsdBridgeType::HALF4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtHalfArray); break; }
 
-      default: {UsdBridgeLogMacro(writer, UsdBridgeLogLevel::ERR, "UsdGeom Attribute<Index> primvar copy does not support source data type: " << arrayDataType) break; }
+      default: {UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom Attribute<Index> primvar copy does not support source data type: " << arrayDataType) break; }
     };
   }
 }

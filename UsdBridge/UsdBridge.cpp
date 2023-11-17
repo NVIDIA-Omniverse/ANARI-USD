@@ -255,7 +255,7 @@ UsdBridge::UsdBridge(const UsdBridgeSettings& settings)
 
 void UsdBridge::SetExternalSceneStage(SceneStagePtr sceneStage)
 {
-  BRIDGE_USDWRITER.SetSceneStage(UsdStageRefPtr((UsdStage*)sceneStage));
+  BRIDGE_USDWRITER.SetExternalSceneStage(UsdStageRefPtr((UsdStage*)sceneStage));
 }
 
 void UsdBridge::SetEnableSaving(bool enableSaving)
@@ -266,8 +266,7 @@ void UsdBridge::SetEnableSaving(bool enableSaving)
 
 bool UsdBridge::OpenSession(UsdBridgeLogCallback logCallback, void* logUserData)
 {
-  BRIDGE_USDWRITER.LogUserData = logUserData;
-  BRIDGE_USDWRITER.LogCallback = logCallback;
+  BRIDGE_USDWRITER.LogObject = {logUserData, logCallback};
 
   Internals->DiagnosticDelegate = std::make_unique<UsdBridgeDiagnosticMgrDelegate>(logUserData, logCallback);
   Internals->DiagRemoveFunc = [](UsdBridgeDiagnosticMgrDelegate* delegate)

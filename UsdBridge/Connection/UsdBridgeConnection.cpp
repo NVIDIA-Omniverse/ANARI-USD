@@ -73,12 +73,12 @@ const char* UsdBridgeConnection::GetUrl(const char* path) const
 }
 
 bool UsdBridgeConnection::Initialize(const UsdBridgeConnectionSettings& settings,
-  UsdBridgeLogCallback logCallback, void* logUserData)
+  const UsdBridgeLogObject& logObj)
 {
   Settings = settings;
 
-  UsdBridgeConnection::LogCallback = logCallback;
-  UsdBridgeConnection::LogUserData = logUserData;
+  UsdBridgeConnection::LogCallback = logObj.LogCallback;
+  UsdBridgeConnection::LogUserData = logObj.LogUserData;
 
   return true;
 }
@@ -332,9 +332,9 @@ const char* UsdBridgeRemoteConnection::GetUrl(const char* path) const
 }
 
 bool UsdBridgeRemoteConnection::Initialize(const UsdBridgeConnectionSettings& settings,
-  UsdBridgeLogCallback logCallback, void* logUserData)
+  const UsdBridgeLogObject& logObj)
 {
-  bool initSuccess = UsdBridgeConnection::Initialize(settings, logCallback, logUserData);
+  bool initSuccess = UsdBridgeConnection::Initialize(settings, logObj);
 
   if (NumInitializedConnInstances == 0)
   {
@@ -597,9 +597,9 @@ const char* UsdBridgeRemoteConnection::GetUrl(const char* path) const
 }
 
 bool UsdBridgeRemoteConnection::Initialize(const UsdBridgeConnectionSettings& settings,
-  UsdBridgeLogCallback logCallback, void* logUserData)
+  const UsdBridgeLogObject& logObj)
 {
-  return UsdBridgeConnection::Initialize(settings, logCallback, logUserData);
+  return UsdBridgeConnection::Initialize(settings, logObj);
 }
 
 void UsdBridgeRemoteConnection::Shutdown()
@@ -674,9 +674,9 @@ const char* UsdBridgeLocalConnection::GetUrl(const char* path) const
   return UsdBridgeConnection::GetUrl(path);
 }
 
-bool UsdBridgeLocalConnection::Initialize(const UsdBridgeConnectionSettings& settings, UsdBridgeLogCallback logCallback, void* logUserData)
+bool UsdBridgeLocalConnection::Initialize(const UsdBridgeConnectionSettings& settings, const UsdBridgeLogObject& logObj)
 {
-  bool initSuccess = UsdBridgeConnection::Initialize(settings, logCallback, logUserData);
+  bool initSuccess = UsdBridgeConnection::Initialize(settings, logObj);
   if (initSuccess)
   {
     if (settings.WorkingDirectory.length() == 0)
@@ -758,9 +758,9 @@ const char* UsdBridgeVoidConnection::GetUrl(const char* path) const
   return UsdBridgeConnection::GetUrl(path);
 }
 
-bool UsdBridgeVoidConnection::Initialize(const UsdBridgeConnectionSettings& settings, UsdBridgeLogCallback logCallback, void* logUserData)
+bool UsdBridgeVoidConnection::Initialize(const UsdBridgeConnectionSettings& settings, const UsdBridgeLogObject& logObj)
 {
-  bool initialized = UsdBridgeConnection::Initialize(settings, logCallback, logUserData);
+  bool initialized = UsdBridgeConnection::Initialize(settings, logObj);
   Settings.WorkingDirectory = "./";// Force relative working directory in case of unforeseen usd saves based on GetUrl()
   return initialized;
 }

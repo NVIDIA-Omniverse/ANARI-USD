@@ -8,6 +8,12 @@
 
 // USD-independent utils for the UsdBridge
 
+#define UsdBridgeLogMacro(obj, level, message) \
+  { std::stringstream logStream; \
+    logStream << message; \
+    std::string logString = logStream.str(); \
+    obj.LogCallback(level, obj.LogUserData, logString.c_str()); }
+
 namespace ubutils
 {
   const char* UsdBridgeTypeToString(UsdBridgeType type);

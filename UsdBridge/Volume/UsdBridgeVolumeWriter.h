@@ -22,7 +22,7 @@ class UsdBridgeVolumeWriterI
 {
   public:
 
-    virtual bool Initialize(UsdBridgeLogCallback logCallback, void* logUserData) = 0;
+    virtual bool Initialize(const UsdBridgeLogObject& logObj) = 0;
 
     virtual void ToVDB(const UsdBridgeVolumeData& volumeData) = 0;
 

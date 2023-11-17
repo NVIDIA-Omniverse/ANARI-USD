@@ -26,7 +26,7 @@ public:
   virtual const char* GetUrl(const char* path) const = 0;
 
   virtual bool Initialize(const UsdBridgeConnectionSettings& settings,
-    UsdBridgeLogCallback logCallback, void* logUserData) = 0;
+    const UsdBridgeLogObject& logObj) = 0;
   virtual void Shutdown() = 0;
 
   virtual int MaxSessionNr() const = 0;
@@ -59,7 +59,7 @@ public:
   const char* GetUrl(const char* path) const override;
 
   bool Initialize(const UsdBridgeConnectionSettings& settings,
-    UsdBridgeLogCallback logCallback, void* logUserData) override;
+    const UsdBridgeLogObject& logObj) override;
   void Shutdown() override;
 
   int MaxSessionNr() const override;
@@ -84,7 +84,7 @@ public:
   const char* GetUrl(const char* path) const override;
 
   bool Initialize(const UsdBridgeConnectionSettings& settings,
-    UsdBridgeLogCallback logCallback, void* logUserData) override;
+    const UsdBridgeLogObject& logObj) override;
   void Shutdown() override;
 
   int MaxSessionNr() const override;
@@ -122,7 +122,7 @@ public:
   const char* GetUrl(const char* path) const override;
 
   bool Initialize(const UsdBridgeConnectionSettings& settings,
-    UsdBridgeLogCallback logCallback, void* logUserData) override;
+    const UsdBridgeLogObject& logObj) override;
   void Shutdown() override;
 
   int MaxSessionNr() const override;

@@ -34,7 +34,7 @@ public:
   UsdBridgeUsdWriter(const UsdBridgeSettings& settings);
   ~UsdBridgeUsdWriter();
 
-  void SetSceneStage(UsdStageRefPtr sceneStage);
+  void SetExternalSceneStage(UsdStageRefPtr sceneStage);
   void SetEnableSaving(bool enableSaving);
 
   int FindSessionNumber();
@@ -150,9 +150,6 @@ public:
   void UpdateIndexVolumeMaterial(UsdStageRefPtr sceneStage, UsdStageRefPtr timeVarStage, const SdfPath& volumePath, const UsdBridgeVolumeData& volumeData, double timeStep);
 #endif
 
-  void* LogUserData;
-  UsdBridgeLogCallback LogCallback;
-
   void ResetSharedResourceModified();
 
   TfToken& AttributeNameToken(const char* attribName);
@@ -162,11 +159,11 @@ public:
   friend void RemoveResourceFiles(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWriter, 
     const char* resourceFolder, const char* extension);
 
-  VtIntArray TempIndexArray;
-
   // Settings 
   UsdBridgeSettings Settings;
   UsdBridgeConnectionSettings ConnectionSettings;
+
+  UsdBridgeLogObject LogObject;
 
 protected:
   // Connect
@@ -192,6 +189,7 @@ protected:
   // Session specific info
   int SessionNumber = -1;
   UsdStageRefPtr SceneStage;
+  UsdStageRefPtr ExternalSceneStage;
   bool EnableSaving = true;
   std::string SceneFileName;
   std::string SessionDirectory;

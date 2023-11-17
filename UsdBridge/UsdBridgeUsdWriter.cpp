@@ -91,9 +91,9 @@ UsdBridgeUsdWriter::~UsdBridgeUsdWriter()
 {
 }
 
-void UsdBridgeUsdWriter::SetSceneStage(UsdStageRefPtr sceneStage)
+void UsdBridgeUsdWriter::SetExternalSceneStage(UsdStageRefPtr sceneStage)
 {
-  this->SceneStage = sceneStage;
+  this->ExternalSceneStage = sceneStage;
 }
 
 void UsdBridgeUsdWriter::SetEnableSaving(bool enableSaving)
@@ -139,7 +139,7 @@ bool UsdBridgeUsdWriter::CreateDirectories()
 
   if (!valid)
   {
-    UsdBridgeLogMacro(this, UsdBridgeLogLevel::ERR, "Something went wrong in the filesystem creating the required output folders (permissions?).");
+    UsdBridgeLogMacro(this->LogObject, UsdBridgeLogLevel::ERR, "Something went wrong in the filesystem creating the required output folders (permissions?).");
   }
 
   return valid;
@@ -198,7 +198,7 @@ bool UsdBridgeUsdWriter::InitializeSession()
   else
     Connect = std::make_unique<UsdBridgeRemoteConnection>();
 
-  Connect->Initialize(ConnectionSettings, this->LogCallback, this->LogUserData);
+  Connect->Initialize(ConnectionSettings, this->LogObject);
 
   SessionNumber = FindSessionNumber();
   SessionDirectory = constring::sessionPf + std::to_string(SessionNumber) + "/";
@@ -207,7 +207,7 @@ bool UsdBridgeUsdWriter::InitializeSession()
 
   valid = CreateDirectories();
 
-  valid = valid && VolumeWriter->Initialize(this->LogCallback, this->LogUserData);
+  valid = valid && VolumeWriter->Initialize(this->LogObject);
 
 #ifdef CUSTOM_PBR_MDL
   if(Settings.EnableMdlShader)
@@ -232,6 +232,13 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   this->SceneFileName = this->SessionDirectory; 
   this->SceneFileName += (binary ? constring::fullSceneNameBin : constring::fullSceneNameAscii);
 
+#ifdef REPLACE_SCENE_BY_EXTERNAL_STAGE
+  if (this->ExternalSceneStage)
+  {
+    this->SceneStage = this->ExternalSceneStage;
+  }
+#endif
+
   const char* absSceneFile = Connect->GetUrl(this->SceneFileName.c_str());
   if (!this->SceneStage && !Settings.CreateNewSession)
       this->SceneStage = UsdStage::Open(absSceneFile);
@@ -240,9 +247,17 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   
   if (!this->SceneStage)
   {
-    UsdBridgeLogMacro(this, UsdBridgeLogLevel::ERR, "Scene UsdStage cannot be created or opened. Maybe a filesystem issue?");
+    UsdBridgeLogMacro(this->LogObject, UsdBridgeLogLevel::ERR, "Scene UsdStage cannot be created or opened. Maybe a filesystem issue?");
     return false;
   }
+#ifndef REPLACE_SCENE_BY_EXTERNAL_STAGE
+  else if (this->ExternalSceneStage)
+  {
+    // Set the scene stage as a sublayer of the external stage
+    ExternalSceneStage->GetRootLayer()->InsertSubLayerPath(
+      this->SceneStage->GetRootLayer()->GetIdentifier());
+  }
+#endif
 
   this->RootClassName = constring::rootClassName;
   UsdPrim rootClassPrim = this->SceneStage->CreateClassPrim(SdfPath(this->RootClassName));
@@ -251,8 +266,13 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
   UsdPrim rootPrim = this->SceneStage->DefinePrim(SdfPath(this->RootName));
   assert(rootPrim);
 
-  this->SceneStage->SetDefaultPrim(rootPrim);
-  UsdModelAPI(rootPrim).SetKind(KindTokens->assembly);
+#ifndef REPLACE_SCENE_BY_EXTERNAL_STAGE
+  if (!this->ExternalSceneStage)
+#endif
+  {
+    this->SceneStage->SetDefaultPrim(rootPrim);
+    UsdModelAPI(rootPrim).SetKind(KindTokens->assembly);
+  }
 
   if(!this->SceneStage->HasAuthoredTimeCodeRange())
   {
@@ -584,7 +604,7 @@ void UsdBridgeUsdWriter::InitializeClipMetaData(const UsdPrim& clipPrim, UsdBrid
     const UsdStagePair& childStagePair = FindOrCreateClipStage(childCache, clipPostfix, childTimeStep, exists);
     //assert(exists); // In case prim creation succeeds but an update is not attempted, no clip stage is generated, so exists will be false
     if(!exists)
-      UsdBridgeLogMacro(this, UsdBridgeLogLevel::WARNING, "Child clip stage not found while setting clip metadata, using generated stage instead. Probably the child data has not been properly updated.");
+      UsdBridgeLogMacro(this->LogObject, UsdBridgeLogLevel::WARNING, "Child clip stage not found while setting clip metadata, using generated stage instead. Probably the child data has not been properly updated.");
 
     refStagePath = &childStagePair.first;
   }

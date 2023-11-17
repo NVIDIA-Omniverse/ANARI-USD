@@ -179,6 +179,12 @@ enum class UsdBridgeLogLevel
 };
 typedef void(*UsdBridgeLogCallback)(UsdBridgeLogLevel, void*, const char*);
 
+struct UsdBridgeLogObject
+{
+  void* LogUserData;
+  UsdBridgeLogCallback LogCallback;
+};
+
 struct UsdBridgeSettings
 {
   const char* HostName;             // Name of the remote server 
