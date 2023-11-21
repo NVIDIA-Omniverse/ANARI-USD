@@ -33,7 +33,7 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("vertex.orientation", ANARI_ARRAY, vertexOrientations)
   REGISTER_PARAMETER_ARRAY_MACRO("vertex.attribute", ANARI_ARRAY, vertexAttributes, MAX_ATTRIBS)
   REGISTER_PARAMETER_MACRO("radius", ANARI_FLOAT32, radiusConstant)
-  REGISTER_PARAMETER_MACRO("scale", ANARI_FLOAT32, scaleConstant)
+  REGISTER_PARAMETER_MACRO("scale", ANARI_FLOAT32_VEC3, scaleConstant)
   REGISTER_PARAMETER_MACRO("orientation", ANARI_FLOAT32_QUAT_IJKW, orientationConstant)
   REGISTER_PARAMETER_MACRO("shapeType", ANARI_STRING, shapeType)
   REGISTER_PARAMETER_MACRO("shapeGeometry", ANARI_GEOMETRY, shapeGeometry)

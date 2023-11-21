@@ -26,7 +26,7 @@ struct UsdVolumeData
   //TF params
   const UsdDataArray* color = nullptr;
   const UsdDataArray* opacity = nullptr;
-  float valueRange[2] = { 0.0f, 1.0f };
+  UsdFloatBox1 valueRange = { 0.0f, 1.0f };
   float unitDistance = 1.0f;
 };
 

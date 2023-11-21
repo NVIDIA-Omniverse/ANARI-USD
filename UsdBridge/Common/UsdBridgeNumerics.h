@@ -8,6 +8,18 @@
 
 #include <math.h>
 
+struct UsdUint2
+{
+  using DataType = unsigned int;
+  DataType Data[2] = { 0, 0 };
+};
+
+struct UsdFloat2
+{
+  using DataType = float;
+  DataType Data[2] = { 1.0, 1.0 };
+};
+
 struct UsdFloat3
 {
   using DataType = float;

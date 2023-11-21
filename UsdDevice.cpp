@@ -117,7 +117,7 @@ UsdDevice::~UsdDevice()
 
   clearDeviceParameters(); // Release device parameters with object references
 
-  clearSharedStringList(); // Do the same for shared string references
+  clearResourceStringList(); // Do the same for resource string references
 
   //internals->bridge->SaveScene(); //Uncomment to test cleanup of usd files.
 
@@ -659,14 +659,14 @@ void UsdDevice::addToVolumeList(UsdVolume* volume)
     volumeList.emplace_back(volume);
 }
 
-void UsdDevice::addToSharedStringList(UsdSharedString* string)
+void UsdDevice::addToResourceStringList(UsdSharedString* string)
 {
-  sharedStringList.push_back(helium::IntrusivePtr<UsdSharedString>(string));
+  resourceStringList.push_back(helium::IntrusivePtr<UsdSharedString>(string));
 }
 
-void UsdDevice::clearSharedStringList()
+void UsdDevice::clearResourceStringList()
 {
-  sharedStringList.resize(0);
+  resourceStringList.resize(0);
 }
 
 void UsdDevice::removeFromVolumeList(UsdVolume* volume)

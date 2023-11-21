@@ -181,7 +181,8 @@ protected:
 
   void AddSharedResourceRef(const UsdBridgeResourceKey& key);
   bool RemoveSharedResourceRef(const UsdBridgeResourceKey& key);
-  bool IsSharedResourceModified(const UsdBridgeResourceKey& key);
+  // Sets modified flag and returns whether the shared resource has been modified since ResetSharedResourceModified()
+  bool SetSharedResourceModified(const UsdBridgeResourceKey& key);
 
   // Token cache for attribute names
   std::vector<TfToken> AttributeTokens;

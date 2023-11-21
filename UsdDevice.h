@@ -219,8 +219,9 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
     void removeFromVolumeList(UsdVolume* volume);
 
     // Allows for selected strings to persist,
-    // so their pointers can be cached beyond their containing objects' lifetimes
-    void addToSharedStringList(UsdSharedString* sharedString);
+    // so their pointers can be cached beyond their containing objects' lifetimes,
+    // to be used for garbage collecting resource files.
+    void addToResourceStringList(UsdSharedString* sharedString);
 
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
@@ -263,7 +264,7 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
     void clearCommitList();
     void flushCommitList();
     void clearDeviceParameters();
-    void clearSharedStringList();
+    void clearResourceStringList();
 
     void initializeBridge();
 
@@ -295,7 +296,7 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
     std::vector<UsdVolume*> volumeList; // Tracks all volumes to auto-commit when child fields have been committed
     bool lockCommitList = false;
 
-    std::vector<helium::IntrusivePtr<UsdSharedString>> sharedStringList;
+    std::vector<helium::IntrusivePtr<UsdSharedString>> resourceStringList;
 
     ANARIStatusCallback statusFunc = nullptr;
     const void* statusUserData = nullptr;

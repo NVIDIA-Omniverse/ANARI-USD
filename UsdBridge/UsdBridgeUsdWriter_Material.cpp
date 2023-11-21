@@ -1272,7 +1272,7 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, UsdBridge
   const std::string& generatedFileName = GetResourceFileName(constring::imgFolder, samplerData.ImageName, defaultName, timeStep, constring::imageExtension);
 
   const char* imgFileName = samplerData.ImageUrl;
-  bool writeFile = false;
+  bool writeFile = false; // No resource key is stored if no file is written
   if(!imgFileName)
   {
     imgFileName = generatedFileName.c_str();
@@ -1307,7 +1307,7 @@ void UsdBridgeUsdWriter::UpdateUsdSampler(UsdStageRefPtr timeVarStage, UsdBridge
 
     // Upload as image to texFile (in case this hasn't yet been performed)
     assert(samplerData.Data);
-    if(!isSharedResource || !IsSharedResourceModified(key))
+    if(!isSharedResource || !SetSharedResourceModified(key))
     {
       TempImageData.resize(0);
 

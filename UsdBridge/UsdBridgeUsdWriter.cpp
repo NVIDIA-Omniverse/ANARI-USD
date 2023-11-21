@@ -989,7 +989,7 @@ bool UsdBridgeUsdWriter::RemoveSharedResourceRef(const UsdBridgeResourceKey& key
   return removed;
 }
 
-bool UsdBridgeUsdWriter::IsSharedResourceModified(const UsdBridgeResourceKey& key)
+bool UsdBridgeUsdWriter::SetSharedResourceModified(const UsdBridgeResourceKey& key)
 {
   bool modified = false;
   for(auto& entry : SharedResourceCache)
@@ -1049,8 +1049,8 @@ void RemoveResourceFiles(UsdBridgePrimCache* cache, UsdBridgeUsdWriter& usdWrite
 #else
         0.0;
 #endif
-      const std::string& volFileName = usdWriter.GetResourceFileName(basePath.c_str(), key.name, timeStep, fileExtension);
-      usdWriter.Connect->RemoveFile(volFileName.c_str(), true);
+      const std::string& resFileName = usdWriter.GetResourceFileName(basePath.c_str(), key.name, timeStep, fileExtension);
+      usdWriter.Connect->RemoveFile(resFileName.c_str(), true);
     }
   }
   keys.resize(0);

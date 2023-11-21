@@ -43,8 +43,8 @@ const void* UsdFrame::mapBuffer(const char *channel,
 {
   const UsdFrameData& paramData = getReadParams();
 
-  *width = paramData.size[0];
-  *height = paramData.size[1];
+  *width = paramData.size.Data[0];
+  *height = paramData.size.Data[1];
   *pixelType = ANARI_UNKNOWN;
 
   if (strEquals(channel, "channel.color"))
@@ -84,7 +84,7 @@ char* UsdFrame::ReserveBuffer(ANARIDataType format)
 {
   const UsdFrameData& paramData = getReadParams();
   size_t formatSize = anari::sizeOf(format);
-  size_t memSize = formatSize * paramData.size[0] * paramData.size[1];
+  size_t memSize = formatSize * paramData.size.Data[0] * paramData.size.Data[1];
   return new char[memSize];
 }
 

@@ -87,7 +87,7 @@ void UsdDataArray::filterSetParam(const char *name,
   UsdDevice* device)
 {
   if(setNameParam(name, type, mem, device))
-    device->addToSharedStringList(getWriteParams().usdName);
+    device->addToResourceStringList(getWriteParams().usdName); //Name is kept for the lifetime of the device (to allow using pointer for caching resource's names)
 }
 
 int UsdDataArray::getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice* device)

@@ -27,7 +27,10 @@ struct UsdDataLayout
 
 struct UsdDataArrayParams
 {
-  // Even though we are not dealing with a usd-backed object, the data array can still have an identifying name
+  // Even though we are not dealing with a usd-backed object, the data array can still have an identifying name.
+  // The pointer can then be used as id for resources (plus defining their filenames) such as textures,
+  // so they can be shared and still removed during garbage collection (after an UsdAnari object has already been destroyed).
+  // The persistence reason is why these strings have to be added to the string list of the device on construction.
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 };

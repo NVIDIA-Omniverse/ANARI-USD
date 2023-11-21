@@ -38,8 +38,8 @@ namespace
     tfData.TfOpacities = tfOpacity->getData();
     tfData.TfOpacitiesType = tfOpacityType;
     tfData.TfNumOpacities = (int)(tfOpacity->getLayout().numItems1);
-    tfData.TfValueRange[0] = paramData.valueRange[0]; 
-    tfData.TfValueRange[1] = paramData.valueRange[1];
+    tfData.TfValueRange[0] = paramData.valueRange.Data[0];
+    tfData.TfValueRange[1] = paramData.valueRange.Data[1];
   }
 }
 

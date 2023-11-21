@@ -13,7 +13,7 @@ struct UsdFrameData
 {
   UsdWorld* world = nullptr;
   UsdRenderer* renderer = nullptr;
-  int size[2] = {0, 0};
+  UsdUint2 size = {0, 0};
   ANARIDataType color = ANARI_UNKNOWN;
   ANARIDataType depth = ANARI_UNKNOWN;
 };

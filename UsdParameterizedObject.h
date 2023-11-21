@@ -401,13 +401,14 @@ protected:
   registeredParams.emplace( std::make_pair<std::string, ParamTypeInfo>( \
     std::string(ParamName), \
     {offsetof(DataType, ParamData), 0, sizeof(DataType::ParamData), {ParamType, ANARI_UNKNOWN, ANARI_UNKNOWN}} \
-  ));
+  )); \
+  static_assert(ParamType == anari::ANARITypeFor<decltype(DataType::ParamData)>::value, "ANARI type " #ParamType " of member '" #ParamData "' does not correspond to member type");
 
 #define REGISTER_PARAMETER_MULTITYPE_MACRO(ParamName, ParamType0, ParamType1, ParamType2, ParamData) \
   { \
-    static_assert(ParamType0 == decltype(DataType::ParamData)::AnariType0, "MultiTypeParams registration: ParamType0 doesn't match AnariType0"); \
-    static_assert(ParamType1 == decltype(DataType::ParamData)::AnariType1, "MultiTypeParams registration: ParamType1 doesn't match AnariType1"); \
-    static_assert(ParamType2 == decltype(DataType::ParamData)::AnariType2, "MultiTypeParams registration: ParamType2 doesn't match AnariType2"); \
+    static_assert(ParamType0 == decltype(DataType::ParamData)::AnariType0, "MultiTypeParams registration: ParamType0 " #ParamType0 " of member '" #ParamData "' doesn't match AnariType0"); \
+    static_assert(ParamType1 == decltype(DataType::ParamData)::AnariType1, "MultiTypeParams registration: ParamType1 " #ParamType1 " of member '" #ParamData "' doesn't match AnariType1"); \
+    static_assert(ParamType2 == decltype(DataType::ParamData)::AnariType2, "MultiTypeParams registration: ParamType2 " #ParamType2 " of member '" #ParamData "' doesn't match AnariType2"); \
     size_t dataOffset = offsetof(DataType, ParamData); \
     size_t typeOffset = offsetof(DataType, ParamData.type); \
     registeredParams.emplace( std::make_pair<std::string, ParamTypeInfo>( \
@@ -416,8 +417,12 @@ protected:
     )); \
   }
 
+// Static assert explainer: gets the element type of the array via the decltype of *std::begin(), which in turn accepts an array
 #define REGISTER_PARAMETER_ARRAY_MACRO(ParamName, ParamType, ParamData, NumEntries) \
   { \
+    using element_type_t = std::remove_reference_t<decltype(*std::begin(std::declval<decltype(DataType::ParamData)&>()))>; \
+    static_assert(ParamType == anari::ANARITypeFor<element_type_t>::value, "ANARI type " #ParamType " of member '" #ParamData "' does not correspond to member type"); \
+    static_assert(sizeof(decltype(DataType::ParamData)) == sizeof(element_type_t)*NumEntries, "Number of elements of member '" #ParamData "' does not correspond with member declaration."); \
     size_t offset0 = offsetof(DataType, ParamData[0]); \
     size_t offset1 = offsetof(DataType, ParamData[1]); \
     size_t paramSize = offset1-offset0; \
