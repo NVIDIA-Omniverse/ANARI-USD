@@ -5,13 +5,21 @@
 
 #include "UsdBridgedBaseObject.h"
 
+enum class UsdSamplerComponents
+{
+  DATA = 0,
+  WRAPS,
+  WRAPT,
+  WRAPR
+};
+
 struct UsdSamplerData
 {
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
   double timeStep = 0.0;
-  int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0:imageUrl, 1:wrapS, 2:wrapT
+  int timeVarying = 0; // Bitmask indicating which attributes are time-varying.
 
   const UsdDataArray* imageData = nullptr;
 
@@ -22,7 +30,7 @@ struct UsdSamplerData
   UsdSharedString* wrapR = nullptr;
 };
 
-class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSamplerHandle>
+class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSamplerHandle, UsdSamplerComponents>
 {
   protected:
     enum SamplerType
@@ -40,10 +48,20 @@ class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSa
     bool isPerInstance() const { return perInstance; }
     void updateBoundParameters(bool boundToInstance, UsdDevice* device);
 
+    static constexpr ComponentPair componentParamNames[] = {
+      ComponentPair(CType::DATA, "image"),
+      ComponentPair(CType::DATA, "imageUrl"),
+      ComponentPair(CType::WRAPS, "wrapMode"),
+      ComponentPair(CType::WRAPS, "wrapMode1"),
+      ComponentPair(CType::WRAPT, "wrapMode2"),
+      ComponentPair(CType::WRAPR, "wrapMode3")};
+
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;
     void doCommitRefs(UsdDevice* device) override {}
+
+    void setSamplerTimeVarying(UsdBridgeSamplerData::DataMemberId& timeVarying);
 
     SamplerType samplerType = SAMPLER_UNKNOWN;
 

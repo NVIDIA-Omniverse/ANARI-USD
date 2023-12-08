@@ -280,8 +280,8 @@ ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams, T
     anariSetParameter(dev, mat, "opacity", ANARI_FLOAT32, &opacityConstant);
   }
 
-  int materialTimeVarying = 1<<3; // Set emissive to timevarying (should appear in material stage under primstages/)
-  anariSetParameter(dev, mat, "usd::timeVarying", ANARI_INT32, &materialTimeVarying);
+  int timevaryEmissive = 1; // Set emissive to timevarying (should appear in material stage under primstages/)
+  anariSetParameter(dev, mat, "usd::timeVarying::emissive", ANARI_BOOL, &timevaryEmissive);
   anariCommitParameters(dev, mat);
   anariRelease(dev, sampler);
   anariRelease(dev, opacitySampler);

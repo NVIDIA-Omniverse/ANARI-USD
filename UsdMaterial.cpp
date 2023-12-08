@@ -174,9 +174,12 @@ void UsdMaterial::updateBoundParameters(bool boundToInstance, UsdDevice* device)
       getMaterialInputSourceName(paramData.metallic, DMI::METALLIC, device, logInfo) ||
       getMaterialInputSourceName(paramData.ior, DMI::IOR, device, logInfo);
 
+    DMI timeVarying;
+    setMaterialTimeVarying(timeVarying);
+
     // Fixup attribute name and type depending on the newly bound geometry
     if(materialInputAttributes.size())
-      usdBridge->ChangeMaterialInputAttributes(usdHandle, materialInputAttributes.data(), materialInputAttributes.size(), dataTimeStep, (DMI)paramData.timeVarying);
+      usdBridge->ChangeMaterialInputAttributes(usdHandle, materialInputAttributes.data(), materialInputAttributes.size(), dataTimeStep, timeVarying);
 
     if(hasPositionAttrib)
       instanceAttributeAttached = true; // As soon as any parameter is set to a position attribute, the geometry type for this material is 'locked-in'
@@ -238,7 +241,7 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
     assignParameterToMaterialInput(paramData.metallic, matData.Metallic, logInfo);
     assignParameterToMaterialInput(paramData.ior, matData.Ior, logInfo);
 
-    matData.TimeVarying = (DMI) paramData.timeVarying;
+    setMaterialTimeVarying(matData.TimeVarying);
 
     usdBridge->SetMaterialData(usdHandle, matData, dataTimeStep);
 
@@ -274,4 +277,16 @@ void UsdMaterial::doCommitRefs(UsdDevice* device)
     usdBridge->SetSamplerRefs(usdHandle, samplerHandles.data(), samplerHandles.size(), worldTimeStep, samplerRefDatas.data());
   else
     usdBridge->DeleteSamplerRefs(usdHandle, worldTimeStep);
+}
+
+void UsdMaterial::setMaterialTimeVarying(UsdBridgeMaterialData::DataMemberId& timeVarying)
+{
+  timeVarying = DMI::ALL
+    & (isTimeVarying(CType::COLOR) ? DMI::ALL : ~DMI::DIFFUSE)
+    & (isTimeVarying(CType::OPACITY) ? DMI::ALL : ~DMI::OPACITY)
+    & (isTimeVarying(CType::EMISSIVE) ? DMI::ALL : ~DMI::EMISSIVECOLOR)
+    & (isTimeVarying(CType::EMISSIVEFACTOR) ? DMI::ALL : ~DMI::EMISSIVEINTENSITY)
+    & (isTimeVarying(CType::ROUGHNESS) ? DMI::ALL : ~DMI::ROUGHNESS)
+    & (isTimeVarying(CType::METALLIC) ? DMI::ALL : ~DMI::METALLIC)
+    & (isTimeVarying(CType::IOR) ? DMI::ALL : ~DMI::IOR);
 }

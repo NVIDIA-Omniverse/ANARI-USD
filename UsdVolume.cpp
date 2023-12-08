@@ -160,7 +160,11 @@ bool UsdVolume::UpdateVolume(UsdDevice* device, const char* debugName)
   volumeData.preClassified = paramData.preClassified;
 
   typedef UsdBridgeVolumeData::DataMemberId DMI;
-  volumeData.TimeVarying = (DMI)(fieldParams.timeVarying | (paramData.timeVarying << UsdBridgeVolumeData::TFDataStart));
+  volumeData.TimeVarying = DMI::ALL
+    & (field->isTimeVarying(UsdSpatialFieldComponents::DATA) ? DMI::ALL : ~DMI::DATA)
+    & (isTimeVarying(CType::COLOR) ? DMI::ALL : ~DMI::TFCOLORS)
+    & (isTimeVarying(CType::OPACITY) ? DMI::ALL : ~DMI::TFOPACITIES)
+    & (isTimeVarying(CType::VALUERANGE) ? DMI::ALL : ~DMI::TFVALUERANGE);
 
   double worldTimeStep = device->getReadParams().timeStep;
   double fieldTimeStep = selectRefTime(paramData.fieldRefTimeStep, fieldParams.timeStep, worldTimeStep); // use the link time, as there is no such thing as separate field data

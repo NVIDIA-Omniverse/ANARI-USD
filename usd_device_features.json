@@ -108,6 +108,60 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::position",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying position bit"
+                }, {
+                    "name" : "usd::timeVarying::normal",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying normal bit"
+                }, {
+                    "name" : "usd::timeVarying::color",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying color bit"
+                }, {
+                    "name" : "usd::timeVarying::index",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying index bit"
+                }, {
+                    "name" : "usd::timeVarying::id",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying id bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute0",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute0 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute1",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute1 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute2",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute2 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute3",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute3 bit"
                 }
             ]
         }, {
@@ -125,6 +179,60 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::position",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying position bit"
+                }, {
+                    "name" : "usd::timeVarying::normal",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying normal bit"
+                }, {
+                    "name" : "usd::timeVarying::color",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying color bit"
+                }, {
+                    "name" : "usd::timeVarying::index",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying index bit"
+                }, {
+                    "name" : "usd::timeVarying::id",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying id bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute0",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute0 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute1",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute1 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute2",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute2 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute3",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute3 bit"
                 }
             ]
         }, {
@@ -142,6 +250,60 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::position",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying position bit"
+                }, {
+                    "name" : "usd::timeVarying::color",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying color bit"
+                }, {
+                    "name" : "usd::timeVarying::index",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying index bit"
+                }, {
+                    "name" : "usd::timeVarying::radius",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying radius bit"
+                }, {
+                    "name" : "usd::timeVarying::id",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying id bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute0",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute0 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute1",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute1 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute2",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute2 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute3",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute3 bit"
                 }, {
                     "name" : "usd::useUsdGeomPoints",
                     "types" : ["ANARI_BOOL"],
@@ -165,6 +327,60 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::position",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying position bit"
+                }, {
+                    "name" : "usd::timeVarying::color",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying color bit"
+                }, {
+                    "name" : "usd::timeVarying::index",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying index bit"
+                }, {
+                    "name" : "usd::timeVarying::radius",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying radius bit"
+                }, {
+                    "name" : "usd::timeVarying::id",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying id bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute0",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute0 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute1",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute1 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute2",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute2 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute3",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute3 bit"
                 }
             ]
         }, {
@@ -182,6 +398,60 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::position",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying position bit"
+                }, {
+                    "name" : "usd::timeVarying::color",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying color bit"
+                }, {
+                    "name" : "usd::timeVarying::index",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying index bit"
+                }, {
+                    "name" : "usd::timeVarying::radius",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying radius bit"
+                }, {
+                    "name" : "usd::timeVarying::id",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying id bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute0",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute0 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute1",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute1 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute2",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute2 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute3",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute3 bit"
                 }
             ]
         }, {
@@ -199,6 +469,60 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::position",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying position bit"
+                }, {
+                    "name" : "usd::timeVarying::color",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying color bit"
+                }, {
+                    "name" : "usd::timeVarying::index",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying index bit"
+                }, {
+                    "name" : "usd::timeVarying::radius",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying radius bit"
+                }, {
+                    "name" : "usd::timeVarying::id",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying id bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute0",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute0 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute1",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute1 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute2",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute2 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute3",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute3 bit"
                 }
             ]
         }, {
@@ -216,6 +540,66 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::position",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying position bit"
+                }, {
+                    "name" : "usd::timeVarying::color",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying color bit"
+                }, {
+                    "name" : "usd::timeVarying::index",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying index bit"
+                }, {
+                    "name" : "usd::timeVarying::scale",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying scale bit"
+                }, {
+                    "name" : "usd::timeVarying::orientation",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying orientation bit"
+                }, {
+                    "name" : "usd::timeVarying::id",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying id bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute0",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute0 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute1",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute1 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute2",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute2 bit"
+                }, {
+                    "name" : "usd::timeVarying::attribute3",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying attribute3 bit"
                 }, {
                     "name" : "usd::time::shapeGeometry",
                     "types" : ["ANARI_INT32"],
@@ -238,6 +622,12 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::color",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying color bit"
                 }, {
                     "name" : "usd::time::sampler::color",
                     "types" : ["ANARI_FLOAT64"],
@@ -265,6 +655,42 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::baseColor",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying baseColor bit"
+                }, {
+                    "name" : "usd::timeVarying::opacity",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying opacity bit"
+                }, {
+                    "name" : "usd::timeVarying::emissive",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying emissive bit"
+                }, {
+                    "name" : "usd::timeVarying::roughness",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying roughness bit"
+                }, {
+                    "name" : "usd::timeVarying::metallic",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying metallic bit"
+                }, {
+                    "name" : "usd::timeVarying::ior",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying ior bit"
                 }, {
                     "name" : "usd::time::sampler::baseColor",
                     "types" : ["ANARI_FLOAT64"],
@@ -312,6 +738,12 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::data",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying data bit"
                 }
             ]
         }, {
@@ -329,6 +761,18 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::image",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying image/imageUrl bit"
+                }, {
+                    "name" : "usd::timeVarying::wrapMode",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying wrapMode bit"
                 }, {
                     "name" : "usd::imageUrl",
                     "types" : ["ANARI_STRING"],
@@ -352,6 +796,24 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
+                    "name" : "usd::timeVarying::image",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying image/imageUrl bit"
+                }, {
+                    "name" : "usd::timeVarying::wrapMode1",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying wrapMode1 bit"
+                }, {
+                    "name" : "usd::timeVarying::wrapMode2",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying wrapMode2 bit"
+                }, {
                     "name" : "usd::imageUrl",
                     "types" : ["ANARI_STRING"],
                     "tags" : [],
@@ -374,6 +836,30 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
+                    "name" : "usd::timeVarying::image",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying image/imageUrl bit"
+                }, {
+                    "name" : "usd::timeVarying::wrapMode1",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying wrapMode1 bit"
+                }, {
+                    "name" : "usd::timeVarying::wrapMode2",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying wrapMode2 bit"
+                }, {
+                    "name" : "usd::timeVarying::wrapMode3",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Time varying wrapMode3 bit"
+                }, {
                     "name" : "usd::imageUrl",
                     "types" : ["ANARI_STRING"],
                     "tags" : [],
@@ -389,6 +875,24 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::color",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying color bit"
+                }, {
+                    "name" : "usd::timeVarying::opacity",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying opacity bit"
+                }, {
+                    "name" : "usd::timeVarying::valueRange",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying valueRange bit"
                 }, {
                     "name" : "usd::preClassified",
                     "types" : ["ANARI_BOOL"],
@@ -410,6 +914,24 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::instance",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying instance bit"
+                }, {
+                    "name" : "usd::timeVarying::surface",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying surface bit"
+                }, {
+                    "name" : "usd::timeVarying::volume",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying volume bit"
                 }
             ]
         }, {
@@ -420,6 +942,18 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::group",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying group bit"
+                }, {
+                    "name" : "usd::timeVarying::transform",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying transform bit"
                 }
             ]
         }, {
@@ -430,6 +964,18 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying::surface",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying surface bit"
+                }, {
+                    "name" : "usd::timeVarying::volume",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying volume bit"
                 }
             ]
         }, {

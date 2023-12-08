@@ -80,9 +80,9 @@ void UsdWorld::doCommitRefs(UsdDevice* device)
 
   const char* objName = getName();
 
-  bool instancesTimeVarying = paramData.timeVarying & 1;
-  bool surfacesTimeVarying = paramData.timeVarying & (1 << 1);
-  bool volumesTimeVarying = paramData.timeVarying & (1 << 2);
+  bool instancesTimeVarying = isTimeVarying(UsdWorldComponents::INSTANCES);
+  bool surfacesTimeVarying = isTimeVarying(UsdWorldComponents::SURFACES);
+  bool volumesTimeVarying = isTimeVarying(UsdWorldComponents::VOLUMES);
 
   UsdLogInfo logInfo(device, this, ANARI_WORLD, this->getName());
 

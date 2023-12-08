@@ -7,24 +7,37 @@
 
 class UsdDataArray;
 
+enum class UsdWorldComponents
+{
+  INSTANCES = 0,
+  SURFACES,
+  VOLUMES
+};
+
 struct UsdWorldData
 {
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
-  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:instances, 1:surfaces, 2:volumes
+  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying.
   UsdDataArray* instances = nullptr;
   UsdDataArray* surfaces = nullptr;
   UsdDataArray* volumes = nullptr;
 };
 
-class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHandle>
+class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHandle, UsdWorldComponents>
 {
   public:
     UsdWorld(const char* name, UsdDevice* device);
     ~UsdWorld();
 
+    static constexpr ComponentPair componentParamNames[] = {
+      ComponentPair(UsdWorldComponents::INSTANCES, "instance"),
+      ComponentPair(UsdWorldComponents::SURFACES, "surface"),
+      ComponentPair(UsdWorldComponents::VOLUMES, "volume")};
+
   protected:
+
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;
     void doCommitRefs(UsdDevice* device) override;

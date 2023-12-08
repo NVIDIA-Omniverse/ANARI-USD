@@ -13,14 +13,28 @@ struct UsdBridgeMeshData;
 
 static constexpr int MAX_ATTRIBS = 16;
 
+enum class UsdGeometryComponents
+{
+  POSITION = 0,
+  NORMAL,
+  COLOR,
+  INDEX,
+  SCALE,
+  ORIENTATION,
+  ID,
+  ATTRIBUTE0,
+  ATTRIBUTE1,
+  ATTRIBUTE2,
+  ATTRIBUTE3
+};
+
 struct UsdGeometryData
 {
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
   double timeStep = 0.0;
-  int timeVarying = 0xFFFFFFFF; // TimeVarying bits: 0: position, 1: normal, 2: color, 3: index, 4: radius/scale, 5: orientations, 5: ids, 6: attribute0, 7: attribute1, etc.
-  static constexpr int TIMEVAR_ATTRIBUTE_START_BIT = 6;
+  int timeVarying = 0xFFFFFFFF; // TimeVarying bits
 
   const UsdDataArray* vertexPositions = nullptr;
   const UsdDataArray* vertexNormals = nullptr;
@@ -66,7 +80,7 @@ struct UsdGeometryData
 
 struct UsdGeometryTempArrays;
 
-class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, UsdGeometryHandle>
+class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, UsdGeometryHandle, UsdGeometryComponents>
 {
   public:
     enum GeomType
@@ -99,6 +113,20 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
         || geomType == GEOM_CYLINDER
         || geomType == GEOM_GLYPH;
     }
+
+    static constexpr ComponentPair componentParamNames[] = {
+      ComponentPair(UsdGeometryComponents::POSITION, "position"),
+      ComponentPair(UsdGeometryComponents::NORMAL, "normal"),
+      ComponentPair(UsdGeometryComponents::COLOR, "color"),
+      ComponentPair(UsdGeometryComponents::INDEX, "index"),
+      ComponentPair(UsdGeometryComponents::SCALE, "scale"),
+      ComponentPair(UsdGeometryComponents::SCALE, "radius"),
+      ComponentPair(UsdGeometryComponents::ORIENTATION, "orientation"),
+      ComponentPair(UsdGeometryComponents::ID, "id"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE0, "attribute0"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE1, "attribute1"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE2, "attribute2"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE3, "attribute3")};
 
   protected:
     bool deferCommit(UsdDevice* device) override;

@@ -8,13 +8,18 @@
 class UsdDataArray;
 class UsdVolume;
 
+enum class UsdSpatialFieldComponents
+{
+  DATA = 0 // includes spacing and origin
+};
+
 struct UsdSpatialFieldData
 {
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
   double timeStep = 0.0;
-  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:data (includes spacing and origin)
+  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying.
 
   const UsdDataArray* data = nullptr;
   
@@ -25,13 +30,16 @@ struct UsdSpatialFieldData
   //int gradientFilter = 0;
 };
 
-class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialFieldData, UsdSpatialFieldHandle>
+class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialFieldData, UsdSpatialFieldHandle, UsdSpatialFieldComponents>
 {
   public:
     UsdSpatialField(const char* name, const char* type, UsdDevice* device);
     ~UsdSpatialField();
 
     friend class UsdVolume;
+
+    static constexpr ComponentPair componentParamNames[] = {
+      ComponentPair(UsdSpatialFieldComponents::DATA, "data")};
 
   protected:
     bool deferCommit(UsdDevice* device) override;

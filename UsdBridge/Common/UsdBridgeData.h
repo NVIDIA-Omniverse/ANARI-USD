@@ -478,12 +478,11 @@ struct UsdBridgeSamplerData
   enum class DataMemberId : uint32_t
   {
     NONE = 0,
-    INATTRIBUTE = (1 << 0),
-    DATA = (1 << 1), // Refers to: data(-type), image name/url
-    WRAPS = (1 << 2),
-    WRAPT = (1 << 3),
-    WRAPR = (1 << 4),
-    ALL = (1 << 5) - 1
+    DATA = (1 << 0), // Refers to: data(-type), image name/url
+    WRAPS = (1 << 1),
+    WRAPT = (1 << 2),
+    WRAPR = (1 << 3),
+    ALL = (1 << 4) - 1
   };
   DataMemberId TimeVarying = DataMemberId::NONE;
 

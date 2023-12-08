@@ -13,14 +13,24 @@ class UsdSampler;
 template<typename ValueType>
 using UsdMaterialMultiTypeParameter = UsdMultiTypeParameter<ValueType, UsdSampler*, UsdSharedString*>;
 
+enum class UsdMaterialDataComponents
+{
+  COLOR = 0,
+  OPACITY,
+  EMISSIVE,
+  EMISSIVEFACTOR,
+  ROUGHNESS,
+  METALLIC,
+  IOR
+};
+
 struct UsdMaterialData
 {
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
   double timeStep = std::numeric_limits<float>::quiet_NaN();
-  int timeVarying = 0; // Bitmask indicating which attributes are time-varying. 0: color, 1: opacity (+alphamode+alphaCutoff), 2: specular,
-    // 3: emissive, 4: specularfactor, 5: emissivefactor, 6: roughness, 7: metallic, 8: ior
+  int timeVarying = 0; // Bitmask indicating which attributes are time-varying.
 
   // Standard parameters
   UsdMaterialMultiTypeParameter<UsdFloat3> color = {{ 1.0f, 1.0f, 1.0f }, ANARI_FLOAT32_VEC3};
@@ -44,7 +54,7 @@ struct UsdMaterialData
   double iorSamplerTimeStep = std::numeric_limits<float>::quiet_NaN();
 };
 
-class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, UsdMaterialHandle>
+class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, UsdMaterialHandle, UsdMaterialDataComponents>
 {
   public:
     using MaterialDMI = UsdBridgeMaterialData::DataMemberId;
@@ -54,6 +64,16 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
 
     bool isPerInstance() const { return perInstance; }
     void updateBoundParameters(bool boundToInstance, UsdDevice* device);
+
+    static constexpr ComponentPair componentParamNames[] = {
+      ComponentPair(UsdMaterialDataComponents::COLOR, "color"),
+      ComponentPair(UsdMaterialDataComponents::COLOR, "baseColor"),
+      ComponentPair(UsdMaterialDataComponents::OPACITY, "opacity"),
+      ComponentPair(UsdMaterialDataComponents::EMISSIVE, "emissive"),
+      ComponentPair(UsdMaterialDataComponents::EMISSIVEFACTOR, "emissiveIntensity"),
+      ComponentPair(UsdMaterialDataComponents::ROUGHNESS, "roughness"),
+      ComponentPair(UsdMaterialDataComponents::METALLIC, "metallic"),
+      ComponentPair(UsdMaterialDataComponents::IOR, "ior")};
 
   protected:
     using MaterialInputAttribNamePair = std::pair<MaterialDMI, const char*>;
@@ -75,6 +95,8 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;
     void doCommitRefs(UsdDevice* device) override;
+
+    void setMaterialTimeVarying(UsdBridgeMaterialData::DataMemberId& timeVarying);
 
     bool isPbr = false;
 

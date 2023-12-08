@@ -73,8 +73,8 @@ void UsdGroup::doCommitRefs(UsdDevice* device)
 
   UsdLogInfo logInfo(device, this, ANARI_GROUP, this->getName());
 
-  bool surfacesTimeVarying = paramData.timeVarying & 1;
-  bool volumesTimeVarying = paramData.timeVarying & (1 << 1);
+  bool surfacesTimeVarying = isTimeVarying(UsdGroupComponents::SURFACES);
+  bool volumesTimeVarying = isTimeVarying(UsdGroupComponents::VOLUMES);
 
   ManageRefArray<SurfaceType, ANARISurface, UsdSurface>(usdHandle, paramData.surfaces, surfacesTimeVarying, timeStep, 
     surfaceHandles, &UsdBridge::SetSurfaceRefs, &UsdBridge::DeleteSurfaceRefs,

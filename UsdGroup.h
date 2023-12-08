@@ -9,21 +9,31 @@
 class UsdDevice;
 class UsdDataArray;
 
+enum class UsdGroupComponents
+{
+  SURFACES = 0,
+  VOLUMES
+};
+
 struct UsdGroupData
 {
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
-  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. 0:surfaces, 1:volumes
+  int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying.
   UsdDataArray* surfaces = nullptr;
   UsdDataArray* volumes = nullptr;
 };
 
-class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHandle>
+class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHandle, UsdGroupComponents>
 {
   public:
     UsdGroup(const char* name, UsdDevice* device);
     ~UsdGroup();
+
+    static constexpr ComponentPair componentParamNames[] = {
+      ComponentPair(UsdGroupComponents::SURFACES, "surface"),
+      ComponentPair(UsdGroupComponents::VOLUMES, "volume")};
 
   protected:
     bool deferCommit(UsdDevice* device) override;

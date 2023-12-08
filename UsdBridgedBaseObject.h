@@ -9,10 +9,83 @@
 #include "UsdDataArray.h"
 
 #include <cmath>
+#include <utility>
 
-template<typename T, typename D, typename H>
+enum class UsdEmptyComponents
+{
+};
+
+template<typename T, typename D, typename H, typename C = UsdEmptyComponents>
 class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
 {
+  protected:
+    using CType = C;
+    using ComponentPair = std::pair<C, const char*>; // Used to define a componentParamNames
+
+    // Timevarying helper functions
+    template<typename IC>
+    void setTimeVarying(IC component, bool value)
+    {
+      D& params = this->getWriteParams();
+      int bit = (1 << static_cast<int>(component));
+      params.timeVarying = value ? (params.timeVarying | bit) : (params.timeVarying & ~bit);
+    }
+
+    template<>
+    void setTimeVarying<UsdEmptyComponents>(UsdEmptyComponents component, bool value)
+    {
+    }
+
+    template<typename IC>
+    bool findTimeVarying(const char* name, IC& component)
+    {
+      for(auto& cmpName : T::componentParamNames)
+      {
+        if(strEquals(name, cmpName.second))
+        {
+          component = cmpName.first;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    template<>
+    bool findTimeVarying<UsdEmptyComponents>(const char* name, UsdEmptyComponents& component)
+    {
+      return false;
+    }
+
+    bool setTimeVaryingParam(const char *name,
+      ANARIDataType type,
+      const void *mem,
+      UsdDevice* device)
+    {
+      static const char* paramName = "usd::timeVarying::";
+      bool value = *(reinterpret_cast<const uint32_t*>(mem));
+
+      if (type == ANARI_BOOL)
+      {
+        if (strcmp(name, paramName) > 0)
+        {
+          const char* secondPart = name + strlen(paramName);
+          C component;
+          if(findTimeVarying(secondPart, component))
+          {
+            setTimeVarying(component, value);
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    bool isTimeVarying(C component) const
+    {
+      const D& params = this->getReadParams();
+      return params.timeVarying & (1 << static_cast<int>(component));
+    }
+
   public:
     UsdBridgedBaseObject(ANARIDataType t, const char* name, UsdDevice* device)
       : UsdParameterizedBaseObject<T, D>(t, device)
@@ -29,8 +102,9 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
       const void *mem,
       UsdDevice* device) override
     {
-      if (!this->setNameParam(name, type, mem, device))
-        this->setParam(name, type, mem, device);
+      if(!this->setTimeVaryingParam(name, type, mem, device))
+        if (!this->setNameParam(name, type, mem, device))
+          this->setParam(name, type, mem, device);
     }
 
     int getProperty(const char *name,
@@ -98,7 +172,7 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
     }
 
   protected:
-    typedef UsdBridgedBaseObject<T,D,H> BridgedBaseObjectType;
+    typedef UsdBridgedBaseObject<T,D,H,C> BridgedBaseObjectType;
 
     const char* uniqueName;
     H usdHandle;
@@ -108,8 +182,8 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
 #endif
 };
 
-template<typename T, typename D, typename H>
-inline bool UsdObjectNotInitialized(const UsdBridgedBaseObject<T,D,H>* obj)
+template<typename T, typename D, typename H, typename C>
+inline bool UsdObjectNotInitialized(const UsdBridgedBaseObject<T,D,H,C>* obj)
 {
   return obj && !obj->getUsdHandle().value;
 }

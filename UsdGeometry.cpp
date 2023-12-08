@@ -732,12 +732,14 @@ void UsdGeometry::setAttributeTimeVarying(typename GeomDataType::DataMemberId& t
   typedef typename GeomDataType::DataMemberId DMI;
   const UsdGeometryData& paramData = getReadParams();
 
+  static constexpr int attribStartBit = static_cast<int>(UsdGeometryComponents::ATTRIBUTE0);
+
   for(size_t attribIdx = 0; attribIdx < attributeArray.size(); ++attribIdx)
   {
     DMI attributeId = DMI::ATTRIBUTE0 + attribIdx;
 
     timeVarying = timeVarying &
-      (isBitSet(paramData.timeVarying, UsdGeometryData::TIMEVAR_ATTRIBUTE_START_BIT+(int)attribIdx) ? DMI::ALL : ~attributeId);
+      (isBitSet(paramData.timeVarying, attribStartBit+(int)attribIdx) ? DMI::ALL : ~attributeId);
   }
 }
 
@@ -805,10 +807,10 @@ void UsdGeometry::initializeGeomData(UsdBridgeMeshData& geomData)
   const UsdGeometryData& paramData = getReadParams();
 
   geomData.TimeVarying = DMI::ALL
-    & (isBitSet(paramData.timeVarying, 0) ? DMI::ALL : ~DMI::POINTS)
-    & (isBitSet(paramData.timeVarying, 1) ? DMI::ALL : ~DMI::NORMALS)
-    & (isBitSet(paramData.timeVarying, 2) ? DMI::ALL : ~DMI::COLORS)
-    & (isBitSet(paramData.timeVarying, 3) ? DMI::ALL : ~DMI::INDICES);
+    & (isTimeVarying(CType::POSITION) ? DMI::ALL : ~DMI::POINTS)
+    & (isTimeVarying(CType::NORMAL) ? DMI::ALL : ~DMI::NORMALS)
+    & (isTimeVarying(CType::COLOR) ? DMI::ALL : ~DMI::COLORS)
+    & (isTimeVarying(CType::INDEX) ? DMI::ALL : ~DMI::INDICES);
   setAttributeTimeVarying<UsdBridgeMeshData>(geomData.TimeVarying);
 
   geomData.FaceVertexCount = geomType == GEOM_QUAD ? 4 : 3;
@@ -820,14 +822,15 @@ void UsdGeometry::initializeGeomData(UsdBridgeInstancerData& geomData)
   const UsdGeometryData& paramData = getReadParams();
 
   geomData.TimeVarying = DMI::ALL
-    & (isBitSet(paramData.timeVarying, 0) ? DMI::ALL : ~DMI::POINTS)
-    & (  (isBitSet(paramData.timeVarying, 1)
-      || ((geomType == GEOM_CYLINDER || geomType == GEOM_CONE)
-        && (isBitSet(paramData.timeVarying, 0) || isBitSet(paramData.timeVarying, 3)))) ? DMI::ALL : ~DMI::ORIENTATIONS)
-    & (isBitSet(paramData.timeVarying, 4) ? DMI::ALL : ~DMI::SCALES)
-    & (isBitSet(paramData.timeVarying, 3) ? DMI::ALL : ~DMI::INVISIBLEIDS)
-    & (isBitSet(paramData.timeVarying, 2) ? DMI::ALL : ~DMI::COLORS)
-    & (isBitSet(paramData.timeVarying, 5) ? DMI::ALL : ~DMI::INSTANCEIDS)
+    & (isTimeVarying(CType::POSITION) ? DMI::ALL : ~DMI::POINTS)
+    & (( ((geomType == GEOM_CYLINDER || geomType == GEOM_CONE)
+            && (isTimeVarying(CType::NORMAL) || isTimeVarying(CType::POSITION) || isTimeVarying(CType::INDEX)))
+        || ((geomType == GEOM_GLYPH) && isTimeVarying(CType::ORIENTATION))
+      ) ? DMI::ALL : ~DMI::ORIENTATIONS)
+    & (isTimeVarying(CType::SCALE) ? DMI::ALL : ~DMI::SCALES)
+    & (isTimeVarying(CType::INDEX) ? DMI::ALL : ~DMI::INVISIBLEIDS)
+    & (isTimeVarying(CType::COLOR) ? DMI::ALL : ~DMI::COLORS)
+    & (isTimeVarying(CType::ID) ? DMI::ALL : ~DMI::INSTANCEIDS)
     & ~DMI::SHAPEINDICES; // Shapeindices are always the same, and USD clients typically do not support timevarying shapes
   setAttributeTimeVarying<UsdBridgeInstancerData>(geomData.TimeVarying);
 
@@ -841,11 +844,11 @@ void UsdGeometry::initializeGeomData(UsdBridgeCurveData& geomData)
 
   // Turn off what is not timeVarying
   geomData.TimeVarying = DMI::ALL
-    & (isBitSet(paramData.timeVarying, 0) ? DMI::ALL : ~DMI::POINTS)
-    & (isBitSet(paramData.timeVarying, 1) ? DMI::ALL : ~DMI::NORMALS)
-    & (isBitSet(paramData.timeVarying, 4) ? DMI::ALL : ~DMI::SCALES)
-    & (isBitSet(paramData.timeVarying, 2) ? DMI::ALL : ~DMI::COLORS)
-    & ((isBitSet(paramData.timeVarying, 0) || isBitSet(paramData.timeVarying, 3)) ? DMI::ALL : ~DMI::CURVELENGTHS);
+    & (isTimeVarying(CType::POSITION) ? DMI::ALL : ~DMI::POINTS)
+    & (isTimeVarying(CType::NORMAL) ? DMI::ALL : ~DMI::NORMALS)
+    & (isTimeVarying(CType::SCALE) ? DMI::ALL : ~DMI::SCALES)
+    & (isTimeVarying(CType::COLOR) ? DMI::ALL : ~DMI::COLORS)
+    & ((isTimeVarying(CType::POSITION) || isTimeVarying(CType::INDEX)) ? DMI::ALL : ~DMI::CURVELENGTHS);
   setAttributeTimeVarying<UsdBridgeCurveData>(geomData.TimeVarying);
 }
 

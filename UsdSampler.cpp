@@ -96,7 +96,9 @@ void UsdSampler::updateBoundParameters(bool boundToInstance, UsdDevice* device)
 
       double worldTimeStep = device->getReadParams().timeStep;
       double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
-      UsdBridgeSamplerData::DataMemberId timeVarying = (UsdBridgeSamplerData::DataMemberId)paramData.timeVarying;
+
+      UsdBridgeSamplerData::DataMemberId timeVarying;
+      setSamplerTimeVarying(timeVarying);
       
       usdBridge->ChangeInAttribute(usdHandle, usdAttribName, dataTimeStep, timeVarying);
     }
@@ -178,7 +180,7 @@ bool UsdSampler::doCommitData(UsdDevice* device)
         samplerData.WrapT = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapT));
         samplerData.WrapR = ANARIToUsdBridgeWrapMode(UsdSharedString::c_str(paramData.wrapR));
 
-        samplerData.TimeVarying = (UsdBridgeSamplerData::DataMemberId)paramData.timeVarying;
+        setSamplerTimeVarying(samplerData.TimeVarying);
 
         usdBridge->SetSamplerData(usdHandle, samplerData, dataTimeStep);
       }
@@ -193,4 +195,15 @@ bool UsdSampler::doCommitData(UsdDevice* device)
   }
 
   return false;
+}
+
+void UsdSampler::setSamplerTimeVarying(UsdBridgeSamplerData::DataMemberId& timeVarying)
+{
+  typedef UsdBridgeSamplerData::DataMemberId DMI;
+
+  timeVarying = DMI::ALL
+    & (isTimeVarying(CType::DATA) ? DMI::ALL : ~DMI::DATA)
+    & (isTimeVarying(CType::WRAPS) ? DMI::ALL : ~DMI::WRAPS)
+    & (isTimeVarying(CType::WRAPT) ? DMI::ALL : ~DMI::WRAPT)
+    & (isTimeVarying(CType::WRAPR) ? DMI::ALL : ~DMI::WRAPR);
 }

@@ -68,8 +68,9 @@ void UsdInstance::doCommitRefs(UsdDevice* device)
   const UsdInstanceData& paramData = getReadParams();
 
   double timeStep = device->getReadParams().timeStep;
-  bool groupTimeVarying = paramData.timeVarying & 1;
-  bool transformTimeVarying = paramData.timeVarying & (1 << 1);
+
+  bool groupTimeVarying = isTimeVarying(UsdInstanceComponents::GROUP);
+  bool transformTimeVarying = isTimeVarying(UsdInstanceComponents::TRANSFORM);
 
   if (paramData.group)
   {
