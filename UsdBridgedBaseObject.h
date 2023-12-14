@@ -22,39 +22,45 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
     using CType = C;
     using ComponentPair = std::pair<C, const char*>; // Used to define a componentParamNames
 
-    // Timevarying helper functions
-    template<typename IC>
-    void setTimeVarying(IC component, bool value)
+    // Timevarying helper functions (classes workaround to allow for partial specialization)
+    template<typename IT, typename ID, typename IH, typename IC>
+    class TimeVaryingClass
     {
-      D& params = this->getWriteParams();
-      int bit = (1 << static_cast<int>(component));
-      params.timeVarying = value ? (params.timeVarying | bit) : (params.timeVarying & ~bit);
-    }
-
-    template<>
-    void setTimeVarying<UsdEmptyComponents>(UsdEmptyComponents component, bool value)
-    {
-    }
-
-    template<typename IC>
-    bool findTimeVarying(const char* name, IC& component)
-    {
-      for(auto& cmpName : T::componentParamNames)
+      public:
+      bool findTimeVarying(const char* name, IC& component)
       {
-        if(strEquals(name, cmpName.second))
+        for(auto& cmpName : IT::componentParamNames)
         {
-          component = cmpName.first;
-          return true;
+          if(strEquals(name, cmpName.second))
+          {
+            component = cmpName.first;
+            return true;
+          }
         }
+        return false;
       }
-      return false;
-    }
 
-    template<>
-    bool findTimeVarying<UsdEmptyComponents>(const char* name, UsdEmptyComponents& component)
+      void setTimeVarying(UsdBridgedBaseObject<IT,ID,IH,IC>* bridgedObj, IC component, bool value)
+      {
+        ID& params = bridgedObj->getWriteParams();
+        int bit = (1 << static_cast<int>(component));
+        params.timeVarying = value ? (params.timeVarying | bit) : (params.timeVarying & ~bit);
+      }
+    };
+
+    template<typename IT, typename ID, typename IH>
+    class TimeVaryingClass<IT, ID, IH, UsdEmptyComponents>
     {
-      return false;
-    }
+      public:
+      bool findTimeVarying(const char* name, UsdEmptyComponents& component)
+      {
+        return false;
+      }
+
+      void setTimeVarying(UsdBridgedBaseObject<IT,ID,IH,UsdEmptyComponents>* bridgedObj, UsdEmptyComponents component, bool value)
+      {
+      }
+    };
 
     bool setTimeVaryingParam(const char *name,
       ANARIDataType type,
@@ -70,9 +76,10 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
         {
           const char* secondPart = name + strlen(paramName);
           C component;
-          if(findTimeVarying(secondPart, component))
+          TimeVaryingClass<T,D,H,C> timevarHelper;
+          if(timevarHelper.findTimeVarying(secondPart, component))
           {
-            setTimeVarying(component, value);
+            timevarHelper.setTimeVarying(this, component, value);
             return true;
           }
         }
