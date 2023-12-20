@@ -61,7 +61,7 @@ namespace
   }
 
   template<typename GeomDataType>
-  void CreateUsdGeomAttributePrimvar(const UsdBridgeLogObject& logObj, UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, uint32_t attribIndex, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
+  void CreateUsdGeomAttributePrimvar(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, uint32_t attribIndex, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
   {
     using DMI = typename GeomDataType::DataMemberId;
 
@@ -75,14 +75,14 @@ namespace
         timeVarChecked = timeEval->IsTimeVarying(attributeId);
       }
 
-      TfToken attribToken = AttribIndexToToken(attribIndex);
+      TfToken attribToken = attrib.Name ? writer->AttributeNameToken(attrib.Name) : AttribIndexToToken(attribIndex);
 
       if(timeVarChecked)
       {
         SdfValueTypeName primvarType = GetPrimvarArrayType(attrib.DataType);
         if(primvarType == SdfValueTypeNames->BoolArray)
         {
-          UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::WARNING, "UsdGeom Attribute<" << attribIndex << "> primvar does not support source data type: " << attrib.DataType);
+          UsdBridgeLogMacro(writer->LogObject, UsdBridgeLogLevel::WARNING, "UsdGeom Attribute<" << attribIndex << "> primvar does not support source data type: " << attrib.DataType);
         }
 
         // Allow for attrib primvar types to change
@@ -101,15 +101,15 @@ namespace
   }
 
   template<typename GeomDataType>
-  void CreateUsdGeomAttributePrimvars(const UsdBridgeLogObject& logObj, UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
+  void CreateUsdGeomAttributePrimvars(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
   {
     for(uint32_t attribIndex = 0; attribIndex < geomData.NumAttributes; ++attribIndex)
     {
-      CreateUsdGeomAttributePrimvar(logObj, primvarApi, geomData, attribIndex, timeEval);
+      CreateUsdGeomAttributePrimvar(writer, primvarApi, geomData, attribIndex, timeEval);
     }
   }
 
-  void InitializeUsdGeometryTimeVar(const UsdBridgeLogObject& logObj, UsdGeomMesh& meshGeom, const UsdBridgeMeshData& meshData, const UsdBridgeSettings& settings,
+  void InitializeUsdGeometryTimeVar(UsdBridgeUsdWriter* writer, UsdGeomMesh& meshGeom, const UsdBridgeMeshData& meshData, const UsdBridgeSettings& settings,
     const TimeEvaluator<UsdBridgeMeshData>* timeEval = nullptr)
   {
     typedef UsdBridgeMeshData::DataMemberId DMI;
@@ -129,10 +129,10 @@ namespace
     if(settings.EnableStTexCoords)
       CreateUsdGeomTexturePrimvars(primvarApi, meshData, settings, timeEval);
 
-    CreateUsdGeomAttributePrimvars(logObj, primvarApi, meshData, timeEval);
+    CreateUsdGeomAttributePrimvars(writer, primvarApi, meshData, timeEval);
   }
 
-  void InitializeUsdGeometryTimeVar(const UsdBridgeLogObject& logObj, UsdGeomPoints& pointsGeom, const UsdBridgeInstancerData& instancerData, const UsdBridgeSettings& settings,
+  void InitializeUsdGeometryTimeVar(UsdBridgeUsdWriter* writer, UsdGeomPoints& pointsGeom, const UsdBridgeInstancerData& instancerData, const UsdBridgeSettings& settings,
     const TimeEvaluator<UsdBridgeInstancerData>* timeEval = nullptr)
   {
     typedef UsdBridgeInstancerData::DataMemberId DMI;
@@ -152,10 +152,10 @@ namespace
     if(settings.EnableStTexCoords)
       CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
 
-    CreateUsdGeomAttributePrimvars(logObj, primvarApi, instancerData, timeEval);
+    CreateUsdGeomAttributePrimvars(writer, primvarApi, instancerData, timeEval);
   }
 
-  void InitializeUsdGeometryTimeVar(const UsdBridgeLogObject& logObj, UsdGeomPointInstancer& pointsGeom, const UsdBridgeInstancerData& instancerData, const UsdBridgeSettings& settings,
+  void InitializeUsdGeometryTimeVar(UsdBridgeUsdWriter* writer, UsdGeomPointInstancer& pointsGeom, const UsdBridgeInstancerData& instancerData, const UsdBridgeSettings& settings,
     const TimeEvaluator<UsdBridgeInstancerData>* timeEval = nullptr)
   {
     typedef UsdBridgeInstancerData::DataMemberId DMI;
@@ -176,14 +176,14 @@ namespace
     if(settings.EnableStTexCoords)
       CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
 
-    CreateUsdGeomAttributePrimvars(logObj, primvarApi, instancerData, timeEval);
+    CreateUsdGeomAttributePrimvars(writer, primvarApi, instancerData, timeEval);
 
     //CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::LINEARVELOCITIES, CreateVelocitiesAttr, UsdBridgeTokens->velocities);
     //CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::ANGULARVELOCITIES, CreateAngularVelocitiesAttr, UsdBridgeTokens->angularVelocities);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::INVISIBLEIDS, CreateInvisibleIdsAttr, UsdBridgeTokens->invisibleIds);
   }
 
-  void InitializeUsdGeometryTimeVar(const UsdBridgeLogObject& logObj, UsdGeomBasisCurves& curveGeom, const UsdBridgeCurveData& curveData, const UsdBridgeSettings& settings,
+  void InitializeUsdGeometryTimeVar(UsdBridgeUsdWriter* writer, UsdGeomBasisCurves& curveGeom, const UsdBridgeCurveData& curveData, const UsdBridgeSettings& settings,
     const TimeEvaluator<UsdBridgeCurveData>* timeEval = nullptr)
   {
     typedef UsdBridgeCurveData::DataMemberId DMI;
@@ -203,17 +203,17 @@ namespace
     if(settings.EnableStTexCoords)
       CreateUsdGeomTexturePrimvars(primvarApi, curveData, settings, timeEval);
 
-    CreateUsdGeomAttributePrimvars(logObj, primvarApi, curveData, timeEval);
+    CreateUsdGeomAttributePrimvars(writer, primvarApi, curveData, timeEval);
 
   }
 
-  UsdPrim InitializeUsdGeometry_Impl(const UsdBridgeLogObject& logObj, UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim,
+  UsdPrim InitializeUsdGeometry_Impl(UsdBridgeUsdWriter* writer, UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim,
     const UsdBridgeSettings& settings,
     TimeEvaluator<UsdBridgeMeshData>* timeEval = nullptr)
   {
     UsdGeomMesh geomMesh = GetOrDefinePrim<UsdGeomMesh>(geometryStage, geomPath);
 
-    InitializeUsdGeometryTimeVar(logObj, geomMesh, meshData, settings, timeEval);
+    InitializeUsdGeometryTimeVar(writer, geomMesh, meshData, settings, timeEval);
 
     if (uniformPrim)
     {
@@ -224,7 +224,7 @@ namespace
     return geomMesh.GetPrim();
   }
 
-  UsdPrim InitializeUsdGeometry_Impl(const UsdBridgeLogObject& logObj, UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeInstancerData& instancerData, bool uniformPrim,
+  UsdPrim InitializeUsdGeometry_Impl(UsdBridgeUsdWriter* writer, UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeInstancerData& instancerData, bool uniformPrim,
     const UsdBridgeSettings& settings,
     TimeEvaluator<UsdBridgeInstancerData>* timeEval = nullptr)
   {
@@ -232,7 +232,7 @@ namespace
     {
       UsdGeomPoints geomPoints = GetOrDefinePrim<UsdGeomPoints>(geometryStage, geomPath);
 
-      InitializeUsdGeometryTimeVar(logObj, geomPoints, instancerData, settings, timeEval);
+      InitializeUsdGeometryTimeVar(writer, geomPoints, instancerData, settings, timeEval);
 
       if (uniformPrim)
       {
@@ -245,19 +245,19 @@ namespace
     {
       UsdGeomPointInstancer geomPoints = GetOrDefinePrim<UsdGeomPointInstancer>(geometryStage, geomPath);
 
-      InitializeUsdGeometryTimeVar(logObj, geomPoints, instancerData, settings, timeEval);
+      InitializeUsdGeometryTimeVar(writer, geomPoints, instancerData, settings, timeEval);
 
       return geomPoints.GetPrim();
     }
   }
 
-  UsdPrim InitializeUsdGeometry_Impl(const UsdBridgeLogObject& logObj, UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim,
+  UsdPrim InitializeUsdGeometry_Impl(UsdBridgeUsdWriter* writer, UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim,
     const UsdBridgeSettings& settings,
     TimeEvaluator<UsdBridgeCurveData>* timeEval = nullptr)
   {
     UsdGeomBasisCurves geomCurves = GetOrDefinePrim<UsdGeomBasisCurves>(geometryStage, geomPath);
 
-    InitializeUsdGeometryTimeVar(logObj, geomCurves, curveData, settings, timeEval);
+    InitializeUsdGeometryTimeVar(writer, geomCurves, curveData, settings, timeEval);
 
     if (uniformPrim)
     {
@@ -421,7 +421,7 @@ namespace
   }
 
   template<typename GeomDataType>
-  void UpdateUsdGeomTexCoords(const UsdBridgeLogObject& logObj, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomPrimvarsAPI& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
+  void UpdateUsdGeomTexCoords(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomPrimvarsAPI& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
     UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
   {
     using DMI = typename GeomDataType::DataMemberId;
@@ -453,7 +453,7 @@ namespace
         {
         case UsdBridgeType::FLOAT2: { ASSIGN_PRIMVAR_MACRO(VtVec2fArray); break; }
         case UsdBridgeType::DOUBLE2: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec2fArray, GfVec2d); break; }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom st primvar should be FLOAT2 or DOUBLE2."); break; }
+        default: { UsdBridgeLogMacro(writer->LogObject, UsdBridgeLogLevel::ERR, "UsdGeom st primvar should be FLOAT2 or DOUBLE2."); break; }
         }
 
         // Per face or per-vertex interpolation. This will break timesteps that have been written before.
@@ -468,20 +468,24 @@ namespace
   }
 
   template<typename GeomDataType>
-  void UpdateUsdGeomAttribute(const UsdBridgeLogObject& logObj, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomPrimvarsAPI& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
+  void UpdateUsdGeomAttribute(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomPrimvarsAPI& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
     UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval, uint32_t attribIndex)
   {
     assert(attribIndex < geomData.NumAttributes);
     const UsdBridgeAttribute& bridgeAttrib = geomData.Attributes[attribIndex];
 
-    TfToken attribToken = AttribIndexToToken(attribIndex);
+    TfToken attribToken = bridgeAttrib.Name ? writer->AttributeNameToken(bridgeAttrib.Name) : AttribIndexToToken(attribIndex);
     UsdGeomPrimvar uniformPrimvar = uniformPrimvars.GetPrimvar(attribToken);
-    UsdGeomPrimvar timeVarPrimvar = timeVarPrimvars.GetPrimvar(attribToken);
-
     // The uniform primvar has to exist, otherwise any timevarying data will be ignored as well
     if(!uniformPrimvar || uniformPrimvar.GetTypeName() != GetPrimvarArrayType(bridgeAttrib.DataType))
     {
-      CreateUsdGeomAttributePrimvar(logObj, uniformPrimvars, geomData, attribIndex); // No timeEval, to force attribute primvar creation
+      CreateUsdGeomAttributePrimvar(writer, uniformPrimvars, geomData, attribIndex); // No timeEval, to force attribute primvar creation on the uniform api
+    }
+
+    UsdGeomPrimvar timeVarPrimvar = timeVarPrimvars.GetPrimvar(attribToken);
+    if(!timeVarPrimvar || timeVarPrimvar.GetTypeName() != GetPrimvarArrayType(bridgeAttrib.DataType)) // even though new clipstages initialize the correct primvar type/name, it may still be wrong for existing ones (or primstages if so configured)
+    {
+      CreateUsdGeomAttributePrimvar(writer, timeVarPrimvars, geomData, attribIndex, &timeEval);
     }
 
     using DMI = typename GeomDataType::DataMemberId;
@@ -499,7 +503,7 @@ namespace
 
       if(!attributePrimvar)
       {
-        UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom Attribute<Index> primvar not found, was the attribute at requested index valid during initialization of the prim? Index is " << attribIndex);
+        UsdBridgeLogMacro(writer->LogObject, UsdBridgeLogLevel::ERR, "UsdGeom Attribute<Index> primvar not found, was the attribute at requested index valid during initialization of the prim? Index is " << attribIndex);
       }
       else
       {
@@ -509,7 +513,7 @@ namespace
           size_t arrayNumElements = bridgeAttrib.PerPrimData ? numPrims : geomData.NumPoints;
           UsdAttribute arrayPrimvar = attributePrimvar;
 
-          AssignAttribArrayToPrimvar(logObj, arrayData, bridgeAttrib.DataType, arrayNumElements, arrayPrimvar, timeCode);
+          AssignAttribArrayToPrimvar(writer->LogObject, arrayData, bridgeAttrib.DataType, arrayNumElements, arrayPrimvar, timeCode);
 
           // Per face or per-vertex interpolation. This will break timesteps that have been written before.
           TfToken attribInterpolation = bridgeAttrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
@@ -524,7 +528,7 @@ namespace
   }
 
   template<typename GeomDataType>
-  void UpdateUsdGeomAttributes(const UsdBridgeLogObject& logObj, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomPrimvarsAPI& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
+  void UpdateUsdGeomAttributes(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomPrimvarsAPI& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
     UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
   {
     uint32_t startIdx = 0;
@@ -532,12 +536,12 @@ namespace
     {
       const UsdBridgeAttribute& attrib = geomData.Attributes[attribIndex];
       if(attrib.DataType != UsdBridgeType::UNDEFINED)
-        UpdateUsdGeomAttribute(logObj, timeVarPrimvars, uniformPrimvars, geomData, numPrims, updateEval, timeEval, attribIndex);
+        UpdateUsdGeomAttribute(writer, timeVarPrimvars, uniformPrimvars, geomData, numPrims, updateEval, timeEval, attribIndex);
     }
   }
 
   template<typename GeomDataType>
-  void UpdateUsdGeomColors(const UsdBridgeLogObject& logObj, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomPrimvarsAPI& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
+  void UpdateUsdGeomColors(UsdBridgeUsdWriter* writer, UsdGeomPrimvarsAPI& timeVarPrimvars, UsdGeomPrimvarsAPI& uniformPrimvars, const GeomDataType& geomData, uint64_t numPrims,
     UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval, TimeEvaluator<GeomDataType>& timeEval)
   {
     using DMI = typename GeomDataType::DataMemberId;
@@ -560,7 +564,7 @@ namespace
         size_t arrayNumElements = geomData.PerPrimColors ? numPrims : geomData.NumPoints;
         assert(colorPrimvar);
 
-        AssignColorArrayToPrimvar(logObj, geomData.Colors, arrayNumElements, geomData.ColorsType, timeEval.Eval(DMI::COLORS), colorPrimvar.GetAttr());
+        AssignColorArrayToPrimvar(writer->LogObject, geomData.Colors, arrayNumElements, geomData.ColorsType, timeEval.Eval(DMI::COLORS), colorPrimvar.GetAttr());
 
         // Per face or per-vertex interpolation. This will break timesteps that have been written before.
         TfToken colorInterpolation = geomData.PerPrimColors ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
@@ -1061,26 +1065,26 @@ namespace
   }
 }
 
-UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim) const
+UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeMeshData& meshData, bool uniformPrim)
 {
-  return InitializeUsdGeometry_Impl(this->LogObject, geometryStage, geomPath, meshData, uniformPrim, Settings);
+  return InitializeUsdGeometry_Impl(this, geometryStage, geomPath, meshData, uniformPrim, Settings);
 }
 
-UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeInstancerData& instancerData, bool uniformPrim) const
+UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeInstancerData& instancerData, bool uniformPrim)
 {
-  return InitializeUsdGeometry_Impl(this->LogObject, geometryStage, geomPath, instancerData, uniformPrim, Settings);
+  return InitializeUsdGeometry_Impl(this, geometryStage, geomPath, instancerData, uniformPrim, Settings);
 }
 
-UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim) const
+UsdPrim UsdBridgeUsdWriter::InitializeUsdGeometry(UsdStageRefPtr geometryStage, const SdfPath& geomPath, const UsdBridgeCurveData& curveData, bool uniformPrim)
 {
-  return InitializeUsdGeometry_Impl(this->LogObject, geometryStage, geomPath, curveData, uniformPrim, Settings);
+  return InitializeUsdGeometry_Impl(this, geometryStage, geomPath, curveData, uniformPrim, Settings);
 }
 
 #ifdef VALUE_CLIP_RETIMING
 void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeMeshData& meshData)
 {
   TimeEvaluator<UsdBridgeMeshData> timeEval(meshData);
-  InitializeUsdGeometry_Impl(this->LogObject, cacheEntry->ManifestStage.second, cacheEntry->PrimPath, meshData, false,
+  InitializeUsdGeometry_Impl(this, cacheEntry->ManifestStage.second, cacheEntry->PrimPath, meshData, false,
     Settings, &timeEval);
 
   if(this->EnableSaving)
@@ -1090,7 +1094,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cac
 void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeInstancerData& instancerData)
 {
   TimeEvaluator<UsdBridgeInstancerData> timeEval(instancerData);
-  InitializeUsdGeometry_Impl(this->LogObject, cacheEntry->ManifestStage.second, cacheEntry->PrimPath, instancerData, false,
+  InitializeUsdGeometry_Impl(this, cacheEntry->ManifestStage.second, cacheEntry->PrimPath, instancerData, false,
     Settings, &timeEval);
 
   if(this->EnableSaving)
@@ -1100,7 +1104,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cac
 void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cacheEntry, const UsdBridgeCurveData& curveData)
 {
   TimeEvaluator<UsdBridgeCurveData> timeEval(curveData);
-  InitializeUsdGeometry_Impl(this->LogObject, cacheEntry->ManifestStage.second, cacheEntry->PrimPath, curveData, false,
+  InitializeUsdGeometry_Impl(this, cacheEntry->ManifestStage.second, cacheEntry->PrimPath, curveData, false,
     Settings, &timeEval);
 
   if(this->EnableSaving)
@@ -1112,7 +1116,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometryManifest(const UsdBridgePrimCache* cac
   FuncDef(this->LogObject, timeVarGeom, uniformGeom, geomData, numPrims, updateEval, timeEval)
 
 #define UPDATE_USDGEOM_PRIMVAR_ARRAYS(FuncDef) \
-  FuncDef(this->LogObject, timeVarPrimvars, uniformPrimvars, geomData, numPrims, updateEval, timeEval)
+  FuncDef(this, timeVarPrimvars, uniformPrimvars, geomData, numPrims, updateEval, timeEval)
 
 void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, const SdfPath& meshPath, const UsdBridgeMeshData& geomData, double timeStep)
 {

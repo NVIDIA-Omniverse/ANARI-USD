@@ -44,6 +44,7 @@ struct UsdGeometryData
   const UsdDataArray* primitiveColors = nullptr;
   const UsdDataArray* primitiveAttributes[MAX_ATTRIBS] = { nullptr };
   const UsdDataArray* primitiveIds = nullptr;
+  const UsdSharedString* attributeNames[MAX_ATTRIBS] = { nullptr };
   const UsdDataArray* indices = nullptr; 
   
   // Spheres

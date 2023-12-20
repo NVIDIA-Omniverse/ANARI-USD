@@ -418,7 +418,7 @@ protected:
   }
 
 // Static assert explainer: gets the element type of the array via the decltype of *std::begin(), which in turn accepts an array
-#define REGISTER_PARAMETER_ARRAY_MACRO(ParamName, ParamType, ParamData, NumEntries) \
+#define REGISTER_PARAMETER_ARRAY_MACRO(ParamName, ParamNameSuffix, ParamType, ParamData, NumEntries) \
   { \
     using element_type_t = std::remove_reference_t<decltype(*std::begin(std::declval<decltype(DataType::ParamData)&>()))>; \
     static_assert(ParamType == anari::ANARITypeFor<element_type_t>::value, "ANARI type " #ParamType " of member '" #ParamData "' does not correspond to member type"); \
@@ -429,7 +429,7 @@ protected:
     for(int i = 0; i < NumEntries; ++i) \
     { \
       registeredParams.emplace( std::make_pair<std::string, ParamTypeInfo>( \
-        ParamName + std::to_string(i), \
+        ParamName + std::to_string(i) + ParamNameSuffix, \
         {offset0+paramSize*i, 0, paramSize, {ParamType, ANARI_UNKNOWN, ANARI_UNKNOWN}} \
       )); \
     } \

@@ -162,6 +162,26 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute3 bit"
+                }, {
+                    "name" : "usd::attribute0.name",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "Alternative name for attribute0 primvar output"
+                }, {
+                    "name" : "usd::attribute1.name",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "Alternative name for attribute1 primvar output"
+                }, {
+                    "name" : "usd::attribute2.name",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "Alternative name for attribute2 primvar output"
+                }, {
+                    "name" : "usd::attribute3.name",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "Alternative name for attribute3 primvar output"
                 }
             ]
         }, {

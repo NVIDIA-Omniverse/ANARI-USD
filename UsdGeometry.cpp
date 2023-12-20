@@ -23,7 +23,7 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("primitive.radius", ANARI_ARRAY, primitiveRadii)
   REGISTER_PARAMETER_MACRO("primitive.scale", ANARI_ARRAY, primitiveScales)
   REGISTER_PARAMETER_MACRO("primitive.orientation", ANARI_ARRAY, primitiveOrientations)
-  REGISTER_PARAMETER_ARRAY_MACRO("primitive.attribute", ANARI_ARRAY, primitiveAttributes, MAX_ATTRIBS)
+  REGISTER_PARAMETER_ARRAY_MACRO("primitive.attribute", "", ANARI_ARRAY, primitiveAttributes, MAX_ATTRIBS)
   REGISTER_PARAMETER_MACRO("primitive.id", ANARI_ARRAY, primitiveIds)
   REGISTER_PARAMETER_MACRO("vertex.position", ANARI_ARRAY, vertexPositions)
   REGISTER_PARAMETER_MACRO("vertex.normal", ANARI_ARRAY, vertexNormals)
@@ -31,7 +31,8 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("vertex.radius", ANARI_ARRAY, vertexRadii)
   REGISTER_PARAMETER_MACRO("vertex.scale", ANARI_ARRAY, vertexScales)
   REGISTER_PARAMETER_MACRO("vertex.orientation", ANARI_ARRAY, vertexOrientations)
-  REGISTER_PARAMETER_ARRAY_MACRO("vertex.attribute", ANARI_ARRAY, vertexAttributes, MAX_ATTRIBS)
+  REGISTER_PARAMETER_ARRAY_MACRO("vertex.attribute", "", ANARI_ARRAY, vertexAttributes, MAX_ATTRIBS)
+  REGISTER_PARAMETER_ARRAY_MACRO("usd::attribute", ".name", ANARI_STRING, attributeNames, MAX_ATTRIBS)
   REGISTER_PARAMETER_MACRO("radius", ANARI_FLOAT32, radiusConstant)
   REGISTER_PARAMETER_MACRO("scale", ANARI_FLOAT32_VEC3, scaleConstant)
   REGISTER_PARAMETER_MACRO("orientation", ANARI_FLOAT32_QUAT_IJKW, orientationConstant)
@@ -768,6 +769,7 @@ void UsdGeometry::syncAttributeArrays()
         attributeArray[i].DataType = AnariToUsdBridgeType(attribArray->getType());
         attributeArray[i].PerPrimData = paramData.vertexAttributes[i] ? false : true;
         attributeArray[i].EltSize = static_cast<uint32_t>(anari::sizeOf(attribArray->getType()));
+        attributeArray[i].Name = UsdSharedString::c_str(paramData.attributeNames[i]);
       }
       else
       {

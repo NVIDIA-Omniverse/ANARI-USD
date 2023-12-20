@@ -28,6 +28,18 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   (attribute1) \
   (attribute2) \
   (attribute3) \
+  (attribute4) \
+  (attribute5) \
+  (attribute6) \
+  (attribute7) \
+  (attribute8) \
+  (attribute9) \
+  (attribute10) \
+  (attribute11) \
+  (attribute12) \
+  (attribute13) \
+  (attribute14) \
+  (attribute15) \
   (color) \
   (ids) \
   (widths) \
@@ -290,6 +302,18 @@ namespace
       case 1: attribToken = UsdBridgeTokens->attribute1; break;
       case 2: attribToken = UsdBridgeTokens->attribute2; break;
       case 3: attribToken = UsdBridgeTokens->attribute3; break;
+      case 4: attribToken = UsdBridgeTokens->attribute4; break;
+      case 5: attribToken = UsdBridgeTokens->attribute5; break;
+      case 6: attribToken = UsdBridgeTokens->attribute6; break;
+      case 7: attribToken = UsdBridgeTokens->attribute7; break;
+      case 8: attribToken = UsdBridgeTokens->attribute8; break;
+      case 9: attribToken = UsdBridgeTokens->attribute9; break;
+      case 10: attribToken = UsdBridgeTokens->attribute10; break;
+      case 11: attribToken = UsdBridgeTokens->attribute11; break;
+      case 12: attribToken = UsdBridgeTokens->attribute12; break;
+      case 13: attribToken = UsdBridgeTokens->attribute13; break;
+      case 14: attribToken = UsdBridgeTokens->attribute14; break;
+      case 15: attribToken = UsdBridgeTokens->attribute15; break;
       default: attribToken = TfToken((std::string("attribute")+std::to_string(attribIndex)).c_str()); break;
     } 
     return attribToken;

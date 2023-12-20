@@ -207,6 +207,7 @@ struct UsdBridgeAttribute
   UsdBridgeType DataType = UsdBridgeType::UNDEFINED;
   bool PerPrimData = false;
   uint32_t EltSize = 0;
+  const char* Name = nullptr;
 };
 
 struct UsdBridgeMeshData

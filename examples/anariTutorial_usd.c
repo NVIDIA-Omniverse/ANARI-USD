@@ -202,6 +202,8 @@ ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams, T
   anariSetParameter(dev, mesh, "vertex.attribute0", ANARI_ARRAY, &array);
   anariRelease(dev, array);
 
+  anariSetParameter(dev, mesh, "usd::attribute0.name", ANARI_STRING, "customTexcoordName");
+
   if(isTransparent)
   {
     array = anariNewArray1D(dev, opacities, 0, 0, ANARI_FLOAT32, 2);
@@ -224,7 +226,7 @@ ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams, T
     sampler = anariNewSampler(dev, "image2D");
     anariSetParameter(dev, sampler, "name", ANARI_STRING, "tutorialSampler");
 
-    anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "attribute0");
+    anariSetParameter(dev, sampler, "inAttribute", ANARI_STRING, "customTexcoordName");
     anariSetParameter(dev, sampler, "wrapMode1", ANARI_STRING, wrapS);
     anariSetParameter(dev, sampler, "wrapMode2", ANARI_STRING, wrapT);
 
@@ -242,7 +244,7 @@ ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams, T
     opacitySampler = anariNewSampler(dev, "image2D");
     anariSetParameter(dev, opacitySampler, "name", ANARI_STRING, "tutorialSamplerOpacity");
 
-    anariSetParameter(dev, opacitySampler, "inAttribute", ANARI_STRING, "attribute0");
+    anariSetParameter(dev, opacitySampler, "inAttribute", ANARI_STRING, "customTexcoordName");
     anariSetParameter(dev, opacitySampler, "wrapMode1", ANARI_STRING, wrapS);
     anariSetParameter(dev, opacitySampler, "wrapMode2", ANARI_STRING, wrapT);
 
