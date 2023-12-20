@@ -63,7 +63,7 @@ ANARIDevice object parameters:
 - Device parameter `usd::writeAtCommit` controls whether writing to USD will happen immediately at the `anariCommit` call, or at `anariRenderFrame` (default). The potential advantage of the former is that one has more granular control over USD processing time. Note that if this parameter is set, the ANARIDevice (specifically its `usd::time`) should be committed before any other object in the scene. This parameter can be changed at any time and **applies immediately**. 
 
 ANARI scene objects:
-- Use individual bits of the `usd::timeVarying` parameter to control which exact ANARI object parameters should vary over time, and which ones should store only one value over all timesteps. Which bit corresponds to which parameter can for the moment only be gathered from the `Usd<objectname>.h` header. This parameter can be changed at any time and is applied like any other parameter during `anariCommit`.
+- Use individual bits of the `usd::timeVarying` parameter to control which exact ANARI object parameters should vary over time, and which ones should store only one value over all timesteps. Parameters that are possibly timevarying can be gathered from `usd_device_features.json`, by looking at the `usd::timeVarying.<parametername>` parameter names. For certain parameters referring to ANARI object references (such as geometries/volumes/materials/samplers), the value of their referenced timestep can be set with the parameter `usd:time.<parametername>`. All these parameters can be changed at any time and are applied like any other parameter during `anariCommit`.
 
 ### Not supported #
 

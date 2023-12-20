@@ -109,55 +109,55 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::position",
+                    "name" : "usd::timeVarying.position",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying position bit"
                 }, {
-                    "name" : "usd::timeVarying::normal",
+                    "name" : "usd::timeVarying.normal",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying normal bit"
                 }, {
-                    "name" : "usd::timeVarying::color",
+                    "name" : "usd::timeVarying.color",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying color bit"
                 }, {
-                    "name" : "usd::timeVarying::index",
+                    "name" : "usd::timeVarying.index",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying index bit"
                 }, {
-                    "name" : "usd::timeVarying::id",
+                    "name" : "usd::timeVarying.id",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying id bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute0",
+                    "name" : "usd::timeVarying.attribute0",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute0 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute1",
+                    "name" : "usd::timeVarying.attribute1",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute1 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute2",
+                    "name" : "usd::timeVarying.attribute2",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute2 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute3",
+                    "name" : "usd::timeVarying.attribute3",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -180,55 +180,55 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::position",
+                    "name" : "usd::timeVarying.position",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying position bit"
                 }, {
-                    "name" : "usd::timeVarying::normal",
+                    "name" : "usd::timeVarying.normal",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying normal bit"
                 }, {
-                    "name" : "usd::timeVarying::color",
+                    "name" : "usd::timeVarying.color",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying color bit"
                 }, {
-                    "name" : "usd::timeVarying::index",
+                    "name" : "usd::timeVarying.index",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying index bit"
                 }, {
-                    "name" : "usd::timeVarying::id",
+                    "name" : "usd::timeVarying.id",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying id bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute0",
+                    "name" : "usd::timeVarying.attribute0",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute0 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute1",
+                    "name" : "usd::timeVarying.attribute1",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute1 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute2",
+                    "name" : "usd::timeVarying.attribute2",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute2 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute3",
+                    "name" : "usd::timeVarying.attribute3",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -251,55 +251,55 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::position",
+                    "name" : "usd::timeVarying.position",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying position bit"
                 }, {
-                    "name" : "usd::timeVarying::color",
+                    "name" : "usd::timeVarying.color",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying color bit"
                 }, {
-                    "name" : "usd::timeVarying::index",
+                    "name" : "usd::timeVarying.index",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying index bit"
                 }, {
-                    "name" : "usd::timeVarying::radius",
+                    "name" : "usd::timeVarying.radius",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying radius bit"
                 }, {
-                    "name" : "usd::timeVarying::id",
+                    "name" : "usd::timeVarying.id",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying id bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute0",
+                    "name" : "usd::timeVarying.attribute0",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute0 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute1",
+                    "name" : "usd::timeVarying.attribute1",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute1 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute2",
+                    "name" : "usd::timeVarying.attribute2",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute2 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute3",
+                    "name" : "usd::timeVarying.attribute3",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -328,55 +328,55 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::position",
+                    "name" : "usd::timeVarying.position",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying position bit"
                 }, {
-                    "name" : "usd::timeVarying::color",
+                    "name" : "usd::timeVarying.color",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying color bit"
                 }, {
-                    "name" : "usd::timeVarying::index",
+                    "name" : "usd::timeVarying.index",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying index bit"
                 }, {
-                    "name" : "usd::timeVarying::radius",
+                    "name" : "usd::timeVarying.radius",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying radius bit"
                 }, {
-                    "name" : "usd::timeVarying::id",
+                    "name" : "usd::timeVarying.id",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying id bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute0",
+                    "name" : "usd::timeVarying.attribute0",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute0 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute1",
+                    "name" : "usd::timeVarying.attribute1",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute1 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute2",
+                    "name" : "usd::timeVarying.attribute2",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute2 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute3",
+                    "name" : "usd::timeVarying.attribute3",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -399,55 +399,55 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::position",
+                    "name" : "usd::timeVarying.position",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying position bit"
                 }, {
-                    "name" : "usd::timeVarying::color",
+                    "name" : "usd::timeVarying.color",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying color bit"
                 }, {
-                    "name" : "usd::timeVarying::index",
+                    "name" : "usd::timeVarying.index",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying index bit"
                 }, {
-                    "name" : "usd::timeVarying::radius",
+                    "name" : "usd::timeVarying.radius",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying radius bit"
                 }, {
-                    "name" : "usd::timeVarying::id",
+                    "name" : "usd::timeVarying.id",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying id bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute0",
+                    "name" : "usd::timeVarying.attribute0",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute0 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute1",
+                    "name" : "usd::timeVarying.attribute1",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute1 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute2",
+                    "name" : "usd::timeVarying.attribute2",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute2 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute3",
+                    "name" : "usd::timeVarying.attribute3",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -470,55 +470,55 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::position",
+                    "name" : "usd::timeVarying.position",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying position bit"
                 }, {
-                    "name" : "usd::timeVarying::color",
+                    "name" : "usd::timeVarying.color",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying color bit"
                 }, {
-                    "name" : "usd::timeVarying::index",
+                    "name" : "usd::timeVarying.index",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying index bit"
                 }, {
-                    "name" : "usd::timeVarying::radius",
+                    "name" : "usd::timeVarying.radius",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying radius bit"
                 }, {
-                    "name" : "usd::timeVarying::id",
+                    "name" : "usd::timeVarying.id",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying id bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute0",
+                    "name" : "usd::timeVarying.attribute0",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute0 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute1",
+                    "name" : "usd::timeVarying.attribute1",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute1 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute2",
+                    "name" : "usd::timeVarying.attribute2",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute2 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute3",
+                    "name" : "usd::timeVarying.attribute3",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -541,67 +541,67 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::position",
+                    "name" : "usd::timeVarying.position",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying position bit"
                 }, {
-                    "name" : "usd::timeVarying::color",
+                    "name" : "usd::timeVarying.color",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying color bit"
                 }, {
-                    "name" : "usd::timeVarying::index",
+                    "name" : "usd::timeVarying.index",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying index bit"
                 }, {
-                    "name" : "usd::timeVarying::scale",
+                    "name" : "usd::timeVarying.scale",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying scale bit"
                 }, {
-                    "name" : "usd::timeVarying::orientation",
+                    "name" : "usd::timeVarying.orientation",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying orientation bit"
                 }, {
-                    "name" : "usd::timeVarying::id",
+                    "name" : "usd::timeVarying.id",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying id bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute0",
+                    "name" : "usd::timeVarying.attribute0",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute0 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute1",
+                    "name" : "usd::timeVarying.attribute1",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute1 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute2",
+                    "name" : "usd::timeVarying.attribute2",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute2 bit"
                 }, {
-                    "name" : "usd::timeVarying::attribute3",
+                    "name" : "usd::timeVarying.attribute3",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute3 bit"
                 }, {
-                    "name" : "usd::time::shapeGeometry",
+                    "name" : "usd::time.shapeGeometry",
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "The timestep of the object attached to the shapeGeometry parameter of the glyph geometry, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
@@ -623,18 +623,18 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::color",
+                    "name" : "usd::timeVarying.color",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying color bit"
                 }, {
-                    "name" : "usd::time::sampler::color",
+                    "name" : "usd::time.sampler.color",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the color parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
-                    "name" : "usd::time::sampler::opacity",
+                    "name" : "usd::time.sampler.opacity",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the opacity parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
@@ -656,68 +656,68 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::baseColor",
+                    "name" : "usd::timeVarying.baseColor",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying baseColor bit"
                 }, {
-                    "name" : "usd::timeVarying::opacity",
+                    "name" : "usd::timeVarying.opacity",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying opacity bit"
                 }, {
-                    "name" : "usd::timeVarying::emissive",
+                    "name" : "usd::timeVarying.emissive",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying emissive bit"
                 }, {
-                    "name" : "usd::timeVarying::roughness",
+                    "name" : "usd::timeVarying.roughness",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying roughness bit"
                 }, {
-                    "name" : "usd::timeVarying::metallic",
+                    "name" : "usd::timeVarying.metallic",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying metallic bit"
                 }, {
-                    "name" : "usd::timeVarying::ior",
+                    "name" : "usd::timeVarying.ior",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying ior bit"
                 }, {
-                    "name" : "usd::time::sampler::baseColor",
+                    "name" : "usd::time.sampler.baseColor",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the baseColor parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
-                    "name" : "usd::time::sampler::opacity",
+                    "name" : "usd::time.sampler.opacity",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the opacity parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
-                    "name" : "usd::time::sampler::emissive",
+                    "name" : "usd::time.sampler.emissive",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the emissive parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
-                    "name" : "usd::time::sampler::roughness",
+                    "name" : "usd::time.sampler.roughness",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the roughness parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
-                    "name" : "usd::time::sampler::metallic",
+                    "name" : "usd::time.sampler.metallic",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the metallic parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
-                    "name" : "usd::time::sampler::ior",
+                    "name" : "usd::time.sampler.ior",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the ior parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
@@ -739,7 +739,7 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::data",
+                    "name" : "usd::timeVarying.data",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -762,13 +762,13 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::image",
+                    "name" : "usd::timeVarying.image",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying image/imageUrl bit"
                 }, {
-                    "name" : "usd::timeVarying::wrapMode",
+                    "name" : "usd::timeVarying.wrapMode",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
@@ -796,19 +796,19 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::image",
+                    "name" : "usd::timeVarying.image",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying image/imageUrl bit"
                 }, {
-                    "name" : "usd::timeVarying::wrapMode1",
+                    "name" : "usd::timeVarying.wrapMode1",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying wrapMode1 bit"
                 }, {
-                    "name" : "usd::timeVarying::wrapMode2",
+                    "name" : "usd::timeVarying.wrapMode2",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
@@ -836,25 +836,25 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::image",
+                    "name" : "usd::timeVarying.image",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying image/imageUrl bit"
                 }, {
-                    "name" : "usd::timeVarying::wrapMode1",
+                    "name" : "usd::timeVarying.wrapMode1",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying wrapMode1 bit"
                 }, {
-                    "name" : "usd::timeVarying::wrapMode2",
+                    "name" : "usd::timeVarying.wrapMode2",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
                     "description" : "Time varying wrapMode2 bit"
                 }, {
-                    "name" : "usd::timeVarying::wrapMode3",
+                    "name" : "usd::timeVarying.wrapMode3",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : false,
@@ -876,19 +876,19 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::color",
+                    "name" : "usd::timeVarying.color",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying color bit"
                 }, {
-                    "name" : "usd::timeVarying::opacity",
+                    "name" : "usd::timeVarying.opacity",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying opacity bit"
                 }, {
-                    "name" : "usd::timeVarying::valueRange",
+                    "name" : "usd::timeVarying.valueRange",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -900,7 +900,7 @@
                     "default" : false,
                     "description" : "Use preclassification to produce a VDB grid with a color and opacity field, instead of a density field"
                 }, {
-                    "name" : "usd::time::value",
+                    "name" : "usd::time.value",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the object attached to the value parameter of the volume, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
@@ -915,19 +915,19 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::instance",
+                    "name" : "usd::timeVarying.instance",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying instance bit"
                 }, {
-                    "name" : "usd::timeVarying::surface",
+                    "name" : "usd::timeVarying.surface",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying surface bit"
                 }, {
-                    "name" : "usd::timeVarying::volume",
+                    "name" : "usd::timeVarying.volume",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -943,13 +943,13 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::group",
+                    "name" : "usd::timeVarying.group",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying group bit"
                 }, {
-                    "name" : "usd::timeVarying::transform",
+                    "name" : "usd::timeVarying.transform",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -965,13 +965,13 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::timeVarying::surface",
+                    "name" : "usd::timeVarying.surface",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying surface bit"
                 }, {
-                    "name" : "usd::timeVarying::volume",
+                    "name" : "usd::timeVarying.volume",
                     "types" : ["ANARI_BOOL"],
                     "tags" : [],
                     "default" : true,
@@ -987,12 +987,12 @@
                     "tags" : [],
                     "description" : "Time varying bitfield"
                 }, {
-                    "name" : "usd::time::geometry",
+                    "name" : "usd::time.geometry",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the object attached to the geometry parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }, {
-                    "name" : "usd::time::material",
+                    "name" : "usd::time.material",
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the object attached to the material parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."

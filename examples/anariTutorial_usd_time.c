@@ -263,7 +263,7 @@ int main(int argc, const char **argv)
     anariRelease(dev, array);
 
     int timevaryTexcoord = 0; // Texcoords are not timeVarying (should now appear in fullscene stage)
-    anariSetParameter(dev, mesh, "usd::timeVarying::attribute0", ANARI_BOOL, &timevaryTexcoord);
+    anariSetParameter(dev, mesh, "usd::timeVarying.attribute0", ANARI_BOOL, &timevaryTexcoord);
     anariSetParameter(dev, mesh, "usd::time", ANARI_FLOAT64, geomTimeValues + timeIdx);
 
     anariCommitParameters(dev, mesh);
@@ -420,8 +420,8 @@ int main(int argc, const char **argv)
       // Only colors and opacities are timevarying
       int timeVaryingMetallic = 1;
       int timeVaryingOpacities = 1;
-      anariSetParameter(dev, mat, "usd::timeVarying::metallic", ANARI_BOOL, &timeVaryingMetallic);
-      anariSetParameter(dev, mat, "usd::timeVarying::opacity", ANARI_BOOL, &timeVaryingOpacities);
+      anariSetParameter(dev, mat, "usd::timeVarying.metallic", ANARI_BOOL, &timeVaryingMetallic);
+      anariSetParameter(dev, mat, "usd::timeVarying.opacity", ANARI_BOOL, &timeVaryingOpacities);
       anariCommitParameters(dev, mat);
       anariRelease(dev, sampler);
 

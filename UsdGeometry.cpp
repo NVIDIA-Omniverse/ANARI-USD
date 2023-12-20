@@ -15,7 +15,7 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
   REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, timeStep)
   REGISTER_PARAMETER_MACRO("usd::timeVarying", ANARI_INT32, timeVarying)
-  REGISTER_PARAMETER_MACRO("usd::time::shapeGeometry", ANARI_FLOAT64, shapeGeometryRefTimeStep)
+  REGISTER_PARAMETER_MACRO("usd::time.shapeGeometry", ANARI_FLOAT64, shapeGeometryRefTimeStep)
   REGISTER_PARAMETER_MACRO("usd::useUsdGeomPoints", ANARI_BOOL, UseUsdGeomPoints)
   REGISTER_PARAMETER_MACRO("primitive.index", ANARI_ARRAY, indices)
   REGISTER_PARAMETER_MACRO("primitive.normal", ANARI_ARRAY, primitiveNormals)
