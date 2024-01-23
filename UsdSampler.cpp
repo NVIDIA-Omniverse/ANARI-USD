@@ -20,6 +20,8 @@ DEFINE_PARAMETER_MAP(UsdSampler,
   REGISTER_PARAMETER_MACRO("wrapMode3", ANARI_STRING, wrapR)
 )
 
+constexpr UsdSampler::ComponentPair UsdSampler::componentParamNames[]; // Workaround for C++14's lack of inlining constexpr arrays
+
 namespace
 { 
   UsdBridgeSamplerData::WrapMode ANARIToUsdBridgeWrapMode(const char* anariWrapMode)

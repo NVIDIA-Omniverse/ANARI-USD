@@ -20,6 +20,8 @@ DEFINE_PARAMETER_MAP(UsdVolume,
   REGISTER_PARAMETER_MACRO("unitDistance", ANARI_FLOAT32, unitDistance)
 )
 
+constexpr UsdVolume::ComponentPair UsdVolume::componentParamNames[]; // Workaround for C++14's lack of inlining constexpr arrays
+
 namespace
 {
   void GatherTfData(const UsdVolumeData& paramData, UsdBridgeTfData& tfData)

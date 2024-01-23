@@ -20,7 +20,6 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
 {
   protected:
     using CType = C;
-    using ComponentPair = std::pair<C, const char*>; // Used to define a componentParamNames
 
     // Timevarying helper functions (classes workaround to allow for partial specialization)
     template<typename IT, typename ID, typename IH, typename IC>
@@ -94,6 +93,8 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
     }
 
   public:
+    using ComponentPair = std::pair<C, const char*>; // Used to define a componentParamNames
+
     UsdBridgedBaseObject(ANARIDataType t, const char* name, UsdDevice* device)
       : UsdParameterizedBaseObject<T, D>(t, device)
       , uniqueName(name)

@@ -26,6 +26,8 @@ DEFINE_PARAMETER_MAP(UsdWorld,
   REGISTER_PARAMETER_MACRO("volume", ANARI_ARRAY, volumes)
 )
 
+constexpr UsdWorld::ComponentPair UsdWorld::componentParamNames[]; // Workaround for C++14's lack of inlining constexpr arrays
+
 UsdWorld::UsdWorld(const char* name, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_WORLD, name, device)
 {

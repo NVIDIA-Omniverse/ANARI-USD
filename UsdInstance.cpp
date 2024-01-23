@@ -17,6 +17,8 @@ DEFINE_PARAMETER_MAP(UsdInstance,
   REGISTER_PARAMETER_MACRO("transform", ANARI_FLOAT32_MAT4, transform)
 )
 
+constexpr UsdInstance::ComponentPair UsdInstance::componentParamNames[]; // Workaround for C++14's lack of inlining constexpr arrays
+
 UsdInstance::UsdInstance(const char* name,
   UsdDevice* device)
   : BridgedBaseObjectType(ANARI_INSTANCE, name, device)

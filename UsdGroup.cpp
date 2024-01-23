@@ -21,6 +21,8 @@ DEFINE_PARAMETER_MAP(UsdGroup,
   REGISTER_PARAMETER_MACRO("volume", ANARI_ARRAY, volumes)
 )
 
+constexpr UsdGroup::ComponentPair UsdGroup::componentParamNames[]; // Workaround for C++14's lack of inlining constexpr arrays
+
 UsdGroup::UsdGroup(const char* name,
   UsdDevice* device)
   : BridgedBaseObjectType(ANARI_GROUP, name, device)

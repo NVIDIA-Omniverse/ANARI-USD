@@ -41,6 +41,8 @@ DEFINE_PARAMETER_MAP(UsdGeometry,
   REGISTER_PARAMETER_MACRO("shapeTransform", ANARI_FLOAT32_MAT4, shapeTransform)
 ) // See .h for usage.
 
+constexpr UsdGeometry::ComponentPair UsdGeometry::componentParamNames[]; // Workaround for C++14's lack of inlining constexpr arrays
+
 struct UsdGeometryTempArrays
 {
   UsdGeometryTempArrays(const UsdGeometry::AttributeArray& attributes)

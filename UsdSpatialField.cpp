@@ -19,6 +19,8 @@ DEFINE_PARAMETER_MAP(UsdSpatialField,
   REGISTER_PARAMETER_MACRO("origin", ANARI_FLOAT32_VEC3, gridOrigin)
 ) // See .h for usage.
 
+constexpr UsdSpatialField::ComponentPair UsdSpatialField::componentParamNames[]; // Workaround for C++14's lack of inlining constexpr arrays
+
 UsdSpatialField::UsdSpatialField(const char* name, const char* type, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_SPATIAL_FIELD, name, device)
 {

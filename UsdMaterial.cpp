@@ -38,6 +38,8 @@ DEFINE_PARAMETER_MAP(UsdMaterial,
   REGISTER_PARAMETER_MATERIAL_MULTITYPE_MACRO("ior", ANARI_FLOAT32, ior) 
 )
 
+constexpr UsdMaterial::ComponentPair UsdMaterial::componentParamNames[]; // Workaround for C++14's lack of inlining constexpr arrays
+
 using DMI = UsdMaterial::MaterialDMI;
 
 UsdMaterial::UsdMaterial(const char* name, const char* type, UsdDevice* device)
