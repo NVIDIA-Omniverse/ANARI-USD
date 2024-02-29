@@ -723,26 +723,26 @@ void UsdBridgeUsdWriter::UpdateClipMetaData(const UsdPrim& clipPrim, UsdBridgePr
 #endif
 
 SdfPath UsdBridgeUsdWriter::AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-  bool timeVarying, double parentTimeStep,
+  bool timeVarying, double parentTimeStep, bool instanceable,
   const RefModFuncs& refModCallbacks)
 {
-  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, parentTimeStep, refModCallbacks);
+  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, parentTimeStep, instanceable, refModCallbacks);
 }
 
 SdfPath UsdBridgeUsdWriter::AddRef(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
   bool timeVarying, bool valueClip, bool clipStages, const char* clipPostfix,
-  double parentTimeStep, double childTimeStep,
+  double parentTimeStep, double childTimeStep, bool instanceable,
   const RefModFuncs& refModCallbacks)
 {
   // Value clip-enabled references have to be defined on the scenestage, as usd does not re-time recursively.
-  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, valueClip, clipStages, clipPostfix, parentTimeStep, childTimeStep, refModCallbacks);
+  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, valueClip, clipStages, clipPostfix, parentTimeStep, childTimeStep, instanceable, refModCallbacks);
 }
 
 SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
   bool timeVarying, // Timevarying existence (visible or not) of the reference itself
   bool valueClip,   // Retiming through a value clip
   bool clipStages,  // Separate stages for separate time slots (can only exist in usd if valueClip enabled)
-  const char* clipPostfix, double parentTimeStep, double childTimeStep,
+  const char* clipPostfix, double parentTimeStep, double childTimeStep, bool instanceable,
   const RefModFuncs& refModCallbacks)
 {
   UsdTimeCode parentTimeCode(parentTimeStep);
@@ -793,6 +793,8 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBrid
 #endif
 #endif
   }
+
+  referencingPrim.SetInstanceable(instanceable);
 
   return referencingPrimPath;
 }

@@ -573,7 +573,7 @@ void UsdBridge::DeleteSampler(UsdSamplerHandle handle)
 
 template<typename ParentHandleType, typename ChildHandleType>
 void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleType* childHandles, uint64_t numChildren, 
-  const char* refPathExt, bool timeVarying, double timeStep)
+  const char* refPathExt, bool timeVarying, double timeStep, bool instanceable)
 {
   if (parentHandle.value == nullptr) return;
   if(HasNullHandles(childHandles, numChildren)) return;
@@ -584,7 +584,7 @@ void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleTy
   BRIDGE_USDWRITER.ManageUnusedRefs(parentCache, childCaches, refPathExt, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   for (uint64_t i = 0; i < numChildren; ++i)
   {
-    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], refPathExt, timeVarying, timeStep, Internals->RefModCallbacks);
+    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], refPathExt, timeVarying, timeStep, instanceable, Internals->RefModCallbacks);
   }
 }
 
@@ -601,18 +601,20 @@ void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bo
   UsdBridgePrimCache* instanceCache = BRIDGE_CACHE.ConvertToPrimCache(instance);
   UsdBridgePrimCache* groupCache = BRIDGE_CACHE.ConvertToPrimCache(group);
 
+  constexpr bool instanceable = false;
+
   BRIDGE_USDWRITER.ManageUnusedRefs(instanceCache, Internals->ToCacheList(groupCache), nullptr, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  BRIDGE_USDWRITER.AddRef_NoClip(instanceCache, groupCache, nullptr, timeVarying, timeStep, Internals->RefModCallbacks);
+  BRIDGE_USDWRITER.AddRef_NoClip(instanceCache, groupCache, nullptr, timeVarying, timeStep, instanceable, Internals->RefModCallbacks);
 }
 
 void UsdBridge::SetSurfaceRefs(UsdWorldHandle world, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
 {
-  SetNoClipRefs(world, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep);
+  SetNoClipRefs(world, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, true);
 }
 
 void UsdBridge::SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
 {
-  SetNoClipRefs(group, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep);
+  SetNoClipRefs(group, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, true);
 }
 
 void UsdBridge::SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep)
@@ -633,11 +635,13 @@ void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geome
   UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
   UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
 
-  bool timeVarying = false; // On a surface, the path to the geometry cannot change over time (ie. is uniformly set), since material is not timevarying either (due to the material binding path rel from the geometry) and the geometry contents itself are already timevarying.
-  bool valueClip = true;
-  bool clipStages = true;
+  constexpr bool timeVarying = false; // On a surface, the path to the geometry cannot change over time (ie. is uniformly set), since material is not timevarying either (due to the material binding path rel from the geometry) and the geometry contents itself are already timevarying.
+  constexpr bool valueClip = true;
+  constexpr bool clipStages = true;
+  constexpr bool instanceable = true;
+
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
-  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, clipStages, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks);
+  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, clipStages, geomClipPf, timeStep, geomTimeStep, instanceable, Internals->RefModCallbacks);
 
   BRIDGE_USDWRITER.UnbindMaterialFromGeom(refGeomPath);
 }
@@ -651,15 +655,17 @@ void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHand
   UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
   UsdBridgePrimCache* materialCache = BRIDGE_CACHE.ConvertToPrimCache(material);
 
-  bool timeVarying = false;
-  bool valueClip = true;
+  constexpr bool timeVarying = false;
+  constexpr bool valueClip = true;
+  constexpr bool instanceable = true;
+
   // Remove any dangling references
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(materialCache), materialPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
   // Update the references
-  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, true, geomClipPf, timeStep, geomTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the surface.
-  SdfPath refMatPath = BRIDGE_USDWRITER.AddRef(surfaceCache, materialCache, materialPathRp, timeVarying, valueClip, false, nullptr, timeStep, matTimeStep, Internals->RefModCallbacks);
+  SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, true, geomClipPf, timeStep, geomTimeStep, instanceable, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the surface.
+  SdfPath refMatPath = BRIDGE_USDWRITER.AddRef(surfaceCache, materialCache, materialPathRp, timeVarying, valueClip, false, nullptr, timeStep, matTimeStep, instanceable, Internals->RefModCallbacks);
 
   // For updating material attribute reader output types, update the suggested material->geompath mapping.
   // Since multiple geometries can be bound to a material, only one is taken, so it is up to the user to ensure correct attribute connection types.
@@ -678,12 +684,14 @@ void UsdBridge::SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle
   UsdBridgePrimCache* volumeCache = BRIDGE_CACHE.ConvertToPrimCache(volume);
   UsdBridgePrimCache* fieldCache = BRIDGE_CACHE.ConvertToPrimCache(field);
 
-  bool timeVarying = false;
-  bool valueClip = true;
-  bool clipStages = false;
+  constexpr bool timeVarying = false;
+  constexpr bool valueClip = true;
+  constexpr bool clipStages = false;
+  constexpr bool instanceable = false;
+
   BRIDGE_USDWRITER.ManageUnusedRefs(volumeCache, Internals->ToCacheList(fieldCache), fieldPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
-  SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, fieldTimeStep, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
+  SdfPath refVolPath = BRIDGE_USDWRITER.AddRef(volumeCache, fieldCache, fieldPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, fieldTimeStep, instanceable, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the volume.
 }
 
 void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandle* samplers, size_t numSamplers, double timeStep, const UsdSamplerRefData* samplerRefData)
@@ -696,9 +704,11 @@ void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandl
 
   // Sampler references cannot be time-varying (ie. path to sampler cannot change over time - connectToSource doesn't allow for that), and are set on the scenestage prim (so they inherit the type of the sampler prim)
   // However, they do allow value clip retiming.
-  bool timeVarying = false;
-  bool valueClip = true;
-  bool clipStages = false;
+  constexpr bool timeVarying = false;
+  constexpr bool valueClip = true;
+  constexpr bool clipStages = false;
+  constexpr bool instanceable = false;
+
   BRIDGE_USDWRITER.ManageUnusedRefs(matCache, samplerCaches, samplerPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
   // Bind sampler and material
@@ -708,7 +718,7 @@ void UsdBridge::SetSamplerRefs(UsdMaterialHandle material, const UsdSamplerHandl
   Internals->TempPrimPaths.resize(numSamplers);
   for (uint64_t i = 0; i < numSamplers; ++i)
   {
-    Internals->TempPrimPaths[i] = BRIDGE_USDWRITER.AddRef(matCache, samplerCaches[i], samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerRefData[i].TimeStep, Internals->RefModCallbacks);
+    Internals->TempPrimPaths[i] = BRIDGE_USDWRITER.AddRef(matCache, samplerCaches[i], samplerPathRp, timeVarying, valueClip, clipStages, nullptr, timeStep, samplerRefData[i].TimeStep, instanceable, Internals->RefModCallbacks);
   }
 
   BRIDGE_USDWRITER.ConnectSamplersToMaterial(materialStage, matPrimPath, Internals->TempPrimPaths, samplerCaches, samplerRefData, numSamplers, timeStep); // requires world timestep, see implementation
@@ -728,15 +738,17 @@ void UsdBridge::SetPrototypeRefs(UsdGeometryHandle geometry, const UsdGeometryHa
   const UsdBridgePrimCacheList& protoGeomCaches = Internals->ExtractPrimCaches<UsdGeometryHandle>(protoGeometries, numProtoGeometries);
 
   // Due to prototype rel paths, the path to the prototype itself cannot change. Also, the contents of the prototype itself can already timevary.
-  bool timeVarying = false;
-  bool valueClip = true;
-  bool clipStages = true;
+  constexpr bool timeVarying = false;
+  constexpr bool valueClip = true;
+  constexpr bool clipStages = true;
+  constexpr bool instanceable = false;
+
   BRIDGE_USDWRITER.ManageUnusedRefs(geometryCache, protoGeomCaches, protoGeometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
 
   Internals->ProtoPrimPaths.resize(numProtoGeometries);
   for(uint64_t i = 0; i < numProtoGeometries; ++i)
   {
-    Internals->ProtoPrimPaths[i] = BRIDGE_USDWRITER.AddRef(geometryCache, protoGeomCaches[i], protoGeometryPathRp, timeVarying, valueClip, clipStages, geomClipPf, timeStep, protoTimeSteps[i], Internals->RefModCallbacks);
+    Internals->ProtoPrimPaths[i] = BRIDGE_USDWRITER.AddRef(geometryCache, protoGeomCaches[i], protoGeometryPathRp, timeVarying, valueClip, clipStages, geomClipPf, timeStep, protoTimeSteps[i], instanceable, Internals->RefModCallbacks);
   }
 }
 

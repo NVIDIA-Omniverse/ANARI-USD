@@ -85,18 +85,18 @@ public:
 #endif
 
   SdfPath AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
-    bool timeVarying, double parentTimeStep,
+    bool timeVarying, double parentTimeStep, bool instanceable,
     const RefModFuncs& refModCallbacks);
   SdfPath AddRef(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, bool valueClip, bool clipStages, const char* clipPostFix,
-    double parentTimeStep, double childTimeStep,
+    double parentTimeStep, double childTimeStep, bool instanceable,
     const RefModFuncs& refModCallbacks);
   // Timevarying means that the existence of a reference between prim A and B can differ over time, valueClip denotes the addition of clip metadata for re-timing, 
   // and clipStages will carve up the referenced clip asset files into one for each timestep (stages are created as necessary). clipPostFix is irrelevant if !clipStages.
   // Returns the path to the parent's subprim which represents/holds the reference to the child's main class prim.
   SdfPath AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, bool valueClip, bool clipStages, const char* clipPostFix,
-    double parentTimeStep, double childTimeStep,
+    double parentTimeStep, double childTimeStep, bool instanceable,
     const RefModFuncs& refModCallbacks);
   void RemoveAllRefs(UsdBridgePrimCache* parentCache, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
   void RemoveAllRefs(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, SdfPath childBasePath, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
