@@ -16,6 +16,7 @@
 #include "UsdRenderer.h"
 #include "UsdFrame.h"
 #include "UsdLight.h"
+#include "UsdCamera.h"
 #include "UsdDeviceQueries.h"
 
 #include <cstdarg>
@@ -484,6 +485,17 @@ ANARIWorld UsdDevice::newWorld()
   return (ANARIWorld)(object);
 }
 
+ANARICamera UsdDevice::newCamera(const char *type)
+{
+  const char* name = makeUniqueName("Camera");
+  UsdCamera* object = new UsdCamera(name, type, this);
+#ifdef CHECK_MEMLEAKS
+  LogObjAllocation(object);
+#endif
+
+  return (ANARICamera)(object);
+}
+
 const char **UsdDevice::getObjectSubtypes(ANARIDataType objectType)
 {
   return anari::usd::query_object_types(objectType);
@@ -646,6 +658,8 @@ void UsdDevice::flushCommitList()
   writeTypeToUsd<(int)ANARI_GROUP>();
   writeTypeToUsd<(int)ANARI_INSTANCE>();
   writeTypeToUsd<(int)ANARI_WORLD>();
+
+  writeTypeToUsd<(int)ANARI_CAMERA>();
 
   clearCommitList();
 

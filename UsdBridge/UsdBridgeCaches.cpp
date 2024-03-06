@@ -31,9 +31,9 @@ UsdBridgePrimCacheManager::ConstPrimCacheIterator UsdBridgePrimCacheManager::Cre
   return UsdPrimCaches.emplace(name, std::move(cacheEntry)).first;
 }
 
-void UsdBridgePrimCacheManager::InitializeWorldPrim(UsdBridgePrimCache* worldCache)
+void UsdBridgePrimCacheManager::InitializeTopLevelPrim(UsdBridgePrimCache* primCache)
 {
-  worldCache->IncRef(); // No DecRef() to go with this IncRef(). Worlds remain within the usd.
+  primCache->IncRef(); // No DecRef() to go with this IncRef(). Prims that aren't rooted aren't automatically removed.
 }
 
 void UsdBridgePrimCacheManager::AddChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)

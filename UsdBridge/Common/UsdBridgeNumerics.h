@@ -6,6 +6,10 @@
 
 #include "UsdBridgeMacros.h"
 
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
+
 #include <math.h>
 
 struct UsdUint2
@@ -26,6 +30,12 @@ struct UsdFloat3
   DataType Data[3] = { 1.0, 1.0, 1.0 };
 };
 
+struct UsdFloat4
+{
+  using DataType = float;
+  DataType Data[4] = { 1.0, 1.0, 1.0, 1.0 };
+};
+
 struct UsdFloatMat4
 {
   using DataType = float;
@@ -40,6 +50,18 @@ struct UsdQuaternion
 {
   using DataType = float;
   DataType Data[4] = {1.0, 0.0, 0.0, 0.0};
+};
+
+struct UsdFloatBox1
+{
+  using DataType = float;
+  DataType Data[2] = { 0.0f, 1.0f };
+};
+
+struct UsdFloatBox2
+{
+  using DataType = float;
+  DataType Data[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 };
 
 namespace usdbridgenumerics

@@ -86,7 +86,6 @@ ANARI scene objects:
     - the `<in/out>Transform` and `<in/out>Offset` parameters
 - Lights:
     - unsupported for now
-- Camera is not supported
 - Properties:
     - `bounds` property not queryable (World, Instance, etc.)
 

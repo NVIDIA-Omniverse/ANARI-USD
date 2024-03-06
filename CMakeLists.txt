@@ -131,6 +131,7 @@ set(USDModule_SOURCES
   UsdRenderer.cpp
   UsdFrame.cpp
   UsdLight.cpp
+  UsdCamera.cpp
   UsdDeviceQueries.cpp)
 
 set(USDModule_HEADERS
@@ -155,7 +156,8 @@ set(USDModule_HEADERS
   UsdWorld.h
   UsdRenderer.h
   UsdFrame.h
-  UsdLight.h)
+  UsdLight.h
+  UsdCamera.h)
 
 add_library(anari_library_usd SHARED ${USDModule_SOURCES} ${USDModule_HEADERS})
 

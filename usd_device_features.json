@@ -1018,6 +1018,30 @@
                     "description" : "The timestep of the object attached to the material parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
                 }
             ]
+        }, {
+            "type" : "ANARI_CAMERA",
+            "name" : "perspective",
+            "description" : "perspective camera object",
+            "parameters" : [
+                {
+                    "name" : "usd::timeVarying",
+                    "types" : ["ANARI_INT32"],
+                    "tags" : [],
+                    "description" : "Time varying bitfield"
+                }, {
+                    "name" : "usd::timeVarying.view",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying view matrix bit"
+                }, {
+                    "name" : "usd::timeVarying.projection",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : true,
+                    "description" : "Time varying projection matrix bit"
+                }
+            ]
         }
     ]
 }

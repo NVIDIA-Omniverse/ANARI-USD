@@ -24,6 +24,7 @@ namespace
   const char* const fieldPathCp = "spatialfields";
   const char* const materialPathCp = "materials";
   const char* const samplerPathCp = "samplers";
+  const char* const cameraPathCp = "cameras";
 
   // Parent path extensions for references in parent classes (Reference path)
   const char* const instancePathRp = "instances";
@@ -41,6 +42,7 @@ namespace
   const char* const fieldPrimStagePf = "_Field";
   const char* const materialPrimStagePf = "_Material";
   const char* const samplerPrimStagePf = "_Sampler";
+  const char* const cameraPrimStagePf = "_Camera";
 
   // Postfixes for clip stage names
   const char* const geomClipPf = "_Geom_";
@@ -300,9 +302,9 @@ bool UsdBridge::CreateWorld(const char* name, UsdWorldHandle& handle)
 
   if (!cacheExists)
   {
-    BRIDGE_USDWRITER.SetSceneGraphRoot(cacheEntry, name);
+    BRIDGE_USDWRITER.AddRootPrim(cacheEntry, worldPathCp);
 
-    BRIDGE_CACHE.InitializeWorldPrim(cacheEntry);
+    BRIDGE_CACHE.InitializeTopLevelPrim(cacheEntry);
   }
   
   handle.value = cacheEntry;
@@ -501,13 +503,45 @@ bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle, UsdBri
   return PrimIsNew(createResult);
 }
 
+bool UsdBridge::CreateCamera(const char* name, UsdCameraHandle& handle)
+{
+  if (!SessionValid) return false;
+
+  // Find or create a cache entry belonging to a prim located under worldPathCp in the usd.
+  BoolEntryPair createResult = Internals->FindOrCreatePrim(cameraPathCp, name);
+  UsdBridgePrimCache* cacheEntry = createResult.second;
+  bool cacheExists = createResult.first.second;
+
+  // The camera has no manifest, instead the primstage+path is directly referenced by the root camera
+  // instance prim.
+  if (!cacheExists)
+  {
+    const std::string* layerId = nullptr;
+#ifdef VALUE_CLIP_RETIMING
+    const UsdStagePair& stagePair = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, cameraPrimStagePf);
+    layerId = &stagePair.first;
+    UsdStageRefPtr camStage = stagePair.second;
+#else
+    UsdStageRefPtr camStage = BRIDGE_USDWRITER.GetSceneStage();
+#endif
+
+    BRIDGE_USDWRITER.InitializeUsdCamera(camStage, cacheEntry->PrimPath);
+
+    BRIDGE_USDWRITER.AddRootPrim(cacheEntry, cameraPathCp, layerId);
+    BRIDGE_CACHE.InitializeTopLevelPrim(cacheEntry);
+  }
+  
+  handle.value = cacheEntry;
+  return PrimIsNew(createResult); 
+}
+
 void UsdBridge::DeleteWorld(UsdWorldHandle handle)
 {
   if (handle.value == nullptr) return;
 
   UsdBridgePrimCache* worldCache = BRIDGE_CACHE.ConvertToPrimCache(handle);
 
-  BRIDGE_USDWRITER.RemoveSceneGraphRoot(worldCache);
+  BRIDGE_USDWRITER.RemoveRootPrim(worldCache, worldPathCp);
 
   // Remove the abstract class 
   Internals->FindAndDeletePrim(handle);
@@ -568,6 +602,18 @@ void UsdBridge::DeleteSampler(UsdSamplerHandle handle)
 {
   if (handle.value == nullptr) return;
 
+  Internals->FindAndDeletePrim(handle);
+}
+
+void UsdBridge::DeleteCamera(UsdCameraHandle handle)
+{
+  if (handle.value == nullptr) return;
+
+  UsdBridgePrimCache* cameraCache = BRIDGE_CACHE.ConvertToPrimCache(handle);
+
+  BRIDGE_USDWRITER.RemoveRootPrim(cameraCache, cameraPathCp);
+
+  // Remove the abstract class 
   Internals->FindAndDeletePrim(handle);
 }
 
@@ -944,6 +990,27 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
 #ifdef VALUE_CLIP_RETIMING
   if(this->EnableSaving)
     samplerStage->Save();
+#endif
+}
+
+void UsdBridge::SetCameraData(UsdCameraHandle camera, const UsdBridgeCameraData& cameraData, double timeStep)
+{
+  if (camera.value == nullptr) return;
+
+  UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(camera);
+  SdfPath& cameraPath = cache->PrimPath;
+
+#ifdef VALUE_CLIP_RETIMING
+  bool timeVarHasChanged = cache->TimeVarBitsUpdate(cameraData.TimeVarying);
+#endif
+
+  UsdStageRefPtr cameraStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
+
+  BRIDGE_USDWRITER.UpdateUsdCamera(cameraStage, cameraPath, cameraData, timeStep, timeVarHasChanged);
+
+#ifdef VALUE_CLIP_RETIMING
+  if(this->EnableSaving)
+    cameraStage->Save();
 #endif
 }
 

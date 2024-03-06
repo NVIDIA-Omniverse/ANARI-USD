@@ -702,6 +702,14 @@ namespace
     return prim;
   }
 
+  template<typename ValueType>
+  void ClearAndSetUsdAttribute(const UsdAttribute& attribute, const ValueType& value, const UsdTimeCode& timeCode, bool clearAttrib)
+  {
+    if(clearAttrib)
+      attribute.Clear();
+    attribute.Set(value, timeCode);
+  }
+
   void ClearUsdAttributes(const UsdAttribute& uniformAttrib, const UsdAttribute& timeVarAttrib, bool timeVaryingUpdate)
   {
 #ifdef TIME_BASED_CACHING
@@ -714,7 +722,7 @@ namespace
 #ifdef OMNIVERSE_CREATE_WORKAROUNDS
     if(timeVaryingUpdate && uniformAttrib)
     {
-      // Create considers the referenced uniform prims as a stronger opinion than timeVarying clip values.
+      // Create considers the referenced uniform prims as a stronger opinion than timeVarying clip values (against the spec, see 'value resolution').
       // Just remove the referenced uniform opinion altogether.
       uniformAttrib.ClearAtTime(TimeEvaluator<bool>::DefaultTime);
     }

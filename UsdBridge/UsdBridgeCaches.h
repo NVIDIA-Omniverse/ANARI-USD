@@ -154,7 +154,7 @@ public:
   ConstPrimCacheIterator CreatePrimCache(const std::string& name, const std::string& fullPath, ResourceCollectFunc collectFunc = nullptr);
   void RemovePrimCache(ConstPrimCacheIterator it) { UsdPrimCaches.erase(it); }
 
-  void InitializeWorldPrim(UsdBridgePrimCache* worldCache);
+  void InitializeTopLevelPrim(UsdBridgePrimCache* worldCache);
 
   void AddChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child);
   void RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child);

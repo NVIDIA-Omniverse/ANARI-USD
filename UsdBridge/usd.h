@@ -36,6 +36,7 @@
 #include <pxr/usd/usdGeom/pointInstancer.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdGeom/basisCurves.h>
+#include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdGeom/scope.h>
 #include <pxr/usd/usdVol/volume.h>
 #include <pxr/usd/usdVol/openVDBAsset.h>

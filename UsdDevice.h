@@ -89,7 +89,7 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
 
     ANARILight newLight(const char *type) override { return nullptr; }
 
-    ANARICamera newCamera(const char *type) override { return nullptr; }
+    ANARICamera newCamera(const char *type) override;
 
     ANARIGeometry newGeometry(const char *type);
     ANARISpatialField newSpatialField(const char *type) override;

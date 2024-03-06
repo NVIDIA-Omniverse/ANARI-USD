@@ -61,8 +61,8 @@ public:
   const UsdStagePair& FindOrCreateClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, double timeStep, bool& exists) const;
   const UsdStagePair& FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, bool isClip, double timeStep, bool& exists) const;
 #endif
-  void SetSceneGraphRoot(UsdBridgePrimCache* worldCache, const char* name);
-  void RemoveSceneGraphRoot(UsdBridgePrimCache* worldCache);
+  void AddRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp, const std::string* layerId = nullptr);
+  void RemoveRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp);
 
   const std::string& CreatePrimName(const char* name, const char* category);
   const std::string& GetResourceFileName(const std::string& basePath, double timeStep, const char* fileExtension);
@@ -110,6 +110,7 @@ public:
   UsdPrim InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath& volumePath, bool uniformPrim) const;
   UsdShadeMaterial InitializeUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim) const;
   void InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, UsdBridgeSamplerData::SamplerType type, bool uniformPrim) const;
+  void InitializeUsdCamera(UsdStageRefPtr cameraStage, const SdfPath& geomPath);
   UsdShadeShader GetOrCreateAttributeReader() const;
 
 #ifdef USE_INDEX_MATERIALS
@@ -141,6 +142,8 @@ public:
   void UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, const UsdGeomPrimvarsAPI& boundGeomPrimvars, double timeStep);
   void UpdateUsdVolume(UsdStageRefPtr timeVarStage, UsdBridgePrimCache* cacheEntry, const UsdBridgeVolumeData& volumeData, double timeStep);
   void UpdateUsdSampler(UsdStageRefPtr timeVarStage, UsdBridgePrimCache* cacheEntry, const UsdBridgeSamplerData& samplerData, double timeStep);
+  void UpdateUsdCamera(UsdStageRefPtr timeVarStage, const SdfPath& cameraPrimPath, 
+    const UsdBridgeCameraData& cameraData, double timeStep, bool timeVarHasChanged);
   void UpdateUsdInstancerPrototypes(const SdfPath& instancerPath, const UsdBridgeInstancerRefData& geomRefData, const SdfPrimPathList& refProtoGeomPrimPaths, const char* protoShapePathRp);
   void UpdateAttributeReader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, MaterialDMI dataMemberId, const char* newName, const UsdGeomPrimvarsAPI& boundGeomPrimvars, double timeStep, MaterialDMI timeVarying);
   void UpdateInAttribute(UsdStageRefPtr timeVarStage, const SdfPath& samplerPrimPath, const char* newName, double timeStep, SamplerDMI timeVarying);

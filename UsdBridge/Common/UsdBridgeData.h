@@ -29,6 +29,7 @@ struct UsdSamplerHandle : public UsdBridgeHandle {};
 struct UsdShaderHandle : public UsdBridgeHandle {};
 struct UsdMaterialHandle : public UsdBridgeHandle {};
 struct UsdLightHandle : public UsdBridgeHandle {};
+struct UsdCameraHandle : public UsdBridgeHandle {};
 
 enum class UsdBridgeType
 {
@@ -461,6 +462,7 @@ struct UsdBridgeMaterialData
   MaterialInput<float> Ior = {1.0f, nullptr};
 };
 
+
 template<typename ValueType>
 const typename ValueType::DataType* GetValuePtr(const UsdBridgeMaterialData::MaterialInput<ValueType>& input)
 {
@@ -520,6 +522,29 @@ struct UsdSamplerRefData
   UsdBridgeMaterialData::DataMemberId DataMemberId; // Material input parameter to connect to
 };
 
+struct UsdBridgeCameraData
+{
+  enum class DataMemberId : uint32_t
+  {
+    NONE = 0,
+    VIEW = (1 << 0), 
+    PROJECTION = (1 << 1),
+    ALL = (1 << 9) - 1
+  };
+  DataMemberId TimeVarying = DataMemberId::NONE;
+
+  UsdFloat3 Position = {0.0f, 0.0f, 0.0f};
+  UsdFloat3 Direction = {0.0f, 0.0f, -1.0f};
+  UsdFloat3 Up = {0.0f, 1.0f, 0.0f};
+  UsdFloatBox2 ImageRegion = {0.0f, 0.0f, 1.0f, 1.0f};
+
+  float Aspect;
+  float Near;
+  float Far;
+  float Fovy;
+  float Height;
+};
+
 template<class TEnum>
 struct DefineBitMaskOps
 {
@@ -532,56 +557,30 @@ struct DefineAddSubOps
   static const bool enable = false;
 };
 
-template<>
-struct DefineBitMaskOps<UsdBridgeMeshData::DataMemberId>
-{
-  static const bool enable = true; 
-};
-template<>
-struct DefineAddSubOps<UsdBridgeMeshData::DataMemberId>
-{
-  static const bool enable = true; 
-};
+#define USDBRIDGE_ENABLE_BITMASK_OP(DataType)\
+  template<>\
+  struct DefineBitMaskOps<DataType::DataMemberId>\
+  {\
+    static const bool enable = true;\
+  };
+#define USDBRIDGE_ENABLE_ADDSUB_OP(DataType)\
+  template<>\
+  struct DefineAddSubOps<DataType::DataMemberId>\
+  {\
+    static const bool enable = true;\
+  };
 
-template<>
-struct DefineBitMaskOps<UsdBridgeInstancerData::DataMemberId>
-{
-  static const bool enable = true;
-};
-template<>
-struct DefineAddSubOps<UsdBridgeInstancerData::DataMemberId>
-{
-  static const bool enable = true;
-};
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeMeshData);
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeInstancerData);
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeCurveData);
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeVolumeData);
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeMaterialData);
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeSamplerData);
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeCameraData);
 
-template<>
-struct DefineBitMaskOps<UsdBridgeCurveData::DataMemberId>
-{
-  static const bool enable = true;
-};
-template<>
-struct DefineAddSubOps<UsdBridgeCurveData::DataMemberId>
-{
-  static const bool enable = true;
-};
-
-template<>
-struct DefineBitMaskOps<UsdBridgeVolumeData::DataMemberId>
-{
-  static const bool enable = true;
-};
-
-template<>
-struct DefineBitMaskOps<UsdBridgeMaterialData::DataMemberId>
-{
-  static const bool enable = true;
-};
-
-template<>
-struct DefineBitMaskOps<UsdBridgeSamplerData::DataMemberId>
-{
-  static const bool enable = true;
-};
+USDBRIDGE_ENABLE_ADDSUB_OP(UsdBridgeMeshData);
+USDBRIDGE_ENABLE_ADDSUB_OP(UsdBridgeInstancerData);
+USDBRIDGE_ENABLE_ADDSUB_OP(UsdBridgeCurveData);
 
 template<class TEnum>
 typename std::enable_if<DefineBitMaskOps<TEnum>::enable, TEnum>::type operator |(TEnum lhs, TEnum rhs)

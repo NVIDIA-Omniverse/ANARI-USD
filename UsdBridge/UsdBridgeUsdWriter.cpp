@@ -346,12 +346,14 @@ void UsdBridgeUsdWriter::CreateManifestStage(const char* name, const char* primP
 void UsdBridgeUsdWriter::RemoveManifestAndClipStages(const UsdBridgePrimCache* cacheEntry)
 {
   // May be superfluous
-  assert(cacheEntry->ManifestStage.second);
-  cacheEntry->ManifestStage.second->RemovePrim(SdfPath(RootClassName));
+  if(cacheEntry->ManifestStage.second)
+  {
+    cacheEntry->ManifestStage.second->RemovePrim(SdfPath(RootClassName));
 
-  // Remove ManifestStage file itself
-  assert(!cacheEntry->ManifestStage.first.empty());
-  Connect->RemoveFile((SessionDirectory + cacheEntry->ManifestStage.first).c_str(), true);
+    // Remove ManifestStage file itself
+    assert(!cacheEntry->ManifestStage.first.empty());
+    Connect->RemoveFile((SessionDirectory + cacheEntry->ManifestStage.first).c_str(), true);
+  }
 
   // remove all clipstage files
   for (auto& x : cacheEntry->ClipStages)
@@ -408,22 +410,33 @@ const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimC
 }
 #endif
 
-void UsdBridgeUsdWriter::SetSceneGraphRoot(UsdBridgePrimCache* worldCache, const char* name)
+void UsdBridgeUsdWriter::AddRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp, const std::string* layerId)
 {
-  // Also add concrete scenegraph prim with reference to world class
-  SdfPath sceneGraphPath(this->RootName + "/" + name);
+  SdfPath primPath(this->RootName + "/" + primPathCp);
+  primPath = primPath.AppendPath(primCache->Name);
 
-  UsdPrim sceneGraphPrim = this->SceneStage->DefinePrim(sceneGraphPath);
+  UsdPrim sceneGraphPrim = SceneStage->DefinePrim(primPath);
   assert(sceneGraphPrim);
-  sceneGraphPrim.GetReferences().AddInternalReference(worldCache->PrimPath); //local and one-one, so no difference between ref or inherit
+
+  UsdReferences primRefs = sceneGraphPrim.GetReferences();
+  primRefs.ClearReferences();
+#ifdef VALUE_CLIP_RETIMING
+  if(layerId)
+  {
+    primRefs.AddReference(*layerId, primCache->PrimPath);
+  }
+#endif
+
+  // Always add a ref to the internal prim, which is represented by the cache
+  primRefs.AddInternalReference(primCache->PrimPath);
 }
 
-void UsdBridgeUsdWriter::RemoveSceneGraphRoot(UsdBridgePrimCache* worldCache)
+void UsdBridgeUsdWriter::RemoveRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp)
 {
-  // Delete concrete scenegraph prim with reference to world class
-  SdfPath sceneGraphPath(this->RootName);
-  sceneGraphPath = sceneGraphPath.AppendPath(worldCache->Name);
-  this->SceneStage->RemovePrim(sceneGraphPath);
+  SdfPath primPath(this->RootName + "/" + primPathCp);
+  primPath = primPath.AppendPath(primCache->Name);
+
+  this->SceneStage->RemovePrim(primPath);
 }
 
 const std::string& UsdBridgeUsdWriter::CreatePrimName(const char * name, const char * category)
@@ -468,7 +481,8 @@ bool UsdBridgeUsdWriter::CreatePrim(const SdfPath& path)
 
 void UsdBridgeUsdWriter::DeletePrim(const UsdBridgePrimCache* cacheEntry)
 {
-  SceneStage->RemovePrim(cacheEntry->PrimPath);
+  if(SceneStage->GetPrimAtPath(cacheEntry->PrimPath))
+    SceneStage->RemovePrim(cacheEntry->PrimPath);
 
 #ifdef VALUE_CLIP_RETIMING
   if (cacheEntry->ManifestStage.second)
@@ -851,6 +865,8 @@ void UsdBridgeUsdWriter::ManageUnusedRefs(UsdStageRefPtr stage, UsdBridgePrimCac
 
   if (basePrim)
   {
+    // For each old (referencing) child prim, find it among the new ones, otherwise
+    // possibly delete the referencing prim.
     UsdPrimSiblingRange children = basePrim.GetAllChildren();
     for (UsdPrim oldChild : children)
     {
@@ -887,8 +903,20 @@ void UsdBridgeUsdWriter::ManageUnusedRefs(UsdStageRefPtr stage, UsdBridgePrimCac
 void UsdBridgeUsdWriter::InitializeUsdTransform(const UsdBridgePrimCache* cacheEntry)
 {
   SdfPath transformPath = cacheEntry->PrimPath;
-  UsdGeomXform transform = UsdGeomXform::Define(SceneStage, transformPath);
+  UsdGeomXform transform = GetOrDefinePrim<UsdGeomXform>(SceneStage, transformPath);
   assert(transform);
+}
+
+void UsdBridgeUsdWriter::InitializeUsdCamera(UsdStageRefPtr cameraStage, const SdfPath& cameraPath)
+{
+  UsdGeomCamera cameraPrim = GetOrDefinePrim<UsdGeomCamera>(cameraStage, cameraPath);
+  assert(cameraPrim);
+
+  cameraPrim.CreateProjectionAttr();
+  cameraPrim.CreateHorizontalApertureAttr();
+  cameraPrim.CreateVerticalApertureAttr();
+  cameraPrim.CreateFocalLengthAttr();
+  cameraPrim.CreateClippingRangeAttr();
 }
 
 void UsdBridgeUsdWriter::BindMaterialToGeom(const SdfPath & refGeomPath, const SdfPath & refMatPath)
@@ -926,7 +954,49 @@ void UsdBridgeUsdWriter::UpdateUsdTransform(const SdfPath& transPrimPath, const 
   UsdGeomXform tfPrim = UsdGeomXform::Get(this->SceneStage, transPrimPath);
   assert(tfPrim);
   tfPrim.ClearXformOpOrder();
-  tfPrim.AddTransformOp().Set(transMat, timeEval.Eval());
+  UsdGeomXformOp xformOp = tfPrim.AddTransformOp();
+  ClearAndSetUsdAttribute(xformOp.GetAttr(), transMat, timeEval.Eval(), !timeEval.TimeVarying);
+}
+
+void UsdBridgeUsdWriter::UpdateUsdCamera(UsdStageRefPtr timeVarStage, const SdfPath& cameraPrimPath, 
+  const UsdBridgeCameraData& cameraData, double timeStep, bool timeVarHasChanged)
+{
+  const TimeEvaluator<UsdBridgeCameraData> timeEval(cameraData, timeStep);
+  typedef UsdBridgeCameraData::DataMemberId DMI;
+
+  UsdGeomCamera cameraPrim = UsdGeomCamera::Get(timeVarStage, cameraPrimPath);
+  assert(cameraPrim);
+
+  // Set the view matrix
+  GfVec3d eyePoint(cameraData.Position.Data);
+  GfVec3d fwdDir(cameraData.Direction.Data);
+  GfVec3d upDir(cameraData.Up.Data);
+  GfVec3d lookAtPoint = eyePoint+fwdDir;
+
+  GfMatrix4d viewMatrix;
+  viewMatrix.SetLookAt(eyePoint, lookAtPoint, upDir);
+
+  cameraPrim.ClearXformOpOrder();
+  UsdGeomXformOp xformOp = cameraPrim.AddTransformOp();
+  ClearAndSetUsdAttribute(xformOp.GetAttr(), viewMatrix, timeEval.Eval(DMI::VIEW),
+    timeVarHasChanged && !timeEval.IsTimeVarying(DMI::VIEW));
+  
+  // Helper function for the projection matrix
+  GfCamera gfCam;
+  gfCam.SetPerspectiveFromAspectRatioAndFieldOfView(cameraData.Aspect, cameraData.Fovy, GfCamera::FOVVertical);
+
+  // Update all attributes affected by SetPerspectiveFromAspectRatioAndFieldOfView (see implementation)
+  UsdTimeCode projectTime = timeEval.Eval(DMI::PROJECTION);
+  bool clearProjAttrib = timeVarHasChanged && !timeEval.IsTimeVarying(DMI::PROJECTION);
+
+  ClearAndSetUsdAttribute(cameraPrim.GetProjectionAttr(), 
+    gfCam.GetProjection() == GfCamera::Perspective ? 
+      UsdGeomTokens->perspective : UsdGeomTokens->orthographic, 
+    projectTime, clearProjAttrib);
+  ClearAndSetUsdAttribute(cameraPrim.GetHorizontalApertureAttr(), gfCam.GetHorizontalAperture(), projectTime, clearProjAttrib);
+  ClearAndSetUsdAttribute(cameraPrim.GetVerticalApertureAttr(), gfCam.GetVerticalAperture(), projectTime, clearProjAttrib);
+  ClearAndSetUsdAttribute(cameraPrim.GetFocalLengthAttr(), gfCam.GetFocalLength(), projectTime, clearProjAttrib);
+  ClearAndSetUsdAttribute(cameraPrim.GetClippingRangeAttr(), GfVec2f(cameraData.Near, cameraData.Far), projectTime, clearProjAttrib);
 }
 
 void UsdBridgeUsdWriter::UpdateBeginEndTime(double timeStep)
