@@ -655,12 +655,16 @@ void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bo
 
 void UsdBridge::SetSurfaceRefs(UsdWorldHandle world, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
 {
-  SetNoClipRefs(world, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, true);
+  constexpr bool instanceable = true;
+
+  SetNoClipRefs(world, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, instanceable);
 }
 
 void UsdBridge::SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
 {
-  SetNoClipRefs(group, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, true);
+  constexpr bool instanceable = true;
+
+  SetNoClipRefs(group, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, instanceable);
 }
 
 void UsdBridge::SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep)
@@ -684,7 +688,7 @@ void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geome
   constexpr bool timeVarying = false; // On a surface, the path to the geometry cannot change over time (ie. is uniformly set), since material is not timevarying either (due to the material binding path rel from the geometry) and the geometry contents itself are already timevarying.
   constexpr bool valueClip = true;
   constexpr bool clipStages = true;
-  constexpr bool instanceable = true;
+  constexpr bool instanceable = false; // Can only make Xform prims instanceable
 
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, clipStages, geomClipPf, timeStep, geomTimeStep, instanceable, Internals->RefModCallbacks);
@@ -703,7 +707,7 @@ void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHand
 
   constexpr bool timeVarying = false;
   constexpr bool valueClip = true;
-  constexpr bool instanceable = true;
+  constexpr bool instanceable = false; // Can only make Xform prims instanceable
 
   // Remove any dangling references
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
