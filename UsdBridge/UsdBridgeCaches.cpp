@@ -10,6 +10,60 @@ PXR_NAMESPACE_USING_DIRECTIVE
 constexpr double UsdBridgePrimCache::PrimStageTimeCode;
 #endif
 
+UsdBridgePrimCache::UsdBridgePrimCache(const SdfPath& pp, const SdfPath& nm, ResourceCollectFunc cf)
+    : PrimPath(pp), Name(nm), ResourceCollect(cf)
+#ifndef NDEBUG
+    , Debug_Name(nm.GetString())
+#endif
+{
+  if(cf)
+  {
+    ResourceKeys = std::make_unique<ResourceContainer>();
+  }
+}
+
+void UsdBridgePrimCache::AddChild(UsdBridgePrimCache* child)
+{
+  this->Children.push_back(child);
+  child->IncRef();
+}
+
+void UsdBridgePrimCache::RemoveChild(UsdBridgePrimCache* child)
+{
+  auto it = std::find(this->Children.begin(), this->Children.end(), child);
+  // Allow for find to fail; in the case where the bridge is recreated and destroyed,
+  // a child prim exists which doesn't have a ref in the cache.
+  if(it != this->Children.end())
+  {
+    child->DecRef();
+    *it = this->Children.back();
+    this->Children.pop_back();
+  }
+}
+
+void UsdBridgePrimCache::RemoveUnreferencedChildTree(AtRemoveFunc atRemove)
+{
+  assert(this->RefCount == 0);
+  atRemove(this);
+
+  for (UsdBridgePrimCache* child : this->Children)
+  {
+    child->DecRef();
+    if(child->RefCount == 0)
+      child->RemoveUnreferencedChildTree(atRemove);
+  }
+  this->Children.clear();
+}
+
+bool UsdBridgePrimCache::AddResourceKey(UsdBridgeResourceKey key) // copy by value
+{
+  assert(ResourceKeys);
+  bool newEntry = std::find(ResourceKeys->begin(), ResourceKeys->end(), key) == ResourceKeys->end();
+  if(newEntry)
+    ResourceKeys->push_back(key);
+  return newEntry;
+}
+
 UsdBridgePrimCacheManager::ConstPrimCacheIterator UsdBridgePrimCacheManager::FindPrimCache(const UsdBridgeHandle& handle) const
 {
   ConstPrimCacheIterator it = std::find_if(
@@ -38,35 +92,12 @@ void UsdBridgePrimCacheManager::InitializeTopLevelPrim(UsdBridgePrimCache* primC
 
 void UsdBridgePrimCacheManager::AddChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
 {
-  parent->Children.push_back(child);
-  child->IncRef();
+  parent->AddChild(child);
 }
 
 void UsdBridgePrimCacheManager::RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
 {
-  auto it = std::find(parent->Children.begin(), parent->Children.end(), child);
-  // Allow for find to fail; in the case where the bridge is recreated and destroyed,
-  // a child prim exists which doesn't have a ref in the cache.
-  if(it != parent->Children.end())
-  {
-    child->DecRef();
-    *it = parent->Children.back();
-    parent->Children.pop_back();
-  }
-}
-
-void UsdBridgePrimCacheManager::RemoveUnreferencedChildTree(UsdBridgePrimCache* parent, AtRemoveFunc atRemove)
-{
-  assert(parent->RefCount == 0);
-  atRemove(parent);
-
-  for (UsdBridgePrimCache* child : parent->Children)
-  {
-    child->DecRef();
-    if(child->RefCount == 0)
-      RemoveUnreferencedChildTree(child, atRemove);
-  }
-  parent->Children.clear();
+  parent->RemoveChild(child);
 }
 
 void UsdBridgePrimCacheManager::RemoveUnreferencedPrimCaches(AtRemoveFunc atRemove)
@@ -79,7 +110,7 @@ void UsdBridgePrimCacheManager::RemoveUnreferencedPrimCaches(AtRemoveFunc atRemo
   {
     if (it->second->RefCount == 0)
     {
-      RemoveUnreferencedChildTree(it->second.get(), atRemove);
+      it->second->RemoveUnreferencedChildTree(atRemove);
     }
     ++it;
   }

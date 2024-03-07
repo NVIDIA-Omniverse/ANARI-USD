@@ -61,13 +61,6 @@ protected:
   void DecRef() { --RefCount; }
 
   unsigned int RefCount = 0;
-  std::vector<UsdBridgePrimCache*> Children;
-#ifdef TIME_BASED_CACHING
-  //Could also contain a mapping from child to an array of (parentTime,childTime)
-  //This would allow single timesteps to be removed in case of unused/replaced references at a parentTime (instead of removal of child if visible), without breaking garbage collection.
-  //Additionally, a refcount per timestep would help to perform garbage collection of individual child clip stages/files,
-  //when no parent references that particular childTime anymore (due to removal/replacing with refs to other children, or replacement with different childTimes for the same child).
-#endif
 };
 
 struct UsdBridgePrimCache : public UsdBridgeRefCache
@@ -75,31 +68,26 @@ struct UsdBridgePrimCache : public UsdBridgeRefCache
   using ResourceContainer = std::vector<UsdBridgeResourceKey>;
 
   //Constructors
-  UsdBridgePrimCache(const SdfPath& pp, const SdfPath& nm, ResourceCollectFunc cf)
-    : PrimPath(pp), Name(nm), ResourceCollect(cf)
-#ifndef NDEBUG
-    , Debug_Name(nm.GetString())
-#endif
-  {
-    if(cf)
-    {
-      ResourceKeys = std::make_unique<ResourceContainer>();
-    }
-  }
+  UsdBridgePrimCache(const SdfPath& pp, const SdfPath& nm, ResourceCollectFunc cf);
+
+  void AddChild(UsdBridgePrimCache* child);
+  void RemoveChild(UsdBridgePrimCache* child);
+  void RemoveUnreferencedChildTree(AtRemoveFunc atRemove);
+
+  bool AddResourceKey(UsdBridgeResourceKey key);
 
   SdfPath PrimPath;
   SdfPath Name;
+  std::vector<UsdBridgePrimCache*> Children;
   ResourceCollectFunc ResourceCollect;
   std::unique_ptr<ResourceContainer> ResourceKeys; // Referenced resources
 
-  bool AddResourceKey(UsdBridgeResourceKey key) // copy by value
-  {
-    assert(ResourceKeys);
-    bool newEntry = std::find(ResourceKeys->begin(), ResourceKeys->end(), key) == ResourceKeys->end();
-    if(newEntry)
-      ResourceKeys->push_back(key);
-    return newEntry;
-  }
+#ifdef TIME_BASED_CACHING
+  //Could also contain a mapping from child to an array of (parentTime,childTime)
+  //This would allow single timesteps to be removed in case of unused/replaced references at a parentTime (instead of removal of child if visible), without breaking garbage collection.
+  //Additionally, a refcount per timestep would help to perform garbage collection of individual child clip stages/files,
+  //when no parent references that particular childTime anymore (due to removal/replacing with refs to other children, or replacement with different childTimes for the same child).
+#endif
 
 #ifdef VALUE_CLIP_RETIMING
   UsdStagePair ManifestStage; // Holds the manifest
@@ -153,13 +141,12 @@ public:
 
   ConstPrimCacheIterator CreatePrimCache(const std::string& name, const std::string& fullPath, ResourceCollectFunc collectFunc = nullptr);
   void RemovePrimCache(ConstPrimCacheIterator it) { UsdPrimCaches.erase(it); }
-
-  void InitializeTopLevelPrim(UsdBridgePrimCache* worldCache);
+  void RemoveUnreferencedPrimCaches(AtRemoveFunc atRemove);
 
   void AddChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child);
   void RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child);
-  void RemoveUnreferencedChildTree(UsdBridgePrimCache* parent, AtRemoveFunc atRemove);
-  void RemoveUnreferencedPrimCaches(AtRemoveFunc atRemove);
+
+  void InitializeTopLevelPrim(UsdBridgePrimCache* worldCache);
 
 protected:
 

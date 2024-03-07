@@ -496,7 +496,6 @@ int main(int argc, const char **argv)
 
     // final cleanups
     anariRelease(dev, renderer);
-    anariRelease(dev, camera);
     anariRelease(dev, frame);
     anariRelease(dev, world);
 
@@ -656,7 +655,6 @@ int main(int argc, const char **argv)
 
     // final cleanups
     anariRelease(dev, renderer);
-    anariRelease(dev, camera);
     anariRelease(dev, frame);
     anariRelease(dev, world);
 
@@ -673,6 +671,7 @@ int main(int argc, const char **argv)
     // ~
   }
 
+  anariRelease(dev, camera);
   anariRelease(dev, texArray);
 
   anariRelease(dev, dev);
