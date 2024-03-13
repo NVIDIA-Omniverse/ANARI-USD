@@ -5,6 +5,7 @@
 
 #include "UsdBridgeUsdWriter.h"
 #include "UsdBridgeCaches.h"
+#include "UsdBridgeDiagnosticMgrDelegate.h"
 
 #include <string>
 #include <memory>
@@ -55,65 +56,6 @@ namespace
 
 typedef UsdBridgePrimCacheManager::PrimCacheIterator PrimCacheIterator;
 typedef UsdBridgePrimCacheManager::ConstPrimCacheIterator ConstPrimCacheIterator;
-
-class UsdBridgeDiagnosticMgrDelegate : public TfDiagnosticMgr::Delegate
-{
-  public:
-    UsdBridgeDiagnosticMgrDelegate(void* logUserData,
-      UsdBridgeLogCallback logCallback)
-      : LogUserData(logUserData)
-      , LogCallback(logCallback)
-    {}
-
-    void IssueError(TfError const& err) override
-    {
-      LogTfMessage(UsdBridgeLogLevel::ERR, err);
-    }
-
-    virtual void IssueFatalError(TfCallContext const& context,
-      std::string const& msg) override
-    {
-      std::string message = TfStringPrintf(
-        "[USD Internal error]: %s in %s at line %zu of %s",
-        msg.c_str(), context.GetFunction(), context.GetLine(), context.GetFile()
-        );
-      LogMessage(UsdBridgeLogLevel::ERR, message);
-    }
- 
-    virtual void IssueStatus(TfStatus const& status) override
-    {
-      LogTfMessage(UsdBridgeLogLevel::STATUS, status);
-    }
-
-    virtual void IssueWarning(TfWarning const& warning) override
-    {
-      LogTfMessage(UsdBridgeLogLevel::WARNING, warning);
-    }
-
-  protected:
-
-    void LogTfMessage(UsdBridgeLogLevel level, TfDiagnosticBase const& diagBase)
-    {
-      std::string message = TfStringPrintf(
-        "[USD Internal Message]: %s with error code %s in %s at line %zu of %s",
-        diagBase.GetCommentary().c_str(),
-        TfDiagnosticMgr::GetCodeName(diagBase.GetDiagnosticCode()).c_str(),
-        diagBase.GetContext().GetFunction(),
-        diagBase.GetContext().GetLine(),
-        diagBase.GetContext().GetFile()
-      );
-
-      LogMessage(level, message);
-    }
-
-    void LogMessage(UsdBridgeLogLevel level, const std::string& message)
-    {
-      LogCallback(level, LogUserData, message.c_str());
-    }
-
-    void* LogUserData;
-    UsdBridgeLogCallback LogCallback;
-};
 
 struct UsdBridgeInternals
 {

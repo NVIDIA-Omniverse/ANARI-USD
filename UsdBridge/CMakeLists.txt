@@ -101,11 +101,13 @@ set(USDBRIDGE_SOURCES
   UsdBridgeUsdWriter_Material.cpp
   UsdBridgeUsdWriter_Volume.cpp
   UsdBridgeTimeEvaluator.cpp
+  UsdBridgeDiagnosticMgrDelegate.cpp
   UsdBridge.h
   UsdBridgeCaches.h
   UsdBridgeUsdWriter.h
   UsdBridgeUsdWriter_Common.h
   UsdBridgeTimeEvaluator.h
+  UsdBridgeDiagnosticMgrDelegate.h
   usd.h
   ${USDBRIDGE_MDL_SOURCES}
 )

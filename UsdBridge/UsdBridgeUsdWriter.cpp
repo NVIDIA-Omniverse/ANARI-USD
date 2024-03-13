@@ -5,6 +5,7 @@
 #include "UsdBridgeCaches.h"
 #include "UsdBridgeMdlStrings.h"
 #include "UsdBridgeUsdWriter_Common.h"
+#include "UsdBridgeDiagnosticMgrDelegate.h"
 
 TF_DEFINE_PUBLIC_TOKENS(
   UsdBridgeTokens,
@@ -334,7 +335,10 @@ void UsdBridgeUsdWriter::CreateManifestStage(const char* name, const char* primP
 
   std::string absoluteFileName = Connect->GetUrl((this->SessionDirectory + cacheEntry->ManifestStage.first).c_str());
 
+  UsdBridgeDiagnosticMgrDelegate::SetOutputEnabled(false);
   cacheEntry->ManifestStage.second = UsdStage::CreateNew(absoluteFileName);
+  UsdBridgeDiagnosticMgrDelegate::SetOutputEnabled(true);
+
   if (!cacheEntry->ManifestStage.second)
     cacheEntry->ManifestStage.second = UsdStage::Open(absoluteFileName);
 
@@ -392,7 +396,10 @@ const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimC
     std::string relativeFileName = folder + cacheEntry->Name.GetString() + fullNamePostfix + (binary ? ".usd" : ".usda");
     std::string absoluteFileName = Connect->GetUrl((this->SessionDirectory + relativeFileName).c_str());
 
+    UsdBridgeDiagnosticMgrDelegate::SetOutputEnabled(false);
     UsdStageRefPtr primClipStage = UsdStage::CreateNew(absoluteFileName);
+    UsdBridgeDiagnosticMgrDelegate::SetOutputEnabled(true);
+
     exists = !primClipStage;
 
     SdfPath rootPrimPath(this->RootClassName);
