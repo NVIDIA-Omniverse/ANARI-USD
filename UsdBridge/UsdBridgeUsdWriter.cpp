@@ -492,7 +492,9 @@ void UsdBridgeUsdWriter::DeletePrim(const UsdBridgePrimCache* cacheEntry)
 #endif
 }
 
-void UsdBridgeUsdWriter::InitializePrimVisibility(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode)
+#ifdef TIME_BASED_CACHING
+void UsdBridgeUsdWriter::InitializePrimVisibility(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode,
+  UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache)
 {
   UsdGeomImageable imageable = UsdGeomImageable::Get(stage, primPath);
 
@@ -509,10 +511,13 @@ void UsdBridgeUsdWriter::InitializePrimVisibility(UsdStageRefPtr stage, const Sd
     if (endTime > timeCode)
       visAttrib.Set(VtValue(UsdGeomTokens->invisible), endTime);//imageable.MakeInvisible(endTime);
     visAttrib.Set(VtValue(UsdGeomTokens->inherited), timeCode);//imageable.MakeVisible(timeCode);
+
+    parentCache->SetChildVisibleAtTime(childCache, timeCode.GetValue());
   }
 }
 
-void UsdBridgeUsdWriter::SetPrimVisibility(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode, bool visible)
+void UsdBridgeUsdWriter::SetPrimVisible(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode,
+  UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache)
 {
   UsdGeomImageable imageable = UsdGeomImageable::Get(stage, primPath);
   if (imageable)
@@ -520,70 +525,54 @@ void UsdBridgeUsdWriter::SetPrimVisibility(UsdStageRefPtr stage, const SdfPath& 
     UsdAttribute visAttrib = imageable.GetVisibilityAttr();
     assert(visAttrib);
 
-    if (visible)
-      visAttrib.Set(VtValue(UsdGeomTokens->inherited), timeCode);//imageable.MakeVisible(timeCode);
-    else
-      visAttrib.Set(VtValue(UsdGeomTokens->invisible), timeCode);//imageable.MakeInvisible(timeCode);
+    visAttrib.Set(VtValue(UsdGeomTokens->inherited), timeCode);//imageable.MakeVisible(timeCode);
+    parentCache->SetChildVisibleAtTime(childCache, timeCode.GetValue());
   }
 }
 
-void UsdBridgeUsdWriter::SetChildrenVisibility(UsdStageRefPtr stage, const SdfPath& parentPath, const UsdTimeCode& timeCode, bool visible)
-{
-  UsdPrim parentPrim = stage->GetPrimAtPath(parentPath);
-  if (parentPrim)
-  {
-    UsdPrimSiblingRange children = parentPrim.GetAllChildren();
-    for (UsdPrim child : children)
-    {
-      SetPrimVisibility(stage, child.GetPath(), timeCode, visible);
-    }
-  }
-}
-
-#ifdef TIME_BASED_CACHING
-void UsdBridgeUsdWriter::PrimRemoveIfVisible(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const UsdPrim& prim, bool timeVarying, const UsdTimeCode& timeCode, AtRemoveRefFunc atRemoveRef)
+void UsdBridgeUsdWriter::PrimRemoveIfInvisibleAnytime(UsdStageRefPtr stage, const UsdPrim& prim, bool timeVarying, const UsdTimeCode& timeCode, AtRemoveRefFunc atRemoveRef,
+  UsdBridgePrimCache* parentCache, UsdBridgePrimCache* primCache)
 {
   const SdfPath& primPath = prim.GetPath();
 
-  bool removePrim = true;
+  bool removePrim = true; // TimeVarying is not automatically removed 
 
   if (timeVarying)
   {
-    UsdGeomImageable imageable = UsdGeomImageable::Get(stage, primPath);
-    if (imageable)
+    if(primCache)
     {
-      TfToken visibilityToken;
-      UsdAttribute visAttrib = imageable.GetVisibilityAttr();
-      if (visAttrib)
-      {
-        visAttrib.Get(&visibilityToken, timeCode);
-        std::vector<double> times;
-        visAttrib.GetTimeSamplesInInterval(GfInterval(timeCode.GetValue()), &times);
+      // Remove prim only if there are no more visible children AND the timecode has actually been removed
+      // (so if the timecode wasn't found in the cache, do not remove the prim)
+      removePrim = parentCache->SetChildInvisibleAtTime(primCache, timeCode.GetValue());
 
-        if (times.size() == 0 || visibilityToken == UsdGeomTokens->invisible)
+      // If prim is still visible at other times, make sure to explicitly set this timeCode as invisible
+      if(!removePrim)
+      {
+        UsdGeomImageable imageable = UsdGeomImageable::Get(stage, primPath);
+        if (imageable)
         {
-          // Do not remove prim if timevarying and invisible, but make sure
-          // that invisibility is explicitly set (non-default)
-          removePrim = false;
-          visAttrib.Set(UsdGeomTokens->invisible, timeCode);
+          UsdAttribute visAttrib = imageable.GetVisibilityAttr();
+          if (visAttrib)
+            visAttrib.Set(UsdGeomTokens->invisible, timeCode);
         }
       }
     }
+    else
+      removePrim = false; // If no cache is available, just don't remove, for possibility of previous timesteps (opposite from when !timeVarying)
   }
 
   if (removePrim)
   {
     // Decrease the ref on the representing cache entry
-    const std::string& childName = prim.GetName().GetString();
-    
-    atRemoveRef(parentCache, childName);
+    if(primCache)
+      atRemoveRef(parentCache, primCache);
     
     // Remove the prim
     stage->RemovePrim(primPath);
   }
 }
 
-void UsdBridgeUsdWriter::ChildrenRemoveIfVisible(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const SdfPath& parentPath, bool timeVarying, const UsdTimeCode& timeCode, AtRemoveRefFunc atRemoveRef, const SdfPath& exceptPath)
+void UsdBridgeUsdWriter::ChildrenRemoveIfInvisibleAnytime(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const SdfPath& parentPath, bool timeVarying, const UsdTimeCode& timeCode, AtRemoveRefFunc atRemoveRef, const SdfPath& exceptPath)
 {
   UsdPrim parentPrim = stage->GetPrimAtPath(parentPath);
   if (parentPrim)
@@ -591,8 +580,11 @@ void UsdBridgeUsdWriter::ChildrenRemoveIfVisible(UsdStageRefPtr stage, UsdBridge
     UsdPrimSiblingRange children = parentPrim.GetAllChildren();
     for (UsdPrim child : children)
     {
+      UsdBridgePrimCache* childCache = parentCache->GetChildCache(child.GetName());
+
       if (child.GetPath() != exceptPath)
-        PrimRemoveIfVisible(stage, parentCache, child, timeVarying, timeCode, atRemoveRef);
+        PrimRemoveIfInvisibleAnytime(stage, child, timeVarying, timeCode, atRemoveRef,
+          parentCache, childCache);
     }
   }
 }
@@ -785,19 +777,21 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBrid
       //referencingPrim.SetInstanceable(true);
     }
 
+    refModCallbacks.AtNewRef(parentCache, childCache);
+
 #ifdef TIME_BASED_CACHING
     // If time domain of the stage extends beyond timestep in either direction, set visibility false for extremes.
     if (timeVarying)
-      InitializePrimVisibility(SceneStage, referencingPrimPath, parentTimeCode);
+      InitializePrimVisibility(SceneStage, referencingPrimPath, parentTimeCode,
+        parentCache, childCache);
 #endif
-
-    refModCallbacks.AtNewRef(parentCache, childCache);
   }
   else
   {
 #ifdef TIME_BASED_CACHING
     if (timeVarying)
-      SetPrimVisibility(SceneStage, referencingPrimPath, parentTimeCode, true);
+      SetPrimVisible(SceneStage, referencingPrimPath, parentTimeCode, 
+        parentCache, childCache);
 
 #ifdef VALUE_CLIP_RETIMING
     // Cliptimes are added as additional info, not actively removed (visibility values remain leading in defining existing relationships over timesteps)
@@ -827,9 +821,9 @@ void UsdBridgeUsdWriter::RemoveAllRefs(UsdStageRefPtr stage, UsdBridgePrimCache*
 #ifdef TIME_BASED_CACHING
   UsdTimeCode timeCode(timeStep);
 
-  // Remove refs just for this timecode, so leave invisible refs (could still be visible in other timecodes) intact.
-  //SetChildrenVisibility(stage, childBasePath, timeCode, false);
-  ChildrenRemoveIfVisible(stage, parentCache, childBasePath, timeVarying, timeCode, atRemoveRef);
+  // Make refs just for this timecode invisible and possibly remove,
+  // but leave refs which are still visible in other timecodes intact.
+  ChildrenRemoveIfInvisibleAnytime(stage, parentCache, childBasePath, timeVarying, timeCode, atRemoveRef);
 #else
   UsdPrim parentPrim = stage->GetPrimAtPath(childBasePath);
   if(parentPrim)
@@ -837,9 +831,13 @@ void UsdBridgeUsdWriter::RemoveAllRefs(UsdStageRefPtr stage, UsdBridgePrimCache*
     UsdPrimSiblingRange children = parentPrim.GetAllChildren();
     for (UsdPrim child : children)
     {
-      const std::string& childName = child.GetName().GetString();
-      atRemoveRef(parentCache, childName); // Decrease reference count in caches
-      stage->RemovePrim(child.GetPath()); // Remove reference prim
+      UsdBridgePrimCache* childCache = parentCache->GetChildCache(child.GetName());
+
+      if(childCache)
+      {
+        atRemoveRef(parentCache, childCache); // Decrease reference count in caches
+        stage->RemovePrim(child.GetPath()); // Remove reference prim
+      }
     }
   }
 #endif
@@ -870,29 +868,26 @@ void UsdBridgeUsdWriter::ManageUnusedRefs(UsdStageRefPtr stage, UsdBridgePrimCac
     UsdPrimSiblingRange children = basePrim.GetAllChildren();
     for (UsdPrim oldChild : children)
     {
-      const std::string& oldChildName = oldChild.GetPrimPath().GetName();
-
       bool found = false;
       for (size_t newChildIdx = 0; newChildIdx < newChildren.size() && !found; ++newChildIdx)
       {
-        const std::string& newChildName = newChildren[newChildIdx]->Name.GetString();
-        found = (newChildName == oldChildName);
+        found = (oldChild.GetName() == newChildren[newChildIdx]->PrimPath.GetNameToken());
       }
 
+      UsdBridgePrimCache* oldChildCache = parentCache->GetChildCache(oldChild.GetName());
+
+      // Not an assert: allow the case where child prims in a stage aren't cached, ie. when the bridge is destroyed and recreated
       if (!found)
 #ifdef TIME_BASED_CACHING
       {
-        // make *referencing* prim invisible at timestep
-        //SetPrimVisibility(oldChild.GetPath(), timeCode, false); // Moved into PrimRemoveIfVisible 
-                                                                  // (since there is a timesamples value and not necessarily a manifest, 
-                                                                  // the default attribute value will not be read)
-
-        // Remove *referencing* prim if visible
-        PrimRemoveIfVisible(stage, parentCache, oldChild, timeVarying, timeCode, atRemoveRef); 
+        // Remove *referencing* prim if no visible timecode exists anymore
+        PrimRemoveIfInvisibleAnytime(stage, oldChild, timeVarying, timeCode, atRemoveRef,
+          parentCache, oldChildCache);
       }
 #else
       {// remove the whole referencing prim
-        atRemoveRef(parentCache, oldChildName);
+        if(oldChildCache)
+          atRemoveRef(parentCache, oldChildCache);
         stage->RemovePrim(oldChild.GetPath());
       }
 #endif

@@ -23,7 +23,7 @@ public:
   using MaterialDMI = UsdBridgeMaterialData::DataMemberId;
   using SamplerDMI = UsdBridgeSamplerData::DataMemberId;
   using AtNewRefFunc = std::function<void(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache)>;
-  using AtRemoveRefFunc = std::function<void(UsdBridgePrimCache* parentCache, const std::string& childName)>;
+  using AtRemoveRefFunc = std::function<void(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache)>;
 
   struct RefModFuncs
   {
@@ -71,12 +71,14 @@ public:
 
   bool CreatePrim(const SdfPath& path);
   void DeletePrim(const UsdBridgePrimCache* cacheEntry);
-  void InitializePrimVisibility(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode);
-  void SetPrimVisibility(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode, bool visible);
-  void SetChildrenVisibility(UsdStageRefPtr stage, const SdfPath& parentPath, const UsdTimeCode& timeCode, bool visible);
 #ifdef TIME_BASED_CACHING
-  void PrimRemoveIfVisible(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const UsdPrim& prim, bool timeVarying, const UsdTimeCode& timeCode, AtRemoveRefFunc atRemoveRef);
-  void ChildrenRemoveIfVisible(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const SdfPath& parentPath, bool timeVarying, const UsdTimeCode& timeCode, AtRemoveRefFunc atRemoveRef, const SdfPath& exceptPath = SdfPath());
+  void InitializePrimVisibility(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode,
+    UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache);
+  void SetPrimVisible(UsdStageRefPtr stage, const SdfPath& primPath, const UsdTimeCode& timeCode,
+    UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache);
+  void PrimRemoveIfInvisibleAnytime(UsdStageRefPtr stage, const UsdPrim& prim, bool timeVarying, const UsdTimeCode& timeCode, AtRemoveRefFunc atRemoveRef,
+    UsdBridgePrimCache* parentCache, UsdBridgePrimCache* primCache);
+  void ChildrenRemoveIfInvisibleAnytime(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, const SdfPath& parentPath, bool timeVarying, const UsdTimeCode& timeCode, AtRemoveRefFunc atRemoveRef, const SdfPath& exceptPath = SdfPath());
 #endif
 
 #ifdef VALUE_CLIP_RETIMING

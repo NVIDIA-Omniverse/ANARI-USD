@@ -125,11 +125,8 @@ struct UsdBridgeInternals
       this->Cache.AddChild(parentCache, childCache);
     };
 
-    RefModCallbacks.AtRemoveRef = [this](UsdBridgePrimCache* parentCache, const std::string& childName) {
-      ConstPrimCacheIterator it = this->Cache.FindPrimCache(childName);
-      // Not an assert: allow the case where child prims in a stage aren't cached, ie. when the bridge is destroyed and recreated
-      if(this->Cache.ValidIterator(it)) 
-        this->Cache.RemoveChild(parentCache, it->second.get());
+    RefModCallbacks.AtRemoveRef = [this](UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache) {
+      this->Cache.RemoveChild(parentCache, childCache);
     };
   }
 
@@ -691,6 +688,7 @@ void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geome
   constexpr bool instanceable = false; // Can only make Xform prims instanceable
 
   BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, Internals->ToCacheList(geometryCache), geometryPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
+  BRIDGE_USDWRITER.ManageUnusedRefs(surfaceCache, UsdBridgePrimCacheList(), materialPathRp, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, clipStages, geomClipPf, timeStep, geomTimeStep, instanceable, Internals->RefModCallbacks);
 
   BRIDGE_USDWRITER.UnbindMaterialFromGeom(refGeomPath);
@@ -1004,8 +1002,11 @@ void UsdBridge::SetCameraData(UsdCameraHandle camera, const UsdBridgeCameraData&
   UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(camera);
   SdfPath& cameraPath = cache->PrimPath;
 
+  bool timeVarHasChanged =
 #ifdef VALUE_CLIP_RETIMING
-  bool timeVarHasChanged = cache->TimeVarBitsUpdate(cameraData.TimeVarying);
+    cache->TimeVarBitsUpdate(cameraData.TimeVarying);
+#else
+    false;
 #endif
 
   UsdStageRefPtr cameraStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);

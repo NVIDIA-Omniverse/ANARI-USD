@@ -65,56 +65,55 @@ protected:
 
 struct UsdBridgePrimCache : public UsdBridgeRefCache
 {
+public:
+  friend class UsdBridgePrimCacheManager;
   using ResourceContainer = std::vector<UsdBridgeResourceKey>;
 
   //Constructors
   UsdBridgePrimCache(const SdfPath& pp, const SdfPath& nm, ResourceCollectFunc cf);
 
-  void AddChild(UsdBridgePrimCache* child);
-  void RemoveChild(UsdBridgePrimCache* child);
-  void RemoveUnreferencedChildTree(AtRemoveFunc atRemove);
+  UsdBridgePrimCache* GetChildCache(const TfToken& nameToken);
 
   bool AddResourceKey(UsdBridgeResourceKey key);
 
   SdfPath PrimPath;
   SdfPath Name;
-  std::vector<UsdBridgePrimCache*> Children;
   ResourceCollectFunc ResourceCollect;
+
   std::unique_ptr<ResourceContainer> ResourceKeys; // Referenced resources
 
 #ifdef TIME_BASED_CACHING
-  //Could also contain a mapping from child to an array of (parentTime,childTime)
-  //This would allow single timesteps to be removed in case of unused/replaced references at a parentTime (instead of removal of child if visible), without breaking garbage collection.
-  //Additionally, a refcount per timestep would help to perform garbage collection of individual child clip stages/files,
-  //when no parent references that particular childTime anymore (due to removal/replacing with refs to other children, or replacement with different childTimes for the same child).
+  void SetChildVisibleAtTime(const UsdBridgePrimCache* childCache, double timeCode);
+  bool SetChildInvisibleAtTime(const UsdBridgePrimCache* childCache, double timeCode); // Returns whether timeCode has been removed AND the visible timeset is empty.
 #endif
 
 #ifdef VALUE_CLIP_RETIMING
+  static constexpr double PrimStageTimeCode = 0.0; // Prim stages are stored in ClipStages under specified time code
+  const UsdStagePair& GetPrimStagePair() const;
+
+  template<typename DataMemberType>
+  bool TimeVarBitsUpdate(DataMemberType newTimeVarBits);
+
   UsdStagePair ManifestStage; // Holds the manifest
   std::unordered_map<double, UsdStagePair> ClipStages; // Holds the stage(s) to the timevarying data
 
   uint32_t LastTimeVaryingBits = 0; // Used to detect changes in timevarying status of parameters
-
-  static constexpr double PrimStageTimeCode = 0.0; // Prim stages are stored in ClipStages under specified time code
-  const UsdStagePair& GetPrimStagePair() const
-  {
-    auto it = ClipStages.find(PrimStageTimeCode);
-    assert(it != ClipStages.end());
-    return it->second;
-  }
-
-  template<typename DataMemberType>
-  bool TimeVarBitsUpdate(DataMemberType newTimeVarBits)
-  {
-    uint32_t newBits = static_cast<uint32_t>(newTimeVarBits);
-    bool hasChanged = (LastTimeVaryingBits != newBits);
-    LastTimeVaryingBits = newBits;
-    return hasChanged;
-  }
 #endif
 
 #ifndef NDEBUG
   std::string Debug_Name;
+#endif
+
+  protected:
+    void AddChild(UsdBridgePrimCache* child);
+    void RemoveChild(UsdBridgePrimCache* child);
+    void RemoveUnreferencedChildTree(AtRemoveFunc atRemove);
+
+    std::vector<UsdBridgePrimCache*> Children;
+
+#ifdef TIME_BASED_CACHING
+    // For each child, hold a vector of timesteps where it's visible (mimicks visibility attribute on the referencing prim)
+    std::vector<std::vector<double>> ChildVisibleAtTimes;
 #endif
 };
 
@@ -152,5 +151,16 @@ protected:
 
   PrimCacheContainer UsdPrimCaches;
 };
+
+#ifdef VALUE_CLIP_RETIMING
+template<typename DataMemberType>
+bool UsdBridgePrimCache::TimeVarBitsUpdate(DataMemberType newTimeVarBits)
+{
+  uint32_t newBits = static_cast<uint32_t>(newTimeVarBits);
+  bool hasChanged = (LastTimeVaryingBits != newBits);
+  LastTimeVaryingBits = newBits;
+  return hasChanged;
+}
+#endif
 
 #endif

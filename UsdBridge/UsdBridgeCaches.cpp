@@ -22,10 +22,67 @@ UsdBridgePrimCache::UsdBridgePrimCache(const SdfPath& pp, const SdfPath& nm, Res
   }
 }
 
+UsdBridgePrimCache* UsdBridgePrimCache::GetChildCache(const TfToken& nameToken)
+{
+  auto it = std::find_if(this->Children.begin(), this->Children.end(),
+    [&nameToken](UsdBridgePrimCache* cache) -> bool { return cache->PrimPath.GetNameToken() == nameToken; });
+
+  return (it == this->Children.end()) ? nullptr : *it;
+}
+
+#ifdef TIME_BASED_CACHING
+void UsdBridgePrimCache::SetChildVisibleAtTime(const UsdBridgePrimCache* childCache, double timeCode)
+{
+  auto childIt = std::find(this->Children.begin(), this->Children.end(), childCache);
+  if(childIt == this->Children.end())
+    return;
+  std::vector<double>& visibleTimes = ChildVisibleAtTimes[childIt - this->Children.begin()];
+
+  auto timeIt = std::find(visibleTimes.begin(), visibleTimes.end(), timeCode);
+  if(timeIt == visibleTimes.end())
+    visibleTimes.push_back(timeCode);
+}
+
+bool UsdBridgePrimCache::SetChildInvisibleAtTime(const UsdBridgePrimCache* childCache, double timeCode)
+{
+  auto childIt = std::find(this->Children.begin(), this->Children.end(), childCache);
+  if(childIt == this->Children.end())
+    return false;
+  std::vector<double>& visibleTimes = ChildVisibleAtTimes[childIt - this->Children.begin()];
+
+  auto timeIt = std::find(visibleTimes.begin(), visibleTimes.end(), timeCode);
+  if(timeIt != visibleTimes.end())
+  {
+    // Remove the time at visibleTimeIdx
+    size_t visibleTimeIdx = timeIt - visibleTimes.begin();
+    visibleTimes[visibleTimeIdx] = visibleTimes.back();
+    visibleTimes.pop_back();
+    return visibleTimes.size() == 0; // Return child removed && empty
+  }
+  return false;
+}
+#endif
+
+#ifdef VALUE_CLIP_RETIMING
+const UsdStagePair& UsdBridgePrimCache::GetPrimStagePair() const
+{
+  auto it = ClipStages.find(PrimStageTimeCode);
+  assert(it != ClipStages.end());
+  return it->second;
+}
+#endif
+
 void UsdBridgePrimCache::AddChild(UsdBridgePrimCache* child)
 {
+  if(std::find(this->Children.begin(), this->Children.end(), child) != this->Children.end())
+    return;
+
   this->Children.push_back(child);
   child->IncRef();
+
+#ifdef TIME_BASED_CACHING
+  this->ChildVisibleAtTimes.resize(this->Children.size());
+#endif
 }
 
 void UsdBridgePrimCache::RemoveChild(UsdBridgePrimCache* child)
@@ -35,6 +92,13 @@ void UsdBridgePrimCache::RemoveChild(UsdBridgePrimCache* child)
   // a child prim exists which doesn't have a ref in the cache.
   if(it != this->Children.end())
   {
+#ifdef TIME_BASED_CACHING
+    size_t foundIdx = it - this->Children.begin();
+    if(foundIdx != this->ChildVisibleAtTimes.size()-1)
+      this->ChildVisibleAtTimes[foundIdx] = std::move(this->ChildVisibleAtTimes.back());
+    this->ChildVisibleAtTimes.pop_back();
+#endif
+
     child->DecRef();
     *it = this->Children.back();
     this->Children.pop_back();
