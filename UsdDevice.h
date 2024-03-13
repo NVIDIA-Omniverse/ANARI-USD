@@ -205,6 +205,8 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
 
     void commit(UsdDevice* device) override;
 
+    void remove(UsdDevice* device) override {}
+
     // USD Specific ///////////////////////////////////////////////////////////
 
     bool isInitialized() { return getUsdBridge() != nullptr; }
@@ -284,6 +286,8 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
     template<int typeInt>
     void writeTypeToUsd();
 
+    void removePrimsFromUsd(bool onlyRemoveHandles = false);
+
     std::unique_ptr<UsdDeviceInternals> internals;
 
     bool bridgeInitAttempt = false;
@@ -291,8 +295,9 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
     // Using object pointers as basis for deferred commits; another option would be to traverse
     // the bridge's internal cache handles, but a handle may map to multiple objects (with the same name)
     // so that's not 1-1 with the effects of a non-deferred commit order.
-    using CommitListType = std::pair<helium::IntrusivePtr<UsdBaseObject>,bool>;
+    using CommitListType = std::pair<helium::IntrusivePtr<UsdBaseObject>, bool>;
     std::vector<CommitListType> commitList;
+    std::vector<UsdBaseObject*> removeList;
     std::vector<UsdVolume*> volumeList; // Tracks all volumes to auto-commit when child fields have been committed
     bool lockCommitList = false;
 

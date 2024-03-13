@@ -143,6 +143,9 @@ int main(int argc, const char **argv)
     anariSetParameter(dev, camera, "position", ANARI_FLOAT32_VEC3, cam_pos);
     anariSetParameter(dev, camera, "direction", ANARI_FLOAT32_VEC3, cam_view);
     anariSetParameter(dev, camera, "up", ANARI_FLOAT32_VEC3, cam_up);
+    int deleteCam = 1;
+    if(anariPass == 0)
+      anariSetParameter(dev, camera, "usd::removePrim", ANARI_BOOL, &deleteCam);
     anariCommitParameters(dev, camera); // commit each object to indicate mods are done
 
     printf("done!\n");

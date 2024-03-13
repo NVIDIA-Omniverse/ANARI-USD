@@ -31,6 +31,8 @@ class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHan
     UsdWorld(const char* name, UsdDevice* device);
     ~UsdWorld();
 
+    void remove(UsdDevice* device) override;
+
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdWorldComponents::INSTANCES, "instance"),
       ComponentPair(UsdWorldComponents::SURFACES, "surface"),

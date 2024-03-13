@@ -37,6 +37,11 @@ UsdGroup::~UsdGroup()
 #endif
 }
 
+void UsdGroup::remove(UsdDevice* device)
+{
+  applyRemoveFunc(device, &UsdBridge::DeleteGroup);
+}
+
 bool UsdGroup::deferCommit(UsdDevice* device)
 {
   const UsdGroupData& paramData = getReadParams();

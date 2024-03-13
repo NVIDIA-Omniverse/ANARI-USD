@@ -40,6 +40,11 @@ UsdCamera::~UsdCamera()
 #endif
 }
 
+void UsdCamera::remove(UsdDevice* device)
+{
+  applyRemoveFunc(device, &UsdBridge::DeleteCamera);
+}
+
 bool UsdCamera::deferCommit(UsdDevice* device)
 {
   return false;

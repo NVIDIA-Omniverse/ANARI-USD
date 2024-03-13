@@ -36,6 +36,8 @@ class UsdSpatialField : public UsdBridgedBaseObject<UsdSpatialField, UsdSpatialF
     UsdSpatialField(const char* name, const char* type, UsdDevice* device);
     ~UsdSpatialField();
 
+    void remove(UsdDevice* device) override;
+
     friend class UsdVolume;
 
     static constexpr ComponentPair componentParamNames[] = {

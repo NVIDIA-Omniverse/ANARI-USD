@@ -114,7 +114,8 @@ UsdDevice::UsdDevice(ANARILibrary library)
 
 UsdDevice::~UsdDevice()
 {
-  clearCommitList(); // Make sure no more references are held before cleaning up the device (and checking for memleaks)
+  // Make sure no more references are held before cleaning up the device (and checking for memleaks)
+  clearCommitList(); 
 
   clearDeviceParameters(); // Release device parameters with object references
 
@@ -603,6 +604,8 @@ void UsdDevice::addToCommitList(UsdBaseObject* object, bool commitData)
 
 void UsdDevice::clearCommitList()
 {
+  removePrimsFromUsd(true); // removeList pointers are taken from commitlist
+
 #ifdef CHECK_MEMLEAKS
   for(auto& commitEntry : commitList)
   {
@@ -661,6 +664,8 @@ void UsdDevice::flushCommitList()
 
   writeTypeToUsd<(int)ANARI_CAMERA>();
 
+  removePrimsFromUsd();
+
   clearCommitList();
 
   lockCommitList = false;
@@ -703,6 +708,9 @@ void UsdDevice::writeTypeToUsd()
 
     if((int)object->getType() == typeInt)
     {
+      using ObjectType = typename AnariToUsdBridgedObject<typeInt>::Type;
+      ObjectType* typedObj = reinterpret_cast<ObjectType*>(object.ptr);
+
       if(!object->deferCommit(this))
       {
         bool commitRefs = true;
@@ -713,14 +721,28 @@ void UsdDevice::writeTypeToUsd()
       }
       else
       {
-        using ObjectType = typename AnariToUsdBridgedObject<typeInt>::Type;
-        ObjectType* typedObj = reinterpret_cast<ObjectType*>(object.ptr);
-
         this->reportStatus(object.ptr, object->getType(), ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_OPERATION,
           "User forgot to at least once commit an ANARI child object of parent object '%s'", typedObj->getName());
       }
+
+      if(typedObj->getRemovePrim())
+      {
+        removeList.push_back(object.ptr); // Just raw pointer, removeList is purged upon commitList clear
+      }
     }
   }
+}
+
+void UsdDevice::removePrimsFromUsd(bool onlyRemoveHandles)
+{
+  if(!onlyRemoveHandles)
+  {
+    for(auto baseObj : removeList)
+    {
+      baseObj->remove(this);
+    }
+  }
+  removeList.resize(0);
 }
 
 int UsdDevice::getProperty(ANARIObject object,

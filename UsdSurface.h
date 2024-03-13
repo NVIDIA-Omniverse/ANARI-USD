@@ -30,6 +30,8 @@ class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSu
     UsdSurface(const char* name, UsdDevice* device);
     ~UsdSurface();
 
+    void remove(UsdDevice* device) override;
+
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;

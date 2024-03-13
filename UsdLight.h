@@ -18,6 +18,8 @@ class UsdLight : public UsdBridgedBaseObject<UsdLight, UsdLightData, UsdLightHan
       UsdDevice* device);
     ~UsdLight();
 
+    void remove(UsdDevice* device) override;
+
   protected:
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;

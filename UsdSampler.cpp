@@ -67,6 +67,11 @@ UsdSampler::~UsdSampler()
 #endif
 }
 
+void UsdSampler::remove(UsdDevice* device)
+{
+  applyRemoveFunc(device, &UsdBridge::DeleteSampler);
+}
+
 void UsdSampler::updateBoundParameters(bool boundToInstance, UsdDevice* device) 
 { 
   UsdBridge* usdBridge = device->getUsdBridge();

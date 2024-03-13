@@ -117,6 +117,9 @@ class UsdBridge
     template<typename ParentHandleType>
     void DeleteAllRefs(ParentHandleType parentHandle, const char* refPathExt, bool timeVarying, double timeStep);
 
+    void CreateRootPrimAndAttach(UsdBridgePrimCache* cacheEntry, const char* primPathCp, const char* layerId = nullptr);
+    void RemoveRootPrimAndDetach(UsdBridgePrimCache* cacheEntry, const char* primPathCp);
+
     UsdBridgeInternals* Internals;
   
     bool EnableSaving;

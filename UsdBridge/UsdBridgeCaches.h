@@ -139,13 +139,14 @@ public:
   inline bool ValidIterator(ConstPrimCacheIterator it) const { return it != UsdPrimCaches.end(); }
 
   ConstPrimCacheIterator CreatePrimCache(const std::string& name, const std::string& fullPath, ResourceCollectFunc collectFunc = nullptr);
-  void RemovePrimCache(ConstPrimCacheIterator it) { UsdPrimCaches.erase(it); }
+  void RemovePrimCache(ConstPrimCacheIterator it, UsdBridgeLogObject& LogObject);
   void RemoveUnreferencedPrimCaches(AtRemoveFunc atRemove);
 
   void AddChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child);
   void RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child);
 
-  void InitializeTopLevelPrim(UsdBridgePrimCache* worldCache);
+  void AttachTopLevelPrim(UsdBridgePrimCache* primCache);
+  void DetachTopLevelPrim(UsdBridgePrimCache* primCache);
 
 protected:
 

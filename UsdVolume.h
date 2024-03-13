@@ -43,6 +43,8 @@ class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolum
     UsdVolume(const char* name, UsdDevice* device);
     ~UsdVolume();
 
+    void remove(UsdDevice* device) override;
+
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdVolumeComponents::COLOR, "color"),
       ComponentPair(UsdVolumeComponents::OPACITY, "opacity"),

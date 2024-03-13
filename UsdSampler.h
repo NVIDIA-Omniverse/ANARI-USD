@@ -45,6 +45,8 @@ class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSa
     UsdSampler(const char* name, const char* type, UsdDevice* device);
     ~UsdSampler();
 
+    void remove(UsdDevice* device) override;
+
     bool isPerInstance() const { return perInstance; }
     void updateBoundParameters(bool boundToInstance, UsdDevice* device);
 

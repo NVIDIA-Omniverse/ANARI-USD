@@ -30,6 +30,8 @@ class UsdInstance : public UsdBridgedBaseObject<UsdInstance, UsdInstanceData, Us
       UsdDevice* device);
     ~UsdInstance();
 
+    void remove(UsdDevice* device) override;
+
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdInstanceComponents::GROUP, "group"),
       ComponentPair(UsdInstanceComponents::TRANSFORM, "transform")};

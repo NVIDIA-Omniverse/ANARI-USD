@@ -203,7 +203,7 @@ void UsdBridgeInternals::FindAndDeletePrim(const UsdBridgeHandle& handle)
 
   UsdWriter.DeletePrim(cacheEntry);
 
-  Cache.RemovePrimCache(it);
+  Cache.RemovePrimCache(it, UsdWriter.LogObject);
 }
 
 template<class T>
@@ -299,9 +299,7 @@ bool UsdBridge::CreateWorld(const char* name, UsdWorldHandle& handle)
 
   if (!cacheExists)
   {
-    BRIDGE_USDWRITER.AddRootPrim(cacheEntry, worldPathCp);
-
-    BRIDGE_CACHE.InitializeTopLevelPrim(cacheEntry);
+    this->CreateRootPrimAndAttach(cacheEntry, worldPathCp);
   }
   
   handle.value = cacheEntry;
@@ -513,10 +511,10 @@ bool UsdBridge::CreateCamera(const char* name, UsdCameraHandle& handle)
   // instance prim.
   if (!cacheExists)
   {
-    const std::string* layerId = nullptr;
+    const char* layerId = nullptr;
 #ifdef VALUE_CLIP_RETIMING
     const UsdStagePair& stagePair = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, cameraPrimStagePf);
-    layerId = &stagePair.first;
+    layerId = stagePair.first.c_str();
     UsdStageRefPtr camStage = stagePair.second;
 #else
     UsdStageRefPtr camStage = BRIDGE_USDWRITER.GetSceneStage();
@@ -524,8 +522,7 @@ bool UsdBridge::CreateCamera(const char* name, UsdCameraHandle& handle)
 
     BRIDGE_USDWRITER.InitializeUsdCamera(camStage, cacheEntry->PrimPath);
 
-    BRIDGE_USDWRITER.AddRootPrim(cacheEntry, cameraPathCp, layerId);
-    BRIDGE_CACHE.InitializeTopLevelPrim(cacheEntry);
+    this->CreateRootPrimAndAttach(cacheEntry, cameraPathCp, layerId);
   }
   
   handle.value = cacheEntry;
@@ -538,7 +535,7 @@ void UsdBridge::DeleteWorld(UsdWorldHandle handle)
 
   UsdBridgePrimCache* worldCache = BRIDGE_CACHE.ConvertToPrimCache(handle);
 
-  BRIDGE_USDWRITER.RemoveRootPrim(worldCache, worldPathCp);
+  this->RemoveRootPrimAndDetach(worldCache, worldPathCp);
 
   // Remove the abstract class 
   Internals->FindAndDeletePrim(handle);
@@ -608,7 +605,7 @@ void UsdBridge::DeleteCamera(UsdCameraHandle handle)
 
   UsdBridgePrimCache* cameraCache = BRIDGE_CACHE.ConvertToPrimCache(handle);
 
-  BRIDGE_USDWRITER.RemoveRootPrim(cameraCache, cameraPathCp);
+  this->RemoveRootPrimAndDetach(cameraCache, cameraPathCp);
 
   // Remove the abstract class 
   Internals->FindAndDeletePrim(handle);
@@ -1104,6 +1101,18 @@ const char* UsdBridge::GetPrimPath(UsdBridgeHandle* handle)
   }
   else
     return nullptr;
+}
+
+void UsdBridge::CreateRootPrimAndAttach(UsdBridgePrimCache* cacheEntry, const char* primPathCp, const char* layerId)
+{
+  BRIDGE_USDWRITER.AddRootPrim(cacheEntry, primPathCp, layerId);
+  BRIDGE_CACHE.AttachTopLevelPrim(cacheEntry);
+}
+ 
+void UsdBridge::RemoveRootPrimAndDetach(UsdBridgePrimCache* cacheEntry, const char* primPathCp)
+{
+  BRIDGE_CACHE.DetachTopLevelPrim(cacheEntry);
+  BRIDGE_USDWRITER.RemoveRootPrim(cacheEntry, primPathCp);
 }
 
 void UsdBridge::SetConnectionLogVerbosity(int logVerbosity)

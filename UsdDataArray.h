@@ -71,6 +71,8 @@ class UsdDataArray : public UsdParameterizedBaseObject<UsdDataArray, UsdDataArra
 
     void commit(UsdDevice* device) override;
 
+    void remove(UsdDevice* device) override {}
+
     void* map(UsdDevice* device);
     void unmap(UsdDevice* device);
 

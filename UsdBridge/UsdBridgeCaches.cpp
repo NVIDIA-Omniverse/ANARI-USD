@@ -5,6 +5,7 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 #include "UsdBridgeCaches.h"
+#include "UsdBridgeUtils.h"
 
 #ifdef VALUE_CLIP_RETIMING
 constexpr double UsdBridgePrimCache::PrimStageTimeCode;
@@ -149,9 +150,14 @@ UsdBridgePrimCacheManager::ConstPrimCacheIterator UsdBridgePrimCacheManager::Cre
   return UsdPrimCaches.emplace(name, std::move(cacheEntry)).first;
 }
 
-void UsdBridgePrimCacheManager::InitializeTopLevelPrim(UsdBridgePrimCache* primCache)
+void UsdBridgePrimCacheManager::AttachTopLevelPrim(UsdBridgePrimCache* primCache)
 {
-  primCache->IncRef(); // No DecRef() to go with this IncRef(). Prims that aren't rooted aren't automatically removed.
+  primCache->IncRef();
+}
+
+void UsdBridgePrimCacheManager::DetachTopLevelPrim(UsdBridgePrimCache* primCache)
+{
+  primCache->DecRef();
 }
 
 void UsdBridgePrimCacheManager::AddChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
@@ -162,6 +168,15 @@ void UsdBridgePrimCacheManager::AddChild(UsdBridgePrimCache* parent, UsdBridgePr
 void UsdBridgePrimCacheManager::RemoveChild(UsdBridgePrimCache* parent, UsdBridgePrimCache* child)
 {
   parent->RemoveChild(child);
+}
+
+void UsdBridgePrimCacheManager::RemovePrimCache(ConstPrimCacheIterator it, UsdBridgeLogObject& LogObject) 
+{ 
+  if(it->second->RefCount > 0)
+  {
+    UsdBridgeLogMacro(LogObject, UsdBridgeLogLevel::WARNING, "Primcache removed for object named: " << it->first << ", but refs still exist");
+  }
+  UsdPrimCaches.erase(it); 
 }
 
 void UsdBridgePrimCacheManager::RemoveUnreferencedPrimCaches(AtRemoveFunc atRemove)

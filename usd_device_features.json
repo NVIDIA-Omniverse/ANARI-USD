@@ -182,6 +182,12 @@
                     "types" : ["ANARI_STRING"],
                     "tags" : [],
                     "description" : "Alternative name for attribute3 primvar output"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -253,6 +259,12 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute3 bit"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -330,6 +342,12 @@
                     "tags" : [],
                     "default" : false,
                     "description" : "For sphere geometries, use UsdGeomPoints instead of UsdGeomPointInstancer to represent the spheres. Cannot be changed after the first commit."
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -401,6 +419,12 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute3 bit"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -472,6 +496,12 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute3 bit"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -543,6 +573,12 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying attribute3 bit"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -625,6 +661,12 @@
                     "types" : ["ANARI_INT32"],
                     "tags" : [],
                     "description" : "The timestep of the object attached to the shapeGeometry parameter of the glyph geometry, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -658,6 +700,12 @@
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the opacity parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -741,6 +789,12 @@
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the sampler object attached to the ior parameter of the material (if so), at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -764,6 +818,12 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying data bit"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -798,6 +858,12 @@
                     "types" : ["ANARI_STRING"],
                     "tags" : [],
                     "description" : "Location of an image which will directly be written into the USD sampler"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -838,6 +904,12 @@
                     "types" : ["ANARI_STRING"],
                     "tags" : [],
                     "description" : "Location of an image which will directly be written into the USD sampler"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -884,6 +956,12 @@
                     "types" : ["ANARI_STRING"],
                     "tags" : [],
                     "description" : "Location of an image which will directly be written into the USD sampler"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -924,6 +1002,12 @@
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the object attached to the value parameter of the volume, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -952,6 +1036,12 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying volume bit"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -974,6 +1064,12 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying transform bit"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -996,6 +1092,12 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying volume bit"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -1016,6 +1118,12 @@
                     "types" : ["ANARI_FLOAT64"],
                     "tags" : [],
                     "description" : "The timestep of the object attached to the material parameter of the surface, at the timestep of the device/scene for the next commit. The default value is the object's time parameter, or otherwise the device value if left unset."
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }, {
@@ -1040,6 +1148,12 @@
                     "tags" : [],
                     "default" : true,
                     "description" : "Time varying projection matrix bit"
+                }, {
+                    "name" : "usd::removePrim",
+                    "types" : ["ANARI_BOOL"],
+                    "tags" : [],
+                    "default" : false,
+                    "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
         }

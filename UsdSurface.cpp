@@ -36,6 +36,11 @@ UsdSurface::~UsdSurface()
 #endif
 }
 
+void UsdSurface::remove(UsdDevice* device)
+{
+  applyRemoveFunc(device, &UsdBridge::DeleteSurface);
+}
+
 bool UsdSurface::deferCommit(UsdDevice* device)
 {
   // Given that all handles/data are used in doCommitRefs, which is always executed deferred, we don't need to check for initialization

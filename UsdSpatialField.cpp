@@ -34,6 +34,11 @@ UsdSpatialField::~UsdSpatialField()
 #endif
 }
 
+void UsdSpatialField::remove(UsdDevice* device)
+{
+  applyRemoveFunc(device, &UsdBridge::DeleteSpatialField);
+}
+
 bool UsdSpatialField::deferCommit(UsdDevice* device)
 {
   // Always defer until flushing of commit list, to give parent volumes the possibility to detect which of its child fields have been committed,

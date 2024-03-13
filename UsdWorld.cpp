@@ -41,6 +41,11 @@ UsdWorld::~UsdWorld()
 #endif
 }
 
+void UsdWorld::remove(UsdDevice* device)
+{
+  applyRemoveFunc(device, &UsdBridge::DeleteWorld);
+}
+
 bool UsdWorld::deferCommit(UsdDevice* device)
 {
   const UsdWorldData& paramData = getReadParams();

@@ -410,7 +410,7 @@ const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimC
 }
 #endif
 
-void UsdBridgeUsdWriter::AddRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp, const std::string* layerId)
+void UsdBridgeUsdWriter::AddRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp, const char* layerId)
 {
   SdfPath primPath(this->RootName + "/" + primPathCp);
   primPath = primPath.AppendPath(primCache->Name);
@@ -423,7 +423,7 @@ void UsdBridgeUsdWriter::AddRootPrim(UsdBridgePrimCache* primCache, const char* 
 #ifdef VALUE_CLIP_RETIMING
   if(layerId)
   {
-    primRefs.AddReference(*layerId, primCache->PrimPath);
+    primRefs.AddReference(layerId, primCache->PrimPath);
   }
 #endif
 
@@ -485,10 +485,7 @@ void UsdBridgeUsdWriter::DeletePrim(const UsdBridgePrimCache* cacheEntry)
     SceneStage->RemovePrim(cacheEntry->PrimPath);
 
 #ifdef VALUE_CLIP_RETIMING
-  if (cacheEntry->ManifestStage.second)
-  {
-    RemoveManifestAndClipStages(cacheEntry);
-  }
+  RemoveManifestAndClipStages(cacheEntry);
 #endif
 }
 

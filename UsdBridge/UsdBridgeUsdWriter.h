@@ -61,7 +61,7 @@ public:
   const UsdStagePair& FindOrCreateClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, double timeStep, bool& exists) const;
   const UsdStagePair& FindOrCreatePrimClipStage(UsdBridgePrimCache* cacheEntry, const char* namePostfix, bool isClip, double timeStep, bool& exists) const;
 #endif
-  void AddRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp, const std::string* layerId = nullptr);
+  void AddRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp, const char* layerId = nullptr);
   void RemoveRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp);
 
   const std::string& CreatePrimName(const char* name, const char* category);

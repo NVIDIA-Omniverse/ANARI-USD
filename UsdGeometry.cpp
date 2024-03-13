@@ -712,6 +712,11 @@ UsdGeometry::~UsdGeometry()
 #endif
 }
 
+void UsdGeometry::remove(UsdDevice* device)
+{
+  applyRemoveFunc(device, &UsdBridge::DeleteGeometry);
+}
+
 void UsdGeometry::filterSetParam(const char *name,
       ANARIDataType type,
       const void *mem,

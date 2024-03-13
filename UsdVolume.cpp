@@ -64,6 +64,11 @@ UsdVolume::~UsdVolume()
 #endif
 }
 
+void UsdVolume::remove(UsdDevice* device)
+{
+  applyRemoveFunc(device, &UsdBridge::DeleteVolume);
+}
+
 bool UsdVolume::CheckTfParams(UsdDevice* device)
 {
   const UsdVolumeData& paramData = getReadParams();

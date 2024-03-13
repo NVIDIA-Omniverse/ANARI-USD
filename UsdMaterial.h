@@ -62,6 +62,8 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     UsdMaterial(const char* name, const char* type, UsdDevice* device);
     ~UsdMaterial();
 
+    void remove(UsdDevice* device) override;
+
     bool isPerInstance() const { return perInstance; }
     void updateBoundParameters(bool boundToInstance, UsdDevice* device);
 

@@ -37,6 +37,8 @@ class UsdBaseObject : public helium::RefCounted
 
     virtual void commit(UsdDevice* device) = 0;
 
+    virtual void remove(UsdDevice* device) = 0; // Remove any committed data and refs
+
     ANARIDataType getType() const { return type; }
 
   protected:

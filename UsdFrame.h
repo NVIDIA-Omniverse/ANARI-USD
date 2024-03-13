@@ -24,6 +24,8 @@ class UsdFrame : public UsdParameterizedBaseObject<UsdFrame, UsdFrameData>
     UsdFrame(UsdBridge* bridge);
     ~UsdFrame();
 
+    void remove(UsdDevice* device) override {}
+
     const void* mapBuffer(const char* channel,
       uint32_t *width,
       uint32_t *height,

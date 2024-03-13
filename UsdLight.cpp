@@ -17,6 +17,11 @@ UsdLight::UsdLight(const char* name, UsdDevice* device)
 UsdLight::~UsdLight()
 {}
 
+void UsdLight::remove(UsdDevice* device)
+{
+  //applyRemoveFunc(device, &UsdBridge::DeleteLight);
+}
+
 bool UsdLight::deferCommit(UsdDevice* device) 
 { 
   return false; 

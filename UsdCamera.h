@@ -38,6 +38,8 @@ class UsdCamera : public UsdBridgedBaseObject<UsdCamera, UsdCameraData, UsdCamer
     UsdCamera(const char* name, const char* type, UsdDevice* device);
     ~UsdCamera();
 
+    void remove(UsdDevice* device) override;
+
     enum CameraType
     {
       CAMERA_UNKNOWN = 0,

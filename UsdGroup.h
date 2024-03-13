@@ -31,6 +31,8 @@ class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHan
     UsdGroup(const char* name, UsdDevice* device);
     ~UsdGroup();
 
+    void remove(UsdDevice* device) override;
+
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdGroupComponents::SURFACES, "surface"),
       ComponentPair(UsdGroupComponents::VOLUMES, "volume")};

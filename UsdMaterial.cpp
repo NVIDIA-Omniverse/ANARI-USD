@@ -67,6 +67,11 @@ UsdMaterial::~UsdMaterial()
 #endif
 }
 
+void UsdMaterial::remove(UsdDevice* device)
+{
+  applyRemoveFunc(device, &UsdBridge::DeleteMaterial);
+}
+
 template<typename ValueType>
 bool UsdMaterial::getMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param, MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo)
 {

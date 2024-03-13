@@ -92,6 +92,22 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
       return params.timeVarying & (1 << static_cast<int>(component));
     }
 
+    bool setRemovePrimParam(const char *name,
+      ANARIDataType type,
+      const void *mem,
+      UsdDevice* device)
+    {
+      if (type == ANARI_BOOL)
+      {
+        if (strcmp(name, "usd::removePrim") == 0)
+        {
+          removePrim = true;
+          return true;
+        }
+      }
+      return false;
+    }
+
   public:
     using ComponentPair = std::pair<C, const char*>; // Used to define a componentParamNames
 
@@ -112,7 +128,8 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
     {
       if(!this->setTimeVaryingParam(name, type, mem, device))
         if (!this->setNameParam(name, type, mem, device))
-          this->setParam(name, type, mem, device);
+          if(!this->setRemovePrimParam(name, type, mem, device))
+            this->setParam(name, type, mem, device);
     }
 
     int getProperty(const char *name,
@@ -179,11 +196,22 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
   #endif
     }
 
+    bool getRemovePrim() const { return removePrim; }
+
   protected:
     typedef UsdBridgedBaseObject<T,D,H,C> BridgedBaseObjectType;
+    typedef void (UsdBridge::*UsdBridgeMemFn)(H handle); 
+
+    void applyRemoveFunc(UsdDevice* device, UsdBridgeMemFn func)
+    {
+      UsdBridge* usdBridge = device->getUsdBridge();
+      if(usdBridge && usdHandle.value)
+        (usdBridge->*func)(usdHandle);
+    }
 
     const char* uniqueName;
     H usdHandle;
+    bool removePrim = false;
     
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
     UsdBridge* cachedBridge = nullptr;
