@@ -11,8 +11,6 @@ class UsdWorld;
 
 struct UsdFrameData
 {
-  UsdWorld* world = nullptr;
-  UsdRenderer* renderer = nullptr;
   UsdUint2 size = {0, 0};
   ANARIDataType color = ANARI_UNKNOWN;
   ANARIDataType depth = ANARI_UNKNOWN;

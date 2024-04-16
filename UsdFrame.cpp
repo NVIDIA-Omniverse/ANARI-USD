@@ -8,8 +8,6 @@
 #include "anari/frontend/type_utility.h"
 
 DEFINE_PARAMETER_MAP(UsdFrame,
-  REGISTER_PARAMETER_MACRO("world", ANARI_WORLD, world)
-  REGISTER_PARAMETER_MACRO("renderer", ANARI_RENDERER, renderer)
   REGISTER_PARAMETER_MACRO("size", ANARI_UINT32_VEC2, size)
   REGISTER_PARAMETER_MACRO("channel.color", ANARI_DATA_TYPE, color)
   REGISTER_PARAMETER_MACRO("channel.depth", ANARI_DATA_TYPE, depth)
