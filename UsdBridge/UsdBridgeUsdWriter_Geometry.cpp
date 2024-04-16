@@ -790,10 +790,11 @@ namespace
         case UsdBridgeType::DOUBLE3: { ConvertNormalsToQuaternions<double>(usdOrients, geomData.Orientations, geomData.NumPoints); break; }
         case UsdBridgeType::FLOAT4:
           {
+            // Note that ANARI quaternion arrays are in IJKW order
             for (uint64_t i = 0; i < geomData.NumPoints; ++i)
             {
               const float* orients = reinterpret_cast<const float*>(geomData.Orientations);
-              usdOrients[i] = GfQuath(orients[i * 4], orients[i * 4 + 1], orients[i * 4 + 2], orients[i * 4 + 3]);
+              usdOrients[i] = GfQuath(orients[i * 4 + 3], orients[i * 4], orients[i * 4 + 1], orients[i * 4 + 2]);
             }
             orientationsAttribute.Set(usdOrients, timeCode);
             break;
@@ -806,7 +807,8 @@ namespace
       {
         if(!usdbridgenumerics::isIdentity(geomData.Orientation))
         {
-          GfQuath defaultOrient(geomData.Orientation.Data[0], geomData.Orientation.Data[1], geomData.Orientation.Data[2], geomData.Orientation.Data[3]);
+          // Note that ANARI quaternion arrays are in IJKW order
+          GfQuath defaultOrient(geomData.Orientation.Data[3], geomData.Orientation.Data[0], geomData.Orientation.Data[1], geomData.Orientation.Data[2]);
           usdOrients.resize(geomData.NumPoints);
           for(auto& x : usdOrients) x = defaultOrient;
           orientationsAttribute.Set(usdOrients, timeCode);
