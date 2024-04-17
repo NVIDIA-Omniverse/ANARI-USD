@@ -14,7 +14,9 @@ struct UsdLightData
 class UsdLight : public UsdBridgedBaseObject<UsdLight, UsdLightData, UsdLightHandle>
 {
   public:
-    UsdLight(const char* name,
+    UsdLight(
+      const char* type,
+      const char* name,
       UsdDevice* device);
     ~UsdLight();
 

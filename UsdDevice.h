@@ -87,7 +87,7 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
 
     // Renderable Objects /////////////////////////////////////////////////////
 
-    ANARILight newLight(const char *type) override { return nullptr; }
+    ANARILight newLight(const char *type) override;
 
     ANARICamera newCamera(const char *type) override;
 

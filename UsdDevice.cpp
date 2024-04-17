@@ -486,6 +486,17 @@ ANARIWorld UsdDevice::newWorld()
   return (ANARIWorld)(object);
 }
 
+ANARILight UsdDevice::newLight(const char *type)
+{
+  const char* name = makeUniqueName("Light");
+  UsdLight* object = new UsdLight(name, type, this);
+#ifdef CHECK_MEMLEAKS
+  LogObjAllocation(object);
+#endif
+
+  return (ANARILight)(object);
+}
+
 ANARICamera UsdDevice::newCamera(const char *type)
 {
   const char* name = makeUniqueName("Camera");
