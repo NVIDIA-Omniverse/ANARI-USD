@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <cstring>
 
-#ifdef WIN32
+#ifdef _WIN32
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
 #include <filesystem>
 namespace fs = std::filesystem;
