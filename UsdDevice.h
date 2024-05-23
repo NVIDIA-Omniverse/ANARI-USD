@@ -20,7 +20,7 @@
 
 extern "C"
 {
-#ifdef WIN32
+#ifdef _WIN32
   USDDevice_INTERFACE void __cdecl anari_library_usd_init();
 #else
   void anari_library_usd_init();
