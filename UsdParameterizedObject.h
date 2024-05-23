@@ -224,7 +224,7 @@ protected:
         if (srcType == ANARI_BOOL)
         {
           bool* destBool_p = reinterpret_cast<bool*>(destAddress);
-          bool srcBool = *(reinterpret_cast<const uint32_t*>(srcAddress));
+          bool srcBool = (*(reinterpret_cast<const uint32_t*>(srcAddress)) & 0xFF); // We only consider the first byte, for safety purposes (even though the spec defines anari bools as int)
 
           contentUpdate = contentUpdate || (*destBool_p != srcBool);
 
