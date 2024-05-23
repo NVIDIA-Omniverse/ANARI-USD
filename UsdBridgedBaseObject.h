@@ -67,7 +67,7 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
       UsdDevice* device)
     {
       static const char* paramName = "usd::timeVarying.";
-      bool value = *(reinterpret_cast<const uint32_t*>(mem));
+      bool value = *(reinterpret_cast<const bool*>(mem));
 
       if (type == ANARI_BOOL)
       {
