@@ -109,6 +109,8 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
       const void *mem,
       UsdDevice* device) override;
 
+    void commit(UsdDevice* device) override;
+
     bool isInstanced() const 
     { 
       return geomType == GEOM_SPHERE
@@ -116,6 +118,8 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
         || geomType == GEOM_CYLINDER
         || geomType == GEOM_GLYPH;
     }
+
+    bool getHasNewAttribName() const { return hasNewAttribName; }
 
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdGeometryComponents::POSITION, "position"),
@@ -167,6 +171,8 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
 
     GeomType geomType = GEOM_UNKNOWN;
     bool protoShapeChanged = false; // Do not automatically commit shapes (the object may have been recreated onto an already existing USD prim)
+
+    bool hasNewAttribName = false;
 
     std::unique_ptr<UsdGeometryTempArrays> tempArrays;
 

@@ -41,6 +41,11 @@ class UsdBaseObject : public helium::RefCounted
 
     ANARIDataType getType() const { return type; }
 
+    void addObserver(UsdBaseObject* observer);
+    void removeObserver(UsdBaseObject* observer);
+    void notify(UsdBaseObject* caller, UsdDevice* device);
+    virtual void observe(UsdBaseObject* caller, UsdDevice* device) {}
+
   protected:
     virtual bool deferCommit(UsdDevice* device) = 0;  // Returns whether data commit has to be deferred
     virtual bool doCommitData(UsdDevice* device) = 0; // Data commit, execution can be immediate, returns whether doCommitRefs has to be performed
@@ -49,6 +54,8 @@ class UsdBaseObject : public helium::RefCounted
     ANARIDataType type;
 
     friend class UsdDevice;
+
+    std::vector<UsdBaseObject*> observers;
 };
 
 // Templated base implementation of parameterized object

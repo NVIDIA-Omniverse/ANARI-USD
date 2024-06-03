@@ -731,7 +731,30 @@ void UsdGeometry::filterSetParam(const char *name,
     return;
   }
 
+  // In case of an attribute name change, notify observers (such as the surface, to change material/sampler bindings)
+  static const char* attribNamePrefix = "usd::attribute";
+  if(strcmp(name, attribNamePrefix) > 0)
+  {
+    static const char* attribNamePostfix = ".name";
+    size_t paramOffset = strlen(name) - strlen(attribNamePostfix);
+    if(strcmp(name+paramOffset, attribNamePostfix) == 0)
+      hasNewAttribName = true; // Only notify once the commit takes place
+  }
+
   BridgedBaseObjectType::filterSetParam(name, type, mem, device);
+}
+
+void UsdGeometry::commit(UsdDevice* device)
+{
+  // Make sure to notify observers of attrib array name changes before the actual commit (doCommitData may have a locked commitlist)
+  if(hasNewAttribName)
+  {
+    notify(this, device);
+    hasNewAttribName = false;
+  }
+
+  // Continue with the normal commit, ie. adding to the commit list or immediate execution of doCommitData
+  BridgedBaseObjectType::commit(device);
 }
 
 template<typename GeomDataType>

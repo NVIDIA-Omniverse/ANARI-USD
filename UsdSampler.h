@@ -48,7 +48,7 @@ class UsdSampler : public UsdBridgedBaseObject<UsdSampler, UsdSamplerData, UsdSa
     void remove(UsdDevice* device) override;
 
     bool isPerInstance() const { return perInstance; }
-    void updateBoundParameters(bool boundToInstance, UsdDevice* device);
+    void updateBoundParameters(bool boundToInstance, const UsdSharedString*const* attribNames, size_t numAttribNames, UsdDevice* device);
 
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(CType::DATA, "image"),

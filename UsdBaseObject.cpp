@@ -4,6 +4,8 @@
 #include "UsdBaseObject.h"
 #include "UsdDevice.h"
 
+#include <algorithm>
+
 UsdBaseObject::UsdBaseObject(ANARIDataType t, UsdDevice* device)
       : type(t)
 {
@@ -21,8 +23,36 @@ void UsdBaseObject::commit(UsdDevice* device)
   {                 
     bool commitRefs = doCommitData(device);
     if(commitRefs)
-      device->addToCommitList(this, false); // Commit refs, but no more data
+      device->addToCommitList(this, false); // Commit refs, but no more data later on
   }
   else
-    device->addToCommitList(this, true); // Commit data and refs
+    device->addToCommitList(this, true); // Commit data and refs later on
+}
+
+void UsdBaseObject::addObserver(UsdBaseObject* observer)
+{
+  if(std::find(observers.begin(), observers.end(), observer) == observers.end())
+  {
+    observers.push_back(observer);
+    observer->refInc();
+  }
+}
+
+void UsdBaseObject::removeObserver(UsdBaseObject* observer)
+{
+  auto it = std::find(observers.begin(), observers.end(), observer);
+  if(it != observers.end())
+  {
+    (*it)->refDec();
+    *it = observers.back();
+    observers.pop_back();
+  }
+}
+
+void UsdBaseObject::notify(UsdBaseObject* caller, UsdDevice* device)
+{
+  for(auto observer : observers)
+  {
+    observer->observe(caller, device);
+  }
 }

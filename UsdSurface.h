@@ -36,4 +36,13 @@ class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSu
     bool deferCommit(UsdDevice* device) override;
     bool doCommitData(UsdDevice* device) override;
     void doCommitRefs(UsdDevice* device) override;
+
+    void observe(UsdBaseObject* caller, UsdDevice* device) override;
+
+    void addGeometryObserver();
+
+    bool updateBoundParameters = false;
+
+    // Cached to remove the surface as observer on geometry when changed
+    UsdGeometry* boundGeometry = nullptr;
 };

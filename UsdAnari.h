@@ -9,6 +9,7 @@
 #include "anari/anari_cpp/Traits.h"
 
 #include <cstring>
+#include <utility>
 
 class UsdDevice;
 class UsdDataArray;
@@ -100,6 +101,8 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType);
 UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType);
 const char* AnariTypeToString(ANARIDataType anariType);
 const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo);
+std::pair<bool, const char*> GetGeomDependentAttributeName(const char* anariAttrib, bool perInstance, const UsdSharedString*const* attribNames, size_t numAttribNames,
+  const UsdLogInfo& logInfo);
 UsdBridgeMaterialData::AlphaModes AnariToUsdAlphaMode(const char* alphaMode);
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level);
 

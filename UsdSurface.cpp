@@ -56,6 +56,7 @@ bool UsdSurface::deferCommit(UsdDevice* device)
 bool UsdSurface::doCommitData(UsdDevice* device)
 {
   UsdBridge* usdBridge = device->getUsdBridge();
+  const UsdSurfaceData& paramData = getReadParams();
     
   bool isNew = false;
   if (!usdHandle.value)
@@ -64,11 +65,14 @@ bool UsdSurface::doCommitData(UsdDevice* device)
   if (paramChanged || isNew)
   {
     paramChanged = false;
+    updateBoundParameters = true;
+
+    addGeometryObserver();
 
     return true; // In this case a doCommitRefs is required, with data (timesteps, handles) from children
   }
 
-  return false;
+  return updateBoundParameters; // Update the bound parameters after they have been committed on geometry/material
 }
 
 void UsdSurface::doCommitRefs(UsdDevice* device)
@@ -78,17 +82,27 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
 
   double worldTimeStep = device->getReadParams().timeStep;
 
-  // Make sure the references are updated on the Bridge side.
-  if (paramData.geometry)
+  bool hasGeometry = paramData.geometry;
+  bool hasMaterial = device->getReadParams().outputMaterial && paramData.material;
+  if(hasGeometry && hasMaterial && updateBoundParameters)
   {
-    double geomObjTimeStep = paramData.geometry->getReadParams().timeStep;
+    const UsdGeometryData& geomParamData = paramData.geometry->getReadParams();
 
-    if(device->getReadParams().outputMaterial && paramData.material)
+    // The geometry to which a material binds has an effect on attribute reader (geom primvar) names, and output types
+    paramData.material->updateBoundParameters(paramData.geometry->isInstanced(), geomParamData, device);
+
+    updateBoundParameters = false;
+  }
+
+  // Make sure the references are updated on the Bridge side.
+  if (hasGeometry)
+  {
+    const UsdGeometryData& geomParamData = paramData.geometry->getReadParams();
+    double geomObjTimeStep = geomParamData.timeStep;
+
+    if(hasMaterial)
     {
       double matObjTimeStep = paramData.material->getReadParams().timeStep;
-
-      // The geometry to which a material binds has an effect on attribute reader (geom primvar) names, and output types
-      paramData.material->updateBoundParameters(paramData.geometry->isInstanced(), device);
 
       usdBridge->SetGeometryMaterialRef(usdHandle, 
         paramData.geometry->getUsdHandle(), 
@@ -115,6 +129,37 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
     if (!paramData.material && device->getReadParams().outputMaterial)
     {
       usdBridge->DeleteMaterialRef(usdHandle, worldTimeStep);
+    }
+  }
+}
+
+void UsdSurface::observe(UsdBaseObject* caller, UsdDevice* device)
+{
+  if(caller->getType() == ANARI_GEOMETRY)
+  {
+    updateBoundParameters = true;
+    device->addToCommitList(this, true);
+  }
+}
+
+void UsdSurface::addGeometryObserver()
+{
+  const UsdSurfaceData& paramData = getReadParams();
+
+  if(paramData.geometry != boundGeometry)
+  {
+    if(boundGeometry)
+    {
+      boundGeometry->removeObserver(this);
+      boundGeometry->refDec();
+    }
+
+    boundGeometry = paramData.geometry;
+
+    if(boundGeometry)
+    {
+      boundGeometry->refInc();
+      boundGeometry->addObserver(this);
     }
   }
 }

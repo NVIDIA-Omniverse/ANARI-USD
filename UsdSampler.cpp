@@ -72,45 +72,33 @@ void UsdSampler::remove(UsdDevice* device)
   applyRemoveFunc(device, &UsdBridge::DeleteSampler);
 }
 
-void UsdSampler::updateBoundParameters(bool boundToInstance, UsdDevice* device) 
+void UsdSampler::updateBoundParameters(bool boundToInstance, const UsdSharedString*const* attribNames, size_t numAttribNames, UsdDevice* device) 
 { 
   UsdBridge* usdBridge = device->getUsdBridge();
 
   if(!usdHandle.value)
     return;
   
-  if(perInstance != boundToInstance)
+  perInstance = boundToInstance;
+
+  UsdLogInfo logInfo(device, this, ANARI_SAMPLER, getName());
+
+  // Fix up the position attribute
+  const UsdSamplerData& paramData = getReadParams();
+  const char* inAttribName = UsdSharedString::c_str(paramData.inAttribute);
+  
+  auto [hasMeshDependentAttribs, meshDependentAttribName] = 
+    GetGeomDependentAttributeName(inAttribName, perInstance, attribNames, numAttribNames, logInfo);
+
+  if(hasMeshDependentAttribs)
   {
-    // Fix up the position attribute
-    const UsdSamplerData& paramData = getReadParams();
-    const char* inAttribName = UsdSharedString::c_str(paramData.inAttribute);
-    if(inAttribName && strEquals(inAttribName, "objectPosition"))
-    {
-      // In case of a per-instance specific attribute name, there can be only one change of the attribute name.
-      UsdLogInfo logInfo(device, this, ANARI_SAMPLER, getName());
-      if(instanceAttributeAttached)
-      {
-        reportStatusThroughDevice(logInfo, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
-          "UsdSampler '%s' binds its inAttribute parameter to %s, but is transitively bound to both an instanced geometry (cones, spheres, cylinders) and regular geometry. \
-          This is incompatible with USD, which demands a differently bound name for those categories. \
-          Please create two different samplers and bind each to only one of both categories of geometry. \
-          The inAttribute value will be updated, but may therefore invalidate previous bindings to the objectPosition attribute.", logInfo.sourceName, "'objectPosition'");
-      }
+    double worldTimeStep = device->getReadParams().timeStep;
+    double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
 
-      instanceAttributeAttached = true;
-
-      const char* usdAttribName = AnariAttributeToUsdName(inAttribName, perInstance, logInfo);
-
-      double worldTimeStep = device->getReadParams().timeStep;
-      double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
-
-      UsdBridgeSamplerData::DataMemberId timeVarying;
-      setSamplerTimeVarying(timeVarying);
-      
-      usdBridge->ChangeInAttribute(usdHandle, usdAttribName, dataTimeStep, timeVarying);
-    }
-
-    perInstance = boundToInstance;
+    UsdBridgeSamplerData::DataMemberId timeVarying;
+    setSamplerTimeVarying(timeVarying);
+    
+    usdBridge->ChangeInAttribute(usdHandle, meshDependentAttribName, dataTimeStep, timeVarying);
   } 
 }
 

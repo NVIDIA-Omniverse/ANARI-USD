@@ -9,6 +9,7 @@
 #include <limits>
 
 class UsdSampler;
+class UsdGeometryData;
 
 template<typename ValueType>
 using UsdMaterialMultiTypeParameter = UsdMultiTypeParameter<ValueType, UsdSampler*, UsdSharedString*>;
@@ -65,7 +66,7 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     void remove(UsdDevice* device) override;
 
     bool isPerInstance() const { return perInstance; }
-    void updateBoundParameters(bool boundToInstance, UsdDevice* device);
+    void updateBoundParameters(bool boundToInstance, const UsdGeometryData& geomParamData, UsdDevice* device);
 
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdMaterialDataComponents::COLOR, "color"),
@@ -81,8 +82,8 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     using MaterialInputAttribNamePair = std::pair<MaterialDMI, const char*>;
 
     template<typename ValueType>
-    bool getMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param,
-      MaterialDMI dataMemberId, UsdDevice* device, const UsdLogInfo& logInfo);
+    void changeMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param,
+      MaterialDMI dataMemberId, const UsdGeometryData& geomParamData, UsdDevice* device, const UsdLogInfo& logInfo);
 
     template<typename ValueType>
     bool getSamplerRefData(const UsdMaterialMultiTypeParameter<ValueType>& param, double refTimeStep,
@@ -103,7 +104,6 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     bool isPbr = false;
 
     bool perInstance = false; // Whether material is attached to a point instancer
-    bool instanceAttributeAttached = false; // Whether a value to any parameter has been set which in USD is different between per-instance and regular geometries
 
     OptionalList<MaterialInputAttribNamePair> materialInputAttributes;
     OptionalList<UsdSamplerHandle> samplerHandles;
