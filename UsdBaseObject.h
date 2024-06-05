@@ -126,6 +126,15 @@ class UsdParameterizedBaseObject : public UsdBaseObject, public UsdParameterized
       }
     }
 
+    void observe(UsdBaseObject* caller, UsdDevice* device) override
+    {
+      if(anari::isArray(caller->getType()))
+      {
+        device->addToCommitList(this, true); // No write to read params; just write to USD
+        ParamClass::paramChanged = true;
+      }
+    }
+
     // Convenience functions for commonly used name property
     bool setNameParam(const char *name,
       ANARIDataType type,
