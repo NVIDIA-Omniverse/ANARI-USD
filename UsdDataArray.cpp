@@ -121,6 +121,8 @@ void UsdDataArray::unmap(UsdDevice * device)
   {
     TransferAndRemoveMappedObjectCopy();
   }
+
+  notify(this, device); // Any objects referencing this array need to recommit
 }
 
 void UsdDataArray::privatize()
@@ -186,7 +188,7 @@ void UsdDataArray::decRef(const ANARIObject* anariObjects, uint64_t numAnariObje
   {
     const UsdBaseObject* baseObj = (reinterpret_cast<const UsdBaseObject*>(anariObjects[i]));
 #ifdef CHECK_MEMLEAKS
-    allocDevice->LogObjDeallocation(baseObj);
+    allocDevice->logObjDeallocation(baseObj);
 #endif
     if (baseObj)
     {
@@ -204,7 +206,7 @@ void UsdDataArray::allocPrivateData()
   data = newData;
 
 #ifdef CHECK_MEMLEAKS
-  allocDevice->LogRawAllocation(newData);
+  allocDevice->logRawAllocation(newData);
 #endif
 }
 
@@ -213,7 +215,7 @@ void UsdDataArray::freePrivateData(bool mappedCopy)
   const void*& memToFree = mappedCopy ? mappedObjectCopy : data;
 
 #ifdef CHECK_MEMLEAKS
-  allocDevice->LogRawDeallocation(memToFree);
+  allocDevice->logRawDeallocation(memToFree);
 #endif
 
   // Deallocate owned memory
@@ -278,7 +280,7 @@ void UsdDataArray::TransferAndRemoveMappedObjectCopy()
     if (newObj != oldObj && oldObj)
     {
 #ifdef CHECK_MEMLEAKS
-      allocDevice->LogObjDeallocation(oldObj);
+      allocDevice->logObjDeallocation(oldObj);
 #endif
       oldObj->refDec(helium::RefType::INTERNAL);
     }

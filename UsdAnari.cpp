@@ -330,21 +330,21 @@ void reportStatusThroughDevice(const UsdLogInfo& logInfo, ANARIStatusSeverity se
 void logAllocationThroughDevice(UsdDevice* device, const void* ptr, ANARIDataType ptrType)
 {
   if(anari::isObject(ptrType))
-    device->LogObjAllocation((const UsdBaseObject*)ptr);
+    device->logObjAllocation(static_cast<const UsdBaseObject*>(ptr));
   else if(ptrType == ANARI_STRING)
-    device->LogStrAllocation((const UsdSharedString*)ptr);
+    device->logStrAllocation(static_cast<const UsdSharedString*>(ptr));
   else
-    device->LogRawAllocation(ptr);
+    device->logRawAllocation(ptr);
 }
 
 void logDeallocationThroughDevice(UsdDevice* device, const void* ptr, ANARIDataType ptrType)
 {
   if(anari::isObject(ptrType))
-    device->LogObjDeallocation((const UsdBaseObject*)ptr);
+    device->logObjDeallocation(static_cast<const UsdBaseObject*>(ptr));
   else if(ptrType == ANARI_STRING)
-    device->LogStrDeallocation((const UsdSharedString*)ptr);
+    device->logStrDeallocation(static_cast<const UsdSharedString*>(ptr));
   else
-    device->LogRawDeallocation(ptr);
+    device->logRawDeallocation(ptr);
 }
 #endif
 

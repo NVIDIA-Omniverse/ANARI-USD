@@ -227,17 +227,21 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
 
 #ifdef CHECK_MEMLEAKS
     // Memleak checking
-    void LogObjAllocation(const UsdBaseObject* ptr);
-    void LogObjDeallocation(const UsdBaseObject* ptr);
+    void logObjAllocation(const UsdBaseObject* ptr);
+    void logObjDeallocation(const UsdBaseObject* ptr);
     std::vector<const UsdBaseObject*> allocatedObjects;
 
-    void LogStrAllocation(const UsdSharedString* ptr);
-    void LogStrDeallocation(const UsdSharedString* ptr);
+    void logStrAllocation(const UsdSharedString* ptr);
+    void logStrDeallocation(const UsdSharedString* ptr);
     std::vector<const UsdSharedString*> allocatedStrings;
 
-    void LogRawAllocation(const void* ptr);
-    void LogRawDeallocation(const void* ptr);
+    void logRawAllocation(const void* ptr);
+    void logRawDeallocation(const void* ptr);
     std::vector<const void*> allocatedRawMemory;
+
+    bool isObjAllocated(const UsdBaseObject* ptr) const;
+    bool isStrAllocated(const UsdSharedString* ptr) const;
+    bool isRawAllocated(const void* ptr) const;
 #endif
 
     void reportStatus(void* source,

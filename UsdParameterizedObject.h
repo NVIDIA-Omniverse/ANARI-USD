@@ -17,6 +17,7 @@
 
 class UsdDevice;
 class UsdBridge;
+class UsdBaseObject;
 
 // When deriving from UsdParameterizedObject<T>, define a a struct T::Data and
 // a static void T::registerParams() that registers any member of T::Data using REGISTER_PARAMETER_MACRO()
@@ -70,15 +71,21 @@ public:
 
 protected:
   helium::RefCounted** ptrToRefCountedPtr(void* address) { return reinterpret_cast<helium::RefCounted**>(address); }
+  UsdBaseObject* toBaseObjectPtr(void* address) { return *reinterpret_cast<UsdBaseObject**>(address); }
   ANARIDataType* toAnariDataTypePtr(void* address) { return reinterpret_cast<ANARIDataType*>(address); }
 
   bool isRefCounted(ANARIDataType type) const { return anari::isObject(type) || type == ANARI_STRING; }
 
-  void safeRefInc(void* paramPtr) // Pointer to the parameter address which holds a helium::RefCounted*
+  void safeRefInc(void* paramPtr, ANARIDataType paramType) // Pointer to the parameter address which holds a helium::RefCounted*
   {
     helium::RefCounted** refCountedPP = ptrToRefCountedPtr(paramPtr);
     if (*refCountedPP)
+    {
       (*refCountedPP)->refInc(helium::RefType::INTERNAL);
+
+      if(anari::isObject(paramType))
+        onParamRefChanged(toBaseObjectPtr(paramPtr), true);
+    }
   }
 
   void safeRefDec(void* paramPtr, ANARIDataType paramType) // Pointer to the parameter address which holds a helium::RefCounted*
@@ -86,6 +93,9 @@ protected:
     helium::RefCounted** refCountedPP = ptrToRefCountedPtr(paramPtr);
     if (*refCountedPP)
     {
+      if(anari::isObject(paramType))
+        onParamRefChanged(toBaseObjectPtr(paramPtr), false);
+
       helium::RefCounted*& refCountedP = *refCountedPP;
 #ifdef CHECK_MEMLEAKS
       logDeallocationThroughDevice(allocDevice, refCountedP, paramType);
@@ -95,6 +105,8 @@ protected:
       refCountedP = nullptr; // Explicitly clear the pointer (see destructor)
     }
   }
+
+  virtual void onParamRefChanged(UsdBaseObject* paramObject, bool incRef) {}
 
   void* paramAddress(D& paramData, const ParamTypeInfo& typeInfo)
   {
@@ -168,7 +180,7 @@ public:
       getParamTypeAndAddress(paramDataSets[paramWriteIdx], typeInfo,
         writeParamType, writeParamAddress);
 
-      // Works even if two parameters point to the same object, as the object pointers are set to null
+      // Works even if two parameters point to the same paramdata address, as the content at that address (object pointers) are set to null
       if(isRefCounted(readParamType))
         safeRefDec(readParamAddress, readParamType);
       if(isRefCounted(writeParamType))
@@ -263,7 +275,7 @@ protected:
             std::memcpy(destAddress, srcAddress, numBytes);
 
             if(isRefCounted(srcType))
-              safeRefInc(destAddress);
+              safeRefInc(destAddress, destType);
           }
 
           // If a string object has been created, decrease its public refcount (1 at creation)
@@ -365,7 +377,7 @@ protected:
       {
         // First inc, then dec (in case branch is taken out and the pointed to object is the same)
         if (isRefCounted(srcType))
-          safeRefInc(srcAddress);
+          safeRefInc(srcAddress, srcType);
         if (isRefCounted(destType))
           safeRefDec(destAddress, destType);
 

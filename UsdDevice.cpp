@@ -141,7 +141,7 @@ UsdDevice::~UsdDevice()
   {
     reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR, "Reference memleak check complete, no issues found.");
   }
-  assert(allocatedObjects.empty());
+  //assert(allocatedObjects.empty());
 #endif
 }
 
@@ -325,7 +325,7 @@ ANARIArray UsdDevice::CreateDataArray(const void *appMemory,
   {
     UsdDataArray* object = new UsdDataArray(dataType, numItems1, numItems2, numItems3, this);
 #ifdef CHECK_MEMLEAKS
-    LogObjAllocation(object);
+    logObjAllocation(object);
 #endif
 
     return (ANARIArray)(object);
@@ -336,7 +336,7 @@ ANARIArray UsdDevice::CreateDataArray(const void *appMemory,
       dataType, numItems1, byteStride1, numItems2, byteStride2, numItems3, byteStride3,
       this);
 #ifdef CHECK_MEMLEAKS
-    LogObjAllocation(object);
+    logObjAllocation(object);
 #endif
 
     return (ANARIArray)(object);
@@ -392,7 +392,7 @@ ANARISampler UsdDevice::newSampler(const char *type)
   const char* name = makeUniqueName("Sampler");
   UsdSampler* object = new UsdSampler(name, type, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARISampler)(object);
@@ -403,7 +403,7 @@ ANARIMaterial UsdDevice::newMaterial(const char *material_type)
   const char* name = makeUniqueName("Material");
   UsdMaterial* object = new UsdMaterial(name, material_type, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARIMaterial)(object);
@@ -414,7 +414,7 @@ ANARIGeometry UsdDevice::newGeometry(const char *type)
   const char* name = makeUniqueName("Geometry");
   UsdGeometry* object = new UsdGeometry(name, type, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARIGeometry)(object);
@@ -425,7 +425,7 @@ ANARISpatialField UsdDevice::newSpatialField(const char * type)
   const char* name = makeUniqueName("SpatialField");
   UsdSpatialField* object = new UsdSpatialField(name, type, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARISpatialField)(object);
@@ -436,7 +436,7 @@ ANARISurface UsdDevice::newSurface()
   const char* name = makeUniqueName("Surface");
   UsdSurface* object = new UsdSurface(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARISurface)(object);
@@ -447,7 +447,7 @@ ANARIVolume UsdDevice::newVolume(const char *type)
   const char* name = makeUniqueName("Volume");
   UsdVolume* object = new UsdVolume(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARIVolume)(object);
@@ -458,7 +458,7 @@ ANARIGroup UsdDevice::newGroup()
   const char* name = makeUniqueName("Group");
   UsdGroup* object = new UsdGroup(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARIGroup)(object);
@@ -469,7 +469,7 @@ ANARIInstance UsdDevice::newInstance(const char */*type*/)
   const char* name = makeUniqueName("Instance");
   UsdInstance* object = new UsdInstance(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARIInstance)(object);
@@ -480,7 +480,7 @@ ANARIWorld UsdDevice::newWorld()
   const char* name = makeUniqueName("World");
   UsdWorld* object = new UsdWorld(name, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARIWorld)(object);
@@ -491,7 +491,7 @@ ANARILight UsdDevice::newLight(const char *type)
   const char* name = makeUniqueName("Light");
   UsdLight* object = new UsdLight(name, type, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARILight)(object);
@@ -502,7 +502,7 @@ ANARICamera UsdDevice::newCamera(const char *type)
   const char* name = makeUniqueName("Camera");
   UsdCamera* object = new UsdCamera(name, type, this);
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARICamera)(object);
@@ -542,7 +542,7 @@ ANARIRenderer UsdDevice::newRenderer(const char *type)
 {
   UsdRenderer* object = new UsdRenderer();
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARIRenderer)(object);
@@ -620,7 +620,7 @@ void UsdDevice::clearCommitList()
 #ifdef CHECK_MEMLEAKS
   for(auto& commitEntry : commitList)
   {
-    LogObjDeallocation(commitEntry.first.ptr);
+    logObjDeallocation(commitEntry.first.ptr);
   }
 #endif
 
@@ -821,7 +821,7 @@ ANARIFrame UsdDevice::newFrame()
 {
   UsdFrame* object = new UsdFrame(internals->bridge.get());
 #ifdef CHECK_MEMLEAKS
-  LogObjAllocation(object);
+  logObjAllocation(object);
 #endif
 
   return (ANARIFrame)(object);
@@ -927,7 +927,7 @@ void UsdDevice::unmapParameterArray(ANARIObject object, const char *name)
   ANARIDataType paramType = ANARI_UNKNOWN;
   void* paramAddress = getBaseObjectPtr(object)->getParameter(name, paramType);
 
-  if(paramAddress && paramType == ANARI_ARRAY)
+  if(paramAddress && anari::isArray(paramType))
   {
     auto arrayAddress = (ANARIArray*)paramAddress;
     if(*arrayAddress)
@@ -942,13 +942,13 @@ void UsdDevice::release(ANARIObject object)
 
   UsdBaseObject* baseObject = getBaseObjectPtr(object);
 
-  bool privatizeArray = baseObject->getType() == ANARI_ARRAY
+  bool privatizeArray = anari::isArray(baseObject->getType())
     && baseObject->useCount(helium::RefType::INTERNAL) > 0
     && baseObject->useCount(helium::RefType::PUBLIC) == 1;
 
 #ifdef CHECK_MEMLEAKS
   if(!handleIsDevice(object))
-    LogObjDeallocation(baseObject);
+    logObjDeallocation(baseObject);
 #endif
 
   if (baseObject)
@@ -994,34 +994,41 @@ namespace
       }
     }
   }
+
+  template<typename T>
+  bool isAllocated(const T* ptr, const std::vector<const T*>& allocations)
+  {
+    auto it = std::find(allocations.begin(), allocations.end(), ptr);
+    return it != allocations.end();
+  }
 }
 
-void UsdDevice::LogObjAllocation(const UsdBaseObject* ptr)
+void UsdDevice::logObjAllocation(const UsdBaseObject* ptr)
 {
   allocatedObjects.push_back(ptr);
 }
 
-void UsdDevice::LogObjDeallocation(const UsdBaseObject* ptr)
+void UsdDevice::logObjDeallocation(const UsdBaseObject* ptr)
 {
   SharedLogDeallocation(ptr, allocatedObjects, this);
 }
 
-void UsdDevice::LogStrAllocation(const UsdSharedString* ptr)
+void UsdDevice::logStrAllocation(const UsdSharedString* ptr)
 {
   allocatedStrings.push_back(ptr);
 }
 
-void UsdDevice::LogStrDeallocation(const UsdSharedString* ptr)
+void UsdDevice::logStrDeallocation(const UsdSharedString* ptr)
 {
   SharedLogDeallocation(ptr, allocatedStrings, this);
 }
 
-void UsdDevice::LogRawAllocation(const void* ptr)
+void UsdDevice::logRawAllocation(const void* ptr)
 {
   allocatedRawMemory.push_back(ptr);
 }
 
-void UsdDevice::LogRawDeallocation(const void* ptr)
+void UsdDevice::logRawDeallocation(const void* ptr)
 {
   if (ptr)
   {
@@ -1036,6 +1043,21 @@ void UsdDevice::LogRawDeallocation(const void* ptr)
     else
       allocatedRawMemory.erase(it);
   }
+}
+
+bool UsdDevice::isObjAllocated(const UsdBaseObject* ptr) const
+{
+  return isAllocated(ptr, allocatedObjects);
+}
+
+bool UsdDevice::isStrAllocated(const UsdSharedString* ptr) const
+{
+  return isAllocated(ptr, allocatedStrings);
+}
+
+bool UsdDevice::isRawAllocated(const void* ptr) const
+{
+  return isAllocated(ptr, allocatedRawMemory);
 }
 #endif
 

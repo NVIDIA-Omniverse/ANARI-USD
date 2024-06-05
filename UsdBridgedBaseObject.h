@@ -108,6 +108,26 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
       return false;
     }
 
+    void observe(UsdBaseObject* caller, UsdDevice* device) override
+    {
+      if(anari::isArray(caller->getType()))
+      {
+        device->addToCommitList(this, true);
+        paramChanged = true;
+      }
+    }
+
+    void onParamRefChanged(UsdBaseObject* paramObject, bool incRef) override
+    {
+      if(anari::isArray(paramObject->getType()))
+      {
+        if(incRef)
+          paramObject->addObserver(this);
+        else
+          paramObject->removeObserver(this);
+      }
+    }
+
   public:
     using ComponentPair = std::pair<C, const char*>; // Used to define a componentParamNames
 

@@ -34,7 +34,6 @@ void UsdBaseObject::addObserver(UsdBaseObject* observer)
   if(std::find(observers.begin(), observers.end(), observer) == observers.end())
   {
     observers.push_back(observer);
-    observer->refInc();
   }
 }
 
@@ -43,7 +42,6 @@ void UsdBaseObject::removeObserver(UsdBaseObject* observer)
   auto it = std::find(observers.begin(), observers.end(), observer);
   if(it != observers.end())
   {
-    (*it)->refDec();
     *it = observers.back();
     observers.pop_back();
   }
@@ -53,6 +51,9 @@ void UsdBaseObject::notify(UsdBaseObject* caller, UsdDevice* device)
 {
   for(auto observer : observers)
   {
+#ifdef CHECK_MEMLEAKS
+    assert(device->isObjAllocated(observer));
+#endif
     observer->observe(caller, device);
   }
 }

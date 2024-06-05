@@ -23,11 +23,14 @@ DEFINE_PARAMETER_MAP(UsdSurface,
 
 UsdSurface::UsdSurface(const char* name, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_SURFACE, name, device)
+  , usdDevice(device)
 {
 }
 
 UsdSurface::~UsdSurface()
 {
+  addGeometryObserver(nullptr);
+
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
   // Given that the object is destroyed, none of its references to other objects
   // has to be updated anymore.
@@ -67,7 +70,7 @@ bool UsdSurface::doCommitData(UsdDevice* device)
     paramChanged = false;
     updateBoundParameters = true;
 
-    addGeometryObserver();
+    addGeometryObserver(paramData.geometry);
 
     return true; // In this case a doCommitRefs is required, with data (timesteps, handles) from children
   }
@@ -142,23 +145,25 @@ void UsdSurface::observe(UsdBaseObject* caller, UsdDevice* device)
   }
 }
 
-void UsdSurface::addGeometryObserver()
+void UsdSurface::addGeometryObserver(UsdGeometry* newGeometry)
 {
-  const UsdSurfaceData& paramData = getReadParams();
-
-  if(paramData.geometry != boundGeometry)
+  if(newGeometry != boundGeometry)
   {
     if(boundGeometry)
     {
       boundGeometry->removeObserver(this);
-      boundGeometry->refDec();
+
+#ifdef CHECK_MEMLEAKS
+      usdDevice->logObjDeallocation(boundGeometry);
+#endif
+      boundGeometry->refDec(helium::INTERNAL);
     }
 
-    boundGeometry = paramData.geometry;
+    boundGeometry = newGeometry;
 
     if(boundGeometry)
     {
-      boundGeometry->refInc();
+      boundGeometry->refInc(helium::INTERNAL);
       boundGeometry->addObserver(this);
     }
   }

@@ -32,6 +32,7 @@ typedef struct TestParameters
   int isTransparent;
   TestType_t testType;
   int useGlyphMesh;
+  int changePositionArray;
 } TestParameters_t;
 
 typedef struct TexData
@@ -168,7 +169,8 @@ float protoTransform[16] = {
 
 float kd[] = { 0.0f, 0.0f, 1.0f };
 
-ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams, TexData_t testData)
+ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams,
+  TexData_t testData, ANARIArray1D* positionArray)
 {
   int useVertexColors = testParams.useVertexColors;
   int useTexture = testParams.useTexture;
@@ -181,7 +183,8 @@ ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams, T
   ANARIArray1D array = anariNewArray1D(dev, vertex, 0, 0, ANARI_FLOAT32_VEC3, 4);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "vertex.position", ANARI_ARRAY, &array);
-  anariRelease(dev, array); // we are done using this handle
+  //anariRelease(dev, array); // we are done using this handle
+  *positionArray = array; // carry over to parent scope
 
   array = anariNewArray1D(dev, normal, 0, 0, ANARI_FLOAT32_VEC3, 4);
   anariCommitParameters(dev, array);
@@ -317,7 +320,8 @@ ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams, T
   return instance;
 }
 
-ANARIInstance createConesInstance(ANARIDevice dev, TestParameters_t testParams, GridData_t testData)
+ANARIInstance createConesInstance(ANARIDevice dev, TestParameters_t testParams,
+  GridData_t testData, ANARIArray1D* positionArray)
 {
   // create and setup geom
   ANARIGeometry cones = anariNewGeometry(dev, "cone");
@@ -346,7 +350,8 @@ ANARIInstance createConesInstance(ANARIDevice dev, TestParameters_t testParams, 
   ANARIArray1D array = anariNewArray1D(dev, testData.gridVertex, 0, 0, ANARI_FLOAT32_VEC3, numVertices);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, cones, "vertex.position", ANARI_ARRAY, &array);
-  anariRelease(dev, array); // we are done using this handle
+  //anariRelease(dev, array); // we are done using this handle
+  *positionArray = array; // carry over to parent scope
 
   if(testParams.useIndices)
   {
@@ -436,7 +441,8 @@ ANARIInstance createConesInstance(ANARIDevice dev, TestParameters_t testParams, 
   return instance;
 }
 
-ANARIInstance createGlyphsInstance(ANARIDevice dev, TestParameters_t testParams, GridData_t testData)
+ANARIInstance createGlyphsInstance(ANARIDevice dev, TestParameters_t testParams,
+  GridData_t testData, ANARIArray1D* positionArray)
 {
   int sizeX = testData.gridSize[0], sizeY = testData.gridSize[1];
   int numVertices = sizeX*sizeY;
@@ -486,7 +492,8 @@ ANARIInstance createGlyphsInstance(ANARIDevice dev, TestParameters_t testParams,
   array = anariNewArray1D(dev, testData.gridVertex, 0, 0, ANARI_FLOAT32_VEC3, numVertices);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, glyphs, "vertex.position", ANARI_ARRAY, &array);
-  anariRelease(dev, array); // we are done using this handle
+  //anariRelease(dev, array); // we are done using this handle
+  *positionArray = array; // carry over to parent scope
 
   if (testParams.useVertexColors)
   {
@@ -559,6 +566,22 @@ ANARIInstance createGlyphsInstance(ANARIDevice dev, TestParameters_t testParams,
   anariRelease(dev, group);
 
   return instance;
+}
+
+void changeAndRender(ANARIDevice dev, ANARIArray1D positionArray, ANARIFrame frame)
+{
+  float* positions = (float*)(anariMapArray(dev, positionArray));
+  if(positions)
+  {
+    // Change one element to something recognizable
+    positions[0] = 123.0f;
+    positions[1] = 456.0f;
+    positions[2] = 789.0f;
+  }
+  anariUnmapArray(dev, positionArray);
+
+  anariRenderFrame(dev, frame);
+  anariFrameReady(dev, frame, ANARI_WAIT);
 }
 
 void doTest(TestParameters_t testParams)
@@ -648,16 +671,17 @@ void doTest(TestParameters_t testParams)
   ANARIWorld world = anariNewWorld(dev);
 
   ANARIInstance instance;
+  ANARIArray1D positionArray;
   switch(testParams.testType)
   {
     case TEST_MESH:
-      instance = createMeshInstance(dev, testParams, texData);
+      instance = createMeshInstance(dev, testParams, texData, &positionArray);
       break;
     case TEST_CONES:
-      instance = createConesInstance(dev, testParams, gridData);
+      instance = createConesInstance(dev, testParams, gridData, &positionArray);
       break;
     case TEST_GLYPHS:
-      instance = createGlyphsInstance(dev, testParams, gridData);
+      instance = createGlyphsInstance(dev, testParams, gridData, &positionArray);
       break;
     default:
       break;
@@ -745,6 +769,10 @@ void doTest(TestParameters_t testParams)
   printf("done!\n");
   printf("\ncleaning up objects...");
 
+  if(testParams.changePositionArray)
+    changeAndRender(dev, positionArray, frame);
+  anariRelease(dev, positionArray);
+
   // final cleanups
   anariRelease(dev, renderer);
   anariRelease(dev, camera);
@@ -768,6 +796,7 @@ int main(int argc, const char **argv)
   testParams.testType = TEST_MESH;
   testParams.writeAtCommit = 0;
   testParams.isTransparent = 0;
+  testParams.changePositionArray = 0;
 
   // Test standard flow with textures
   testParams.useVertexColors = 0;
@@ -783,6 +812,11 @@ int main(int argc, const char **argv)
   testParams.useVertexColors = 0;
   testParams.useTexture = 0;
   doTest(testParams);
+
+  // With changing position array
+  testParams.changePositionArray = 1;
+  doTest(testParams);
+  testParams.changePositionArray = 0;
 
   // Transparency
   testParams.useVertexColors = 0;
