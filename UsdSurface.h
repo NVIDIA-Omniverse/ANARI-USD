@@ -37,16 +37,10 @@ class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSu
     bool doCommitData(UsdDevice* device) override;
     void doCommitRefs(UsdDevice* device) override;
 
+    void onParamRefChanged(UsdBaseObject* paramObject, bool incRef, bool onWriteParams) override;
     void observe(UsdBaseObject* caller, UsdDevice* device) override;
-
-    void addGeometryObserver(UsdGeometry* newGeometry);
 
     // When geometry notifies surface, the bound parameters have to be updated.
     // The parameters are not time-varying, so they can be represented by a universal reference.
     bool updateBoundParameters = false;
-
-    // Cached to remove the surface as observer on geometry when changed
-    UsdGeometry* boundGeometry = nullptr;
-
-    UsdDevice* usdDevice = nullptr;
 };

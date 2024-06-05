@@ -76,7 +76,7 @@ protected:
 
   bool isRefCounted(ANARIDataType type) const { return anari::isObject(type) || type == ANARI_STRING; }
 
-  void safeRefInc(void* paramPtr, ANARIDataType paramType) // Pointer to the parameter address which holds a helium::RefCounted*
+  void safeRefInc(void* paramPtr, ANARIDataType paramType, bool onWriteParams) // Pointer to the parameter address which holds a helium::RefCounted*
   {
     helium::RefCounted** refCountedPP = ptrToRefCountedPtr(paramPtr);
     if (*refCountedPP)
@@ -84,17 +84,17 @@ protected:
       (*refCountedPP)->refInc(helium::RefType::INTERNAL);
 
       if(anari::isObject(paramType))
-        onParamRefChanged(toBaseObjectPtr(paramPtr), true);
+        onParamRefChanged(toBaseObjectPtr(paramPtr), true, onWriteParams);
     }
   }
 
-  void safeRefDec(void* paramPtr, ANARIDataType paramType) // Pointer to the parameter address which holds a helium::RefCounted*
+  void safeRefDec(void* paramPtr, ANARIDataType paramType, bool onWriteParams) // Pointer to the parameter address which holds a helium::RefCounted*
   {
     helium::RefCounted** refCountedPP = ptrToRefCountedPtr(paramPtr);
     if (*refCountedPP)
     {
       if(anari::isObject(paramType))
-        onParamRefChanged(toBaseObjectPtr(paramPtr), false);
+        onParamRefChanged(toBaseObjectPtr(paramPtr), false, onWriteParams);
 
       helium::RefCounted*& refCountedP = *refCountedPP;
 #ifdef CHECK_MEMLEAKS
@@ -106,7 +106,7 @@ protected:
     }
   }
 
-  virtual void onParamRefChanged(UsdBaseObject* paramObject, bool incRef) {}
+  virtual void onParamRefChanged(UsdBaseObject* paramObject, bool incRef, bool onWriteParams) {}
 
   void* paramAddress(D& paramData, const ParamTypeInfo& typeInfo)
   {
@@ -182,9 +182,9 @@ public:
 
       // Works even if two parameters point to the same paramdata address, as the content at that address (object pointers) are set to null
       if(isRefCounted(readParamType))
-        safeRefDec(readParamAddress, readParamType);
+        safeRefDec(readParamAddress, readParamType, false);
       if(isRefCounted(writeParamType))
-        safeRefDec(writeParamAddress, writeParamType);
+        safeRefDec(writeParamAddress, writeParamType, true);
 
       ++it;
     }
@@ -270,12 +270,12 @@ protected:
           if(contentUpdate)
           {
             if(isRefCounted(destType))
-              safeRefDec(destAddress, destType);
+              safeRefDec(destAddress, destType, true);
 
             std::memcpy(destAddress, srcAddress, numBytes);
 
             if(isRefCounted(srcType))
-              safeRefInc(destAddress, destType);
+              safeRefInc(destAddress, destType, true);
           }
 
           // If a string object has been created, decrease its public refcount (1 at creation)
@@ -321,7 +321,7 @@ protected:
 
     // Make sure to dec existing ptr, as it will be relinquished
     if(isRefCounted(destType))
-      safeRefDec(destAddress, destType);
+      safeRefDec(destAddress, destType, true);
 
     // Just replace contents of the whole parameter structure, single or multiparam
     std::memcpy(destAddress, srcAddress, paramSize);
@@ -377,9 +377,9 @@ protected:
       {
         // First inc, then dec (in case branch is taken out and the pointed to object is the same)
         if (isRefCounted(srcType))
-          safeRefInc(srcAddress, srcType);
+          safeRefInc(srcAddress, srcType, false); // count as increase of readparams ref due to subsequent copy
         if (isRefCounted(destType))
-          safeRefDec(destAddress, destType);
+          safeRefDec(destAddress, destType, false);
 
         // Perform assignment immediately; there may be multiple parameters with the same object target,
         // which will be branched out at the compare the second time around

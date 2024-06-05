@@ -629,33 +629,6 @@ void UsdDevice::clearCommitList()
 
 void UsdDevice::flushCommitList()
 {
-  // Automatically perform a new commitdata/commitrefs on volumes which are not committed,
-  // but for which their (readdata) spatial field is in commitlist. (to update the previous commit)
-  for(UsdVolume* volume : volumeList)
-  {
-    const UsdVolumeData& readParams = volume->getReadParams();
-    if(readParams.field)
-    {
-      //volume not in commitlist
-      auto volEntry = std::find_if(commitList.begin(), commitList.end(),
-        [&volume](const CommitListType& entry) -> bool { return entry.first.ptr == volume; });
-      if(volEntry == commitList.end())
-      {
-        auto fieldEntry = std::find_if(commitList.begin(), commitList.end(),
-          [&readParams](const CommitListType& entry) -> bool { return entry.first.ptr == readParams.field; });
-
-        // spatialfield from readParams is in commit list
-        if(fieldEntry != commitList.end())
-        {
-          UsdBaseObject* baseObject = static_cast<UsdBaseObject*>(volume);
-          bool commitRefs = baseObject->doCommitData(this);
-          if(commitRefs)
-            baseObject->doCommitRefs(this);
-        }
-      }
-    }
-  }
-
   lockCommitList = true;
 
   writeTypeToUsd<(int)ANARI_SAMPLER>();

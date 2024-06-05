@@ -113,6 +113,19 @@ class UsdParameterizedBaseObject : public UsdBaseObject, public UsdParameterized
     virtual const char* getName() const { return ""; }
 
   protected:
+
+    void onParamRefChanged(UsdBaseObject* paramObject, bool incRef, bool onWriteParams) override
+    {
+      // Only observe arrays that have actually been committed, so !onWriteParams
+      if(!onWriteParams && anari::isArray(paramObject->getType()))
+      {
+        if(incRef)
+          paramObject->addObserver(this);
+        else
+          paramObject->removeObserver(this);
+      }
+    }
+
     // Convenience functions for commonly used name property
     bool setNameParam(const char *name,
       ANARIDataType type,

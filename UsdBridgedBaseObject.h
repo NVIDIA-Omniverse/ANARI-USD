@@ -112,19 +112,8 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
     {
       if(anari::isArray(caller->getType()))
       {
-        device->addToCommitList(this, true);
+        device->addToCommitList(this, true); // No write to read params; just write to USD
         paramChanged = true;
-      }
-    }
-
-    void onParamRefChanged(UsdBaseObject* paramObject, bool incRef) override
-    {
-      if(anari::isArray(paramObject->getType()))
-      {
-        if(incRef)
-          paramObject->addObserver(this);
-        else
-          paramObject->removeObserver(this);
       }
     }
 

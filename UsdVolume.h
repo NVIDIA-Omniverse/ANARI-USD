@@ -55,6 +55,9 @@ class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolum
     bool doCommitData(UsdDevice* device) override;
     void doCommitRefs(UsdDevice* device) override {}
 
+    void onParamRefChanged(UsdBaseObject* paramObject, bool incRef, bool onWriteParams) override;
+    void observe(UsdBaseObject* caller, UsdDevice* device) override;
+
     bool CheckTfParams(UsdDevice* device);
     bool UpdateVolume(UsdDevice* device, const char* debugName);
 

@@ -23,14 +23,11 @@ DEFINE_PARAMETER_MAP(UsdSurface,
 
 UsdSurface::UsdSurface(const char* name, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_SURFACE, name, device)
-  , usdDevice(device)
 {
 }
 
 UsdSurface::~UsdSurface()
 {
-  addGeometryObserver(nullptr);
-
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
   // Given that the object is destroyed, none of its references to other objects
   // has to be updated anymore.
@@ -69,8 +66,6 @@ bool UsdSurface::doCommitData(UsdDevice* device)
   {
     paramChanged = false;
     updateBoundParameters = true;
-
-    addGeometryObserver(paramData.geometry);
 
     return true; // In this case a doCommitRefs is required, with data (timesteps, handles) from children
   }
@@ -136,35 +131,26 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
   }
 }
 
+void UsdSurface::onParamRefChanged(UsdBaseObject* paramObject, bool incRef, bool onWriteParams)
+{
+  if(!onWriteParams && paramObject->getType() == ANARI_GEOMETRY)
+  {
+    if(incRef)
+      paramObject->addObserver(this);
+    else
+      paramObject->removeObserver(this);
+  }
+
+  BridgedBaseObjectType::onParamRefChanged(paramObject, incRef, onWriteParams);
+}
+
 void UsdSurface::observe(UsdBaseObject* caller, UsdDevice* device)
 {
   if(caller->getType() == ANARI_GEOMETRY)
   {
     updateBoundParameters = true;
-    device->addToCommitList(this, true);
+    device->addToCommitList(this, true); // No write to read params; just write to USD
   }
-}
 
-void UsdSurface::addGeometryObserver(UsdGeometry* newGeometry)
-{
-  if(newGeometry != boundGeometry)
-  {
-    if(boundGeometry)
-    {
-      boundGeometry->removeObserver(this);
-
-#ifdef CHECK_MEMLEAKS
-      usdDevice->logObjDeallocation(boundGeometry);
-#endif
-      boundGeometry->refDec(helium::INTERNAL);
-    }
-
-    boundGeometry = newGeometry;
-
-    if(boundGeometry)
-    {
-      boundGeometry->refInc(helium::INTERNAL);
-      boundGeometry->addObserver(this);
-    }
-  }
+  BridgedBaseObjectType::observe(caller, device);
 }

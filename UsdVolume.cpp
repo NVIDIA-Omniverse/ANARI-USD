@@ -241,3 +241,26 @@ bool UsdVolume::doCommitData(UsdDevice* device)
 
   return false;
 }
+
+void UsdVolume::onParamRefChanged(UsdBaseObject* paramObject, bool incRef, bool onWriteParams)
+{
+  if(!onWriteParams && paramObject->getType() == ANARI_SPATIAL_FIELD)
+  {
+    if(incRef)
+      paramObject->addObserver(this);
+    else
+      paramObject->removeObserver(this);
+  }
+
+  BridgedBaseObjectType::onParamRefChanged(paramObject, incRef, onWriteParams);
+}
+
+void UsdVolume::observe(UsdBaseObject* caller, UsdDevice* device)
+{
+  if(caller->getType() == ANARI_SPATIAL_FIELD)
+  {
+    device->addToCommitList(this, true); // No write to read params; just write to USD
+  }
+
+  BridgedBaseObjectType::observe(caller, device);
+}

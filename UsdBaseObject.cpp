@@ -31,29 +31,35 @@ void UsdBaseObject::commit(UsdDevice* device)
 
 void UsdBaseObject::addObserver(UsdBaseObject* observer)
 {
-  if(std::find(observers.begin(), observers.end(), observer) == observers.end())
-  {
-    observers.push_back(observer);
-  }
+  // duplicate entries allowed in case the same object is observed from multiple references on the same observer
+  // (implicit ref counter of observed object)
+  observers.push_back(observer);
 }
 
 void UsdBaseObject::removeObserver(UsdBaseObject* observer)
 {
   auto it = std::find(observers.begin(), observers.end(), observer);
-  if(it != observers.end())
-  {
-    *it = observers.back();
-    observers.pop_back();
-  }
+  assert(it != observers.end());
+
+  *it = observers.back();
+  observers.pop_back();
 }
 
 void UsdBaseObject::notify(UsdBaseObject* caller, UsdDevice* device)
 {
-  for(auto observer : observers)
+  auto it = observers.begin();
+  while(it != observers.end())
   {
+    auto observer = *it;
+
 #ifdef CHECK_MEMLEAKS
     assert(device->isObjAllocated(observer));
 #endif
-    observer->observe(caller, device);
+
+    // Don't call observe twice
+    if(std::find(observers.begin(), it, observer) == it)
+      observer->observe(caller, device);
+
+    ++it;
   }
 }

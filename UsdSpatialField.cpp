@@ -34,6 +34,15 @@ UsdSpatialField::~UsdSpatialField()
 #endif
 }
 
+void UsdSpatialField::commit(UsdDevice* device)
+{
+  // Notify observers (such as volume) that the spatial field has changed.
+  notify(this, device);
+
+  // Continue with the normal commit, ie. adding to the commit list or immediate execution of doCommitData
+  BridgedBaseObjectType::commit(device);
+}
+
 void UsdSpatialField::remove(UsdDevice* device)
 {
   applyRemoveFunc(device, &UsdBridge::DeleteSpatialField);
