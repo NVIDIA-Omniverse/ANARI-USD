@@ -9,9 +9,9 @@
 template<typename T0, typename T1, typename T2>
 struct UsdMultiTypeParameter
 {
-  static constexpr int AnariType0 = anari::ANARITypeFor<T0>::value;
-  static constexpr int AnariType1 = anari::ANARITypeFor<T1>::value;
-  static constexpr int AnariType2 = anari::ANARITypeFor<T2>::value;
+  using CDataType0 = T0;
+  using CDataType1 = T1;
+  using CDataType2 = T2;
 
   union DataUnion
   {
@@ -26,19 +26,19 @@ struct UsdMultiTypeParameter
   // Helper functions
   T0& Get(T0& arg) const 
   { 
-    if(AnariType0 == type) { arg = data.type0; }
+    if(AnariTypeMatchesCType<CDataType0>(type)) { arg = data.type0; }
     return arg; 
   }
 
   T1& Get(T1& arg) const 
   { 
-    if(AnariType1 == type) { arg = data.type1; }
+    if(AnariTypeMatchesCType<CDataType1>(type)) { arg = data.type1; }
     return arg; 
   }
 
   T2& Get(T2& arg) const 
   { 
-    if(AnariType2 == type) { arg = data.type2; }
+    if(AnariTypeMatchesCType<CDataType2>(type)) { arg = data.type2; }
     return arg; 
   }
 };
