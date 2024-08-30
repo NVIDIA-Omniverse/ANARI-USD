@@ -7,6 +7,7 @@
 #include "UsdCommonMacros.h"
 #include "anari/frontend/anari_enums.h"
 #include "anari/anari_cpp/Traits.h"
+#include "anari/frontend/type_utility.h"
 
 #include <cstring>
 #include <utility>
@@ -32,6 +33,7 @@ struct UsdDataLayout;
 
 namespace anari
 {
+  static_assert(sizeof(bool) >= sizeof(ANARITypeProperties<ANARI_BOOL>::base_type));
   ANARI_TYPEFOR_SPECIALIZATION(UsdUint2, ANARI_UINT32_VEC2);
   ANARI_TYPEFOR_SPECIALIZATION(UsdFloat2, ANARI_FLOAT32_VEC2);
   ANARI_TYPEFOR_SPECIALIZATION(UsdFloat3, ANARI_FLOAT32_VEC3);
@@ -56,6 +58,20 @@ namespace anari
   ANARI_TYPEFOR_SPECIALIZATION(UsdWorld*, ANARI_WORLD);
 }
 
+// Helper templates which allow for bool usage as param type 
+// Replaces ANARI_TYPEFOR_SPECIALIZATION(bool, ANARI_BOOL)
+template<typename ParamCType, int AnariType>
+struct AssertParamDataType
+{ 
+  static constexpr bool value = AnariType == anari::ANARITypeFor<ParamCType>::value;
+};
+
+template<>
+struct AssertParamDataType<bool, ANARI_BOOL>
+{ 
+  static constexpr bool value = true;
+};
+
 // Shared convenience functions
 namespace
 {
@@ -69,6 +85,19 @@ namespace
   {
     T *p = (T *)_p;
     *p = v;
+  }
+
+  // Helper templates which allow for bool usage as param type 
+  template<typename ParamCType>
+  inline bool AnariTypeMatchesCType(int anariType)
+  {
+    return anariType == anari::ANARITypeFor<ParamCType>::value;
+  }
+
+  template<>
+  inline bool AnariTypeMatchesCType<bool>(int anariType)
+  {
+    return anariType == ANARI_BOOL;
   }
 }
 

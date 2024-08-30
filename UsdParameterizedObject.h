@@ -233,57 +233,45 @@ protected:
         bool contentUpdate = srcType != destType; // Always do a content update if types differ (in case of multitype params)
 
         // Update data for all the different types
-        if (srcType == ANARI_BOOL)
+        UsdSharedString* sharedStr = nullptr;
+        if (srcType == ANARI_STRING)
         {
-          bool* destBool_p = reinterpret_cast<bool*>(destAddress);
-          bool srcBool = *(reinterpret_cast<const bool*>(srcAddress));
+          // Wrap strings to make them refcounted,
+          // from that point they are considered normal RefCounteds.
+          UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*ptrToRefCountedPtr(destAddress));
+          const char* srcCstr = reinterpret_cast<const char*>(srcAddress);
 
-          contentUpdate = contentUpdate || (*destBool_p != srcBool); // Keep this code until the ANARI SDK is comfortable treating bool types as 8-bit
-
-          *destBool_p = srcBool;
-        }
-        else
-        {
-          UsdSharedString* sharedStr = nullptr;
-          if (srcType == ANARI_STRING)
-          {
-            // Wrap strings to make them refcounted,
-            // from that point they are considered normal RefCounteds.
-            UsdSharedString* destStr = reinterpret_cast<UsdSharedString*>(*ptrToRefCountedPtr(destAddress));
-            const char* srcCstr = reinterpret_cast<const char*>(srcAddress);
-
-            contentUpdate = contentUpdate || !destStr || !strEquals(destStr->c_str(), srcCstr); // Note that execution of strEquals => (srcType == destType)
-
-            if(contentUpdate)
-            {
-              sharedStr = new UsdSharedString(srcCstr); // Remember to refdec
-              numBytes = sizeof(void*);
-              srcAddress = &sharedStr;
-#ifdef CHECK_MEMLEAKS
-              logAllocationThroughDevice(allocDevice, sharedStr, ANARI_STRING);
-#endif
-            }
-          }
-          else
-            contentUpdate = contentUpdate || bool(std::memcmp(destAddress, srcAddress, numBytes));
+          contentUpdate = contentUpdate || !destStr || !strEquals(destStr->c_str(), srcCstr); // Note that execution of strEquals => (srcType == destType)
 
           if(contentUpdate)
           {
-            if(isRefCounted(destType))
-              safeRefDec(destAddress, destType, true);
-
-            std::memcpy(destAddress, srcAddress, numBytes);
-
-            if(isRefCounted(srcType))
-              safeRefInc(destAddress, destType, true);
+            sharedStr = new UsdSharedString(srcCstr); // Remember to refdec
+            numBytes = sizeof(void*);
+            srcAddress = &sharedStr;
+#ifdef CHECK_MEMLEAKS
+            logAllocationThroughDevice(allocDevice, sharedStr, ANARI_STRING);
+#endif
           }
+        }
+        else
+          contentUpdate = contentUpdate || bool(std::memcmp(destAddress, srcAddress, numBytes));
 
-          // If a string object has been created, decrease its public refcount (1 at creation)
-          if (sharedStr)
-          {
-            assert(sharedStr->useCount() == 2); // Single public and internal reference
-            sharedStr->refDec();
-          }
+        if(contentUpdate)
+        {
+          if(isRefCounted(destType))
+            safeRefDec(destAddress, destType, true);
+
+          std::memcpy(destAddress, srcAddress, numBytes);
+
+          if(isRefCounted(srcType))
+            safeRefInc(destAddress, destType, true);
+        }
+
+        // If a string object has been created, decrease its public refcount (1 at creation)
+        if (sharedStr)
+        {
+          assert(sharedStr->useCount() == 2); // Single public and internal reference
+          sharedStr->refDec();
         }
 
         // Update the type for multitype params (so far only data has been updated)
@@ -414,13 +402,14 @@ protected:
     std::string(ParamName), \
     {offsetof(DataType, ParamData), 0, sizeof(DataType::ParamData), {ParamType, ANARI_UNKNOWN, ANARI_UNKNOWN}} \
   )); \
-  static_assert(ParamType == anari::ANARITypeFor<decltype(DataType::ParamData)>::value, "ANARI type " #ParamType " of member '" #ParamData "' does not correspond to member type");
+  static_assert(AssertParamDataType<decltype(DataType::ParamData), ParamType>::value, "ANARI type " #ParamType " of member '" #ParamData "' does not correspond to member type");
 
 #define REGISTER_PARAMETER_MULTITYPE_MACRO(ParamName, ParamType0, ParamType1, ParamType2, ParamData) \
   { \
-    static_assert(ParamType0 == decltype(DataType::ParamData)::AnariType0, "MultiTypeParams registration: ParamType0 " #ParamType0 " of member '" #ParamData "' doesn't match AnariType0"); \
-    static_assert(ParamType1 == decltype(DataType::ParamData)::AnariType1, "MultiTypeParams registration: ParamType1 " #ParamType1 " of member '" #ParamData "' doesn't match AnariType1"); \
-    static_assert(ParamType2 == decltype(DataType::ParamData)::AnariType2, "MultiTypeParams registration: ParamType2 " #ParamType2 " of member '" #ParamData "' doesn't match AnariType2"); \
+    using multitype_t = decltype(DataType::ParamData); \
+    static_assert(AssertParamDataType<multitype_t::CDataType0, ParamType0>::value, "MultiTypeParams registration: ParamType0 " #ParamType0 " of member '" #ParamData "' doesn't match AnariType0"); \
+    static_assert(AssertParamDataType<multitype_t::CDataType1, ParamType1>::value, "MultiTypeParams registration: ParamType1 " #ParamType1 " of member '" #ParamData "' doesn't match AnariType1"); \
+    static_assert(AssertParamDataType<multitype_t::CDataType2, ParamType2>::value, "MultiTypeParams registration: ParamType2 " #ParamType2 " of member '" #ParamData "' doesn't match AnariType2"); \
     size_t dataOffset = offsetof(DataType, ParamData); \
     size_t typeOffset = offsetof(DataType, ParamData.type); \
     registeredParams.emplace( std::make_pair<std::string, ParamTypeInfo>( \
@@ -433,7 +422,7 @@ protected:
 #define REGISTER_PARAMETER_ARRAY_MACRO(ParamName, ParamNameSuffix, ParamType, ParamData, NumEntries) \
   { \
     using element_type_t = std::remove_reference_t<decltype(*std::begin(std::declval<decltype(DataType::ParamData)&>()))>; \
-    static_assert(ParamType == anari::ANARITypeFor<element_type_t>::value, "ANARI type " #ParamType " of member '" #ParamData "' does not correspond to member type"); \
+    static_assert(AssertParamDataType<element_type_t, ParamType>::value, "ANARI type " #ParamType " of member '" #ParamData "' does not correspond to member type"); \
     static_assert(sizeof(decltype(DataType::ParamData)) == sizeof(element_type_t)*NumEntries, "Number of elements of member '" #ParamData "' does not correspond with member declaration."); \
     size_t offset0 = offsetof(DataType, ParamData[0]); \
     size_t offset1 = offsetof(DataType, ParamData[1]); \
