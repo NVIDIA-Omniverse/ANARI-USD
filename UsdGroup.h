@@ -44,14 +44,16 @@ class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHan
 
     std::vector<UsdSurfaceHandle> surfaceHandles; // for convenience
     std::vector<UsdVolumeHandle> volumeHandles; // for convenience
+    std::vector<int> instanceableValues; // for convenience
 };
 
 typedef void (UsdBridge::*SetRefFunc)(UsdGroupHandle, const UsdSurfaceHandle*, uint64_t, bool, double);
 
 template<int ChildAnariTypeEnum, typename ChildAnariType, typename ChildUsdType, 
   typename ParentHandleType, typename ChildHandleType>
-void ManageRefArray(ParentHandleType parentHandle, UsdDataArray* childArray, bool refsTimeVarying, double timeStep, std::vector<ChildHandleType>& tempChildHandles,
-  void (UsdBridge::*SetRefFunc)(ParentHandleType, const ChildHandleType*, uint64_t, bool, double), void (UsdBridge::*DeleteRefFunc)(ParentHandleType, bool, double), 
+void ManageRefArray(ParentHandleType parentHandle, UsdDataArray* childArray, bool refsTimeVarying, double timeStep,
+  std::vector<ChildHandleType>& tempChildHandles, std::vector<int>& tempInstanceableValues,
+  void (UsdBridge::*SetRefFunc)(ParentHandleType, const ChildHandleType*, uint64_t, bool, double, const int*), void (UsdBridge::*DeleteRefFunc)(ParentHandleType, bool, double), 
   UsdBridge* usdBridge, UsdLogInfo& logInfo, const char* typeErrorMsg)
 {
   bool validRefs = AssertArrayType(childArray, ChildAnariTypeEnum, logInfo, typeErrorMsg);
@@ -64,13 +66,15 @@ void ManageRefArray(ParentHandleType parentHandle, UsdDataArray* childArray, boo
 
       uint64_t numChildren = childArray->getLayout().numItems1;
       tempChildHandles.resize(numChildren);
+      tempInstanceableValues.resize(numChildren);
       for (uint64_t i = 0; i < numChildren; ++i)
       {
         const ChildUsdType* usdChild = reinterpret_cast<const ChildUsdType*>(children[i]);
         tempChildHandles[i] = usdChild->getUsdHandle();
+        tempInstanceableValues[i] = usdChild->isInstanceable() ? 1 : 0;
       }
 
-      (usdBridge->*SetRefFunc)(parentHandle, tempChildHandles.data(), numChildren, refsTimeVarying, timeStep);
+      (usdBridge->*SetRefFunc)(parentHandle, tempChildHandles.data(), numChildren, refsTimeVarying, timeStep, tempInstanceableValues.data());
     }
     else
     {

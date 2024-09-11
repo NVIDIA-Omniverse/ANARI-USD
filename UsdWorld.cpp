@@ -94,14 +94,14 @@ void UsdWorld::doCommitRefs(UsdDevice* device)
   UsdLogInfo logInfo(device, this, ANARI_WORLD, this->getName());
 
   ManageRefArray<InstanceType, ANARIInstance, UsdInstance>(usdHandle, paramData.instances, instancesTimeVarying, timeStep,
-    instanceHandles, &UsdBridge::SetInstanceRefs, &UsdBridge::DeleteInstanceRefs,
+    instanceHandles, instanceableValues, &UsdBridge::SetInstanceRefs, &UsdBridge::DeleteInstanceRefs,
     usdBridge, logInfo, "UsdWorld commit failed: 'instance' array elements should be of type ANARI_INSTANCE");
 
   ManageRefArray<SurfaceType, ANARISurface, UsdSurface>(usdHandle, paramData.surfaces, surfacesTimeVarying, timeStep,
-    surfaceHandles, &UsdBridge::SetSurfaceRefs, &UsdBridge::DeleteSurfaceRefs,
+    surfaceHandles, instanceableValues, &UsdBridge::SetSurfaceRefs, &UsdBridge::DeleteSurfaceRefs,
     usdBridge, logInfo, "UsdGroup commit failed: 'surface' array elements should be of type ANARI_SURFACE");
 
   ManageRefArray<VolumeType, ANARIVolume, UsdVolume>(usdHandle, paramData.volumes, volumesTimeVarying, timeStep,
-    volumeHandles, &UsdBridge::SetVolumeRefs, &UsdBridge::DeleteVolumeRefs,
+    volumeHandles, instanceableValues, &UsdBridge::SetVolumeRefs, &UsdBridge::DeleteVolumeRefs,
     usdBridge, logInfo, "UsdGroup commit failed: 'volume' array elements should be of type ANARI_VOLUME");
 }

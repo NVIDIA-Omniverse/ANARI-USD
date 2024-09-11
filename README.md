@@ -51,6 +51,9 @@ Specific ANARI scene object parameters (World, Instancer, Group, Surface, Geomet
 Specific ANARI timed object parameters (Geometry, Material, Spatialfield, Sampler):
 - A `usd::time` parameter to define the time at which `commit()` will add the data to the scenegraph object indicated by `usd::name`, regardless of the global timestep set for the ANARIDevice object. The effect of setting this parameter is that the parent objects referencing these "timed objects" will keep a USD-based time-mapping per global timestep. This way, a child reference defined at a particular global timestep will point to the data output of the child object at its `usd::time`, thereby avoiding data duplication. This parameter is applied like any other parameter during `anariCommit`.
 
+For Surface and Volume:
+- A `usd::isInstanceable` parameter is defined to allow the user to write the `instanceable` metadata to the corresponding USD output prim.
+
 ### Advanced parameters #
 
 ANARIDevice object parameters:

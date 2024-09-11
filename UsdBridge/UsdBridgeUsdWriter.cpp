@@ -806,7 +806,8 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBrid
 #endif
   }
 
-  referencingPrim.SetInstanceable(instanceable);
+  if(instanceable || referencingPrim.HasAuthoredInstanceable())
+    referencingPrim.SetInstanceable(instanceable);
 
   return referencingPrimPath;
 }

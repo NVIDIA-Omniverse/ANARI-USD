@@ -22,6 +22,8 @@ struct UsdSurfaceData
 
   double geometryRefTimeStep = std::numeric_limits<float>::quiet_NaN();
   double materialRefTimeStep = std::numeric_limits<float>::quiet_NaN();
+
+  bool isInstanceable = false;
 };
 
 class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSurfaceHandle>
@@ -31,6 +33,8 @@ class UsdSurface : public UsdBridgedBaseObject<UsdSurface, UsdSurfaceData, UsdSu
     ~UsdSurface();
 
     void remove(UsdDevice* device) override;
+
+    bool isInstanceable() const;
 
   protected:
     bool deferCommit(UsdDevice* device) override;

@@ -25,6 +25,8 @@ struct UsdVolumeData
 
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying. (field reference always set over all timesteps)
 
+  bool isInstanceable = false;
+
   UsdSpatialField* field = nullptr;
   double fieldRefTimeStep = std::numeric_limits<float>::quiet_NaN();
 
@@ -44,6 +46,8 @@ class UsdVolume : public UsdBridgedBaseObject<UsdVolume, UsdVolumeData, UsdVolum
     ~UsdVolume();
 
     void remove(UsdDevice* device) override;
+
+    bool isInstanceable() const;
 
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdVolumeComponents::COLOR, "color"),

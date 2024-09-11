@@ -19,6 +19,7 @@ DEFINE_PARAMETER_MAP(UsdSurface,
   REGISTER_PARAMETER_MACRO("usd::time.material", ANARI_FLOAT64, materialRefTimeStep)
   REGISTER_PARAMETER_MACRO("geometry", GeometryType, geometry)
   REGISTER_PARAMETER_MACRO("material", MaterialType, material)
+  REGISTER_PARAMETER_MACRO("usd::isInstanceable", ANARI_BOOL, isInstanceable)
 )
 
 UsdSurface::UsdSurface(const char* name, UsdDevice* device)
@@ -39,6 +40,12 @@ UsdSurface::~UsdSurface()
 void UsdSurface::remove(UsdDevice* device)
 {
   applyRemoveFunc(device, &UsdBridge::DeleteSurface);
+}
+
+bool UsdSurface::isInstanceable() const
+{
+  const UsdSurfaceData& paramData = getReadParams();
+  return paramData.isInstanceable;
 }
 
 bool UsdSurface::deferCommit(UsdDevice* device)

@@ -47,4 +47,5 @@ class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHan
     std::vector<UsdInstanceHandle> instanceHandles; // for convenience
     std::vector<UsdSurfaceHandle> surfaceHandles; // for convenience
     std::vector<UsdVolumeHandle> volumeHandles; // for convenience
+    std::vector<int> instanceableValues; // for convenience
 };

@@ -19,6 +19,7 @@ struct UsdInstanceData
   UsdSharedString* usdName = nullptr;
 
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying.
+
   UsdGroup* group = nullptr;
   UsdFloatMat4 transform;
 };
@@ -31,6 +32,8 @@ class UsdInstance : public UsdBridgedBaseObject<UsdInstance, UsdInstanceData, Us
     ~UsdInstance();
 
     void remove(UsdDevice* device) override;
+
+    bool isInstanceable() const;
 
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdInstanceComponents::GROUP, "group"),

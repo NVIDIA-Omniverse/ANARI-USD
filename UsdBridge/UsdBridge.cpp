@@ -555,7 +555,7 @@ void UsdBridge::DeleteCamera(UsdCameraHandle handle)
 
 template<typename ParentHandleType, typename ChildHandleType>
 void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleType* childHandles, uint64_t numChildren, 
-  const char* refPathExt, bool timeVarying, double timeStep, bool instanceable)
+  const char* refPathExt, bool timeVarying, double timeStep, const int* instanceableValues)
 {
   if (parentHandle.value == nullptr) return;
   if(HasNullHandles(childHandles, numChildren)) return;
@@ -566,13 +566,14 @@ void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleTy
   BRIDGE_USDWRITER.ManageUnusedRefs(parentCache, childCaches, refPathExt, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   for (uint64_t i = 0; i < numChildren; ++i)
   {
-    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], refPathExt, timeVarying, timeStep, instanceable, Internals->RefModCallbacks);
+    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], refPathExt, timeVarying, timeStep,
+      instanceableValues && instanceableValues[i], Internals->RefModCallbacks);
   }
 }
 
-void UsdBridge::SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep)
+void UsdBridge::SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep, const int* instanceableValues)
 {
-  SetNoClipRefs(world, instances, numInstances, instancePathRp, timeVarying, timeStep);
+  SetNoClipRefs(world, instances, numInstances, instancePathRp, timeVarying, timeStep, instanceableValues);
 }
 
 void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep)
@@ -589,28 +590,24 @@ void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bo
   BRIDGE_USDWRITER.AddRef_NoClip(instanceCache, groupCache, nullptr, timeVarying, timeStep, instanceable, Internals->RefModCallbacks);
 }
 
-void UsdBridge::SetSurfaceRefs(UsdWorldHandle world, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
+void UsdBridge::SetSurfaceRefs(UsdWorldHandle world, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep, const int* instanceableValues)
 {
-  constexpr bool instanceable = true;
-
-  SetNoClipRefs(world, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, instanceable);
+  SetNoClipRefs(world, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, instanceableValues);
 }
 
-void UsdBridge::SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep)
+void UsdBridge::SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep, const int* instanceableValues)
 {
-  constexpr bool instanceable = true;
-
-  SetNoClipRefs(group, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, instanceable);
+  SetNoClipRefs(group, surfaces, numSurfaces, surfacePathRp, timeVarying, timeStep, instanceableValues);
 }
 
-void UsdBridge::SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep)
+void UsdBridge::SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep, const int* instanceableValues)
 {
-  SetNoClipRefs(world, volumes, numVolumes, volumePathRp, timeVarying, timeStep);
+  SetNoClipRefs(world, volumes, numVolumes, volumePathRp, timeVarying, timeStep, instanceableValues);
 }
 
-void UsdBridge::SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep)
+void UsdBridge::SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep, const int* instanceableValues)
 {
-  SetNoClipRefs(group, volumes, numVolumes, volumePathRp, timeVarying, timeStep);
+  SetNoClipRefs(group, volumes, numVolumes, volumePathRp, timeVarying, timeStep, instanceableValues);
 }
 
 void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep)

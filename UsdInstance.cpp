@@ -38,6 +38,11 @@ void UsdInstance::remove(UsdDevice* device)
   applyRemoveFunc(device, &UsdBridge::DeleteInstance);
 }
 
+bool UsdInstance::isInstanceable() const
+{
+  return false;
+}
+
 bool UsdInstance::deferCommit(UsdDevice* device)
 {
   const UsdInstanceData& paramData = getReadParams();
