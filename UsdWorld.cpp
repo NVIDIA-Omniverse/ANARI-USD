@@ -72,6 +72,47 @@ bool UsdWorld::doCommitData(UsdDevice* device)
   return false;
 }
 
+/*
+template<>
+void ManageRefArray<ANARI_INSTANCE, ANARIInstance, UsdInstance, UsdWorldHandle, UsdInstanceHandle>
+  (UsdWorldHandle parentHandle, UsdDataArray* childArray, bool refsTimeVarying, double timeStep, std::vector<UsdInstanceHandle>& tempChildHandles,
+  void (UsdBridge::*SetRefFunc)(UsdWorldHandle, const UsdInstanceHandle*, uint64_t, bool, double), void (UsdBridge::*DeleteRefFunc)(UsdWorldHandle, bool, double), 
+  UsdBridge* usdBridge, UsdLogInfo& logInfo, const char* typeErrorMsg)
+{
+  bool validRefs = AssertArrayType(childArray, ANARI_INSTANCE, logInfo, typeErrorMsg);
+
+  if(validRefs)
+  {
+    if (childArray)
+    {
+      const ANARIInstance* children = reinterpret_cast<const ANARIInstance*>(childArray->getData());
+
+      uint64_t numChildren = childArray->getLayout().numItems1;
+      tempChildHandles.resize(numChildren);
+      for (uint64_t i = 0; i < numChildren; ++i)
+      {
+        const UsdInstance* usdChild = reinterpret_cast<const UsdInstance*>(children[i]);
+        tempChildHandles[i] = usdChild->getUsdHandle();
+      }
+
+      (usdBridge->*SetRefFunc)(parentHandle, tempChildHandles.data(), numChildren, refsTimeVarying, timeStep);
+
+      for (uint64_t i = 0; i < numChildren; ++i)
+      {
+        const UsdInstance* usdChild = reinterpret_cast<const UsdInstance*>(children[i]);
+        tempChildHandles[i] = usdChild->testHandle;
+      }
+
+      (usdBridge->*SetRefFunc)(parentHandle, tempChildHandles.data(), numChildren, refsTimeVarying, -1.0f);
+    }
+    else
+    {
+      (usdBridge->*DeleteRefFunc)(parentHandle, refsTimeVarying, timeStep);
+    }
+  }
+}
+*/
+
 void UsdWorld::doCommitRefs(UsdDevice* device)
 {
   UsdBridge* usdBridge = device->getUsdBridge();

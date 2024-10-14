@@ -109,7 +109,7 @@ class UsdBridge
 
     template<typename ParentHandleType, typename ChildHandleType>
     void SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleType* childHandles, uint64_t numChildren, 
-      const char* refPathExt, bool timeVarying, double timeStep);
+      const char* refPathExt, bool timeVarying, double timeStep, bool instanceable = false);
 
     template<typename ParentHandleType>
     void DeleteAllRefs(ParentHandleType parentHandle, const char* refPathExt, bool timeVarying, double timeStep);

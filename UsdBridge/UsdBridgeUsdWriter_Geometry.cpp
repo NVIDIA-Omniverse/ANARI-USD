@@ -48,6 +48,33 @@ namespace
     UsdGeomPrimvarsAPI& timeVarPrimvars = primvarArgs.TimeVarPrimvars;\
     UsdGeomPrimvarsAPI& uniformPrimvars = primvarArgs.UniformPrimvars;
 
+
+  template<typename ReturnEltType = UsdBridgeNoneType>
+  UsdBridgeSpanI<ReturnEltType>* UpdateUsdAttribute_Safe( UsdBridgeRt& usdRtData,
+    const UsdBridgeLogObject& logObj, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements,
+    ::PXR_NS::UsdAttribute& attrib, ::PXR_NS::UsdTimeCode& timeCode, bool writeToAttrib = true)
+  {
+    UsdBridgeSpanI<ReturnEltType>* rtSpan = nullptr;
+
+    // Check if UsdRt has been able to convert the prim
+    if(usdRtData.ValidPrim())
+    {
+      // Route the attribute assignment through UsdRt/Fabric
+      rtSpan = usdRtData.UpdateUsdAttribute<ReturnEltType>(logObj, arrayData, arrayDataType, arrayNumElements, attrib,
+        timeCode, writeToAttrib);
+    }
+    else
+    {
+      // Route the attribute assignment through the usual PXR_NS namespace
+      UsdBridgeArrays::AttribSpanInit spanInit(arrayNumElements, attrib, timeCode);
+      spanInit.SetAutoAssignToAttrib(writeToAttrib);
+      rtSpan = UsdBridgeArrays::AssignArrayToAttribute<UsdBridgeArrays::AttribSpanInit, UsdBridgeArrays::AttribSpan, ReturnEltType>(
+        logObj, arrayData, arrayDataType, arrayNumElements, spanInit);
+    }
+
+    return rtSpan;
+  }
+
   template<typename UsdGeomType>
   UsdAttribute UsdGeomGetPointsAttribute(UsdGeomType& usdGeom) { return UsdAttribute(); }
 
@@ -120,7 +147,7 @@ namespace
 
       if(timeVarChecked)
       {
-        SdfValueTypeName primvarType = GetPrimvarAttribArrayType(attrib.DataType);
+        SdfValueTypeName primvarType = UsdBridgeArrays::GetAttribArrayType(attrib.DataType);
         if(primvarType == SdfValueTypeNames->BoolArray)
         {
           UsdBridgeLogMacro(writer->LogObject, UsdBridgeLogLevel::WARNING, "UsdGeom Attribute<" << attribIndex << "> primvar does not support source data type: " << attrib.DataType);
@@ -339,9 +366,11 @@ namespace
         size_t arrayNumElements = geomData.NumPoints;
         UsdBridgeType arrayDataType = geomData.PointsType;
 
+        UsdBridgeSpanI<GfVec3f>* pointSpan = UpdateUsdAttribute_Safe<GfVec3f>(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements, pointsAttr, timeCode);
+
         // USDRT_REM
         //UsdAttribute arrayPrimvar = pointsAttr;
-        //VtVec3fArray& usdVerts = GetStaticTempArray<VtVec3fArray>(arrayNumElements);
+        //VtVec3fArray& usdVerts = UsdBridgeArrays::GetStaticTempArray<VtVec3fArray>(arrayNumElements);
         //bool setPrimvar = true;
         //switch (geomData.PointsType)
         //{
@@ -349,8 +378,6 @@ namespace
         //case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_CUSTOM_ARRAY_MACRO(VtVec3fArray, GfVec3d, usdVerts); break; }
         //default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom PointsAttr should be FLOAT3 or DOUBLE3."); break; }
         //}
-
-        UsdBridgeSpanI<GfVec3f>* pointSpan = usdRtData.UpdateUsdAttribute<GfVec3f>(logObj, arrayData, arrayDataType, arrayNumElements, pointsAttr, timeCode, timeVaryingUpdate);
 
         if(pointSpan)
         {
@@ -388,41 +415,66 @@ namespace
 
       uint64_t numIndices = geomData.NumIndices;
 
-      VtArray<int>& usdVertexCounts = GetStaticTempArray<VtIntArray>(numPrims);
-      int vertexCount = numIndices / numPrims;
-      for (uint64_t i = 0; i < numPrims; ++i)
-        usdVertexCounts[i] = vertexCount;//geomData.FaceVertCounts[i];
-
       // Face Vertex counts
       UsdAttribute faceVertCountsAttr = outGeom->GetFaceVertexCountsAttr();
-      faceVertCountsAttr.Set(usdVertexCounts, timeCode);
+      int vertexCount = numIndices / numPrims;
 
-      if (!geomData.Indices)
+      UsdBridgeSpanI<int>* faceVertCountSpan = UpdateUsdAttribute_Safe<int>(usdRtData, logObj, nullptr, UsdBridgeType::INT, numPrims,
+        faceVertCountsAttr, timeCode); // By passing a nullptr as data, only the span will be returned
+
+      if(faceVertCountSpan)
       {
-        VtIntArray& tempIndices = GetStaticTempArray<VtIntArray>(numIndices);
-        for (uint64_t i = 0; i < numIndices; ++i)
-          tempIndices[i] = (int)i;
-
-        UsdAttribute arrayPrimvar = outGeom->GetFaceVertexIndicesAttr();
-        arrayPrimvar.Set(tempIndices, timeCode);
+        for(int& x : *faceVertCountSpan) x = vertexCount;
+        faceVertCountSpan->AssignToAttrib();
       }
-      else
-      {
-        // Face indices
-        const void* arrayData = geomData.Indices;
-        size_t arrayNumElements = numIndices;
-        UsdAttribute arrayPrimvar = outGeom->GetFaceVertexIndicesAttr();
-        bool setPrimvar = true;
 
-        switch (geomData.IndicesType)
+      //VtArray<int>& usdVertexCounts = UsdBridgeArrays::GetStaticTempArray<VtIntArray>(numPrims);
+      //for (uint64_t i = 0; i < numPrims; ++i)
+      //  usdVertexCounts[i] = vertexCount;//geomData.FaceVertCounts[i];
+      //faceVertCountsAttr.Set(usdVertexCounts, timeCode);
+
+      // Vertex indices
+      if(numIndices > 0)
+      {
+        const void* arrayData = geomData.Indices;
+        UsdBridgeType arrayDataType = geomData.IndicesType;
+        size_t arrayNumElements = numIndices;
+        UsdAttribute indicesAttr = outGeom->GetFaceVertexIndicesAttr();
+
+        UsdBridgeSpanI<int>* indicesSpan = UpdateUsdAttribute_Safe<int>(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements,
+          indicesAttr, timeCode);
+
+        // If arrayData was null, only the span will have been returned
+        if (!arrayData && indicesSpan)
         {
-        case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, uint64_t); break; }
-        case UsdBridgeType::LONG: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, int64_t); break; }
-        case UsdBridgeType::INT: {ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
-        case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom FaceVertexIndicesAttr should be (U)LONG or (U)INT."); break; }
+          int i = 0;
+          for(int& x : *indicesSpan) x = i++;
+          indicesSpan->AssignToAttrib();
         }
       }
+
+      //if (!arrayData && numIndices > 0)
+      //{
+      //  VtIntArray& tempIndices = UsdBridgeArrays::GetStaticTempArray<VtIntArray>(numIndices);
+      //  for (uint64_t i = 0; i < numIndices; ++i)
+      //    tempIndices[i] = (int)i;
+//
+      //  arrayData = &tempIndices[0];
+      //  arrayDataType = UsdBridgeType::INT;
+      //}
+
+
+      // USDRT_REM
+      // UsdAttribute arrayPrimvar = indicesAttr;
+      //bool setPrimvar = true;
+      //switch (geomData.IndicesType)
+      //{
+      //case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, uint64_t); break; }
+      //case UsdBridgeType::LONG: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtIntArray, int64_t); break; }
+      //case UsdBridgeType::INT: {ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
+      //case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
+      //default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom FaceVertexIndicesAttr should be (U)LONG or (U)INT."); break; }
+      //}
     }
   }
 
@@ -447,16 +499,20 @@ namespace
       if (geomData.Normals != nullptr)
       {
         const void* arrayData = geomData.Normals;
+        UsdBridgeType arrayDataType = geomData.NormalsType;
         size_t arrayNumElements = geomData.PerPrimNormals ? numPrims : geomData.NumPoints;
-        UsdAttribute arrayPrimvar = normalsAttr;
-        bool setPrimvar = true;
 
-        switch (geomData.NormalsType)
-        {
-        case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
-        case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom NormalsAttr should be FLOAT3 or DOUBLE3."); break; }
-        }
+        UpdateUsdAttribute_Safe(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements, normalsAttr, timeCode);
+
+        //UsdAttribute arrayPrimvar = normalsAttr;
+        //bool setPrimvar = true;
+//
+        //switch (geomData.NormalsType)
+        //{
+        //case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
+        //case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
+        //default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom NormalsAttr should be FLOAT3 or DOUBLE3."); break; }
+        //}
 
         // Per face or per-vertex interpolation. This will break timesteps that have been written before.
         TfToken normalInterpolation = geomData.PerPrimNormals ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
@@ -495,16 +551,20 @@ namespace
       if (texCoordAttrib.Data != nullptr)
       {
         const void* arrayData = texCoordAttrib.Data;
+        UsdBridgeType arrayDataType = texCoordAttrib.DataType;
         size_t arrayNumElements = texCoordAttrib.PerPrimData ? numPrims : geomData.NumPoints;
-        UsdAttribute arrayPrimvar = texcoordPrimvar;
-        bool setPrimvar = true;
 
-        switch (texCoordAttrib.DataType)
-        {
-        case UsdBridgeType::FLOAT2: { ASSIGN_PRIMVAR_MACRO(VtVec2fArray); break; }
-        case UsdBridgeType::DOUBLE2: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec2fArray, GfVec2d); break; }
-        default: { UsdBridgeLogMacro(writer->LogObject, UsdBridgeLogLevel::ERR, "UsdGeom st primvar should be FLOAT2 or DOUBLE2."); break; }
-        }
+        UpdateUsdAttribute_Safe(usdRtData, writer->LogObject, arrayData, arrayDataType, arrayNumElements, texcoordPrimvar, timeCode);
+
+        //UsdAttribute arrayPrimvar = texcoordPrimvar;
+        //bool setPrimvar = true;
+//
+        //switch (texCoordAttrib.DataType)
+        //{
+        //case UsdBridgeType::FLOAT2: { ASSIGN_PRIMVAR_MACRO(VtVec2fArray); break; }
+        //case UsdBridgeType::DOUBLE2: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec2fArray, GfVec2d); break; }
+        //default: { UsdBridgeLogMacro(writer->LogObject, UsdBridgeLogLevel::ERR, "UsdGeom st primvar should be FLOAT2 or DOUBLE2."); break; }
+        //}
 
         // Per face or per-vertex interpolation. This will break timesteps that have been written before.
         TfToken texcoordInterpolation = texCoordAttrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
@@ -528,13 +588,13 @@ namespace
     TfToken attribToken = bridgeAttrib.Name ? writer->AttributeNameToken(bridgeAttrib.Name) : AttribIndexToToken(attribIndex);
     UsdGeomPrimvar uniformPrimvar = uniformPrimvars.GetPrimvar(attribToken);
     // The uniform primvar has to exist, otherwise any timevarying data will be ignored as well
-    if(!uniformPrimvar || uniformPrimvar.GetTypeName() != GetPrimvarAttribArrayType(bridgeAttrib.DataType))
+    if(!uniformPrimvar || uniformPrimvar.GetTypeName() != UsdBridgeArrays::GetAttribArrayType(bridgeAttrib.DataType))
     {
       CreateUsdGeomAttributePrimvar(writer, uniformPrimvars, geomData, attribIndex); // No timeEval, to force attribute primvar creation on the uniform api
     }
 
     UsdGeomPrimvar timeVarPrimvar = timeVarPrimvars.GetPrimvar(attribToken);
-    if(!timeVarPrimvar || timeVarPrimvar.GetTypeName() != GetPrimvarAttribArrayType(bridgeAttrib.DataType)) // even though new clipstages initialize the correct primvar type/name, it may still be wrong for existing ones (or primstages if so configured)
+    if(!timeVarPrimvar || timeVarPrimvar.GetTypeName() != UsdBridgeArrays::GetAttribArrayType(bridgeAttrib.DataType)) // even though new clipstages initialize the correct primvar type/name, it may still be wrong for existing ones (or primstages if so configured)
     {
       CreateUsdGeomAttributePrimvar(writer, timeVarPrimvars, geomData, attribIndex, &timeEval);
     }
@@ -562,11 +622,11 @@ namespace
         {
           const void* arrayData = bridgeAttrib.Data;
           size_t arrayNumElements = bridgeAttrib.PerPrimData ? numPrims : geomData.NumPoints;
-          UsdAttribute arrayPrimvar = attributePrimvar;
+
+          UpdateUsdAttribute_Safe(usdRtData, writer->LogObject, arrayData, bridgeAttrib.DataType, arrayNumElements, attributePrimvar, timeCode);
 
           // USDRT_REM
-          //AssignAttribArrayToPrimvar(writer->LogObject, arrayData, bridgeAttrib.DataType, arrayNumElements, arrayPrimvar, timeCode);
-          usdRtData.UpdateUsdAttribute(writer->LogObject, arrayData, bridgeAttrib.DataType, arrayNumElements, arrayPrimvar, timeCode, timeVaryingUpdate);
+          //AssignAttribArrayToPrimvar(writer->LogObject, arrayData, bridgeAttrib.DataType, arrayNumElements, attributePrimvar, timeCode);
 
           // Per face or per-vertex interpolation. This will break timesteps that have been written before.
           TfToken attribInterpolation = bridgeAttrib.PerPrimData ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
@@ -617,9 +677,22 @@ namespace
       if (geomData.Colors != nullptr)
       {
         size_t arrayNumElements = geomData.PerPrimColors ? numPrims : geomData.NumPoints;
+        const void* arrayData = geomData.Colors;
+        UsdBridgeType arrayDataType = geomData.ColorsType;
         assert(colorAttrib);
 
-        AssignColorArrayToPrimvar(writer->LogObject, geomData.Colors, arrayNumElements, geomData.ColorsType, timeEval.Eval(DMI::COLORS), colorAttrib);
+        //AssignColorArrayToPrimvar(writer->LogObject, geomData.Colors, arrayNumElements, geomData.ColorsType, timeEval.Eval(DMI::COLORS), colorAttrib);
+
+        // Get a span of type GfVec4f
+        UsdBridgeSpanI<GfVec4f>* colorsSpan = UpdateUsdAttribute_Safe<GfVec4f>(usdRtData, writer->LogObject, nullptr, arrayDataType, arrayNumElements, colorAttrib, timeCode);
+
+        if(colorsSpan)
+        {
+          // Write full color array to the span, using its type
+          UsdBridgeArrays::WriteToSpanColor(writer->LogObject, *colorsSpan, arrayData, arrayNumElements, arrayDataType);
+          // Assign the span to the color attribute
+          colorsSpan->AssignToAttrib();
+        }
 
         // Per face or per-vertex interpolation. This will break timesteps that have been written before.
         TfToken colorInterpolation = geomData.PerPrimColors ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
@@ -655,17 +728,21 @@ namespace
       {
         const void* arrayData = geomData.InstanceIds;
         size_t arrayNumElements = geomData.NumPoints;
-        UsdAttribute arrayPrimvar = idsAttr;
-        bool setPrimvar = true;
+        UsdBridgeType arrayDataType = geomData.InstanceIdsType;
 
-        switch (geomData.InstanceIdsType)
-        {
-        case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
-        case UsdBridgeType::INT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, int); break; }
-        case UsdBridgeType::LONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
-        case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom IdsAttribute should be (U)LONG or (U)INT."); break; }
-        }
+        UpdateUsdAttribute_Safe(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements, idsAttr, timeCode);
+
+        //UsdAttribute arrayPrimvar = idsAttr;
+        //bool setPrimvar = true;
+//
+        //switch (geomData.InstanceIdsType)
+        //{
+        //case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
+        //case UsdBridgeType::INT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, int); break; }
+        //case UsdBridgeType::LONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
+        //case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
+        //default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom IdsAttribute should be (U)LONG or (U)INT."); break; }
+        //}
       }
       else
       {
@@ -692,33 +769,28 @@ namespace
 
       UsdAttribute widthsAttribute = outGeom.GetWidthsAttr();
       assert(widthsAttribute);
-      if (geomData.Scales)
-      {
-        const void* arrayData = geomData.Scales;
-        size_t arrayNumElements = geomData.NumPoints;
-        UsdAttribute arrayPrimvar = widthsAttribute;
-        bool setPrimvar = false;
+      const void* arrayData = geomData.Scales;
+      size_t arrayNumElements = geomData.NumPoints;
+      UsdBridgeType arrayDataType = geomData.ScalesType;
 
-        auto doubleFn = [](VtFloatArray& usdArray) { for(auto& x : usdArray) { x *= 2.0f; } };
-        switch (geomData.ScalesType)
-        {
-        case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO(VtFloatArray); doubleFn(usdArray); arrayPrimvar.Set(usdArray, timeCode); break; }
-        case UsdBridgeType::DOUBLE: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtFloatArray, double); doubleFn(usdArray); arrayPrimvar.Set(usdArray, timeCode); break; }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom WidthsAttribute should be FLOAT or DOUBLE."); break; }
-        }
+      // Remember that widths define a diameter, so a default width (1.0) corresponds to a scale of 0.5.
+      if(!arrayData && geomData.getUniformScale() == 0.5f)
+      {
+        widthsAttribute.Set(SdfValueBlock(), timeCode);
       }
       else
       {
-        // Remember that widths define a diameter, so a default width (1.0) corresponds to a scale of 0.5.
-        if(geomData.getUniformScale() != 0.5f)
+        UsdBridgeSpanI<float>* widthsSpan = UpdateUsdAttribute_Safe<float>(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements,
+          widthsAttribute, timeCode, false); // Don't update the attribute, just return the span (with written arrayData if applicable)
+
+        if(widthsSpan)
         {
-          VtFloatArray& usdWidths = GetStaticTempArray<VtFloatArray>(geomData.NumPoints);
-          for(auto& x : usdWidths) x = geomData.getUniformScale() * 2.0f;
-          widthsAttribute.Set(usdWidths, timeCode);
-        }
-        else
-        {
-          widthsAttribute.Set(SdfValueBlock(), timeCode);
+          if (arrayData)
+          { for(float& x : *widthsSpan) { x *= 2.0f; } }
+          else
+          { for(float& x : *widthsSpan) { x = geomData.getUniformScale() * 2.0f; } }
+
+          widthsSpan->AssignToAttrib();
         }
       }
     }
@@ -742,34 +814,25 @@ namespace
 
       UsdAttribute scalesAttribute = outGeom.GetScalesAttr();
       assert(scalesAttribute);
-      if (geomData.Scales)
-      {
-        const void* arrayData = geomData.Scales;
-        size_t arrayNumElements = geomData.NumPoints;
-        UsdAttribute arrayPrimvar = scalesAttribute;
-        bool setPrimvar = true;
 
-        switch (geomData.ScalesType)
-        {
-        case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO_1EXPAND3(VtVec3fArray, float); break;}
-        case UsdBridgeType::DOUBLE: {ASSIGN_PRIMVAR_MACRO_1EXPAND3(VtVec3fArray, double); break;}
-        case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
-        case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom ScalesAttribute should be FLOAT(3) or DOUBLE(3)."); break; }
-        }
+      const void* arrayData = geomData.Scales;
+      size_t arrayNumElements = geomData.NumPoints;
+      UsdBridgeType arrayDataType = geomData.ScalesType;
+
+      if(!arrayData && usdbridgenumerics::isIdentity(geomData.Scale))
+      {
+        scalesAttribute.Set(SdfValueBlock(), timeCode);
       }
       else
       {
-        if(!usdbridgenumerics::isIdentity(geomData.Scale))
+        UsdBridgeSpanI<GfVec3f>* scalesSpan = UpdateUsdAttribute_Safe<GfVec3f>(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements,
+            scalesAttribute, timeCode); // By passing a nullptr as data, only the span will be returned
+
+        if(!arrayData && scalesSpan)
         {
           GfVec3f defaultScale(geomData.Scale.Data);
-          VtVec3fArray& usdScales = GetStaticTempArray<VtVec3fArray>(geomData.NumPoints);
-          for(auto& x : usdScales) x = defaultScale;
-          scalesAttribute.Set(usdScales, timeCode);
-        }
-        else
-        {
-          scalesAttribute.Set(SdfValueBlock(), timeCode);
+          for(GfVec3f& x : *scalesSpan) x = defaultScale;
+          scalesSpan->AssignToAttrib();
         }
       }
     }
@@ -797,20 +860,24 @@ namespace
       {
         const void* arrayData = geomData.Orientations;
         size_t arrayNumElements = geomData.NumPoints;
-        UsdAttribute arrayPrimvar = normalsAttribute;
-        bool setPrimvar = true;
+        UsdBridgeType arrayDataType = geomData.OrientationsType;
 
-        switch (geomData.OrientationsType)
-        {
-        case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
-        case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom NormalsAttribute (orientations) should be FLOAT3 or DOUBLE3."); break; }
-        }
+        UpdateUsdAttribute_Safe(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements, normalsAttribute, timeCode);
+
+        //UsdAttribute arrayPrimvar = normalsAttribute;
+        //bool setPrimvar = true;
+//
+        //switch (geomData.OrientationsType)
+        //{
+        //case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO(VtVec3fArray); break; }
+        //case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtVec3fArray, GfVec3d); break; }
+        //default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom NormalsAttribute (orientations) should be FLOAT3 or DOUBLE3."); break; }
+        //}
       }
       else
       {
         //GfVec3f defaultNormal(1, 0, 0);
-        //VtVec3fArray& usdNormals = GetStaticTempArray<VtVec3fArray>(geomData.NumPoints);
+        //VtVec3fArray& usdNormals = UsdBridgeArrays::GetStaticTempArray<VtVec3fArray>(geomData.NumPoints);
         //for(auto& x : usdNormals) x = defaultNormal;
         //normalsAttribute.Set(usdNormals, timeCode);
         normalsAttribute.Set(SdfValueBlock(), timeCode);
@@ -837,37 +904,46 @@ namespace
       // Orientations
       UsdAttribute orientationsAttribute = outGeom.GetOrientationsAttr();
       assert(orientationsAttribute);
-      VtQuathArray& usdOrients = GetStaticTempArray<VtQuathArray>(geomData.NumPoints);
-      if (geomData.Orientations)
+      //VtQuathArray& usdOrients = UsdBridgeArrays::GetStaticTempArray<VtQuathArray>(geomData.NumPoints);
+      const void* arrayData = (UsdBridgeTypeNumComponents(geomData.OrientationsType) == 4) ? geomData.Orientations : nullptr;
+      size_t arrayNumElements = geomData.NumPoints;
+      UsdBridgeType arrayDataType = geomData.OrientationsType;
+
+      if(!geomData.Orientations && usdbridgenumerics::isIdentity(geomData.Orientation))
       {
-        switch (geomData.OrientationsType)
-        {
-        case UsdBridgeType::FLOAT3: { ConvertNormalsToQuaternions<float>(usdOrients, geomData.Orientations, geomData.NumPoints); break; }
-        case UsdBridgeType::DOUBLE3: { ConvertNormalsToQuaternions<double>(usdOrients, geomData.Orientations, geomData.NumPoints); break; }
-        case UsdBridgeType::FLOAT4:
-          {
-            for (uint64_t i = 0; i < geomData.NumPoints; ++i)
-            {
-              const float* orients = reinterpret_cast<const float*>(geomData.Orientations);
-              usdOrients[i] = GfQuath(orients[i * 4], orients[i * 4 + 1], orients[i * 4 + 2], orients[i * 4 + 3]);
-            }
-            break;
-          }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom OrientationsAttribute should be FLOAT3, DOUBLE3 or FLOAT4."); break; }
-        }
-        orientationsAttribute.Set(usdOrients, timeCode);
+        orientationsAttribute.Set(SdfValueBlock(), timeCode);
       }
       else
       {
-        if(!usdbridgenumerics::isIdentity(geomData.Orientation))
+        UsdBridgeSpanI<GfQuath>* orientsSpan = UpdateUsdAttribute_Safe<GfQuath>(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements,
+          orientationsAttribute, timeCode);
+
+        if(!arrayData && orientsSpan)
         {
-          GfQuath defaultOrient(geomData.Orientation.Data[0], geomData.Orientation.Data[1], geomData.Orientation.Data[2], geomData.Orientation.Data[3]);
-          for(auto& x : usdOrients) x = defaultOrient;
-          orientationsAttribute.Set(usdOrients, timeCode);
-        }
-        else
-        {
-          orientationsAttribute.Set(SdfValueBlock(), timeCode);
+          if (geomData.Orientations)
+          {
+            bool supportedType = true;
+            switch (geomData.OrientationsType)
+            {
+            case UsdBridgeType::FLOAT3: { ConvertNormalsToQuaternions<float>(*orientsSpan, geomData.Orientations); break; }
+            case UsdBridgeType::DOUBLE3: { ConvertNormalsToQuaternions<double>(*orientsSpan, geomData.Orientations); break; }
+            default: { supportedType = false; break; }
+            }
+
+            if(supportedType)
+              orientsSpan->AssignToAttrib();
+            else
+            {
+              UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom OrientationsAttribute should be a 4-component vector, FLOAT3 or DOUBLE3.");
+            }
+          }
+          else // => !usdbridgenumerics::isIdentity(geomData.Orientation)
+          {
+            // Assign a single orientation everywhere
+            GfQuath defaultOrient(geomData.Orientation.Data[0], geomData.Orientation.Data[1], geomData.Orientation.Data[2], geomData.Orientation.Data[3]);
+            for(GfQuath& x : *orientsSpan) x = defaultOrient;
+            orientsSpan->AssignToAttrib();
+          }
         }
       }
     }
@@ -882,7 +958,6 @@ namespace
     bool performsUpdate = updateEval.PerformsUpdate(DMI::SHAPEINDICES);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::SHAPEINDICES);
 
-
     if (performsUpdate)
     {
       UsdTimeCode timeCode = timeEval.Eval(DMI::SHAPEINDICES);
@@ -891,25 +966,17 @@ namespace
       UsdAttribute protoIndexAttr = outGeom->GetProtoIndicesAttr();
       assert(protoIndexAttr);
 
-      //Shape indices
-      if(geomData.ShapeIndices)
-      {
-        const void* arrayData = geomData.ShapeIndices;
-        size_t arrayNumElements = geomData.NumPoints;
-        UsdAttribute arrayPrimvar = protoIndexAttr;
-        bool setPrimvar = true;
+      const void* arrayData = geomData.ShapeIndices;
+      size_t arrayNumElements = geomData.NumPoints;
+      UsdBridgeType arrayDataType = UsdBridgeType::INT;
 
-        switch (geomData.OrientationsType)
-        {
-        case UsdBridgeType::INT: {ASSIGN_PRIMVAR_MACRO(VtIntArray); break; }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom ProtoIndicesAttr (ShapeIndices) should be INT."); break; }
-        }
-      }
-      else
+      UsdBridgeSpanI<int>* protoIdxSpan = UpdateUsdAttribute_Safe<int>(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements,
+          protoIndexAttr, timeCode); // By passing a nullptr as data, only the span will be returned
+
+      if(!arrayData && protoIdxSpan)
       {
-        VtIntArray& protoIndices = GetStaticTempArray<VtIntArray>(geomData.NumPoints);
-        for(auto& x : protoIndices) x = 0;
-        protoIndexAttr.Set(protoIndices, timeCode);
+        for(int& x : *protoIdxSpan) x = 0;
+        protoIdxSpan->AssignToAttrib();
       }
     }
   }
@@ -935,11 +1002,17 @@ namespace
       assert(linearVelocitiesAttribute);
       if (geomData.LinearVelocities)
       {
-        GfVec3f* linVels = (GfVec3f*)geomData.LinearVelocities;
+        const void* arrayData = geomData.LinearVelocities;
+        size_t arrayNumElements = geomData.NumPoints;
+        UsdBridgeType arrayDataType = UsdBridgeType::FLOAT3; // as per type and numcomponents of geomData.AngularVelocities
 
-        VtVec3fArray& usdVelocities = GetStaticTempArray<VtVec3fArray>(geomData.NumPoints);
-        usdVelocities.assign(linVels, linVels + geomData.NumPoints);
-        linearVelocitiesAttribute.Set(usdVelocities, timeCode);
+        UpdateUsdAttribute_Safe(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements, linearVelocitiesAttribute, timeCode);
+
+        //GfVec3f* linVels = (GfVec3f*)geomData.LinearVelocities;
+//
+        //VtVec3fArray& usdVelocities = UsdBridgeArrays::GetStaticTempArray<VtVec3fArray>(geomData.NumPoints);
+        //usdVelocities.assign(linVels, linVels + geomData.NumPoints);
+        //linearVelocitiesAttribute.Set(usdVelocities, timeCode);
       }
       else
       {
@@ -969,11 +1042,17 @@ namespace
       assert(angularVelocitiesAttribute);
       if (geomData.AngularVelocities)
       {
-        GfVec3f* angVels = (GfVec3f*)geomData.AngularVelocities;
+        const void* arrayData = geomData.AngularVelocities;
+        size_t arrayNumElements = geomData.NumPoints;
+        UsdBridgeType arrayDataType = UsdBridgeType::FLOAT3; // as per type and numcomponents of geomData.AngularVelocities
 
-        VtVec3fArray& usdAngularVelocities = GetStaticTempArray<VtVec3fArray>(geomData.NumPoints);
-        usdAngularVelocities.assign(angVels, angVels + geomData.NumPoints);
-        angularVelocitiesAttribute.Set(usdAngularVelocities, timeCode);
+        UpdateUsdAttribute_Safe(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements, angularVelocitiesAttribute, timeCode);
+
+        //GfVec3f* angVels = (GfVec3f*)geomData.AngularVelocities;
+
+        //VtVec3fArray& usdAngularVelocities = UsdBridgeArrays::GetStaticTempArray<VtVec3fArray>(geomData.NumPoints);
+        //usdAngularVelocities.assign(angVels, angVels + geomData.NumPoints);
+        //angularVelocitiesAttribute.Set(usdAngularVelocities, timeCode);
       }
       else
       {
@@ -1006,17 +1085,21 @@ namespace
       {
         const void* arrayData = geomData.InvisibleIds;
         size_t arrayNumElements = numInvisibleIds;
-        UsdAttribute arrayPrimvar = invisIdsAttr;
-        bool setPrimvar = true;
+        UsdBridgeType arrayDataType = geomData.InvisibleIdsType;
 
-        switch (geomData.InvisibleIdsType)
-        {
-        case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
-        case UsdBridgeType::INT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, int); break; }
-        case UsdBridgeType::LONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
-        case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
-        default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom GetInvisibleIdsAttr should be (U)LONG or (U)INT."); break; }
-        }
+        UpdateUsdAttribute_Safe(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements, invisIdsAttr, timeCode);
+
+        //UsdAttribute arrayPrimvar = invisIdsAttr;
+        //bool setPrimvar = true;
+//
+        //switch (geomData.InvisibleIdsType)
+        //{
+        //case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, unsigned int); break; }
+        //case UsdBridgeType::INT: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtInt64Array, int); break; }
+        //case UsdBridgeType::LONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
+        //case UsdBridgeType::ULONG: {ASSIGN_PRIMVAR_MACRO(VtInt64Array); break; }
+        //default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom GetInvisibleIdsAttr should be (U)LONG or (U)INT."); break; }
+        //}
       }
       else
       {
@@ -1047,10 +1130,14 @@ namespace
 
       const void* arrayData = geomData.CurveLengths;
       size_t arrayNumElements = geomData.NumCurveLengths;
-      UsdAttribute arrayPrimvar = vertCountAttr;
-      bool setPrimvar = true;
+      UsdBridgeType arrayDataType = UsdBridgeType::INT; // as per type of geomData.CurveLengths
 
-      { ASSIGN_PRIMVAR_MACRO(VtIntArray); }
+      UpdateUsdAttribute_Safe(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements, vertCountAttr, timeCode);
+
+      //UsdAttribute arrayPrimvar = vertCountAttr;
+      //bool setPrimvar = true;
+
+      //{ ASSIGN_PRIMVAR_MACRO(VtIntArray); }
     }
   }
 

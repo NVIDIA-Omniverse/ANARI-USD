@@ -118,6 +118,13 @@ set(USDBRIDGE_SOURCES
 
 add_library(UsdBridge STATIC ${USDBRIDGE_SOURCES})
 
+if (WIN32)
+  set_source_files_properties(
+    ${CMAKE_CURRENT_LIST_DIR}/UsdBridgeRt.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/UsdBridgeUsdWriter_Geometry.cpp
+    PROPERTIES COMPILE_FLAGS /bigobj)
+endif()
+
 # Includes
 
 target_include_directories(UsdBridge
@@ -174,7 +181,6 @@ target_link_libraries(UsdBridge
 
 option(USD_DEVICE_USE_USDRT "Enable usage of USDRT by supplying <USDRT/CARBSDK>_<INCLUDE/BIN>_DIR and CUDAToolkit_ROOT" OFF)
 cmake_dependent_option(USD_DEVICE_USE_FABRIC "Enable usage of Fabric" OFF "USD_DEVICE_USE_USDRT" OFF)
-cmake_dependent_option(USD_DEVICE_STANDALONE_CARBSDK "Use a standalone Carbonite SDK by supplying CARBSDK_LIB" OFF "USD_DEVICE_USE_USDRT" OFF)
 if(${USD_DEVICE_USE_USDRT})
   find_package(CUDAToolkit)
   target_include_directories(UsdBridge
@@ -192,9 +198,6 @@ if(${USD_DEVICE_USE_USDRT})
   target_compile_definitions(UsdBridge PRIVATE USE_USDRT)
   if(${USD_DEVICE_USE_FABRIC})
     target_compile_definitions(UsdBridge PRIVATE USE_FABRIC)
-  endif()
-  if(${USD_DEVICE_STANDALONE_CARBSDK})
-    target_compile_definitions(UsdBridge PRIVATE STANDALONE_CARBSDK)
   endif()
 endif()
 
@@ -236,7 +239,7 @@ if(${INSTALL_USD_DEPS})
       DESTINATION ${PLATFORM_INSTALL_LIBDIR})
 
   #Install CarbSdk
-  if(${USD_DEVICE_STANDALONE_CARBSDK})
+  if(${USD_DEVICE_USE_USDRT})
     install(
       DIRECTORY "${USDRT_BIN_DIR}/"
       DESTINATION ${PLATFORM_INSTALL_LIBDIR}

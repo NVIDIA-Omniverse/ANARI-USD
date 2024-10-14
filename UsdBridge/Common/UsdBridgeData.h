@@ -229,7 +229,7 @@ namespace UsdBridgeTypeTraits
   DEFINE_USDBRIDGETYPE_SCALARTYPE(USHORT2, uint16_t)
   DEFINE_USDBRIDGETYPE_SCALARTYPE(SHORT2, int16_t)
   DEFINE_USDBRIDGETYPE_SCALARTYPE(UINT2, uint32_t)
-  DEFINE_USDBRIDGETYPE_SCALARTYPE(INT2, int)
+  DEFINE_USDBRIDGETYPE_SCALARTYPE(INT2, int32_t)
   DEFINE_USDBRIDGETYPE_SCALARTYPE(ULONG2, uint64_t)
   DEFINE_USDBRIDGETYPE_SCALARTYPE(LONG2, int64_t)
   DEFINE_USDBRIDGETYPE_SCALARTYPE(FLOAT2, float)
@@ -463,8 +463,8 @@ struct UsdBridgeInstancerData
   const void* Colors = nullptr;
   UsdBridgeType ColorsType = UsdBridgeType::UNDEFINED;
   static constexpr bool PerPrimColors = false; // For compatibility
-  const float* LinearVelocities = nullptr;
-  const float* AngularVelocities = nullptr;
+  const float* LinearVelocities = nullptr; // 3 component float
+  const float* AngularVelocities = nullptr; // 3 component float
   const UsdBridgeAttribute* Attributes = nullptr; // Pointer to externally managed attribute array
   uint32_t NumAttributes = 0;
   const void* InstanceIds = nullptr; 
@@ -817,6 +817,8 @@ class UsdBridgeSpanI
     virtual EltType* end() = 0;
     virtual const EltType* end() const = 0;
     virtual size_t size() const = 0;
+
+    virtual void AssignToAttrib() = 0;
 };
 
 #endif

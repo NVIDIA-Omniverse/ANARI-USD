@@ -16,15 +16,21 @@
 #include <usdrt/scenegraph/usd/usd/attribute.h>
 #include <usdrt/scenegraph/usd/usdGeom/tokens.h>
 #include <usdrt/scenegraph/usd/usdGeom/primvarsAPI.h>
+#include <omni/fabric/stage/PrimBucketList.h>
+#include <omni/fabric/stage/StageReaderWriter.h>
 #endif
 
 #ifdef USE_USDRT
 using UsdRtStageRefPtrType = usdrt::UsdStageRefPtr;
 using UsdRtPrimType = usdrt::UsdPrim;
+using UsdRtAttribType = usdrt::UsdAttribute;
+using UsdRtRelationshipType = usdrt::UsdRelationship;
 using UsdRtSdfPathType = usdrt::SdfPath;
 #else
 using UsdRtStageRefPtrType = PXR_NS::UsdStagePtr;
 using UsdRtPrimType = PXR_NS::UsdPrim;
+using UsdRtAttribType = PXR_NS::UsdAttribute;
+using UsdRtRelationshipType = PXR_NS::UsdRelationship;
 using UsdRtSdfPathType = PXR_NS::SdfPath;
 #endif
 
@@ -34,8 +40,6 @@ namespace
   {
 #ifdef USE_USDRT
     PXR_NS::UsdStageCache& stageCache = PXR_NS::UsdUtilsStageCache::Get();
-
-    usdrt::UsdStageRefPtr stage = usdrt::UsdStage::Open("./data/test.usda");
 
     // If stage doesn't exist in stagecache, insert
     PXR_NS::UsdStageCache::Id usdStageId = stageCache.GetId(usdStage);
@@ -57,27 +61,135 @@ class UsdBridgeRtInternals
   public:
     UsdBridgeRtInternals(const PXR_NS::UsdStagePtr& sceneStage, const PXR_NS::UsdStagePtr& timeVarStage, const PXR_NS::SdfPath& primPath)
     {
+      PxrSceneStage = sceneStage;
       SceneStage = ToUsdRtStage(sceneStage);
-      TimeVarStage = ToUsdRtStage(timeVarStage);
+
+//#ifdef USE_FABRIC
+      omni::fabric::StageReaderWriterId stageReaderWriterId = SceneStage->GetStageReaderWriterId();
+      StageReaderWriter = omni::fabric::StageReaderWriter(stageReaderWriterId);
+//#endif
 
 #ifdef USE_USDRT
-      RtPrimPath = primPath.GetString();
+      std::string pathString = primPath.GetString();
+      ClassPrimPath = pathString;
+
+      FindUniformPrim(SceneStage->GetPrimAtPath(usdrt::SdfPath("/Root")));
+
+      // Get every Mesh prim with a extent attribute in Fabric
+      const omni::fabric::Token extentAttribName("faceVertexCounts");
+      omni::fabric::AttrNameAndType extentAttrib(omni::fabric::Type(omni::fabric::BaseDataType::eInt, 1, 1), extentAttribName);
+      omni::fabric::AttrNameAndType mesh(
+        omni::fabric::Type(omni::fabric::BaseDataType::eTag, 1, 0, omni::fabric::AttributeRole::ePrimTypeName),
+        omni::fabric::Token("Mesh"));
+      omni::fabric::PrimBucketList buckets = StageReaderWriter.findPrims({ extentAttrib, mesh });
+
+      // Iterate over the buckets that match the query
+      for (size_t bucketId = 0; bucketId < buckets.bucketCount(); bucketId++)
+      {
+        auto primPaths = StageReaderWriter.getPathArray(buckets, bucketId);
+
+        auto attribs = StageReaderWriter.getAttributeNamesAndTypes(buckets, bucketId);
+
+        for (omni::fabric::Path primPath : primPaths)
+        {
+          UsdRtSdfPathType sdfPrimPath(primPath.getText());
+
+          if(sdfPrimPath.GetNameToken() == ClassPrimPath.GetNameToken())
+          {
+#ifdef USE_FABRIC
+            UniformFabricPath = primPath;
 #else
-      RtPrimPath = primPath;
+            UniformPrim = SceneStage->GetPrimAtPath(sdfPrimPath);
 #endif
 
-      UniformPrim = this->SceneStage->GetPrimAtPath(RtPrimPath);
-      assert(UniformPrim);
+            bool hasAttrib = UniformPrim.HasAttribute(usdrt::TfToken("primvars:attribute0"));
 
-      TimeVarPrim = this->TimeVarStage->GetPrimAtPath(RtPrimPath);
-      assert(TimeVarPrim);
+            for(const omni::fabric::AttrNameAndType& attribNameType : attribs)
+            {
+              const char* nameText = attribNameType.name.getText();
+              nameText = nameText;
+            }
+            //UsdRtRelationshipType protoRel = rtPrim.GetRelationship(usdrt::TfToken("_protoPath"));
+            //if (protoRel)
+            //{
+            //  usdrt::SdfPathVector targets;
+            //  protoRel.GetTargets(&targets);
+            //  for(auto& relTarget : targets)
+            //  {
+            //    std::string relString = relTarget.GetString();
+//
+            //    UniformPrim = SceneStage->GetPrimAtPath(relTarget);
+            //    assert(UniformPrim);
+            //  }
+            //}
+          }
+        }
+      }
+#else
+      ClassPrimPath = primPath;
+      UniformPrim = PxrSceneStage->GetPrimAtPath(ClassPrimPath);
+#endif
     }
 
+#ifdef USE_USDRT
+    void ReCalc()
+    {
+      SceneStage = ToUsdRtStage(PxrSceneStage);
+#ifdef USE_FABRIC
+      UniformFabricPath = omni::fabric::Path();
+#else
+      UniformPrim = UsdRtPrimType();
+#endif
+      //FindUniformPrim(PxrSceneStage->GetPrimAtPath(PXR_NS::SdfPath("/Root")));
+
+    }
+
+    void FindUniformPrim(usdrt::UsdPrim rootPrim)
+    {
+      UsdRtPrimType rtPrim = rootPrim;
+      //UsdRtPrimType rtPrim = SceneStage->GetPrimAtPath(
+      //  rootPrim.GetPath().GetString()
+      //  );
+//
+      if(rtPrim && rtPrim.GetPath().GetNameToken() == ClassPrimPath.GetNameToken())
+      {
+        UniformPrim = rtPrim;
+
+        //bool hasAttrib = UniformPrim.HasAttribute(usdrt::TfToken("primvars:attribute0"));
+        //hasAttrib = hasAttrib;
+
+        //UsdRtRelationshipType protoRel = rtPrim.GetRelationship(usdrt::TfToken("_protoPath"));
+        //if (protoRel)
+        //{
+        //  usdrt::SdfPathVector targets;
+        //  protoRel.GetTargets(&targets);
+        //  for(auto& relTarget : targets)
+        //  {
+        //    std::string relString = relTarget.GetString();
+//
+        //    UniformPrim = SceneStage->GetPrimAtPath(relTarget);
+        //    assert(UniformPrim);
+        //  }
+        //}
+      }
+//
+      for(auto& childPrim : rootPrim.GetFilteredChildren(PXR_NS::UsdTraverseInstanceProxies()))
+      {
+        FindUniformPrim(childPrim);
+      }
+    }
+#endif
+
+    PXR_NS::UsdStagePtr PxrSceneStage;
     UsdRtStageRefPtrType SceneStage;
-    UsdRtStageRefPtrType TimeVarStage;
-    UsdRtSdfPathType RtPrimPath;
+    UsdRtSdfPathType ClassPrimPath;
+#ifdef USE_FABRIC
+    omni::fabric::StageReaderWriter StageReaderWriter;
+    omni::fabric::Path UniformFabricPath;
+#else
+    omni::fabric::StageReaderWriter StageReaderWriter;
     UsdRtPrimType UniformPrim;
-    UsdRtPrimType TimeVarPrim;
+#endif
 };
 
 UsdBridgeRt::UsdBridgeRt(const PXR_NS::UsdStagePtr& sceneStage, const PXR_NS::UsdStagePtr& timeVarStage, const PXR_NS::SdfPath& primPath)
@@ -101,24 +213,42 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 #ifdef USE_FABRIC
 
-#include <usdrt_only/omni/fabric/stage/StageReaderWriter.h>
-
 struct UsdBridgeFabricSpanInit
 {
   UsdBridgeFabricSpanInit(
     size_t numElements,
     omni::fabric::Path& primPath,
     omni::fabric::Token& attrName,
+    ::PXR_NS::SdfValueTypeName attrValueType,
     omni::fabric::StageReaderWriter& stageReaderWriter)
     : PrimPath(primPath)
     , AttrName(attrName)
+    , AttrValueType(attrValueType)
     , StageReaderWriter(stageReaderWriter)
   {
     stageReaderWriter.setArrayAttributeSize(primPath, attrName, numElements);
+    size_t checkSize = stageReaderWriter.getArrayAttributeSize(primPath, attrName);
+    checkSize = checkSize;
+  }
+
+  const char* GetAttribName()
+  {
+    return AttrName.getText();
+  }
+
+  ::PXR_NS::SdfValueTypeName GetAttribValueType()
+  {
+    return AttrValueType;
+  }
+
+  bool GetAutoAssignToAttrib() const
+  {
+    return false; // Not relevant for fabric spans, since AssignToAttrib does nothing
   }
 
   omni::fabric::Path& PrimPath;
   omni::fabric::Token& AttrName;
+  ::PXR_NS::SdfValueTypeName AttrValueType;
   omni::fabric::StageReaderWriter& StageReaderWriter;
 };
 
@@ -163,7 +293,7 @@ class UsdBridgeFabricSpan : public UsdBridgeSpanI<EltType>
       return AttribSpan.size();
     }
 
-    void assignToPrimvar()
+    void AssignToAttrib() override
     {}
 
     gsl::span<EltType> AttribSpan;
@@ -172,41 +302,39 @@ class UsdBridgeFabricSpan : public UsdBridgeSpanI<EltType>
 
 template<typename ReturnEltType>
 UsdBridgeSpanI<ReturnEltType>* UsdBridgeRt::UpdateUsdAttribute(const UsdBridgeLogObject& logObj, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements,
-  const ::PXR_NS::UsdAttribute& attrib, const ::PXR_NS::UsdTimeCode& timeCode, bool timeVaryingUpdate)
+  const ::PXR_NS::UsdAttribute& attrib, const ::PXR_NS::UsdTimeCode& timeCode, bool writeToAttrib)
 {
-  ::PXR_NS::SdfValueTypeName attribValueType = attrib.GetTypeName();
+  //ReCalc(); //fix
+
   using RtReturnEltType = UsdBridgeTypeTraits::PxrToRtEltType<ReturnEltType>::Type;
 
 #ifdef USE_FABRIC
-
-  omni::fabric::StageReaderWriterId stageReaderWriterId = (timeVaryingUpdate ? Internals->TimeVarStage : Internals->SceneStage)->GetStageReaderWriterId();
-  omni::fabric::StageReaderWriter stageReaderWriter(stageReaderWriterId);
-
   const std::string& attribName = attrib.GetName().GetString();
-  omni::fabric::Path fPrimPath(attrib.GetPrimPath().GetString().c_str());
   omni::fabric::Token fAttribName(attribName.c_str());
 
-  UsdBridgeFabricSpanInit fabricSpanInit(arrayNumElements, fPrimPath, fAttribName, stageReaderWriter);
-  UsdBridgeSpanI<RtReturnEltType>* rtSpan = AssignArrayToAttribute<UsdBridgeFabricSpanInit, UsdBridgeFabricSpan, RtReturnEltType>(
-    logObj, arrayData, arrayDataType, arrayNumElements, attribValueType, fabricSpanInit);
+  UsdBridgeFabricSpanInit fabricSpanInit(arrayNumElements, Internals->UniformFabricPath, fAttribName, attrib.GetTypeName(), Internals->StageReaderWriter);
+  UsdBridgeSpanI<RtReturnEltType>* rtSpan = UsdBridgeArrays::AssignArrayToAttribute<UsdBridgeFabricSpanInit, UsdBridgeFabricSpan, RtReturnEltType>(
+    logObj, arrayData, arrayDataType, arrayNumElements, fabricSpanInit);
 
 #else
 
 #ifdef USE_USDRT
-  UsdPrim rtPrim = timeVaryingUpdate ? Internals->TimeVarPrim : Internals->UniformPrim;
+  UsdPrim rtPrim = Internals->UniformPrim;
   const std::string& attribName = attrib.GetName().GetString();
     
   UsdAttribute rtAttrib = rtPrim.GetAttribute(attribName);
   UsdTimeCode rtTimeCode(timeCode.GetValue());
+
 #else
   UsdAttribute rtAttrib = attrib;
   UsdTimeCode rtTimeCode = timeCode;
 #endif
   assert(rtAttrib);
 
-  AttribSpanInit spanInit(arrayNumElements, &rtAttrib, &rtTimeCode);
-  UsdBridgeSpanI<RtReturnEltType>* rtSpan = AssignArrayToAttribute<AttribSpanInit, AttribSpan, RtReturnEltType>(
-    logObj, arrayData, arrayDataType, arrayNumElements, attribValueType, spanInit);
+  UsdBridgeArrays::AttribSpanInit spanInit(arrayNumElements, attrib.GetTypeName(), rtAttrib, rtTimeCode);
+  spanInit.SetAutoAssignToAttrib(writeToAttrib);
+  UsdBridgeSpanI<RtReturnEltType>* rtSpan = UsdBridgeArrays::AssignArrayToAttribute<UsdBridgeArrays::AttribSpanInit, UsdBridgeArrays::AttribSpan, RtReturnEltType>(
+    logObj, arrayData, arrayDataType, arrayNumElements, spanInit);
 
 #endif
 
@@ -214,10 +342,30 @@ UsdBridgeSpanI<ReturnEltType>* UsdBridgeRt::UpdateUsdAttribute(const UsdBridgeLo
   return reinterpret_cast<UsdBridgeSpanI<ReturnEltType>*>(rtSpan);
 }
 
+void UsdBridgeRt::ReCalc()
+{
+#ifdef USE_USDRT
+  Internals->ReCalc();
+#endif
+}
+
+bool UsdBridgeRt::ValidPrim()
+{
+#ifdef USE_FABRIC
+  return Internals->UniformFabricPath != omni::fabric::Path();
+#else
+  return Internals->UniformPrim.IsValid();
+#endif
+}
+
 #define UPDATE_USD_ATTRIBUTE_EXPLICIT_DEFINITION(SpecializedEltType)\
   template UsdBridgeSpanI<SpecializedEltType>* UsdBridgeRt::UpdateUsdAttribute<SpecializedEltType>(const UsdBridgeLogObject& logObj,\
     const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements,\
-    const ::PXR_NS::UsdAttribute& attrib, const ::PXR_NS::UsdTimeCode& timeCode, bool timeVaryingUpdate);
+    const ::PXR_NS::UsdAttribute& attrib, const ::PXR_NS::UsdTimeCode& timeCode, bool writeToAttrib);
 
 UPDATE_USD_ATTRIBUTE_EXPLICIT_DEFINITION(UsdBridgeNoneType)
+UPDATE_USD_ATTRIBUTE_EXPLICIT_DEFINITION(int)
+UPDATE_USD_ATTRIBUTE_EXPLICIT_DEFINITION(float)
 UPDATE_USD_ATTRIBUTE_EXPLICIT_DEFINITION(::PXR_NS::GfVec3f)
+UPDATE_USD_ATTRIBUTE_EXPLICIT_DEFINITION(::PXR_NS::GfVec4f)
+UPDATE_USD_ATTRIBUTE_EXPLICIT_DEFINITION(::PXR_NS::GfQuath)

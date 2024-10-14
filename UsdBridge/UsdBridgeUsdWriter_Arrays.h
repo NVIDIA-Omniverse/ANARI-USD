@@ -67,7 +67,9 @@ namespace UsdBridgeTypeTraits
 
   template<typename PxrEltType>
   struct PxrToRtEltType
-  {};
+  {
+    using Type = std::enable_if_t<std::is_scalar_v<PxrEltType>, PxrEltType>;
+  };
   #define PXR_ELTTYPE_TO_RT_ELTTYPE(TypePxrElt, TypeRtElt)\
     template<>\
     struct PxrToRtEltType<TypePxrElt>\
@@ -76,9 +78,14 @@ namespace UsdBridgeTypeTraits
     };
   PXR_ELTTYPE_TO_RT_ELTTYPE(UsdBridgeNoneType, UsdBridgeNoneType)
   PXR_ELTTYPE_TO_RT_ELTTYPE(::PXR_NS::GfVec3f, GfVec3f)
+  PXR_ELTTYPE_TO_RT_ELTTYPE(::PXR_NS::GfVec4f, GfVec4f)
+  PXR_ELTTYPE_TO_RT_ELTTYPE(::PXR_NS::GfQuath, GfQuath)
 }
 
 namespace
+{ //internal linkage
+
+namespace UsdBridgeArrays
 {
   template<typename T0, typename T1>
   struct CanCopyType
@@ -99,8 +106,8 @@ namespace
   DEFINE_CANCOPY_SIGNED_UNSIGNED(char, unsigned char)
   DEFINE_CANCOPY_SIGNED_UNSIGNED(short, unsigned short)
   DEFINE_CANCOPY_SIGNED_UNSIGNED(int, unsigned int)
+  DEFINE_CANCOPY_SIGNED_UNSIGNED(int8_t, uint8_t)
   DEFINE_CANCOPY_SIGNED_UNSIGNED(int64_t, uint64_t)
-
 
   template<typename ArrayType>
   ArrayType& GetStaticTempArray(size_t numElements)
@@ -110,24 +117,27 @@ namespace
     return array;
   }
 
-  template<typename SpanInitType, template <typename T> class SpanI, typename AttributeUsdBaseType>
-  SpanI<AttributeUsdBaseType>& GetStaticSpan(SpanInitType& destSpanInit)
+  template<typename SpanInitType, template <typename T> class SpanI, typename AttributeCType>
+  SpanI<AttributeCType>& GetStaticSpan(SpanInitType& destSpanInit)
   {
-    thread_local static SpanI<AttributeUsdBaseType> destSpan(destSpanInit);
-    destSpan = SpanI<AttributeUsdBaseType>(destSpanInit);
+    thread_local static SpanI<AttributeCType> destSpan(destSpanInit);
+    destSpan = SpanI<AttributeCType>(destSpanInit);
     return destSpan;
   }
 
   template<typename ElementType>
   void WriteToSpanCopy(const void* data, size_t numElements, UsdBridgeSpanI<ElementType>& destSpan)
   {
+    assert(destSpan.size() == numElements);
     ElementType* typedData = (ElementType*)data;
-    std::copy(typedData, typedData+numElements, destSpan.begin());
+    if(numElements > 0)
+      std::copy(typedData, typedData+numElements, destSpan.begin());
   }
 
   template<typename DestType, typename SourceType>
   void WriteToSpanConvert(const void* data, size_t numElements, UsdBridgeSpanI<DestType>& destSpan)
   {
+    assert(destSpan.size() == numElements);
     SourceType* typedData = (SourceType*)data;
     DestType* destArray = destSpan.begin();
     for (int i = 0; i < numElements; ++i)
@@ -139,6 +149,7 @@ namespace
   template<typename DestType, typename SourceType>
   void WriteToSpanConvertQuat(const void* data, size_t numElements, UsdBridgeSpanI<DestType>& destSpan)
   {
+    assert(destSpan.size() == numElements);
     using DestScalarType = typename DestType::ScalarType;
     SourceType* typedSrcData = (SourceType*)data;
     DestType* destArray = destSpan.begin();
@@ -155,6 +166,7 @@ namespace
   template<typename DestType, typename SourceScalarType, int NumComponents>
   void WriteToSpanConvertVector(const void* data, size_t numElements, UsdBridgeSpanI<DestType>& destSpan)
   {
+    assert(destSpan.size() == numElements);
     using DestScalarType = typename DestType::ScalarType;
     const SourceScalarType* typedSrcData = (SourceScalarType*)data;
     DestType* destArray = destSpan.begin();
@@ -165,9 +177,122 @@ namespace
     }
   }
 
+  template<typename InputEltType, int numComponents>
+  void WriteToSpanExpandToColor(const void* data, uint64_t numElements, UsdBridgeSpanI<GfVec4f>& destSpan)
+  {
+    assert(destSpan.size() == numElements);
+    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
+    size_t i = 0;
+    // No memcopies, as input is not guaranteed to be of float type
+    if(numComponents == 1)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(typedInput[i], 0.0f, 0.0f, 1.0f); ++i; }
+    if(numComponents == 2)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(typedInput[i*2], typedInput[i*2+1], 0.0f, 1.0f); ++i; }
+    if(numComponents == 3)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(typedInput[i*3], typedInput[i*3+1], typedInput[i*3+2], 1.0f); ++i; }
+  }
 
+  template<typename InputEltType, int numComponents>
+  void WriteToSpanExpandToColorNormalize(const void* data, uint64_t numElements, UsdBridgeSpanI<GfVec4f>& destSpan)
+  {
+    assert(destSpan.size() == numElements);
+    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
+    double normFactor = 1.0 / (double)std::numeric_limits<InputEltType>::max(); // float may not be enough for uint32_t
+    // No memcopies, as input is not guaranteed to be of float type
+    size_t i = 0;
+    if(numComponents == 1)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(typedInput[i]*normFactor, 0.0f, 0.0f, 1.0f); ++i; }
+    if(numComponents == 2)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(typedInput[i*2]*normFactor, typedInput[i*2+1]*normFactor, 0.0f, 1.0f); ++i; }
+    if(numComponents == 3)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(typedInput[i*3]*normFactor, typedInput[i*3+1]*normFactor, typedInput[i*3+2]*normFactor, 1.0f); ++i; }
+    if(numComponents == 4)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(typedInput[i*4]*normFactor, typedInput[i*4+1]*normFactor, typedInput[i*4+2]*normFactor, typedInput[i*4+3]*normFactor); ++i; }
+  }
 
+  template<int numComponents>
+  void WriteToSpanExpandSRGBToColor(const void* data, uint64_t numElements, UsdBridgeSpanI<GfVec4f>& destSpan)
+  {
+    assert(destSpan.size() == numElements);
+    const unsigned char* typedInput = reinterpret_cast<const unsigned char*>(data);
+    float normFactor = 1.0f / 255.0f;
+    const float* srgbTable = ubutils::SrgbToLinearTable();
+    // No memcopies, as input is not guaranteed to be of float type
+    size_t i = 0;
+    if(numComponents == 1)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(srgbTable[typedInput[i]], 0.0f, 0.0f, 1.0f); ++i; }
+    if(numComponents == 2)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(srgbTable[typedInput[i*2]], 0.0f, 0.0f, typedInput[i*2+1]*normFactor); ++i; } // Alpha is linear
+    if(numComponents == 3)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(srgbTable[typedInput[i*3]], srgbTable[typedInput[i*3+1]], srgbTable[typedInput[i*3+2]], 1.0f); ++i; }
+    if(numComponents == 4)
+      for (auto& destElt : destSpan)
+      { destElt = GfVec4f(srgbTable[typedInput[i*4]], srgbTable[typedInput[i*4+1]], srgbTable[typedInput[i*4+2]], typedInput[i*4+3]*normFactor); ++i; }
+  }
 
+  #define WRITE_SPAN_MACRO(EltType) \
+    WriteToSpanCopy<EltType>(arrayData, arrayNumElements, destSpan)
+
+  #define WRITE_SPAN_MACRO_CONVERT(DestType, SrcType) \
+    WriteToSpanConvert<DestType, SrcType>(arrayData, arrayNumElements, destSpan)
+
+  #define WRITE_SPAN_MACRO_EXPAND_COL(EltType, NumComponents) \
+    WriteToSpanExpandToColor<EltType, NumComponents>(arrayData, arrayNumElements, destSpan)
+
+  #define WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(EltType, NumComponents) \
+    WriteToSpanExpandToColorNormalize<EltType, NumComponents>(arrayData, arrayNumElements, destSpan)
+
+  #define WRITE_SPAN_MACRO_EXPAND_SGRB(NumComponents) \
+    WriteToSpanExpandSRGBToColor<NumComponents>(arrayData, arrayNumElements, destSpan)
+
+  // Assigns color data array to GfVec4f span
+  void WriteToSpanColor(const UsdBridgeLogObject& logObj, UsdBridgeSpanI<GfVec4f>& destSpan,
+    const void* arrayData, size_t arrayNumElements, UsdBridgeType arrayType)
+  {
+    switch (arrayType)
+    {
+      case UsdBridgeType::UCHAR: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint8_t, 1); break; }
+      case UsdBridgeType::UCHAR2: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint8_t, 2); break; }
+      case UsdBridgeType::UCHAR3: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint8_t, 3); break; }
+      case UsdBridgeType::UCHAR4: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint8_t, 4); break; }
+      case UsdBridgeType::UCHAR_SRGB_R: {WRITE_SPAN_MACRO_EXPAND_SGRB(1); break; }
+      case UsdBridgeType::UCHAR_SRGB_RA: {WRITE_SPAN_MACRO_EXPAND_SGRB(2); break; }
+      case UsdBridgeType::UCHAR_SRGB_RGB: {WRITE_SPAN_MACRO_EXPAND_SGRB(3); break; }
+      case UsdBridgeType::UCHAR_SRGB_RGBA: {WRITE_SPAN_MACRO_EXPAND_SGRB(4); break; }
+      case UsdBridgeType::USHORT: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint16_t, 1); break; }
+      case UsdBridgeType::USHORT2: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint16_t, 2); break; }
+      case UsdBridgeType::USHORT3: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint16_t, 3); break; }
+      case UsdBridgeType::USHORT4: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint16_t, 4); break; }
+      case UsdBridgeType::UINT: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint32_t, 1); break; }
+      case UsdBridgeType::UINT2: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint32_t, 2); break; }
+      case UsdBridgeType::UINT3: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint32_t, 3); break; }
+      case UsdBridgeType::UINT4: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint32_t, 4); break; }
+      case UsdBridgeType::FLOAT: {WRITE_SPAN_MACRO_EXPAND_COL(float, 1); break; }
+      case UsdBridgeType::FLOAT2: {WRITE_SPAN_MACRO_EXPAND_COL(float,2); break; }
+      case UsdBridgeType::FLOAT3: {WRITE_SPAN_MACRO_EXPAND_COL(float, 3); break; }
+      case UsdBridgeType::FLOAT4: {WRITE_SPAN_MACRO(GfVec4f); break; }
+      case UsdBridgeType::DOUBLE: {WRITE_SPAN_MACRO_EXPAND_COL(double, 1); break; }
+      case UsdBridgeType::DOUBLE2: {WRITE_SPAN_MACRO_EXPAND_COL(double, 2); break; }
+      case UsdBridgeType::DOUBLE3: {WRITE_SPAN_MACRO_EXPAND_COL(double, 3); break; }
+      case UsdBridgeType::DOUBLE4: {WRITE_SPAN_MACRO_CONVERT(GfVec4f, GfVec4d); break; }
+      default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4) or UCHAR_SRGB_<X>."); break; }
+    }
+  }
+}
+
+#if 0
+namespace
+{
 
     // Array assignment
   template<class ArrayType>
@@ -217,102 +342,47 @@ namespace
       (*usdArray)[i] = typename ArrayType::ElementType(typedInput[i], typedInput[i], typedInput[i]);
     }
   }
-
-  template<typename InputEltType, int numComponents>
-  void ExpandToColor(const void* data, uint64_t numElements, const UsdTimeCode& timeCode, VtArray<GfVec4f>* usdArray)
-  {
-    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
-    // No memcopies, as input is not guaranteed to be of float type
-    if(numComponents == 1)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i], 0.0f, 0.0f, 1.0f);
-    if(numComponents == 2)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*2], typedInput[i*2+1], 0.0f, 1.0f);
-    if(numComponents == 3)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*3], typedInput[i*3+1], typedInput[i*3+2], 1.0f);
-  }
-
-  template<typename InputEltType, int numComponents>
-  void ExpandToColorNormalize(const void* data, uint64_t numElements, const UsdTimeCode& timeCode, VtArray<GfVec4f>* usdArray)
-  {
-    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
-    double normFactor = 1.0 / (double)std::numeric_limits<InputEltType>::max(); // float may not be enough for uint32_t
-    // No memcopies, as input is not guaranteed to be of float type
-    if(numComponents == 1)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i]*normFactor, 0.0f, 0.0f, 1.0f);
-    if(numComponents == 2)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*2]*normFactor, typedInput[i*2+1]*normFactor, 0.0f, 1.0f);
-    if(numComponents == 3)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*3]*normFactor, typedInput[i*3+1]*normFactor, typedInput[i*3+2]*normFactor, 1.0f);
-    if(numComponents == 4)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(typedInput[i*4]*normFactor, typedInput[i*4+1]*normFactor, typedInput[i*4+2]*normFactor, typedInput[i*4+3]*normFactor);
-  }
-
-  template<int numComponents>
-  void ExpandSRGBToColor(const void* data, uint64_t numElements, const UsdTimeCode& timeCode, VtArray<GfVec4f>* usdArray)
-  {
-    const unsigned char* typedInput = reinterpret_cast<const unsigned char*>(data);
-    float normFactor = 1.0f / 255.0f;
-    const float* srgbTable = ubutils::SrgbToLinearTable();
-    // No memcopies, as input is not guaranteed to be of float type
-    if(numComponents == 1)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i]], 0.0f, 0.0f, 1.0f);
-    if(numComponents == 2)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i*2]], 0.0f, 0.0f, typedInput[i*2+1]*normFactor); // Alpha is linear
-    if(numComponents == 3)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i*3]], srgbTable[typedInput[i*3+1]], srgbTable[typedInput[i*3+2]], 1.0f);
-    if(numComponents == 4)
-      for (int i = 0; i < numElements; ++i)
-        (*usdArray)[i] = GfVec4f(srgbTable[typedInput[i*4]], srgbTable[typedInput[i*4+1]], srgbTable[typedInput[i*4+2]], typedInput[i*4+3]*normFactor);
-  }
 }
 
 #define ASSIGN_SET_PRIMVAR if(setPrimvar) arrayPrimvar.Set(usdArray, timeCode)
 #define ASSIGN_PRIMVAR_MACRO(ArrayType) \
-  ArrayType& usdArray = GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_FLATTEN_MACRO(ArrayType) \
-  ArrayType& usdArray = GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvarFlatten<ArrayType>(arrayData, arrayDataType, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvarFlatten<ArrayType>(arrayData, arrayDataType, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_CONVERT_MACRO(ArrayType, EltType) \
-  ArrayType& usdArray = GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(ArrayType, EltType) \
-  ArrayType& usdArray = GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvarConvertFlatten<ArrayType, EltType>(arrayData, arrayDataType, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvarConvertFlatten<ArrayType, EltType>(arrayData, arrayDataType, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_CUSTOM_ARRAY_MACRO(ArrayType, customArray) \
   ArrayType& usdArray = customArray; AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_CONVERT_CUSTOM_ARRAY_MACRO(ArrayType, EltType, customArray) \
   ArrayType& usdArray = customArray; AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_1EXPAND3(ArrayType, EltType) \
-  ArrayType& usdArray = GetStaticTempArray<ArrayType>(arrayNumElements); Expand1ToVec3<ArrayType, EltType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); Expand1ToVec3<ArrayType, EltType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+
+
 #define ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColor<EltType, 1>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColor<EltType, 1>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColor<EltType, 2>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColor<EltType, 2>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColor<EltType, 3>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColor<EltType, 3>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 1>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 1>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 2>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 2>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 3>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 3>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 4>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 4>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_1EXPAND_SGRB() \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<1>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<1>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_2EXPAND_SGRB() \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<2>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<2>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_3EXPAND_SGRB() \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<3>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<3>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 #define ASSIGN_PRIMVAR_MACRO_4EXPAND_SGRB() \
-  VtArray<GfVec4f>& usdArray = GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<4>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
+  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<4>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
 
 #define GET_USDARRAY_REF usdArrayRef = &usdArray
 
@@ -354,22 +424,65 @@ namespace
     return usdArrayRef;
   }
 
+}
+#endif
 
 
-
+namespace UsdBridgeArrays
+{
   struct AttribSpanInit
   {
+    // Standard 4-argument constructor, template only required for conditional compilation of the next constructor
+    template<typename U = SdfValueTypeName>
     AttribSpanInit(size_t numElements,
-      UsdAttribute* attrib = nullptr,
-      UsdTimeCode* timeCode = nullptr)
+      ::PXR_NS::SdfValueTypeName attribValueType,
+      UsdAttribute& attrib,
+      UsdTimeCode& timeCode)
       : NumElements(numElements)
+      , AttribValueType(attribValueType)
       , Attrib(attrib)
       , TimeCode(timeCode)
-    {}
+    {
+    }
 
-    size_t NumElements;
-    UsdAttribute* Attrib;
-    UsdTimeCode* TimeCode;
+    // Only compile when we are in a PXR_NS namespace for easier construction.
+    template<typename U = SdfValueTypeName,
+      std::enable_if_t<std::is_same_v<::PXR_NS::SdfValueTypeName, U>, bool> = true>
+    AttribSpanInit(size_t numElements,
+      UsdAttribute& attrib,
+      UsdTimeCode& timeCode)
+      : NumElements(numElements)
+      , AttribValueType(attrib.GetTypeName())
+      , Attrib(attrib)
+      , TimeCode(timeCode)
+    {
+    }
+
+    const char* GetAttribName()
+    {
+      return Attrib.GetName().GetText();
+    }
+
+    ::PXR_NS::SdfValueTypeName GetAttribValueType()
+    {
+      return AttribValueType;
+    }
+
+    void SetAutoAssignToAttrib(bool assign)
+    {
+      AutoAssignToAttrib = assign;
+    }
+
+    bool GetAutoAssignToAttrib() const
+    {
+      return AutoAssignToAttrib;
+    }
+
+    size_t NumElements = 0;
+    ::PXR_NS::SdfValueTypeName AttribValueType;
+    UsdAttribute Attrib;
+    UsdTimeCode TimeCode;
+    bool AutoAssignToAttrib = true;
   };
 
   template<typename EltType>
@@ -414,66 +527,17 @@ namespace
         return AttribArray->size();
       }
 
-      void assignToPrimvar()
+      void AssignToAttrib() override
       {
-        if(SpanInit.Attrib)
-          SpanInit.Attrib->Set(*AttribArray, SpanInit.TimeCode ? *(SpanInit.TimeCode) : UsdTimeCode::Default());
+        SpanInit.Attrib.Set(*AttribArray, SpanInit.TimeCode);
       }
 
       AttribSpanInit SpanInit;
       VtArray<EltType>* AttribArray;
   };
 
-  template<typename SpanInitType, template <typename T> class SpanI, typename AttributeUsdBaseType, UsdBridgeType ArrayEltType>
-  UsdBridgeSpanI<AttributeUsdBaseType>* WriteSpanToPrimvar(const UsdBridgeLogObject& logObj, SpanInitType& destSpanInit, const void* arrayData, size_t arrayNumElements)
-  {
-    constexpr UsdBridgeType AttributeEltType = typename UsdBridgeTypeTraits::UsdBaseToBridgeType<AttributeUsdBaseType>::Type; 
-    constexpr int attributeNumComponents = UsdBridgeTypeTraits::NumComponents<AttributeEltType>::Value;
-    constexpr int arrayNumComponents = UsdBridgeTypeTraits::NumComponents<ArrayEltType>::Value;
-    using AttributeScalarType = typename UsdBridgeTypeTraits::ScalarType<AttributeEltType>::Type;
-    using ArrayScalarType = typename UsdBridgeTypeTraits::ScalarType<ArrayEltType>::Type;
-
-    if constexpr(arrayNumComponents == attributeNumComponents)
-    {
-      SpanI<AttributeUsdBaseType>& destSpan = GetStaticSpan<SpanInitType, SpanI, AttributeUsdBaseType>(destSpanInit);
-
-      if(arrayNumElements > 0)// Explicitly don't write/assign, just return the span
-      {
-        constexpr bool canDirectCopy = CanCopyType<ArrayScalarType, AttributeScalarType>::Value;
-        constexpr bool canConvert = std::is_constructible<AttributeScalarType, ArrayScalarType>::value;
-
-        if constexpr(canDirectCopy)
-          WriteToSpanCopy<AttributeUsdBaseType>(arrayData, arrayNumElements, destSpan);
-        else if constexpr(canConvert)
-        {
-          if constexpr(arrayNumComponents == 1)
-            WriteToSpanConvert<AttributeUsdBaseType, ArrayScalarType>(arrayData, arrayNumElements, destSpan);
-          else if constexpr(
-            std::is_same<AttributeUsdBaseType, GfQuath>::value || 
-            std::is_same<AttributeUsdBaseType, GfQuatf>::value ||
-            std::is_same<AttributeUsdBaseType, GfQuatd>::value)
-            WriteToSpanConvertQuat<AttributeUsdBaseType, ArrayScalarType>(arrayData, arrayNumElements, destSpan);
-          else
-            WriteToSpanConvertVector<AttributeUsdBaseType, ArrayScalarType, arrayNumComponents>(arrayData, arrayNumElements, destSpan);
-        }
-        else
-        {
-          UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Cannot convert array data of type: " << ubutils::UsdBridgeTypeToString(ArrayEltType) << " to attribute data type: " << ubutils::UsdBridgeTypeToString(AttributeEltType))
-          return nullptr;
-        }
-        destSpan.assignToPrimvar();
-      }
-      return &destSpan;
-    }
-    else
-    {
-      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Different number of components between array data type: " << ubutils::UsdBridgeTypeToString(ArrayEltType) << " and attribute data type: " << ubutils::UsdBridgeTypeToString(AttributeEltType));
-    }
-    return nullptr;
-  }
-
-    // Make sure types correspond to AssignAttribArrayToPrimvar()
-  SdfValueTypeName GetPrimvarAttribArrayType(UsdBridgeType eltType)
+    // Make sure types correspond to AssignArrayToAttribute()
+  SdfValueTypeName GetAttribArrayType(UsdBridgeType eltType)
   {
     assert(eltType != UsdBridgeType::UNDEFINED);
 
@@ -529,15 +593,76 @@ namespace
     return result;
   }
 
+  // Creates the span using AttributeCType (the type to write to), since at this point both the span and proper type are known.
+  template<typename SpanInitType, template <typename T> class SpanI, typename AttributeCType, UsdBridgeType ArrayEltBridgeType>
+  UsdBridgeSpanI<AttributeCType>* WriteSpanToAttrib(const UsdBridgeLogObject& logObj, SpanInitType& destSpanInit, const void* arrayData, size_t arrayNumElements)
+  {
+    // Also uses a bunch of type traits to figure out whether to copy/convert/expand
+    constexpr UsdBridgeType AttributeEltType = typename UsdBridgeTypeTraits::UsdBaseToBridgeType<AttributeCType>::Type; 
+    constexpr int attributeNumComponents = UsdBridgeTypeTraits::NumComponents<AttributeEltType>::Value;
+    constexpr int arrayNumComponents = UsdBridgeTypeTraits::NumComponents<ArrayEltBridgeType>::Value;
+    using AttributeScalarCType = typename UsdBridgeTypeTraits::ScalarType<AttributeEltType>::Type;
+    using ArrayScalarCType = typename UsdBridgeTypeTraits::ScalarType<ArrayEltBridgeType>::Type;
+
+    // Actual span creation with the dest type AttributeCType
+    SpanI<AttributeCType>& destSpan = GetStaticSpan<SpanInitType, SpanI, AttributeCType>(destSpanInit);
+    size_t destSpanSize = destSpan.size();
+
+    if(destSpanSize != arrayNumElements)
+    {
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Usd Attribute span size (" << destSpanSize << ") does not correspond to number of array elements to write (" << arrayNumElements << "), so copy is aborted");
+      return nullptr;
+    }
+
+    if(arrayData != nullptr) // If null, explicitly don't write/assign, just return the span
+    {
+      if constexpr(arrayNumComponents == attributeNumComponents)
+      {
+        constexpr bool canDirectCopy = CanCopyType<ArrayScalarCType, AttributeScalarCType>::Value;
+        constexpr bool canConvert = std::is_constructible<AttributeScalarCType, ArrayScalarCType>::value;
+
+        if constexpr(canDirectCopy)
+          WriteToSpanCopy<AttributeCType>(arrayData, arrayNumElements, destSpan);
+        else if constexpr(canConvert)
+        {
+          if constexpr(arrayNumComponents == 1)
+            WriteToSpanConvert<AttributeCType, ArrayScalarCType>(arrayData, arrayNumElements, destSpan);
+          else if constexpr(
+            std::is_same<AttributeCType, GfQuath>::value ||
+            std::is_same<AttributeCType, GfQuatf>::value ||
+            std::is_same<AttributeCType, GfQuatd>::value)
+            WriteToSpanConvertQuat<AttributeCType, ArrayScalarCType>(arrayData, arrayNumElements, destSpan);
+          else
+            WriteToSpanConvertVector<AttributeCType, ArrayScalarCType, arrayNumComponents>(arrayData, arrayNumElements, destSpan);
+        }
+        else
+        {
+          UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Cannot convert array data of type: " << ubutils::UsdBridgeTypeToString(ArrayEltBridgeType) << " to attribute data type: " << ubutils::UsdBridgeTypeToString(AttributeEltType))
+          return nullptr;
+        }
+
+        // Check if assign is desired
+        if(destSpanInit.GetAutoAssignToAttrib())
+          destSpan.AssignToAttrib();
+      }
+      else
+      {
+        UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Different number of components between array data type: " << ubutils::UsdBridgeTypeToString(ArrayEltBridgeType) << " and attribute data type: " << ubutils::UsdBridgeTypeToString(AttributeEltType));
+        return nullptr;
+      }
+    }
+    return &destSpan;
+  }
+
   template<typename SpanInitType, template <typename T> class SpanI,
-    typename AttributeUsdBaseType, UsdBridgeType ArrayEltType, typename ReturnEltType>
-  void WriteSpanToPrimvar_Filter(const UsdBridgeLogObject& logObj, 
+    typename AttributeCType, UsdBridgeType ArrayEltBridgeType, typename ReturnEltType>
+  void WriteSpanToAttrib_Return(const UsdBridgeLogObject& logObj, 
     SpanInitType& destSpanInit, const void* arrayData, size_t arrayNumElements, UsdBridgeSpanI<ReturnEltType>*& resultSpan)
   {
-    UsdBridgeSpanI<AttributeUsdBaseType>* writeSpan = WriteSpanToPrimvar<SpanInitType, SpanI, AttributeUsdBaseType, ArrayEltType>
+    UsdBridgeSpanI<AttributeCType>* writeSpan = WriteSpanToAttrib<SpanInitType, SpanI, AttributeCType, ArrayEltBridgeType>
       (logObj, destSpanInit, arrayData, arrayNumElements);
 
-    if constexpr(std::is_same<ReturnEltType, AttributeUsdBaseType>::value)
+    if constexpr(std::is_same<ReturnEltType, AttributeCType>::value)
       resultSpan = writeSpan;
     else if constexpr(!std::is_same<ReturnEltType, UsdBridgeNoneType>::value)
     {
@@ -546,68 +671,68 @@ namespace
     }
   }
 
-  #define WRITE_SPAN_TO_PRIMVAR(ArrayEltType)\
-    case ArrayEltType:\
+  #define WRITE_SPAN_TO_ATTRIB(ArrayEltBridgeType)\
+    case ArrayEltBridgeType:\
     {\
-      WriteSpanToPrimvar_Filter<SpanInitType, SpanI, AttributeUsdBaseType, ArrayEltType, ReturnEltType>\
+      WriteSpanToAttrib_Return<SpanInitType, SpanI, AttributeCType, ArrayEltBridgeType, ReturnEltType>\
         (logObj, destSpanInit, arrayData, arrayNumElements, resultSpan);\
       break;\
     }
 
-  template<typename AttributeUsdBaseType, typename SpanInitType, template <typename T> class SpanI, typename ReturnEltType>
+  template<typename AttributeCType, typename SpanInitType, template <typename T> class SpanI, typename ReturnEltType>
   UsdBridgeSpanI<ReturnEltType>* AssignArrayToTypedAttribute(const UsdBridgeLogObject& logObj, 
     SpanInitType& destSpanInit, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements)
   {
     UsdBridgeSpanI<ReturnEltType>* resultSpan = nullptr;
     switch (arrayDataType)
     {
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::UCHAR)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::CHAR)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::USHORT)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::SHORT)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::UINT)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::INT)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::LONG)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::ULONG)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::HALF)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::FLOAT)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::DOUBLE)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::UCHAR)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::CHAR)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::USHORT)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::SHORT)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::UINT)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::INT)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::LONG)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::ULONG)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::HALF)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::FLOAT)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::DOUBLE)
 
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::UCHAR2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::CHAR2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::USHORT2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::SHORT2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::INT2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::UINT2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::LONG2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::ULONG2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::HALF2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::FLOAT2)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::DOUBLE2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::UCHAR2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::CHAR2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::USHORT2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::SHORT2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::INT2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::UINT2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::LONG2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::ULONG2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::HALF2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::FLOAT2)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::DOUBLE2)
 
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::UCHAR3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::CHAR3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::USHORT3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::SHORT3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::INT3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::UINT3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::LONG3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::ULONG3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::HALF3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::FLOAT3)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::DOUBLE3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::UCHAR3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::CHAR3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::USHORT3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::SHORT3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::INT3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::UINT3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::LONG3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::ULONG3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::HALF3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::FLOAT3)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::DOUBLE3)
 
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::UCHAR4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::CHAR4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::USHORT4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::SHORT4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::INT4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::UINT4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::LONG4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::ULONG4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::HALF4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::FLOAT4)
-      WRITE_SPAN_TO_PRIMVAR(UsdBridgeType::DOUBLE4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::UCHAR4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::CHAR4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::USHORT4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::SHORT4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::INT4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::UINT4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::LONG4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::ULONG4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::HALF4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::FLOAT4)
+      WRITE_SPAN_TO_ATTRIB(UsdBridgeType::DOUBLE4)
 
       default:
       {
@@ -618,8 +743,8 @@ namespace
     return resultSpan;
   }
 
-  #define MAP_VALUETYPE_TO_BASETYPE(SdfVTN, TypeUsdBase)\
-    ValueTypeToAssignArrayMap.emplace(::PXR_NS::SdfVTN.GetType(), AssignArrayToTypedAttribute<TypeUsdBase, SpanInitType, SpanI, ReturnEltType>);
+  #define MAP_VALUETYPE_TO_BASETYPE(SdfVTN, AttribCType)\
+    ValueTypeToAssignArrayMap.emplace(::PXR_NS::SdfVTN.GetType(), AssignArrayToTypedAttribute<AttribCType, SpanInitType, SpanI, ReturnEltType>);
 
   // The assign array map essentially determines for any runtime attribute sdfvaluetype, which span element type should be employed (completing the span type)
   template<typename SpanInitType, template <typename T> class SpanI, typename ReturnEltType>
@@ -682,15 +807,17 @@ namespace
 
   template<typename SpanInitType = AttribSpanInit, template <typename T> class SpanI = AttribSpan, typename ReturnEltType = UsdBridgeNoneType>
   UsdBridgeSpanI<ReturnEltType>* AssignArrayToAttribute(const UsdBridgeLogObject& logObj, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, 
-    const ::PXR_NS::SdfValueTypeName& attribValueType, SpanInitType& destSpanInit = SpanInitType(arrayNumElements))
+    SpanInitType& destSpanInit = SpanInitType(arrayNumElements))
   {
     static AssignArrayMapType<SpanInitType, SpanI, ReturnEltType> assignArrayMap;
 
     // Find the array assignment specialization for the runtime attribute value type, and execute it if available
+    auto attribValueType = destSpanInit.GetAttribValueType();
     auto assignArrayEntry = assignArrayMap.ValueTypeToAssignArrayMap.find(attribValueType.GetType());
     if(assignArrayEntry != assignArrayMap.ValueTypeToAssignArrayMap.end())
     {
-      auto resultSpan = assignArrayEntry->second(logObj, destSpanInit, arrayData, arrayDataType, arrayNumElements);
+      auto assignArrayFunc = assignArrayEntry->second;
+      auto resultSpan = assignArrayFunc(logObj, destSpanInit, arrayData, arrayDataType, arrayNumElements);
 
       // If the caller expects a span and none is returned, raise an error message
       if constexpr(!std::is_same<ReturnEltType, UsdBridgeNoneType>::value)
@@ -698,7 +825,7 @@ namespace
         if(!resultSpan)
         {
           UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, 
-            "UsdGeom PointsAttr did not return writeable memory after update;\
+            "Update of UsdAttribute " << destSpanInit.GetAttribName() << " with an array did not return writeable memory after update;\
             data array and attribute types cannot be converted or are not supported, or the span and attribute types do not match - see previous errors");
         }
       }
@@ -712,8 +839,11 @@ namespace
     return nullptr;
   }
 
+}
 
-
+#if 0
+namespace
+{
 
   // Make sure types correspond to GetPrimvarAttribArrayType()
   void AssignAttribArrayToPrimvar(const UsdBridgeLogObject& logObj, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, UsdAttribute& arrayPrimvar, const UsdTimeCode& timeCode)
@@ -781,5 +911,8 @@ namespace
     };
   }
 }
+#endif
+
+} // internal linkage
 
 #endif

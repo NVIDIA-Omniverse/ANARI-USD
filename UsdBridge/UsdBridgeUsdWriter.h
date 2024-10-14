@@ -90,7 +90,7 @@ public:
 
   SdfPath AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, double parentTimeStep,
-    const RefModFuncs& refModCallbacks);
+    const RefModFuncs& refModCallbacks, bool instanceable = false);
   SdfPath AddRef(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, bool valueClip, bool clipStages, const char* clipPostFix,
     double parentTimeStep, double childTimeStep,
@@ -101,7 +101,7 @@ public:
   SdfPath AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
     bool timeVarying, bool valueClip, bool clipStages, const char* clipPostFix,
     double parentTimeStep, double childTimeStep,
-    const RefModFuncs& refModCallbacks);
+    const RefModFuncs& refModCallbacks, bool instanceable = false);
   void RemoveAllRefs(UsdBridgePrimCache* parentCache, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
   void RemoveAllRefs(UsdStageRefPtr stage, UsdBridgePrimCache* parentCache, SdfPath childBasePath, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);
   void ManageUnusedRefs(UsdBridgePrimCache* parentCache, const UsdBridgePrimCacheList& newChildren, const char* refPathExt, bool timeVarying, double timeStep, AtRemoveRefFunc atRemoveRef);

@@ -723,9 +723,10 @@ void UsdBridgeUsdWriter::UpdateClipMetaData(const UsdPrim& clipPrim, UsdBridgePr
 
 SdfPath UsdBridgeUsdWriter::AddRef_NoClip(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
   bool timeVarying, double parentTimeStep,
-  const RefModFuncs& refModCallbacks)
+  const RefModFuncs& refModCallbacks,
+  bool instanceable)
 {
-  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, parentTimeStep, refModCallbacks);
+  return AddRef_Impl(parentCache, childCache, refPathExt, timeVarying, false, false, nullptr, parentTimeStep, parentTimeStep, refModCallbacks, instanceable);
 }
 
 SdfPath UsdBridgeUsdWriter::AddRef(UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache, const char* refPathExt,
@@ -742,7 +743,7 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBrid
   bool valueClip,   // Retiming through a value clip
   bool clipStages,  // Separate stages for separate time slots (can only exist in usd if valueClip enabled)
   const char* clipPostfix, double parentTimeStep, double childTimeStep,
-  const RefModFuncs& refModCallbacks)
+  const RefModFuncs& refModCallbacks, bool instanceable)
 {
   UsdTimeCode parentTimeCode(parentTimeStep);
 
@@ -767,7 +768,7 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBrid
       UsdReferences references = referencingPrim.GetReferences(); //references or inherits?
       references.ClearReferences();
       references.AddInternalReference(childCache->PrimPath);
-      //referencingPrim.SetInstanceable(true);
+      referencingPrim.SetInstanceable(instanceable);
     }
 
 #ifdef TIME_BASED_CACHING

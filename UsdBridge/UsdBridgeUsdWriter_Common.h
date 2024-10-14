@@ -261,16 +261,18 @@ namespace
   }
 
   template<typename NormalsType>
-  void ConvertNormalsToQuaternions(VtQuathArray& quaternions, const void* normals, uint64_t numVertices)
+  void ConvertNormalsToQuaternions(UsdBridgeSpanI<GfQuath>& quaternions, const void* normals)
   {
     GfVec3f from(0.0f, 0.0f, 1.0f);
     NormalsType* norms = (NormalsType*)(normals);
-    for (int i = 0; i < numVertices; ++i)
+    size_t i = 0;
+    for (GfQuath& destQuat : quaternions)
     {
       GfVec3f to((float)(norms[i * 3]), (float)(norms[i * 3 + 1]), (float)(norms[i * 3 + 2]));
       GfRotation rot(from, to);
       const GfQuaternion& quat = rot.GetQuaternion();
-      quaternions[i] = GfQuath((float)(quat.GetReal()), GfVec3h(quat.GetImaginary()));
+      destQuat = GfQuath((float)(quat.GetReal()), GfVec3h(quat.GetImaginary()));
+      ++i;
     }
   }
 

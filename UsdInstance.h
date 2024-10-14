@@ -5,6 +5,8 @@
 
 #include "UsdBridgedBaseObject.h"
 
+//#include <string>
+
 class UsdGroup;
 
 enum class UsdInstanceComponents
@@ -33,6 +35,9 @@ class UsdInstance : public UsdBridgedBaseObject<UsdInstance, UsdInstanceData, Us
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdInstanceComponents::GROUP, "group"),
       ComponentPair(UsdInstanceComponents::TRANSFORM, "transform")};
+
+    //std::string testName;
+    //UsdInstanceHandle testHandle;
 
   protected:
     bool deferCommit(UsdDevice* device) override;

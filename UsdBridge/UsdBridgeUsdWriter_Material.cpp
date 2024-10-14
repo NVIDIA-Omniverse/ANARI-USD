@@ -1477,6 +1477,8 @@ void UsdBridgeUsdWriter::UpdateIndexVolumeMaterial(UsdStageRefPtr sceneStage, Us
   // Set the attributes
   UsdAttribute& outAttrib = valuesTimeVarying ? timeVarTfValueAttr : uniformTfValueAttr;
   UsdTimeCode outTimeCode = valuesTimeVarying ? timeEval.TimeCode : timeEval.Default();
+
+  /*
   VtVec4fArray* outArray = AssignColorArrayToPrimvar(LogObject, volumeData.TfData.TfColors, volumeData.TfData.TfNumColors, volumeData.TfData.TfColorsType,
     outTimeCode,
     outAttrib,
@@ -1487,6 +1489,30 @@ void UsdBridgeUsdWriter::UpdateIndexVolumeMaterial(UsdStageRefPtr sceneStage, Us
 
   if(outArray)
     outAttrib.Set(*outArray, outTimeCode);
+  */
+
+
+  size_t arrayNumElements = volumeData.TfData.TfNumColors;
+  const void* arrayData = volumeData.TfData.TfColors;
+  UsdBridgeType arrayDataType = volumeData.TfData.TfColorsType;
+
+  // Only get a span of type GfVec4f
+  UsdBridgeArrays::AttribSpanInit spanInit(arrayNumElements, outAttrib, outTimeCode);
+  UsdBridgeSpanI<GfVec4f>* tfColorsSpan = UsdBridgeArrays::AssignArrayToAttribute<UsdBridgeArrays::AttribSpanInit, UsdBridgeArrays::AttribSpan, GfVec4f>(
+    LogObject, nullptr, arrayDataType, arrayNumElements, spanInit);
+
+  if(tfColorsSpan)
+  {
+    // Write the color component to the span
+    UsdBridgeArrays::WriteToSpanColor(LogObject, *tfColorsSpan, arrayData, arrayNumElements, arrayDataType);
+    // Write the opacity component to the same span
+    GfVec4f* outTfData = tfColorsSpan->begin();
+    for(size_t i = 0; i < tfColorsSpan->size() && i < volumeData.TfData.TfNumOpacities; ++i, ++outTfData)
+      (*outTfData)[3] = tfOpacities[i];
+
+    // Assign the span to the attribute
+    tfColorsSpan->AssignToAttrib();
+  }
 
   SET_TIMEVARYING_ATTRIB(rangeTimeVarying, timeVarDomainAttr, uniformDomainAttr, valueRange);
 }

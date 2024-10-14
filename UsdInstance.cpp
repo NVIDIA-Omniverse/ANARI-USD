@@ -50,7 +50,12 @@ bool UsdInstance::doCommitData(UsdDevice* device)
 
   bool isNew = false;
   if (!usdHandle.value)
+  {
     isNew = usdBridge->CreateInstance(instanceName, usdHandle);
+
+    //testName = instanceName + std::string("_dummy");
+    //usdBridge->CreateInstance(testName.c_str(), testHandle);
+  }
 
   if (paramChanged || isNew)
   {
@@ -75,10 +80,12 @@ void UsdInstance::doCommitRefs(UsdDevice* device)
   if (paramData.group)
   {
     usdBridge->SetGroupRef(usdHandle, paramData.group->getUsdHandle(), groupTimeVarying, timeStep);
+    //usdBridge->SetGroupRef(testHandle, paramData.group->getUsdHandle(), groupTimeVarying, timeStep);
   }
   else
   {
     usdBridge->DeleteGroupRef(usdHandle, groupTimeVarying, timeStep);
+    //usdBridge->DeleteGroupRef(testHandle, groupTimeVarying, timeStep);
   }
 
   usdBridge->SetInstanceTransform(usdHandle, paramData.transform.Data, transformTimeVarying, timeStep);

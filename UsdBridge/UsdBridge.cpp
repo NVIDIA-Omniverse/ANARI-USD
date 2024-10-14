@@ -300,7 +300,6 @@ struct UsdBridgeCarbLogger : public carb::logging::Logger
     int lineNumber,
     const char* message)
   {
-    int lala = 0;
   }
 
   static void SetCarbLogVerbosity(int logVerbosity)
@@ -322,11 +321,7 @@ void UsdBridgeInternals::InitializeCarbSDK()
   static bool isInitialized = false;
   if(!isInitialized)
   {
-#ifdef STANDALONE_CARBSDK
     if(carb::Framework* framework = carb::acquireFrameworkAndRegisterBuiltins())
-#else
-    if(carb::Framework* framework = carb::getFramework())
-#endif
     {
       framework->registerPlugin(g_carbClientName, framework->getBuiltinLoggingDesc());
     }
@@ -690,7 +685,7 @@ void UsdBridge::DeleteSampler(UsdSamplerHandle handle)
 
 template<typename ParentHandleType, typename ChildHandleType>
 void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleType* childHandles, uint64_t numChildren, 
-  const char* refPathExt, bool timeVarying, double timeStep)
+  const char* refPathExt, bool timeVarying, double timeStep, bool instanceable)
 {
   if (parentHandle.value == nullptr) return;
   if(HasNullHandles(childHandles, numChildren)) return;
@@ -701,13 +696,16 @@ void UsdBridge::SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleTy
   BRIDGE_USDWRITER.ManageUnusedRefs(parentCache, childCaches, refPathExt, timeVarying, timeStep, Internals->RefModCallbacks.AtRemoveRef);
   for (uint64_t i = 0; i < numChildren; ++i)
   {
-    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], refPathExt, timeVarying, timeStep, Internals->RefModCallbacks);
+    BRIDGE_USDWRITER.AddRef_NoClip(parentCache, childCaches[i], refPathExt, timeVarying, timeStep, Internals->RefModCallbacks, instanceable);
   }
 }
 
 void UsdBridge::SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep)
 {
-  SetNoClipRefs(world, instances, numInstances, instancePathRp, timeVarying, timeStep);
+  //if(timeStep >= 0.0)
+    SetNoClipRefs(world, instances, numInstances, instancePathRp, timeVarying, timeStep, false);
+  //else
+  //  SetNoClipRefs(world, instances, numInstances, "dummyInstances", timeVarying, timeStep, false);
 }
 
 void UsdBridge::SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep)
