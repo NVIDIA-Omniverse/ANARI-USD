@@ -940,7 +940,7 @@ namespace
           else // => !usdbridgenumerics::isIdentity(geomData.Orientation)
           {
             // Assign a single orientation everywhere
-            GfQuath defaultOrient(geomData.Orientation.Data[0], geomData.Orientation.Data[1], geomData.Orientation.Data[2], geomData.Orientation.Data[3]);
+            GfQuath defaultOrient(geomData.Orientation.Data[3], geomData.Orientation.Data[0], geomData.Orientation.Data[1], geomData.Orientation.Data[2]);
             for(GfQuath& x : *orientsSpan) x = defaultOrient;
             orientsSpan->AssignToAttrib();
           }
