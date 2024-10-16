@@ -211,7 +211,7 @@ void UsdDevice::filterSetParam(
   {
     internals->uniqueNames.clear();
   }
-  else if (strEquals(name, "usd::connection.logVerbosity")) // 0 <= verbosity <= 4, with 4 being the loudest
+  else if (strEquals(name, "usd::connection.logVerbosity")) // 0 <= verbosity <= USDBRIDGE_MAX_LOG_VERBOSITY, with USDBRIDGE_MAX_LOG_VERBOSITY being the loudest
   {
     if(type == ANARI_INT32)
       UsdBridge::SetConnectionLogVerbosity(*(reinterpret_cast<const int*>(mem)));

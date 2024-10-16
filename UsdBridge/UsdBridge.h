@@ -100,7 +100,7 @@ class UsdBridge
     // Static parameter interface
     //
 
-    static void SetConnectionLogVerbosity(int logVerbosity); // 0 <= logVerbosity <= 4, 0 is quietest
+    static void SetConnectionLogVerbosity(int logVerbosity); // 0 <= logVerbosity <= USDBRIDGE_MAX_LOG_VERBOSITY, 0 is quietest
 
   protected: 
 

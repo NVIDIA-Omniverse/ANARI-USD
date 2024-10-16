@@ -1,8 +1,8 @@
 // Copyright 2020 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef OmniBridgeCaches_h
-#define OmniBridgeCaches_h
+#ifndef UsdBridgeCaches_h
+#define UsdBridgeCaches_h
 
 #include <string>
 #include <map>

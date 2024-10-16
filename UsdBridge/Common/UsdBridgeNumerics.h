@@ -11,23 +11,111 @@
 #endif
 
 #include <math.h>
+#include <cstdint>
+
+struct UsdUChar2
+{
+  static constexpr int NumComponents = 2;
+  using DataType = uint8_t;
+  DataType Data[NumComponents] = { 0, 0 };
+};
+
+struct UsdChar2
+{
+  static constexpr int NumComponents = 2;
+  using DataType = int8_t;
+  DataType Data[NumComponents] = { 0, 0 };
+};
+
+struct UsdUShort2
+{
+  static constexpr int NumComponents = 2;
+  using DataType = uint16_t;
+  DataType Data[NumComponents] = { 0, 0 };
+};
+
+struct UsdShort2
+{
+  static constexpr int NumComponents = 2;
+  using DataType = int16_t;
+  DataType Data[NumComponents] = { 0, 0 };
+};
+
+struct UsdUChar3
+{
+  static constexpr int NumComponents = 3;
+  using DataType = uint8_t;
+  DataType Data[NumComponents] = { 0, 0, 0 };
+};
+
+struct UsdChar3
+{
+  static constexpr int NumComponents = 3;
+  using DataType = int8_t;
+  DataType Data[NumComponents] = { 0, 0, 0 };
+};
+
+struct UsdUShort3
+{
+  static constexpr int NumComponents = 3;
+  using DataType = uint16_t;
+  DataType Data[NumComponents] = { 0, 0, 0 };
+};
+
+struct UsdShort3
+{
+  static constexpr int NumComponents = 3;
+  using DataType = int16_t;
+  DataType Data[NumComponents] = { 0, 0, 0 };
+};
+
+struct UsdUChar4
+{
+  static constexpr int NumComponents = 4;
+  using DataType = uint8_t;
+  DataType Data[NumComponents] = { 0, 0, 0, 0 };
+};
+
+struct UsdChar4
+{
+  static constexpr int NumComponents = 4;
+  using DataType = int8_t;
+  DataType Data[NumComponents] = { 0, 0, 0, 0 };
+};
+
+struct UsdUShort4
+{
+  static constexpr int NumComponents = 4;
+  using DataType = uint16_t;
+  DataType Data[NumComponents] = { 0, 0, 0, 0 };
+};
+
+struct UsdShort4
+{
+  static constexpr int NumComponents = 4;
+  using DataType = int16_t;
+  DataType Data[NumComponents] = { 0, 0, 0, 0 };
+};
 
 struct UsdUint2
 {
-  using DataType = unsigned int;
-  DataType Data[2] = { 0, 0 };
+  static constexpr int NumComponents = 2;
+  using DataType = uint32_t;
+  DataType Data[NumComponents] = { 0, 0 };
 };
 
 struct UsdFloat2
 {
+  static constexpr int NumComponents = 2;
   using DataType = float;
-  DataType Data[2] = { 1.0, 1.0 };
+  DataType Data[NumComponents] = { 1.0, 1.0 };
 };
 
 struct UsdFloat3
 {
+  static constexpr int NumComponents = 3;
   using DataType = float;
-  DataType Data[3] = { 1.0, 1.0, 1.0 };
+  DataType Data[NumComponents] = { 1.0, 1.0, 1.0 };
 };
 
 struct UsdFloat4
@@ -38,8 +126,9 @@ struct UsdFloat4
 
 struct UsdFloatMat4
 {
+  static constexpr int NumComponents = 16;
   using DataType = float;
-  DataType Data[16] = {
+  DataType Data[NumComponents] = {
       1, 0, 0, 0,
       0, 1, 0, 0,
       0, 0, 1, 0,
