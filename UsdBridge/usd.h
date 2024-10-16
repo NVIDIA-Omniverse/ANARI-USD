@@ -20,10 +20,12 @@
 #include <pxr/base/vt/array.h>
 #include <pxr/base/gf/range3f.h>
 #include <pxr/base/gf/rotation.h>
+#include <pxr/base/gf/half.h>
 #include <pxr/usd/usd/attribute.h>
 #include <pxr/usd/usd/notice.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usd/primRange.h>
+#include <pxr/usd/usd/primFlags.h>
 #include <pxr/usd/usd/modelAPI.h>
 #include <pxr/usd/usd/clipsAPI.h>
 #include <pxr/usd/usd/inherits.h>
@@ -40,6 +42,7 @@
 #include <pxr/usd/usdGeom/scope.h>
 #include <pxr/usd/usdVol/volume.h>
 #include <pxr/usd/usdVol/openVDBAsset.h>
+#include <pxr/usd/usdUtils/stageCache.h>
 #include <pxr/usd/sdf/layer.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usdShade/material.h>
