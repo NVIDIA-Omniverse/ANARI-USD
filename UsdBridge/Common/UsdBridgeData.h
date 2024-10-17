@@ -285,7 +285,7 @@ inline int UsdBridgeTypeNumComponents(UsdBridgeType dataType)
 {
   int typeIdent = (int)dataType;
   if(typeIdent <= (int)UsdBridgeType::DOUBLE4)
-    return typeIdent / UsdBridgeNumFundamentalTypes;
+    return (typeIdent / UsdBridgeNumFundamentalTypes) + 1;
   
   switch(dataType)
   {
