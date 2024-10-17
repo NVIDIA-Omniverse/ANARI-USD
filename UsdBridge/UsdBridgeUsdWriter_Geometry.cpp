@@ -743,23 +743,44 @@ namespace
       UsdAttribute scalesAttribute = outGeom.GetScalesAttr();
       assert(scalesAttribute);
 
-      const void* arrayData = geomData.Scales;
-      size_t arrayNumElements = geomData.NumPoints;
-      UsdBridgeType arrayDataType = geomData.ScalesType;
-
-      if(!arrayData && usdbridgenumerics::isIdentity(geomData.Scale))
+      if(!geomData.Scales && usdbridgenumerics::isIdentity(geomData.Scale))
       {
         scalesAttribute.Set(SdfValueBlock(), timeCode);
       }
       else
       {
-        UsdBridgeSpanI<GfVec3f>* scalesSpan = UpdateUsdAttribute_Safe<GfVec3f>(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements,
-            scalesAttribute, timeCode); // By passing a nullptr as data, only the span will be returned
+        const void* arrayData = (UsdBridgeTypeNumComponents(geomData.ScalesType) == 3) 
+          ? geomData.Scales : nullptr; // Conversion is not going to work without the same number of components as a GfVec3f
+        size_t arrayNumElements = geomData.NumPoints;
+        UsdBridgeType arrayDataType = geomData.ScalesType;
 
+        UsdBridgeSpanI<GfVec3f>* scalesSpan = UpdateUsdAttribute_Safe<GfVec3f>(usdRtData, logObj, arrayData, arrayDataType, arrayNumElements,
+            scalesAttribute, timeCode);
+        
         if(!arrayData && scalesSpan)
         {
-          GfVec3f defaultScale(geomData.Scale.Data);
-          for(GfVec3f& x : *scalesSpan) x = defaultScale;
+          if(geomData.Scales)
+          {
+            bool supportedType = true;
+            switch (geomData.ScalesType)
+            {
+            case UsdBridgeType::FLOAT: { UsdBridgeArrays::WriteToSpanExpand<GfVec3f, float>(geomData.Scales, *scalesSpan); break; }
+            case UsdBridgeType::DOUBLE: { UsdBridgeArrays::WriteToSpanExpand<GfVec3f, double>(geomData.Scales, *scalesSpan); break; }
+            default: { supportedType = false; break; }
+            }
+
+            if(supportedType)
+              scalesSpan->AssignToAttrib();
+            else
+            {
+              UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom ScalesAttribute should be a FLOAT or DOUBLE scalar or 3-component vector.");
+            }
+          }
+          else // => !usdbridgenumerics::isIdentity(geomData.Scale)
+          {
+            GfVec3f defaultScale(geomData.Scale.Data);
+            for(GfVec3f& x : *scalesSpan) x = defaultScale;
+          }
           scalesSpan->AssignToAttrib();
         }
       }
@@ -827,7 +848,7 @@ namespace
       else
       {
         const void* arrayData = (UsdBridgeTypeNumComponents(geomData.OrientationsType) == 4) 
-          ? geomData.Orientations : nullptr;
+          ? geomData.Orientations : nullptr; // Conversion is not going to work without the same number of components as a GfQuath
         size_t arrayNumElements = geomData.NumPoints;
         UsdBridgeType arrayDataType = geomData.OrientationsType;
 
@@ -841,8 +862,8 @@ namespace
             bool supportedType = true;
             switch (geomData.OrientationsType)
             {
-            case UsdBridgeType::FLOAT3: { ConvertNormalsToQuaternions<float>(*orientsSpan, geomData.Orientations); break; }
-            case UsdBridgeType::DOUBLE3: { ConvertNormalsToQuaternions<double>(*orientsSpan, geomData.Orientations); break; }
+            case UsdBridgeType::FLOAT3: { UsdBridgeArrays::WriteToSpanNormalsToQuaternions<float>(geomData.Orientations, *orientsSpan); break; }
+            case UsdBridgeType::DOUBLE3: { UsdBridgeArrays::WriteToSpanNormalsToQuaternions<double>(geomData.Orientations, *orientsSpan); break; }
             default: { supportedType = false; break; }
             }
 

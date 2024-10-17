@@ -126,34 +126,48 @@ namespace UsdBridgeArrays
   }
 
   template<typename ElementType>
-  void WriteToSpanCopy(const void* data, size_t numElements, UsdBridgeSpanI<ElementType>& destSpan)
+  void WriteToSpanCopy(const void* data, UsdBridgeSpanI<ElementType>& destSpan)
   {
-    assert(destSpan.size() == numElements);
     ElementType* typedData = (ElementType*)data;
-    if(numElements > 0)
-      std::copy(typedData, typedData+numElements, destSpan.begin());
+    if(destSpan.size() > 0)
+      std::copy(typedData, typedData+destSpan.size(), destSpan.begin());
   }
 
   template<typename DestType, typename SourceType>
-  void WriteToSpanConvert(const void* data, size_t numElements, UsdBridgeSpanI<DestType>& destSpan)
+  void WriteToSpanConvert(const void* data, UsdBridgeSpanI<DestType>& destSpan)
   {
-    assert(destSpan.size() == numElements);
     SourceType* typedData = (SourceType*)data;
     DestType* destArray = destSpan.begin();
-    for (int i = 0; i < numElements; ++i)
+    for (int i = 0; i < destSpan.size(); ++i)
     {
       destArray[i] = DestType(typedData[i]);
     }
   }
 
   template<typename DestType, typename SourceType>
-  void WriteToSpanConvertQuat(const void* data, size_t numElements, UsdBridgeSpanI<DestType>& destSpan)
+  void WriteToSpanExpand(const void* data, UsdBridgeSpanI<DestType>& destSpan)
   {
-    assert(destSpan.size() == numElements);
+    constexpr size_t DestComponents = DestType::dimension;
+    SourceType* typedData = (SourceType*)data;
+    DestType* destArray = destSpan.begin();
+    for (int i = 0; i < destSpan.size(); ++i)
+    {
+      if constexpr(DestComponents == 2)
+        destArray[i] = DestType(typedData[i], typedData[i]);
+      if constexpr(DestComponents == 3)
+        destArray[i] = DestType(typedData[i], typedData[i], typedData[i]);
+      if constexpr(DestComponents == 4)
+        destArray[i] = DestType(typedData[i], typedData[i], typedData[i], typedData[i]);
+    }
+  }
+
+  template<typename DestType, typename SourceType>
+  void WriteToSpanConvertQuat(const void* data, UsdBridgeSpanI<DestType>& destSpan)
+  {
     using DestScalarType = typename DestType::ScalarType;
     SourceType* typedSrcData = (SourceType*)data;
     DestType* destArray = destSpan.begin();
-    for (int i = 0; i < numElements; ++i)
+    for (int i = 0; i < destSpan.size(); ++i)
     {
       destArray[i] = DestType(
         DestScalarType(typedSrcData[i*4+3]), // note that the real component comes first in the quat's constructor
@@ -163,14 +177,29 @@ namespace UsdBridgeArrays
     }
   }
 
-  template<typename DestType, typename SourceScalarType, int NumComponents>
-  void WriteToSpanConvertVector(const void* data, size_t numElements, UsdBridgeSpanI<DestType>& destSpan)
+  template<typename NormalsType>
+  void WriteToSpanNormalsToQuaternions(const void* normals, UsdBridgeSpanI<GfQuath>& quaternions)
   {
-    assert(destSpan.size() == numElements);
+    GfVec3f from(0.0f, 0.0f, 1.0f);
+    NormalsType* norms = (NormalsType*)(normals);
+    size_t i = 0;
+    for (GfQuath& destQuat : quaternions)
+    {
+      GfVec3f to((float)(norms[i * 3]), (float)(norms[i * 3 + 1]), (float)(norms[i * 3 + 2]));
+      GfRotation rot(from, to);
+      const GfQuaternion& quat = rot.GetQuaternion();
+      destQuat = GfQuath((float)(quat.GetReal()), GfVec3h(quat.GetImaginary()));
+      ++i;
+    }
+  }
+
+  template<typename DestType, typename SourceScalarType, int NumComponents>
+  void WriteToSpanConvertVector(const void* data, UsdBridgeSpanI<DestType>& destSpan)
+  {
     using DestScalarType = typename DestType::ScalarType;
     const SourceScalarType* typedSrcData = (SourceScalarType*)data;
     DestType* destArray = destSpan.begin();
-    for (int i = 0; i < numElements; ++i)
+    for (int i = 0; i < destSpan.size(); ++i)
     {
       for(int j = 0; j < NumComponents; ++j)
         destArray[i][j] = DestScalarType(*(typedSrcData++));
@@ -178,9 +207,8 @@ namespace UsdBridgeArrays
   }
 
   template<typename InputEltType, int numComponents>
-  void WriteToSpanExpandToColor(const void* data, uint64_t numElements, UsdBridgeSpanI<GfVec4f>& destSpan)
+  void WriteToSpanExpandToColor(const void* data, UsdBridgeSpanI<GfVec4f>& destSpan)
   {
-    assert(destSpan.size() == numElements);
     const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
     size_t i = 0;
     // No memcopies, as input is not guaranteed to be of float type
@@ -196,9 +224,8 @@ namespace UsdBridgeArrays
   }
 
   template<typename InputEltType, int numComponents>
-  void WriteToSpanExpandToColorNormalize(const void* data, uint64_t numElements, UsdBridgeSpanI<GfVec4f>& destSpan)
+  void WriteToSpanExpandToColorNormalize(const void* data, UsdBridgeSpanI<GfVec4f>& destSpan)
   {
-    assert(destSpan.size() == numElements);
     const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
     double normFactor = 1.0 / (double)std::numeric_limits<InputEltType>::max(); // float may not be enough for uint32_t
     // No memcopies, as input is not guaranteed to be of float type
@@ -218,9 +245,8 @@ namespace UsdBridgeArrays
   }
 
   template<int numComponents>
-  void WriteToSpanExpandSRGBToColor(const void* data, uint64_t numElements, UsdBridgeSpanI<GfVec4f>& destSpan)
+  void WriteToSpanExpandSRGBToColor(const void* data, UsdBridgeSpanI<GfVec4f>& destSpan)
   {
-    assert(destSpan.size() == numElements);
     const unsigned char* typedInput = reinterpret_cast<const unsigned char*>(data);
     float normFactor = 1.0f / 255.0f;
     const float* srgbTable = ubutils::SrgbToLinearTable();
@@ -241,24 +267,32 @@ namespace UsdBridgeArrays
   }
 
   #define WRITE_SPAN_MACRO(EltType) \
-    WriteToSpanCopy<EltType>(arrayData, arrayNumElements, destSpan)
+    WriteToSpanCopy<EltType>(arrayData, destSpan)
 
   #define WRITE_SPAN_MACRO_CONVERT(DestType, SrcType) \
-    WriteToSpanConvert<DestType, SrcType>(arrayData, arrayNumElements, destSpan)
+    WriteToSpanConvert<DestType, SrcType>(arrayData, destSpan)
 
   #define WRITE_SPAN_MACRO_EXPAND_COL(EltType, NumComponents) \
-    WriteToSpanExpandToColor<EltType, NumComponents>(arrayData, arrayNumElements, destSpan)
+    WriteToSpanExpandToColor<EltType, NumComponents>(arrayData, destSpan)
 
   #define WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(EltType, NumComponents) \
-    WriteToSpanExpandToColorNormalize<EltType, NumComponents>(arrayData, arrayNumElements, destSpan)
+    WriteToSpanExpandToColorNormalize<EltType, NumComponents>(arrayData, destSpan)
 
   #define WRITE_SPAN_MACRO_EXPAND_SGRB(NumComponents) \
-    WriteToSpanExpandSRGBToColor<NumComponents>(arrayData, arrayNumElements, destSpan)
+    WriteToSpanExpandSRGBToColor<NumComponents>(arrayData, destSpan)
 
   // Assigns color data array to GfVec4f span
   void WriteToSpanColor(const UsdBridgeLogObject& logObj, UsdBridgeSpanI<GfVec4f>& destSpan,
     const void* arrayData, size_t arrayNumElements, UsdBridgeType arrayType)
   {
+    size_t destSpanSize = destSpan.size();
+
+    if(destSpanSize != arrayNumElements)
+    {
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Usd Attribute span size (" << destSpanSize << ") does not correspond to number of array elements to write (" << arrayNumElements << "), so copy is aborted");
+      return;
+    }
+
     switch (arrayType)
     {
       case UsdBridgeType::UCHAR: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint8_t, 1); break; }
@@ -289,144 +323,6 @@ namespace UsdBridgeArrays
     }
   }
 }
-
-#if 0
-namespace
-{
-
-    // Array assignment
-  template<class ArrayType>
-  void AssignArrayToPrimvar(const void* data, size_t numElements, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    USDBRIDGE_ARRAYTYPE_ELEMENTTYPE
-    ElementType* typedData = (ElementType*)data;
-    std::copy(typedData, typedData+numElements, usdArray->begin());
-  }
-
-  template<class ArrayType>
-  void AssignArrayToPrimvarFlatten(const void* data, UsdBridgeType dataType, size_t numElements, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    int elementMultiplier = UsdBridgeTypeNumComponents(dataType);
-    size_t numFlattenedElements = numElements * elementMultiplier;
-
-    AssignArrayToPrimvar<ArrayType>(data, numFlattenedElements, timeCode, usdArray);
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarConvert(const void* data, size_t numElements, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    USDBRIDGE_ARRAYTYPE_ELEMENTTYPE
-    EltType* typedData = (EltType*)data;
-
-    for (int i = 0; i < numElements; ++i)
-    {
-      (*usdArray)[i] = ElementType(typedData[i]);
-    }
-  }
-
-  template<class ArrayType, class EltType>
-  void AssignArrayToPrimvarConvertFlatten(const void* data, UsdBridgeType dataType, size_t numElements, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    int elementMultiplier = UsdBridgeTypeNumComponents(dataType);
-    size_t numFlattenedElements = numElements * elementMultiplier;
-
-    AssignArrayToPrimvarConvert<ArrayType, EltType>(data, numFlattenedElements, timeCode, usdArray);
-  }
-
-  template<typename ArrayType, typename EltType>
-  void Expand1ToVec3(const void* data, uint64_t numElements, const UsdTimeCode& timeCode, ArrayType* usdArray)
-  {
-    const EltType* typedInput = reinterpret_cast<const EltType*>(data);
-    for (int i = 0; i < numElements; ++i)
-    {
-      (*usdArray)[i] = typename ArrayType::ElementType(typedInput[i], typedInput[i], typedInput[i]);
-    }
-  }
-}
-
-#define ASSIGN_SET_PRIMVAR if(setPrimvar) arrayPrimvar.Set(usdArray, timeCode)
-#define ASSIGN_PRIMVAR_MACRO(ArrayType) \
-  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_FLATTEN_MACRO(ArrayType) \
-  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvarFlatten<ArrayType>(arrayData, arrayDataType, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_CONVERT_MACRO(ArrayType, EltType) \
-  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(ArrayType, EltType) \
-  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); AssignArrayToPrimvarConvertFlatten<ArrayType, EltType>(arrayData, arrayDataType, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_CUSTOM_ARRAY_MACRO(ArrayType, customArray) \
-  ArrayType& usdArray = customArray; AssignArrayToPrimvar<ArrayType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_CONVERT_CUSTOM_ARRAY_MACRO(ArrayType, EltType, customArray) \
-  ArrayType& usdArray = customArray; AssignArrayToPrimvarConvert<ArrayType, EltType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_1EXPAND3(ArrayType, EltType) \
-  ArrayType& usdArray = UsdBridgeArrays::GetStaticTempArray<ArrayType>(arrayNumElements); Expand1ToVec3<ArrayType, EltType>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-
-
-#define ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColor<EltType, 1>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColor<EltType, 2>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColor<EltType, 3>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 1>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 2>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 3>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(EltType) \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandToColorNormalize<EltType, 4>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_1EXPAND_SGRB() \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<1>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_2EXPAND_SGRB() \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<2>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_3EXPAND_SGRB() \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<3>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-#define ASSIGN_PRIMVAR_MACRO_4EXPAND_SGRB() \
-  VtArray<GfVec4f>& usdArray = UsdBridgeArrays::GetStaticTempArray<VtArray<GfVec4f>>(arrayNumElements); ExpandSRGBToColor<4>(arrayData, arrayNumElements, timeCode, &usdArray); ASSIGN_SET_PRIMVAR
-
-#define GET_USDARRAY_REF usdArrayRef = &usdArray
-
-namespace
-{
-  // Assigns color data array to VtArray<GfVec4f> primvar
-  VtArray<GfVec4f>* AssignColorArrayToPrimvar(const UsdBridgeLogObject& logObj, const void* arrayData, size_t arrayNumElements, UsdBridgeType arrayType, UsdTimeCode timeCode, UsdAttribute& arrayPrimvar, bool setPrimvar = true)
-  {
-    VtArray<GfVec4f>* usdArrayRef = nullptr;
-    switch (arrayType)
-    {
-      case UsdBridgeType::UCHAR: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint8_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UCHAR2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint8_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UCHAR3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint8_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UCHAR4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint8_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UCHAR_SRGB_R: {ASSIGN_PRIMVAR_MACRO_1EXPAND_SGRB(); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UCHAR_SRGB_RA: {ASSIGN_PRIMVAR_MACRO_2EXPAND_SGRB(); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UCHAR_SRGB_RGB: {ASSIGN_PRIMVAR_MACRO_3EXPAND_SGRB(); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UCHAR_SRGB_RGBA: {ASSIGN_PRIMVAR_MACRO_4EXPAND_SGRB(); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::USHORT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint16_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::USHORT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint16_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::USHORT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint16_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::USHORT4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint16_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UINT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_NORMALIZE_COL(uint32_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UINT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_NORMALIZE_COL(uint32_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UINT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_NORMALIZE_COL(uint32_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::UINT4: {ASSIGN_PRIMVAR_MACRO_4EXPAND_NORMALIZE_COL(uint32_t); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::FLOAT: {ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(float); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::FLOAT2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(float); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::FLOAT3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(float); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::FLOAT4: {ASSIGN_PRIMVAR_MACRO(VtArray<GfVec4f>); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::DOUBLE: {ASSIGN_PRIMVAR_MACRO_1EXPAND_COL(double); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::DOUBLE2: {ASSIGN_PRIMVAR_MACRO_2EXPAND_COL(double); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::DOUBLE3: {ASSIGN_PRIMVAR_MACRO_3EXPAND_COL(double); GET_USDARRAY_REF; break; }
-      case UsdBridgeType::DOUBLE4: {ASSIGN_PRIMVAR_CONVERT_MACRO(VtArray<GfVec4f>, GfVec4d); GET_USDARRAY_REF; break; }
-      default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4) or UCHAR_SRGB_<X>."); break; }
-    }
-
-    return usdArrayRef;
-  }
-
-}
-#endif
-
 
 namespace UsdBridgeArrays
 {
@@ -622,18 +518,18 @@ namespace UsdBridgeArrays
         constexpr bool canConvert = std::is_constructible<AttributeScalarCType, ArrayScalarCType>::value;
 
         if constexpr(canDirectCopy)
-          WriteToSpanCopy<AttributeCType>(arrayData, arrayNumElements, destSpan);
+          WriteToSpanCopy<AttributeCType>(arrayData, destSpan);
         else if constexpr(canConvert)
         {
           if constexpr(arrayNumComponents == 1)
-            WriteToSpanConvert<AttributeCType, ArrayScalarCType>(arrayData, arrayNumElements, destSpan);
+            WriteToSpanConvert<AttributeCType, ArrayScalarCType>(arrayData, destSpan);
           else if constexpr(
             std::is_same<AttributeCType, GfQuath>::value ||
             std::is_same<AttributeCType, GfQuatf>::value ||
             std::is_same<AttributeCType, GfQuatd>::value)
-            WriteToSpanConvertQuat<AttributeCType, ArrayScalarCType>(arrayData, arrayNumElements, destSpan);
+            WriteToSpanConvertQuat<AttributeCType, ArrayScalarCType>(arrayData, destSpan);
           else
-            WriteToSpanConvertVector<AttributeCType, ArrayScalarCType, arrayNumComponents>(arrayData, arrayNumElements, destSpan);
+            WriteToSpanConvertVector<AttributeCType, ArrayScalarCType, arrayNumComponents>(arrayData, destSpan);
         }
         else
         {
@@ -825,8 +721,8 @@ namespace UsdBridgeArrays
         if(!resultSpan)
         {
           UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, 
-            "Update of UsdAttribute " << destSpanInit.GetAttribName() << " with an array did not return writeable memory after update;\
-            data array and attribute types cannot be converted or are not supported, or the span and attribute types do not match - see previous errors");
+            "Update of UsdAttribute '" << destSpanInit.GetAttribName() << "' with an array did not return writeable memory after update; " <<
+            "data array and attribute types cannot be converted or are not supported, or the span and attribute types do not match - see previous errors");
         }
       }
       return resultSpan;
@@ -841,77 +737,6 @@ namespace UsdBridgeArrays
 
 }
 
-#if 0
-namespace
-{
-
-  // Make sure types correspond to GetPrimvarAttribArrayType()
-  void AssignAttribArrayToPrimvar(const UsdBridgeLogObject& logObj, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, UsdAttribute& arrayPrimvar, const UsdTimeCode& timeCode)
-  {
-    bool setPrimvar = true;
-    switch (arrayDataType)
-    {
-      case UsdBridgeType::UCHAR: { ASSIGN_PRIMVAR_MACRO(VtArray<unsigned char>); break; }
-      case UsdBridgeType::UCHAR_SRGB_R: { ASSIGN_PRIMVAR_MACRO(VtArray<unsigned char>); break; }
-      case UsdBridgeType::CHAR: { ASSIGN_PRIMVAR_MACRO(VtArray<unsigned char>); break; }
-      case UsdBridgeType::USHORT: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtArray<unsigned int>, short); break; }
-      case UsdBridgeType::SHORT: { ASSIGN_PRIMVAR_CONVERT_MACRO(VtArray<int>, unsigned short); break; }
-      case UsdBridgeType::UINT: { ASSIGN_PRIMVAR_MACRO(VtArray<unsigned int>); break; }
-      case UsdBridgeType::INT: { ASSIGN_PRIMVAR_MACRO(VtArray<int>); break; }
-      case UsdBridgeType::LONG: { ASSIGN_PRIMVAR_MACRO(VtArray<int64_t>); break; }
-      case UsdBridgeType::ULONG: { ASSIGN_PRIMVAR_MACRO(VtArray<uint64_t>); break; }
-      case UsdBridgeType::HALF: { ASSIGN_PRIMVAR_MACRO(VtArray<GfHalf>); break; }
-      case UsdBridgeType::FLOAT: { ASSIGN_PRIMVAR_MACRO(VtArray<float>); break; }
-      case UsdBridgeType::DOUBLE: { ASSIGN_PRIMVAR_MACRO(VtArray<double>); break; }
-
-      case UsdBridgeType::INT2: { ASSIGN_PRIMVAR_MACRO(VtArray<GfVec2i>); break; }
-      case UsdBridgeType::FLOAT2: { ASSIGN_PRIMVAR_MACRO(VtArray<GfVec2f>); break; }
-      case UsdBridgeType::DOUBLE2: { ASSIGN_PRIMVAR_MACRO(VtArray<GfVec2d>); break; }
-
-      case UsdBridgeType::INT3: { ASSIGN_PRIMVAR_MACRO(VtArray<GfVec3i>); break; }
-      case UsdBridgeType::FLOAT3: { ASSIGN_PRIMVAR_MACRO(VtArray<GfVec3f>); break; }
-      case UsdBridgeType::DOUBLE3: { ASSIGN_PRIMVAR_MACRO(VtArray<GfVec3d>); break; }
-
-      case UsdBridgeType::INT4: { ASSIGN_PRIMVAR_MACRO(VtArray<GfVec4i>); break; }
-      case UsdBridgeType::FLOAT4: { ASSIGN_PRIMVAR_MACRO(VtArray<GfVec4f>); break; }
-      case UsdBridgeType::DOUBLE4: { ASSIGN_PRIMVAR_MACRO(VtArray<GfVec4d>); break; }
-
-      case UsdBridgeType::UCHAR2:
-      case UsdBridgeType::UCHAR3: 
-      case UsdBridgeType::UCHAR4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtArray<unsigned char>); break; }
-      case UsdBridgeType::UCHAR_SRGB_RA:
-      case UsdBridgeType::UCHAR_SRGB_RGB: 
-      case UsdBridgeType::UCHAR_SRGB_RGBA: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtArray<unsigned char>); break; }
-      case UsdBridgeType::CHAR2:
-      case UsdBridgeType::CHAR3: 
-      case UsdBridgeType::CHAR4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtArray<unsigned char>); break; }
-      case UsdBridgeType::USHORT2:
-      case UsdBridgeType::USHORT3:
-      case UsdBridgeType::USHORT4: { ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(VtArray<unsigned int>, short); break; }
-      case UsdBridgeType::SHORT2:
-      case UsdBridgeType::SHORT3: 
-      case UsdBridgeType::SHORT4: { ASSIGN_PRIMVAR_CONVERT_FLATTEN_MACRO(VtArray<int>, unsigned short); break; }
-      case UsdBridgeType::UINT2:
-      case UsdBridgeType::UINT3: 
-      case UsdBridgeType::UINT4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtArray<unsigned int>); break; }
-      case UsdBridgeType::LONG2:
-      case UsdBridgeType::LONG3: 
-      case UsdBridgeType::LONG4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtArray<int64_t>); break; }
-      case UsdBridgeType::ULONG2:
-      case UsdBridgeType::ULONG3: 
-      case UsdBridgeType::ULONG4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtArray<uint64_t>); break; }
-      case UsdBridgeType::HALF2:
-      case UsdBridgeType::HALF3: 
-      case UsdBridgeType::HALF4: { ASSIGN_PRIMVAR_FLATTEN_MACRO(VtArray<GfHalf>); break; }
-
-      default: {
-        const char* typeStr = ubutils::UsdBridgeTypeToString(arrayDataType);
-        UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom Attribute<Index> primvar copy does not support source data type: " << typeStr) 
-        break; }
-    };
-  }
-}
-#endif
 
 } // internal linkage
 

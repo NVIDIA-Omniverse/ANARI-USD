@@ -222,6 +222,7 @@ int main(int argc, const char **argv)
 
   for (int timeIdx = 0; timeIdx < numTimeSteps; ++timeIdx)
   {
+    // Balls visible at timestep 0, 5, 6, 10
     int doubleNodes = ((timeIdx % 3) == 1);
 
     anariSetParameter(dev, dev, "usd::time", ANARI_FLOAT64, timeValues + timeIdx);
