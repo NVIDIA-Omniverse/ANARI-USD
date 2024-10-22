@@ -4,6 +4,10 @@
 
 #include "UsdBridgeDiagnosticMgrDelegate.h"
 
+#ifdef USE_USDRT
+#include "carb/ClientUtils.h"
+#endif
+
 bool UsdBridgeDiagnosticMgrDelegate::OutputEnabled = false;
 
 UsdBridgeDiagnosticMgrDelegate::UsdBridgeDiagnosticMgrDelegate(void* logUserData, UsdBridgeLogCallback logCallback)
@@ -90,7 +94,7 @@ void UsdBridgeCarbLogger::CarbLogCallback(carb::logging::Logger* logger,
 {
 }
 
-static void UsdBridgeCarbLogger::SetCarbLogVerbosity(int logVerbosity)
+void UsdBridgeCarbLogger::SetCarbLogVerbosity(int logVerbosity)
 {
   carb::Framework* framework = carb::getFramework();
   carb::logging::ILogging* logIface = framework ? framework->tryAcquireInterface<carb::logging::ILogging>() : nullptr;

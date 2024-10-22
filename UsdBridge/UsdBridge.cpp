@@ -13,8 +13,6 @@
 
 #ifdef USE_USDRT
 #include "carb/ClientUtils.h"
-#include "carb/logging/ILogging.h"
-#include "carb/logging/Logger.h"
 CARB_GLOBALS("anariUsdBridge")
 #endif
 

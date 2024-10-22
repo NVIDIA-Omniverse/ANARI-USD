@@ -71,7 +71,7 @@ class UsdBridgeRtInternals
       std::string pathString = primPath.GetString();
       ClassPrimPath = pathString;
 
-      FindUniformPrim(SceneStage->GetPrimAtPath(usdrt::SdfPath("/Root")));
+      FindUniformPrim(PxrSceneStage->GetPrimAtPath(PXR_NS::SdfPath("/Root")));
 
       // Get every Mesh prim with a extent attribute in Fabric
       const omni::fabric::Token extentAttribName("faceVertexCounts");
@@ -100,13 +100,15 @@ class UsdBridgeRtInternals
             UniformPrim = SceneStage->GetPrimAtPath(sdfPrimPath);
 #endif
 
-            bool hasAttrib = UniformPrim.HasAttribute(usdrt::TfToken("primvars:attribute0"));
+            //bool hasAttrib = UniformPrim.HasAttribute(usdrt::TfToken("primvars:attribute0"));
 
-            for(const omni::fabric::AttrNameAndType& attribNameType : attribs)
-            {
-              const char* nameText = attribNameType.name.getText();
-              nameText = nameText;
-            }
+            // Check array of attribs that exist on the prim
+            //for(const omni::fabric::AttrNameAndType& attribNameType : attribs)
+            //{
+            //  const char* nameText = attribNameType.name.getText();
+            //  nameText = nameText;
+            //}
+
             //UsdRtRelationshipType protoRel = rtPrim.GetRelationship(usdrt::TfToken("_protoPath"));
             //if (protoRel)
             //{
@@ -142,16 +144,19 @@ class UsdBridgeRtInternals
 
     }
 
-    void FindUniformPrim(usdrt::UsdPrim rootPrim)
+    void FindUniformPrim(PXR_NS::UsdPrim rootPrim)
     {
-      UsdRtPrimType rtPrim = rootPrim;
-      //UsdRtPrimType rtPrim = SceneStage->GetPrimAtPath(
-      //  rootPrim.GetPath().GetString()
-      //  );
-//
+      UsdRtPrimType rtPrim = SceneStage->GetPrimAtPath(
+        rootPrim.GetPath().GetString()
+        );
+
       if(rtPrim && rtPrim.GetPath().GetNameToken() == ClassPrimPath.GetNameToken())
       {
+#ifdef USE_FABRIC
+        UniformFabricPath = rtPrim.GetPath().GetText();
+#else
         UniformPrim = rtPrim;
+#endif
 
         //bool hasAttrib = UniformPrim.HasAttribute(usdrt::TfToken("primvars:attribute0"));
         //hasAttrib = hasAttrib;
@@ -185,6 +190,8 @@ class UsdBridgeRtInternals
     omni::fabric::StageReaderWriter StageReaderWriter;
 #ifdef USE_FABRIC
     omni::fabric::Path UniformFabricPath;
+#else
+    UsdRtPrimType UniformPrim;
 #endif
 #else
     UsdRtPrimType UniformPrim;

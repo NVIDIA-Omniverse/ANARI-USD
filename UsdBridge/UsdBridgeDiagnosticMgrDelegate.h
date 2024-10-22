@@ -6,6 +6,11 @@
 
 #include "UsdBridgeData.h"
 
+#ifdef USE_USDRT
+#include "carb/logging/ILogging.h"
+#include "carb/logging/Logger.h"
+#endif
+
 #include "usd.h"
 PXR_NAMESPACE_USING_DIRECTIVE
 
