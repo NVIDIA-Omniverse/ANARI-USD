@@ -189,6 +189,10 @@ protected:
   // Sets modified flag and returns whether the shared resource has been modified since ResetSharedResourceModified()
   bool SetSharedResourceModified(const UsdBridgeResourceKey& key);
 
+#ifdef USE_INDEX_MATERIALS
+  void WriteTfPrimvars(const float* tfOpacities, const UsdBridgeVolumeData& volumeData, UsdAttribute& outAttrib, UsdTimeCode outTimeCode);
+#endif
+
   // Token cache for attribute names
   std::vector<TfToken> AttributeTokens;
 

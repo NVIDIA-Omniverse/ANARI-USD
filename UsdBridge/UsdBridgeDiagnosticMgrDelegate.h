@@ -6,6 +6,11 @@
 
 #include "UsdBridgeData.h"
 
+#ifdef USE_USDRT
+#include "carb/logging/ILogging.h"
+#include "carb/logging/Logger.h"
+#endif
+
 #include "usd.h"
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -36,5 +41,26 @@ class UsdBridgeDiagnosticMgrDelegate : public TfDiagnosticMgr::Delegate
     UsdBridgeLogCallback LogCallback;
     static bool OutputEnabled;
 };
+
+#ifdef USE_USDRT
+struct UsdBridgeCarbLogger : public carb::logging::Logger
+{
+  UsdBridgeCarbLogger();
+
+  ~UsdBridgeCarbLogger();
+
+  static void CarbLogCallback(carb::logging::Logger* logger,
+    const char* source,
+    int32_t level,
+    const char* filename,
+    const char* functionName,
+    int lineNumber,
+    const char* message);
+
+  static void SetCarbLogVerbosity(int logVerbosity);
+
+  carb::logging::ILogging* CarbLogIface = nullptr;
+};
+#endif
 
 #endif

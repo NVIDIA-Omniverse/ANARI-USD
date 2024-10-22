@@ -9,6 +9,12 @@
 
 #include <string>
 #include <memory>
+#include <algorithm>
+
+#ifdef USE_USDRT
+#include "carb/ClientUtils.h"
+CARB_GLOBALS("anariUsdBridge")
+#endif
 
 #define BRIDGE_CACHE Internals->Cache
 #define BRIDGE_USDWRITER Internals->UsdWriter
@@ -70,6 +76,10 @@ struct UsdBridgeInternals
     RefModCallbacks.AtRemoveRef = [this](UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache) {
       this->Cache.RemoveChild(parentCache, childCache);
     };
+
+#ifdef USE_USDRT
+    InitializeCarbSDK();
+#endif
   }
 
   ~UsdBridgeInternals()
@@ -108,6 +118,13 @@ struct UsdBridgeInternals
   UsdBridgePrimCacheList TempPrimCaches;
   SdfPrimPathList TempPrimPaths;
   SdfPrimPathList ProtoPrimPaths;
+
+#ifdef USE_USDRT
+  void InitializeCarbSDK();
+  void CleanupCarbSDK();
+
+  UsdBridgeCarbLogger* CarbLogObject;
+#endif
 };
 
 
@@ -177,6 +194,49 @@ UsdGeomPrimvarsAPI UsdBridgeInternals::GetBoundGeomPrimvars(const UsdBridgeHandl
   }
   return UsdGeomPrimvarsAPI();
 }
+
+#ifdef USE_USDRT
+void UsdBridgeInternals::InitializeCarbSDK()
+{
+  static bool isInitialized = false;
+  if(!isInitialized)
+  {
+    if(carb::Framework* framework = carb::acquireFrameworkAndRegisterBuiltins())
+    {
+      framework->registerPlugin(g_carbClientName, framework->getBuiltinLoggingDesc());
+    }
+  }
+
+  CarbLogObject = new UsdBridgeCarbLogger();
+
+  if(!isInitialized)
+  {
+    carb::Framework* framework = carb::getFramework();
+
+    if(framework)
+    {
+      constexpr const char* const kPluginsSearchPaths[] = { ".", "plugins", "usdrt_only", "plugins/scenegraph", "plugins/omni.usd" };
+      const std::vector<const char*> loadedFileWildcards{ "carb.dictionary.plugin", "carb.dictionary.serializer-*.plugin", "carb.settings.plugin",
+                    "omni.gpucompute-*.plugin", "omni.fabric*.plugin", "omni.tbb.globalcontrol.plugin", "carb.tasking.plugin", "usdrt.scenegraph.plugin" };
+
+      carb::PluginLoadingDesc desc = carb::PluginLoadingDesc::getDefault();
+      desc.loadedFileWildcards = loadedFileWildcards.data();
+      desc.loadedFileWildcardCount = loadedFileWildcards.size();
+      desc.searchPaths = kPluginsSearchPaths;
+      desc.searchPathCount = CARB_COUNTOF(kPluginsSearchPaths);
+      framework->loadPlugins(desc);
+
+      isInitialized = true;
+    }
+  }
+}
+
+void UsdBridgeInternals::CleanupCarbSDK()
+{
+  delete CarbLogObject;
+  CarbLogObject = nullptr;
+}
+#endif
 
 template<typename HandleType>
 bool HasNullHandles(const HandleType* handles, uint64_t numHandles)
@@ -1058,4 +1118,8 @@ void UsdBridge::SetConnectionLogVerbosity(int logVerbosity)
 {
   int logLevel = UsdBridgeRemoteConnection::GetConnectionLogLevelMax() - logVerbosity; // Just invert verbosity to get the level
   UsdBridgeRemoteConnection::SetConnectionLogLevel(logLevel);
+
+#ifdef USE_USDRT
+  UsdBridgeCarbLogger::SetCarbLogVerbosity(logVerbosity);
+#endif
 }

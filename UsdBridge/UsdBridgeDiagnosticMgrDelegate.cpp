@@ -4,6 +4,10 @@
 
 #include "UsdBridgeDiagnosticMgrDelegate.h"
 
+#ifdef USE_USDRT
+#include "carb/ClientUtils.h"
+#endif
+
 bool UsdBridgeDiagnosticMgrDelegate::OutputEnabled = false;
 
 UsdBridgeDiagnosticMgrDelegate::UsdBridgeDiagnosticMgrDelegate(void* logUserData, UsdBridgeLogCallback logCallback)
@@ -55,3 +59,50 @@ void UsdBridgeDiagnosticMgrDelegate::LogMessage(UsdBridgeLogLevel level, const s
     if(OutputEnabled)
     LogCallback(level, LogUserData, message.c_str());
 }
+
+#ifdef USE_USDRT
+UsdBridgeCarbLogger::UsdBridgeCarbLogger()
+{
+  this->handleMessage = CarbLogCallback;
+  if(carb::Framework* framework = carb::getFramework())
+  {
+    if(CarbLogIface = framework->acquireInterface<carb::logging::ILogging>())
+    {
+      CarbLogIface->addLogger(this);
+      CarbLogIface->setLogEnabled(true);
+      CarbLogIface->setLevelThreshold(carb::logging::kLevelVerbose);
+    }
+  }
+}
+
+UsdBridgeCarbLogger::~UsdBridgeCarbLogger()
+{
+  if(CarbLogIface)
+  {
+    CarbLogIface->removeLogger(this);
+    CarbLogIface = nullptr;
+  }
+}
+
+void UsdBridgeCarbLogger::CarbLogCallback(carb::logging::Logger* logger,
+  const char* source,
+  int32_t level,
+  const char* filename,
+  const char* functionName,
+  int lineNumber,
+  const char* message)
+{
+}
+
+void UsdBridgeCarbLogger::SetCarbLogVerbosity(int logVerbosity)
+{
+  carb::Framework* framework = carb::getFramework();
+  carb::logging::ILogging* logIface = framework ? framework->tryAcquireInterface<carb::logging::ILogging>() : nullptr;
+  if(logIface)
+  {
+    logIface->setLevelThreshold(
+      std::max(carb::logging::kLevelVerbose, carb::logging::kLevelFatal - logVerbosity) );
+  }
+}
+
+#endif
