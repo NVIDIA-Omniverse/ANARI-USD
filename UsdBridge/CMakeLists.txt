@@ -182,6 +182,8 @@ option(USD_DEVICE_USE_USDRT "Enable usage of USDRT by supplying <USDRT/CARBSDK>_
 cmake_dependent_option(USD_DEVICE_USE_FABRIC "Enable usage of Fabric" OFF "USD_DEVICE_USE_USDRT" OFF)
 if(${USD_DEVICE_USE_USDRT})
   find_package(CUDAToolkit)
+  cmake_path(GET CUDA_INCLUDE_DIR PARENT_PATH CUDA_BASE_DIR)
+  cmake_path(GET CUDA_BASE_DIR PARENT_PATH CUDA_BASE_DIR_PARENT)
   target_include_directories(UsdBridge
     PRIVATE
       ${USDRT_INCLUDE_DIR}
@@ -189,7 +191,7 @@ if(${USD_DEVICE_USE_USDRT})
       "${GSL_INCLUDE_DIR}"
       "${PYBIND_INCLUDE_DIR}"
       "${CUDA_INCLUDE_DIR}"
-      "${CUDA_INCLUDE_DIR}/../.."
+      "${CUDA_BASE_DIR_PARENT}"
       ${CARBSDK_INCLUDE_DIR}
   )
   if (WIN32)
