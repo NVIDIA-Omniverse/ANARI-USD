@@ -58,6 +58,8 @@ class UsdBaseObject : public helium::RefCounted
     std::vector<UsdBaseObject*> observers;
 };
 
+void UsdBridgeAddToCommitList(UsdDevice* device, UsdBaseObject* object, bool commitData); // Helper function to suppress compiler warnings
+
 // Templated base implementation of parameterized object
 template<typename T, typename D>
 class UsdParameterizedBaseObject : public UsdBaseObject, public UsdParameterizedObject<T, D>
@@ -130,7 +132,7 @@ class UsdParameterizedBaseObject : public UsdBaseObject, public UsdParameterized
     {
       if(anari::isArray(caller->getType()))
       {
-        device->addToCommitList(this, true); // No write to read params; just write to USD
+        UsdBridgeAddToCommitList(device, this, true); // No write to read params; just write to USD
         ParamClass::paramChanged = true;
       }
     }

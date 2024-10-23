@@ -312,7 +312,7 @@ UsdBridgeSpanI<ReturnEltType>* UsdBridgeRt::UpdateUsdAttribute(const UsdBridgeLo
 {
   //ReCalc(); //fix
 
-  using RtReturnEltType = UsdBridgeTypeTraits::PxrToRtEltType<ReturnEltType>::Type;
+  using RtReturnEltType = typename UsdBridgeTypeTraits::PxrToRtEltType<ReturnEltType>::Type;
 
 #ifdef USE_FABRIC
   const std::string& attribName = attrib.GetName().GetString();

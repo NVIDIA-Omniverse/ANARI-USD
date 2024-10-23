@@ -117,6 +117,10 @@ enum class UsdBridgeType
 };
 constexpr int UsdBridgeNumFundamentalTypes = (int)UsdBridgeType::UCHAR2; // Multi-component groups sizes up until 4 should be equal
 
+struct UsdBridgeNoneType
+{
+};
+
 namespace UsdBridgeTypeTraits
 {
   template<UsdBridgeType Type>

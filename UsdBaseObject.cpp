@@ -63,3 +63,8 @@ void UsdBaseObject::notify(UsdBaseObject* caller, UsdDevice* device)
     ++it;
   }
 }
+
+void UsdBridgeAddToCommitList(UsdDevice* device, UsdBaseObject* object, bool commitData)
+{
+  device->addToCommitList(object, commitData);
+}

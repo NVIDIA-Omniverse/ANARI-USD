@@ -19,10 +19,6 @@
 #define USDBRIDGE_ARRAYTYPE_ELEMENTTYPE using ElementType = typename ArrayType::ElementType;
 #endif
 
-struct UsdBridgeNoneType
-{
-};
-
 namespace UsdBridgeTypeTraits
 {
 
@@ -494,7 +490,7 @@ namespace UsdBridgeArrays
   UsdBridgeSpanI<AttributeCType>* WriteSpanToAttrib(const UsdBridgeLogObject& logObj, SpanInitType& destSpanInit, const void* arrayData, size_t arrayNumElements)
   {
     // Also uses a bunch of type traits to figure out whether to copy/convert/expand
-    constexpr UsdBridgeType AttributeEltType = typename UsdBridgeTypeTraits::UsdBaseToBridgeType<AttributeCType>::Type; 
+    constexpr UsdBridgeType AttributeEltType = UsdBridgeTypeTraits::UsdBaseToBridgeType<AttributeCType>::Type; 
     constexpr int attributeNumComponents = UsdBridgeTypeTraits::NumComponents<AttributeEltType>::Value;
     constexpr int arrayNumComponents = UsdBridgeTypeTraits::NumComponents<ArrayEltBridgeType>::Value;
     using AttributeScalarCType = typename UsdBridgeTypeTraits::ScalarType<AttributeEltType>::Type;
@@ -703,7 +699,7 @@ namespace UsdBridgeArrays
 
   template<typename SpanInitType = AttribSpanInit, template <typename T> class SpanI = AttribSpan, typename ReturnEltType = UsdBridgeNoneType>
   UsdBridgeSpanI<ReturnEltType>* AssignArrayToAttribute(const UsdBridgeLogObject& logObj, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements, 
-    SpanInitType& destSpanInit = SpanInitType(arrayNumElements))
+    SpanInitType& destSpanInit)
   {
     static AssignArrayMapType<SpanInitType, SpanI, ReturnEltType> assignArrayMap;
 
