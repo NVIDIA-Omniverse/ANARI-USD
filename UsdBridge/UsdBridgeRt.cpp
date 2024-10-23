@@ -8,6 +8,8 @@
 #include <usdrt/scenegraph/base/gf/quath.h>
 #include <usdrt/scenegraph/base/gf/quatf.h>
 #include <usdrt/scenegraph/base/gf/quatd.h>
+#include <usdrt/scenegraph/base/gf/rotation.h>
+#include <usdrt/scenegraph/base/gf/transform.h>
 #include <usdrt/scenegraph/base/vt/array.h>
 #include <usdrt/scenegraph/base/tf/token.h>
 #include <usdrt/scenegraph/usd/sdf/path.h>
@@ -176,7 +178,7 @@ class UsdBridgeRtInternals
         //}
       }
 //
-      for(auto& childPrim : rootPrim.GetFilteredChildren(PXR_NS::UsdTraverseInstanceProxies()))
+      for(const auto& childPrim : rootPrim.GetFilteredChildren(PXR_NS::UsdTraverseInstanceProxies()))
       {
         FindUniformPrim(childPrim);
       }

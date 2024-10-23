@@ -183,7 +183,7 @@ namespace UsdBridgeArrays
     {
       GfVec3f to((float)(norms[i * 3]), (float)(norms[i * 3 + 1]), (float)(norms[i * 3 + 2]));
       GfRotation rot(from, to);
-      const GfQuaternion& quat = rot.GetQuaternion();
+      GfQuatd quat = rot.GetQuat();
       destQuat = GfQuath((float)(quat.GetReal()), GfVec3h(quat.GetImaginary()));
       ++i;
     }

@@ -186,13 +186,18 @@ if(${USD_DEVICE_USE_USDRT})
     PRIVATE
       ${USDRT_INCLUDE_DIR}
       "${USDRT_INCLUDE_DIR}/usdrt_only"
-      "${USDRT_INCLUDE_DIR}/../../gsl/include"
-      "${USDRT_INCLUDE_DIR}/../../pybind11/include"
-      "${USDRT_INCLUDE_DIR}/../../cuda/include"
-      "${USDRT_INCLUDE_DIR}/../.."
+      "${GSL_INCLUDE_DIR}"
+      "${PYBIND_INCLUDE_DIR}"
+      "${CUDA_INCLUDE_DIR}"
+      "${CUDA_INCLUDE_DIR}/../.."
       ${CARBSDK_INCLUDE_DIR}
   )
-  target_link_libraries(UsdBridge PRIVATE "${CARBSDK_BIN_DIR}/carb${CMAKE_STATIC_LIBRARY_SUFFIX}" CUDA::cudart)
+  if (WIN32)
+    set(CARB_LIB "${CARBSDK_BIN_DIR}/carb${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  else()
+    set(CARB_LIB "${CARBSDK_BIN_DIR}/libcarb.so")
+  endif()
+  target_link_libraries(UsdBridge PRIVATE "${CARB_LIB}" CUDA::cudart)
 
   target_compile_definitions(UsdBridge PRIVATE USE_USDRT)
   if(${USD_DEVICE_USE_FABRIC})
