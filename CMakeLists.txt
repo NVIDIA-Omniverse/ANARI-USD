@@ -74,8 +74,10 @@ find_package(anari 0.10 REQUIRED
 ## Code generation
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
-  list(PREPEND CMAKE_MODULE_PATH ${Python_ROOT_DIR})
-  find_package(Python REQUIRED COMPONENTS Interpreter Development)
+  message(STATUS "Adding codegen target")
+
+  list(PREPEND CMAKE_MODULE_PATH ${Python3_ROOT_DIR})
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
   list(POP_FRONT CMAKE_MODULE_PATH)
 
   add_custom_target(generate_usd_queries
@@ -203,9 +205,11 @@ if(${INSTALL_ANARI_DEPS})
 
   if(${INSTALL_ANARI_COMPILE_DEPS})
     ## Compile time deps
-    install(
-      DIRECTORY "${ANARI_ROOT_DIR}/bin/"
-      DESTINATION ${CMAKE_INSTALL_BINDIR})
+    if(WIN32)
+      install(
+        DIRECTORY "${ANARI_ROOT_DIR}/bin/"
+        DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif()
     install(
       DIRECTORY "${ANARI_ROOT_DIR}/include/"
       DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
