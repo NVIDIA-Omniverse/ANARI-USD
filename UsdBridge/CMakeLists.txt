@@ -224,7 +224,8 @@ if(${INSTALL_USD_DEPS})
   install(
     DIRECTORY "${USD_LIB_DIR}/"
     DESTINATION ${PLATFORM_INSTALL_LIBDIR}
-    PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE)
+    PATTERN "*${CMAKE_STATIC_LIBRARY_SUFFIX}" EXCLUDE
+    PATTERN "cmake" EXCLUDE)
   install(
     DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${USD_ROOT_DIR_RELEASE}/bin/>$<$<CONFIG:Debug>:${USD_ROOT_DIR_DEBUG}/bin/>"
     DESTINATION ${PLATFORM_INSTALL_LIBDIR}
@@ -246,36 +247,36 @@ if(${INSTALL_USD_DEPS})
 
   #Install CarbSdk
   if(${USD_DEVICE_USE_USDRT})
-  install(
-    DIRECTORY "${USDRT_BIN_DIR}/"
-    DESTINATION ${PLATFORM_INSTALL_LIBDIR}
-    FILES_MATCHING
-    PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}*"
-    PATTERN "*.pdb"
-    REGEX "${USDRT_BIN_DIR}(/[^/]*)+/[^/]*$") # Any file that's not in the root of the bin dir will match
-  install(
-    DIRECTORY "${CARBSDK_BIN_DIR}/"
-    DESTINATION ${PLATFORM_INSTALL_LIBDIR}
-    FILES_MATCHING
-    PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}*"
-    PATTERN "*.pdb"
-    REGEX "${CARBSDK_BIN_DIR}(/[^/]*)+/[^/]*$")
-  install(
-    DIRECTORY "${RTXPLUGINS_BIN_DIR}/"
-    DESTINATION ${PLATFORM_INSTALL_LIBDIR}
-    FILES_MATCHING
-    REGEX "${RTXPLUGINS_BIN_DIR}/plugins/omni.usd/[^/]*$")
-  install(
-    DIRECTORY "${RTXPLUGINS_BIN_DIR}/"
-    DESTINATION ${PLATFORM_INSTALL_LIBDIR}
-    FILES_MATCHING
-    REGEX "${RTXPLUGINS_BIN_DIR}/plugins/omni.usd/[^/]*$")
-  install(
-    DIRECTORY "${CUDAToolkit_ROOT}/../${PLATFORM_INSTALL_LIBDIR}"
-    DESTINATION ${PLATFORM_INSTALL_LIBDIR}
-    FILES_MATCHING
-    REGEX "/cudart[0-9_]*${CMAKE_SHARED_LIBRARY_SUFFIX}$")
-endif()
+    install(
+      DIRECTORY "${USDRT_BIN_DIR}/"
+      DESTINATION ${PLATFORM_INSTALL_LIBDIR}
+      FILES_MATCHING
+      PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}*"
+      PATTERN "*.pdb"
+      REGEX "${USDRT_BIN_DIR}(/[^/]*)+/[^/]*$") # Any file that's not in the root of the bin dir will match
+    install(
+      DIRECTORY "${CARBSDK_BIN_DIR}/"
+      DESTINATION ${PLATFORM_INSTALL_LIBDIR}
+      FILES_MATCHING
+      PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}*"
+      PATTERN "*.pdb"
+      REGEX "${CARBSDK_BIN_DIR}(/[^/]*)+/[^/]*$")
+    install(
+      DIRECTORY "${RTXPLUGINS_BIN_DIR}/"
+      DESTINATION ${PLATFORM_INSTALL_LIBDIR}
+      FILES_MATCHING
+      REGEX "${RTXPLUGINS_BIN_DIR}/plugins/omni.usd/[^/]*$")
+    install(
+      DIRECTORY "${RTXPLUGINS_BIN_DIR}/"
+      DESTINATION ${PLATFORM_INSTALL_LIBDIR}
+      FILES_MATCHING
+      REGEX "${RTXPLUGINS_BIN_DIR}/plugins/omni.usd/[^/]*$")
+    install(
+      DIRECTORY "${CUDAToolkit_ROOT}/../${PLATFORM_INSTALL_LIBDIR}"
+      DESTINATION ${PLATFORM_INSTALL_LIBDIR}
+      FILES_MATCHING
+      REGEX "/cudart[0-9_]*${CMAKE_SHARED_LIBRARY_SUFFIX}$")
+  endif()
 endif()
 
 message( "-------------------- End UsdBridge CmakeLists.txt ----------------------------------------")

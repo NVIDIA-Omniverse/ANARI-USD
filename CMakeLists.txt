@@ -196,12 +196,27 @@ install(TARGETS anari_library_usd
 ## install(FILES $<TARGET_PDB_FILE:anari_library_usd> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
 
 option(INSTALL_ANARI_DEPS "Enable install of ANARI SDK dependencies along with USD device" OFF) # Not truly a dependency of the USD Device, generally one wants to build against ANARI source, not just libs
+cmake_dependent_option(INSTALL_ANARI_COMPILE_DEPS "Enable install of ANARI SDK dependencies required for compilation of ANARI client code" OFF "INSTALL_ANARI_DEPS" OFF)
 if(${INSTALL_ANARI_DEPS})
 
   set(PLATFORM_INSTALL_LIBDIR "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_INSTALL_LIBDIR}>$<$<PLATFORM_ID:Windows>:${CMAKE_INSTALL_BINDIR}>/")
 
-  install(
-    FILES $<TARGET_RUNTIME_DLLS:anari_library_usd>
-    DESTINATION ${PLATFORM_INSTALL_LIBDIR})
+  if(${INSTALL_ANARI_COMPILE_DEPS})
+    ## Compile time deps
+    install(
+      DIRECTORY "${ANARI_ROOT_DIR}/bin/"
+      DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(
+      DIRECTORY "${ANARI_ROOT_DIR}/include/"
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    install(
+      DIRECTORY "${ANARI_ROOT_DIR}/lib/"
+      DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  else()
+    ## Runtime deps
+    install(
+      FILES $<TARGET_RUNTIME_DLLS:anari_library_usd>
+      DESTINATION ${PLATFORM_INSTALL_LIBDIR})
+  endif()
 endif()
 
