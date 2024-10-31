@@ -72,14 +72,14 @@ else()
   endif()
 endif()
 
-if(NOT Imath_DIR) # Transitive deps
+if(NOT DEFINED Imath_DIR) # Transitive deps
   if(WIN32)
     set(Imath_DIR "${USD_ROOT_DIR_CURRENT}/lib/cmake/Imath")
   else()
     set(Imath_DIR "${USD_ROOT_DIR_CURRENT}/lib64/cmake/Imath")
   endif()
 endif()
-if(NOT MaterialX_DIR)
+if(NOT DEFINED MaterialX_DIR)
   set(MaterialX_DIR "${USD_ROOT_DIR_CURRENT}/lib/cmake/MaterialX")
 endif()
 
