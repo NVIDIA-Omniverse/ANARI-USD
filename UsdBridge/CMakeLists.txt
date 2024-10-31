@@ -11,6 +11,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(CMakeDependentOption)
 include(usdhelpers.cmake)
 
+# Python
+
+list(PREPEND CMAKE_MODULE_PATH ${Python3_ROOT_DIR})
+find_package(Python3 REQUIRED COMPONENTS Development)
+list(POP_FRONT CMAKE_MODULE_PATH)
+
+set(USD_PYTHON_TARGETS Python3::Module)
+set(PY_SHARED_LIB_DIR "${Python3_RUNTIME_LIBRARY_DIRS}")
+set(USD_PYTHON_LINK_DIRS "${Python3_LIBRARY_DIRS}")
+list(GET Python3_INCLUDE_DIRS 0 Python3_INCLUDE_DIR) # Required for passing pxrConfig.cmake
+list(GET Python3_LIBRARIES 0 Python3_LIBRARY) # Required for passing pxrConfig.cmake
+
 # USD
 
 if (NOT EXISTS ${USD_ROOT_DIR})
@@ -35,6 +47,12 @@ else()
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  set(USD_ROOT_DIR_CURRENT "${USD_ROOT_DIR_RELEASE}")
+else()
+  set(USD_ROOT_DIR_CURRENT "${USD_ROOT_DIR_DEBUG}")
+endif()
+
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
   if(NOT EXISTS "${USD_ROOT_DIR_DEBUG}/include")
     message(FATAL_ERROR "USD_ROOT_DIR or its /debug subfolder does not have an /include subfolder, so it's not configured correctly at ${USD_ROOT_DIR_DEBUG}")
   endif()
@@ -55,8 +73,9 @@ else()
 endif()
 
 # Search in config mode
+set(Imath_DIR "${USD_ROOT_DIR_CURRENT}/lib/cmake/Imath") # Required for passing pxrConfig.cmake
 find_package(pxr REQUIRED
-  PATHS ${USD_ROOT_DIR_RELEASE})
+  PATHS ${USD_ROOT_DIR_CURRENT})
 
 if(NOT (USD_ROOT_DIR_DEBUG STREQUAL USD_ROOT_DIR_RELEASE))
   set(USD_DEBUG_TARGET_CMAKE "${USD_ROOT_DIR_DEBUG}/cmake/pxrTargets-debug.cmake")
@@ -71,16 +90,6 @@ endif()
 list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade usdLux usdUtils)
 flatten_and_cleanup_targets(USD_TARGETS "${USD_INIT_TARGETS}")
 message(STATUS "USD_TARGETS: ${USD_TARGETS}")
-
-# Python
-
-list(PREPEND CMAKE_MODULE_PATH ${Python_ROOT_DIR})
-find_package(Python REQUIRED COMPONENTS Development)
-list(POP_FRONT CMAKE_MODULE_PATH)
-
-set(USD_PYTHON_TARGETS Python::Module)
-set(PY_SHARED_LIB_DIR "${Python_RUNTIME_LIBRARY_DIRS}")
-set(USD_PYTHON_LINK_DIRS "${Python_LIBRARY_DIRS}")
 
 # Boost may have a custom include directory structure, just take the release ones
 

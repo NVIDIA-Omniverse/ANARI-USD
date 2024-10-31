@@ -21,7 +21,7 @@ From this directory, run `mkdir _build && cd _build`, after which there are two 
 
 - Superbuild: run `(c)cmake(-gui)` on the `../superbuild` subdir, for detailed instructions see `superbuild/README.md`.
 - Regular build: Directly run `(c)cmake(-gui)` on the root directory.
-    - Example with Omniverse support, without OpenVDB: `ccmake .. -DUSD_DEVICE_USE_OMNIVERSE=ON -DANARI_ROOT_DIR=<anari_install_path> -DUSD_ROOT_DIR=<usd_install_path> -DOMNIUSDRESOLVER_ROOT_DIR=<omni_usd_resolver_install_path> -DOMNICLIENT_ROOT_DIR=<omni_client_install_path> -DPython_ROOT_DIR=<python_install_path> -DPython_FIND_STRATEGY_LOCATION=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON`
+    - Example with Omniverse support, without OpenVDB: `ccmake .. -DUSD_DEVICE_USE_OMNIVERSE=ON -DANARI_ROOT_DIR=<anari_install_path> -DUSD_ROOT_DIR=<usd_install_path> -DOMNIUSDRESOLVER_ROOT_DIR=<omni_usd_resolver_install_path> -DOMNICLIENT_ROOT_DIR=<omni_client_install_path> -DPython3_ROOT_DIR=<python_install_path> -DPython3_FIND_STRATEGY_LOCATION=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON`
 
 After configuring and generating any of the above builds, run `cmake --build . --config [Release|Debug]`
 
@@ -106,7 +106,7 @@ If you have separate release and debug versions of USD, (or standalone OpenVDB, 
 - Go to the install directory of the connect sample, which is typically in `~/.local/share/ov/pkg/` or `<userdir>/AppData/local/ov/pkg/` but can also be found in the launcher by looking at your installed apps, a triple-stack on the right side of the connector sample entry -> settings
 - Build the connect sample by running `build.sh/.bat` in its folder
 - Locate the `usd`, `omni_usd_resolver`, `omni_client_library` and `python` folders in the `_build/target-deps` subfolder
-- The location of the previous four subfolders respectively can directly be set as `USD_ROOT_DIR`, `OMNIUSDRESOLVER_ROOT_DIR`, `OMNICLIENT_ROOT_DIR`, `Python_ROOT_DIR` in the ANARI CMake superbuild configuration
+- The location of the previous four subfolders respectively can directly be set as `USD_ROOT_DIR`, `OMNIUSDRESOLVER_ROOT_DIR`, `OMNICLIENT_ROOT_DIR`, `Python3_ROOT_DIR` in the ANARI CMake superbuild configuration
 
 #### Building USD Manually #
 

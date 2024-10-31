@@ -153,7 +153,7 @@ if (BUILD_USD)
 else()
 
   set(USD_ROOT_DIR "" CACHE PATH "Path to USD")
-  set(Python_ROOT_DIR "" CACHE PATH "Path to python install used for building USD")
+  set(Python3_ROOT_DIR "" CACHE PATH "Path to python install used for building USD")
 
   if(NOT EXISTS ${USD_ROOT_DIR})
     message(FATAL_ERROR "When BUILD_USD is off, a valid directory is required for USD_ROOT_DIR (optionally pointing to debug/ and release/ subdirectories)")
@@ -230,8 +230,8 @@ if (BUILD_ANARI_USD_DEVICE)
   else()
     list(APPEND ANARI_DEVICE_BUILD_ARGS
       -DUSD_ROOT_DIR=${USD_ROOT_DIR}
-      -DPython_ROOT_DIR=${Python_ROOT_DIR}
-      -DPython_FIND_STRATEGY=LOCATION
+      -DPython3_ROOT_DIR=${Python3_ROOT_DIR}
+      -DPython3_FIND_STRATEGY=LOCATION
       )
     if(USD_DEVICE_USE_OPENVDB)
       list(APPEND ANARI_DEVICE_BUILD_ARGS -DOpenVDB_ROOT=${OpenVDB_ROOT})
