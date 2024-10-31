@@ -73,7 +73,6 @@ else()
 endif()
 
 # Search in config mode
-set(Imath_DIR "${USD_ROOT_DIR_CURRENT}/lib/cmake/Imath") # Required for passing pxrConfig.cmake
 find_package(pxr REQUIRED
   PATHS ${USD_ROOT_DIR_CURRENT})
 
