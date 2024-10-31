@@ -23,9 +23,9 @@ Note that on Linux, GCC only guarantees forward ABI-compatibility, so libraries 
 From this directory, run `mkdir _build && cd _build`, after which there are two ways to build the USD Device:
 
 - Regular build: Directly run `(c)cmake(-gui)` on the root directory.
-    - Example of release configuration with Omniverse support, without OpenVDB: `ccmake .. -DUSD_DEVICE_USE_OMNIVERSE=ON -DANARI_ROOT_DIR=<anari_install_path> -DUSD_ROOT_DIR=<usd_install_path> -DOMNIUSDRESOLVER_ROOT_DIR=<omni_usd_resolver_install_path> -DOMNICLIENT_ROOT_DIR=<omni_client_install_path> -DPython3_ROOT_DIR=<python_install_path> -DPython3_FIND_STRATEGY_LOCATION=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_path>`
-    - If you want all dependencies to be installed alongside the USD device's binaries, add `-DINSTALL_ANARI_DEPS=ON -DINSTALL_ANARI_COMPILE_DEPS=ON -DINSTALL_USD_DEPS=ON -DINSTALL_OMNIVERSE_DEPS=ON`
-    - If you also want to generate the example executables, add `-DUSD_DEVICE_BUILD_EXAMPLES=ON`. They can be executed standalone if the dependencies from the previous step are installed.
+    - Example of release configuration with Omniverse support, without OpenVDB: `ccmake .. -D "USD_DEVICE_USE_OMNIVERSE=ON" -D "ANARI_ROOT_DIR=<anari_install_path>" -D "USD_ROOT_DIR=<usd_install_path>" -D "OMNIUSDRESOLVER_ROOT_DIR=<omni_usd_resolver_install_path>" -D "OMNICLIENT_ROOT_DIR=<omni_client_install_path>" -D "Python3_ROOT_DIR=<python_install_path>" -D "Python3_FIND_STRATEGY_LOCATION=ON" -D "CMAKE_POSITION_INDEPENDENT_CODE=ON" -D "CMAKE_BUILD_TYPE=Release" -D "CMAKE_INSTALL_PREFIX=<install_path>"`
+    - If you want all dependencies to be installed alongside the USD device's binaries, add `-D "INSTALL_ANARI_DEPS=ON" -D "INSTALL_ANARI_COMPILE_DEPS=ON" -D "INSTALL_USD_DEPS=ON" -D "INSTALL_OMNIVERSE_DEPS=ON"`
+    - If you also want to generate the example executables, add `-D "USD_DEVICE_BUILD_EXAMPLES=ON"`. They can be executed standalone if the dependencies from the previous step are installed.
 - (Experimental) Superbuild: run `(c)cmake(-gui)` on the `../superbuild` subdir, for detailed instructions see `superbuild/README.md`.
 
 After configuring and generating any of the above builds, run `cmake --build . --config [Release|Debug] --target install` to build and install.
