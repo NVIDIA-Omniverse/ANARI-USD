@@ -1,17 +1,18 @@
 ## USD device for ANARI #
 
-Device for ANARI generating USD+Omniverse output
+Device which generates USD output from intercepted ANARI API calls to, optionally with Omniverse support. 
+
+This project can be used purely to output USD files to local disk without any further run- or buildtime dependencies, and does therefore not require the use of Omniverse if not desired. If Omniverse output is enabled, it can be configured to transfer USD data to an Omniverse service of choice.
 
 ### Prerequisites #
 
-On Windows and Linux this library builds against USD versions 22.xx, OpenVDB 10.
+On Windows and Linux this library builds against USD versions 22.xx or 23.xx, with (if enabled) OpenVDB 10/11.
 
 USD can be built/installed in any of the following ways (depending on desired capabilities):
-    - Get prebuilt USD + Omniverse packages from Omniverse launcher according to [Downloading the Omniverse libraries](#downloading-the-omniverse-libraries)
+    - Get prebuilt USD + Omniverse packages according to [Downloading the Omniverse libraries](#downloading-the-omniverse-libraries)
     - Build USD from source (https://github.com/PixarAnimationStudios/USD/), optionally with OpenVDB support according to [Building USD Manually](#building-usd-manually)
         - For release/debug versions, observe the directory structure guidelines in [Debug Builds](#debug-builds) section
-    - Get prebuilt USD packages from https://developer.nvidia.com/usd#bin (No OpenVDB or Omniverse support)
-    - Automatic installation of USD as part of the superbuild, see `superbuild/README.md` (Experimental)
+    - (Experimental) Automatic installation of USD as part of the superbuild, see `superbuild/README.md`
 
 Note that on Linux, GCC only guarantees forward ABI-compatibility, so libraries downloaded from external sources built with newer versions of GCC than the USD device may not link to it properly.
 
@@ -19,11 +20,13 @@ Note that on Linux, GCC only guarantees forward ABI-compatibility, so libraries 
 
 From this directory, run `mkdir _build && cd _build`, after which there are two ways to build the USD Device:
 
-- Superbuild: run `(c)cmake(-gui)` on the `../superbuild` subdir, for detailed instructions see `superbuild/README.md`.
 - Regular build: Directly run `(c)cmake(-gui)` on the root directory.
-    - Example with Omniverse support, without OpenVDB: `ccmake .. -DUSD_DEVICE_USE_OMNIVERSE=ON -DANARI_ROOT_DIR=<anari_install_path> -DUSD_ROOT_DIR=<usd_install_path> -DOMNIUSDRESOLVER_ROOT_DIR=<omni_usd_resolver_install_path> -DOMNICLIENT_ROOT_DIR=<omni_client_install_path> -DPython3_ROOT_DIR=<python_install_path> -DPython3_FIND_STRATEGY_LOCATION=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON`
+    - Example of release configuration with Omniverse support, without OpenVDB: `ccmake .. -DUSD_DEVICE_USE_OMNIVERSE=ON -DANARI_ROOT_DIR=<anari_install_path> -DUSD_ROOT_DIR=<usd_install_path> -DOMNIUSDRESOLVER_ROOT_DIR=<omni_usd_resolver_install_path> -DOMNICLIENT_ROOT_DIR=<omni_client_install_path> -D "Imath_DIR=<usd_install_path>/lib/cmake/Imath" -D "MaterialX_DIR=<usd_install_path>/lib/cmake/MaterialX" -DPython3_ROOT_DIR=<python_install_path> -DPython3_FIND_STRATEGY_LOCATION=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_path>`
+    - If you want all dependencies to be installed alongside the USD device's binaries, add `-DINSTALL_ANARI_DEPS=ON -DINSTALL_ANARI_COMPILE_DEPS=ON -DINSTALL_USD_DEPS=ON -DINSTALL_OMNIVERSE_DEPS=ON`
+    - If you also want to generate the example executables, add `-DUSD_DEVICE_BUILD_EXAMPLES=ON`. They can be executed standalone if the dependencies from the previous step are installed.
+- (Experimental) Superbuild: run `(c)cmake(-gui)` on the `../superbuild` subdir, for detailed instructions see `superbuild/README.md`.
 
-After configuring and generating any of the above builds, run `cmake --build . --config [Release|Debug]`
+After configuring and generating any of the above builds, run `cmake --build . --config [Release|Debug] --target install` to build and install.
 
 ### Usage notes #
 
@@ -101,12 +104,11 @@ If you have separate release and debug versions of USD, (or standalone OpenVDB, 
 
 #### Downloading the Omniverse libraries #
 
-- Get the Nvidia Omniverse Launcher from https://www.nvidia.com/en-us/omniverse/
-- Go to the `Exchange` tab and navigate to the `Connectors` section. Install the Connect Sample (version 102.1.5 is known to work).
-- Go to the install directory of the connect sample, which is typically in `~/.local/share/ov/pkg/` or `<userdir>/AppData/local/ov/pkg/` but can also be found in the launcher by looking at your installed apps, a triple-stack on the right side of the connector sample entry -> settings
-- Build the connect sample by running `build.sh/.bat` in its folder
+- Clone the Connect Sample on Github: https://github.com/NVIDIA-Omniverse/connect-samples
+- Make sure you check out a tag using a supported USD version for this USD device: inspect the `deps/target-deps.packman.xml` file, and make sure that the `omni_connect_sdk` entry contains a major version of the `pxr-<version>` substring corresponding to what is listed at the top of this `README.md`.
+- Build the connect sample by running `repo.sh/.bat build` in its folder
 - Locate the `usd`, `omni_usd_resolver`, `omni_client_library` and `python` folders in the `_build/target-deps` subfolder
-- The location of the previous four subfolders respectively can directly be set as `USD_ROOT_DIR`, `OMNIUSDRESOLVER_ROOT_DIR`, `OMNICLIENT_ROOT_DIR`, `Python3_ROOT_DIR` in the ANARI CMake superbuild configuration
+- The location of the previous four subfolders respectively can directly be set as `USD_ROOT_DIR`, `OMNIUSDRESOLVER_ROOT_DIR`, `OMNICLIENT_ROOT_DIR`, `Python3_ROOT_DIR` in the ANARI CMake (superbuild) configuration, as demonstrated in [Building the ANARI USD device](#building-the-anari-usd-device).
 
 #### Building USD Manually #
 
