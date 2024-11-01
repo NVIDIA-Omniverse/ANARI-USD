@@ -8,10 +8,10 @@ This project can be used purely to output USD files to local disk without any fu
 
 On Windows and Linux this library builds against:
     - ANARI SDK (corresponding to git tagged version of this repo) at https://github.com/KhronosGroup/ANARI-SDK
-    - USD version 23.xx, with (if enabled) OpenVDB 10 or 11.
+    - USD version 23.xx or 24.xx, with (if enabled) OpenVDB 10 or 11.
 
 USD can be built/installed in any of the following ways (depending on desired capabilities):
-    - Get prebuilt USD + Omniverse packages according to [Downloading the Omniverse libraries](#downloading-the-omniverse-libraries)
+    - Get prebuilt USD and optional Omniverse packages according to [Downloading the Omniverse libraries](#downloading-the-omniverse-libraries)
     - Build USD from source (https://github.com/PixarAnimationStudios/USD/), optionally with OpenVDB support according to [Building USD Manually](#building-usd-manually)
         - For release/debug versions, observe the directory structure guidelines in [Debug Builds](#debug-builds) section
     - (Experimental) Automatic installation of USD as part of the superbuild, see `superbuild/README.md`
