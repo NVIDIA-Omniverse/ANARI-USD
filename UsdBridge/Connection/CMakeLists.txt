@@ -61,6 +61,8 @@ function(get_omni_dependency
 endfunction()
 
 if(${USD_DEVICE_USE_OMNIVERSE})
+  set(OMNICLIENT_ROOT_DIR "" CACHE PATH "Path to the OmniClient Library")
+  set(OMNIUSDRESOLVER_ROOT_DIR "" CACHE PATH "Path to the Usd Resolver Library")
 
   get_omni_dependency(
     OMNICLIENT_ROOT_DIR
