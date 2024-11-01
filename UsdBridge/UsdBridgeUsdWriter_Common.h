@@ -14,148 +14,150 @@ template<typename T>
 using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
 
 #define MISC_TOKEN_SEQ \
-  (Root) \
-  (extent)
+  PROCESS_PREFIX(Root) \
+  PROCESS_PREFIX(extent)
 
 #define ATTRIB_TOKEN_SEQ \
-  (faceVertexCounts) \
-  (faceVertexIndices) \
-  (points) \
-  (positions) \
-  (normals) \
-  (st) \
-  (attribute0) \
-  (attribute1) \
-  (attribute2) \
-  (attribute3) \
-  (attribute4) \
-  (attribute5) \
-  (attribute6) \
-  (attribute7) \
-  (attribute8) \
-  (attribute9) \
-  (attribute10) \
-  (attribute11) \
-  (attribute12) \
-  (attribute13) \
-  (attribute14) \
-  (attribute15) \
-  (color) \
-  (ids) \
-  (widths) \
-  (protoIndices) \
-  (orientations) \
-  (scales) \
-  (velocities) \
-  (angularVelocities) \
-  (invisibleIds) \
-  (curveVertexCounts)
+  PROCESS_PREFIX(faceVertexCounts) \
+  PROCESS_PREFIX(faceVertexIndices) \
+  PROCESS_PREFIX(points) \
+  PROCESS_PREFIX(positions) \
+  PROCESS_PREFIX(normals) \
+  PROCESS_PREFIX(st) \
+  PROCESS_PREFIX(attribute0) \
+  PROCESS_PREFIX(attribute1) \
+  PROCESS_PREFIX(attribute2) \
+  PROCESS_PREFIX(attribute3) \
+  PROCESS_PREFIX(attribute4) \
+  PROCESS_PREFIX(attribute5) \
+  PROCESS_PREFIX(attribute6) \
+  PROCESS_PREFIX(attribute7) \
+  PROCESS_PREFIX(attribute8) \
+  PROCESS_PREFIX(attribute9) \
+  PROCESS_PREFIX(attribute10) \
+  PROCESS_PREFIX(attribute11) \
+  PROCESS_PREFIX(attribute12) \
+  PROCESS_PREFIX(attribute13) \
+  PROCESS_PREFIX(attribute14) \
+  PROCESS_PREFIX(attribute15) \
+  PROCESS_PREFIX(color) \
+  PROCESS_PREFIX(ids) \
+  PROCESS_PREFIX(widths) \
+  PROCESS_PREFIX(protoIndices) \
+  PROCESS_PREFIX(orientations) \
+  PROCESS_PREFIX(scales) \
+  PROCESS_PREFIX(velocities) \
+  PROCESS_PREFIX(angularVelocities) \
+  PROCESS_PREFIX(invisibleIds) \
+  PROCESS_PREFIX(curveVertexCounts)
 
 #define USDPREVSURF_TOKEN_SEQ \
-  (UsdPreviewSurface) \
-  (useSpecularWorkflow) \
-  (result) \
-  (surface) \
-  ((PrimVarReader_Float, "UsdPrimvarReader_float")) \
-  ((PrimVarReader_Float2, "UsdPrimvarReader_float2")) \
-  ((PrimVarReader_Float3, "UsdPrimvarReader_float3")) \
-  ((PrimVarReader_Float4, "UsdPrimvarReader_float4")) \
-  (UsdUVTexture) \
-  (fallback) \
-  (r) \
-  (rg) \
-  (rgb) \
-  (black) \
-  (clamp) \
-  (repeat) \
-  (mirror)
+  PROCESS_PREFIX(UsdPreviewSurface) \
+  PROCESS_PREFIX(useSpecularWorkflow) \
+  PROCESS_PREFIX(result) \
+  PROCESS_PREFIX(surface) \
+  PROCESS_PREFIX((PrimVarReader_Float, "UsdPrimvarReader_float")) \
+  PROCESS_PREFIX((PrimVarReader_Float2, "UsdPrimvarReader_float2")) \
+  PROCESS_PREFIX((PrimVarReader_Float3, "UsdPrimvarReader_float3")) \
+  PROCESS_PREFIX((PrimVarReader_Float4, "UsdPrimvarReader_float4")) \
+  PROCESS_PREFIX(UsdUVTexture) \
+  PROCESS_PREFIX(fallback) \
+  PROCESS_PREFIX(r) \
+  PROCESS_PREFIX(rg) \
+  PROCESS_PREFIX(rgb) \
+  PROCESS_PREFIX(black) \
+  PROCESS_PREFIX(clamp) \
+  PROCESS_PREFIX(repeat) \
+  PROCESS_PREFIX(mirror)
 
 #define USDPREVSURF_INPUT_TOKEN_SEQ \
-  (roughness) \
-  (opacity) \
-  (opacityThreshold) \
-  (metallic) \
-  (ior) \
-  (diffuseColor) \
-  (specularColor) \
-  (emissiveColor) \
-  (file) \
-  (WrapS) \
-  (WrapT) \
-  (WrapR) \
-  (varname)
+  PROCESS_PREFIX(roughness) \
+  PROCESS_PREFIX(opacity) \
+  PROCESS_PREFIX(opacityThreshold) \
+  PROCESS_PREFIX(metallic) \
+  PROCESS_PREFIX(ior) \
+  PROCESS_PREFIX(diffuseColor) \
+  PROCESS_PREFIX(specularColor) \
+  PROCESS_PREFIX(emissiveColor) \
+  PROCESS_PREFIX(file) \
+  PROCESS_PREFIX(WrapS) \
+  PROCESS_PREFIX(WrapT) \
+  PROCESS_PREFIX(WrapR) \
+  PROCESS_PREFIX(varname)
 
 #define USDPREVSURF_OUTPUT_TOKEN_SEQ \
-  (result) \
-  (r) \
-  (rg) \
-  (rgb) \
-  (a)
+  PROCESS_PREFIX(result) \
+  PROCESS_PREFIX(r) \
+  PROCESS_PREFIX(rg) \
+  PROCESS_PREFIX(rgb) \
+  PROCESS_PREFIX(a)
 
 #define MDL_OUTPUT_TOKEN_SEQ \
-  (out)
+  PROCESS_PREFIX(out)
 
 #define MDL_TOKEN_SEQ \
-  (mdl) \
-  (OmniPBR) \
-  (sourceAsset) \
-  (out) \
-  (data_lookup_float) \
-  (data_lookup_float2) \
-  (data_lookup_float3) \
-  (data_lookup_float4) \
-  (data_lookup_int) \
-  (data_lookup_int2) \
-  (data_lookup_int3) \
-  (data_lookup_int4) \
-  (data_lookup_color) \
-  (lookup_color) \
-  (lookup_float) \
-  (lookup_float3) \
-  (lookup_float4) \
-  ((xyz, "xyz(float4)")) \
-  ((x, "x(float4)")) \
-  ((y, "y(float4)")) \
-  ((z, "z(float4)")) \
-  ((w, "w(float4)")) \
-  ((construct_color, "construct_color(float3)")) \
-  ((mul_float, "multiply(float,float)")) \
-  (coord) \
-  (colorSpace)
+  PROCESS_PREFIX(mdl) \
+  PROCESS_PREFIX(OmniPBR) \
+  PROCESS_PREFIX(sourceAsset) \
+  PROCESS_PREFIX(out) \
+  PROCESS_PREFIX(data_lookup_float) \
+  PROCESS_PREFIX(data_lookup_float2) \
+  PROCESS_PREFIX(data_lookup_float3) \
+  PROCESS_PREFIX(data_lookup_float4) \
+  PROCESS_PREFIX(data_lookup_int) \
+  PROCESS_PREFIX(data_lookup_int2) \
+  PROCESS_PREFIX(data_lookup_int3) \
+  PROCESS_PREFIX(data_lookup_int4) \
+  PROCESS_PREFIX(data_lookup_color) \
+  PROCESS_PREFIX(lookup_color) \
+  PROCESS_PREFIX(lookup_float) \
+  PROCESS_PREFIX(lookup_float3) \
+  PROCESS_PREFIX(lookup_float4) \
+  PROCESS_PREFIX((xyz, "xyz(float4)")) \
+  PROCESS_PREFIX((x, "x(float4)")) \
+  PROCESS_PREFIX((y, "y(float4)")) \
+  PROCESS_PREFIX((z, "z(float4)")) \
+  PROCESS_PREFIX((w, "w(float4)")) \
+  PROCESS_PREFIX((construct_color, "construct_color(float3)")) \
+  PROCESS_PREFIX((mul_float, "multiply(float,float)")) \
+  PROCESS_PREFIX(coord) \
+  PROCESS_PREFIX(colorSpace)
 
 #define MDL_INPUT_TOKEN_SEQ \
-  (reflection_roughness_constant) \
-  (opacity_constant) \
-  (opacity_threshold) \
-  (enable_opacity) \
-  (metallic_constant) \
-  (ior_constant) \
-  (diffuse_color_constant) \
-  (emissive_color) \
-  (emissive_intensity) \
-  (enable_emission) \
-  (name) \
-  (tex) \
-  (wrap_u) \
-  (wrap_v) \
-  (wrap_w) \
-  (a) \
-  (b) \
+  PROCESS_PREFIX(reflection_roughness_constant) \
+  PROCESS_PREFIX(opacity_constant) \
+  PROCESS_PREFIX(opacity_threshold) \
+  PROCESS_PREFIX(enable_opacity) \
+  PROCESS_PREFIX(metallic_constant) \
+  PROCESS_PREFIX(ior_constant) \
+  PROCESS_PREFIX(diffuse_color_constant) \
+  PROCESS_PREFIX(emissive_color) \
+  PROCESS_PREFIX(emissive_intensity) \
+  PROCESS_PREFIX(enable_emission) \
+  PROCESS_PREFIX(name) \
+  PROCESS_PREFIX(tex) \
+  PROCESS_PREFIX(wrap_u) \
+  PROCESS_PREFIX(wrap_v) \
+  PROCESS_PREFIX(wrap_w) \
+  PROCESS_PREFIX(a) \
+  PROCESS_PREFIX(b) \
 
 #define VOLUME_TOKEN_SEQ \
-  (density) \
-  (filePath)
+  PROCESS_PREFIX(density) \
+  PROCESS_PREFIX(filePath)
 
 #define INDEX_TOKEN_SEQ \
-  (nvindex) \
-  (volume) \
-  (colormap) \
-  (Colormap) \
-  (colormapValues) \
-  (colormapSource) \
-  (domain) \
-  (domainBoundaryMode) \
-  (clampToEdge)
+  PROCESS_PREFIX(nvindex) \
+  PROCESS_PREFIX(volume) \
+  PROCESS_PREFIX(colormap) \
+  PROCESS_PREFIX(Colormap) \
+  PROCESS_PREFIX(colormapValues) \
+  PROCESS_PREFIX(colormapSource) \
+  PROCESS_PREFIX(domain) \
+  PROCESS_PREFIX(domainBoundaryMode) \
+  PROCESS_PREFIX(clampToEdge)
+
+#define PROCESS_PREFIX
 
 TF_DECLARE_PUBLIC_TOKENS(
   UsdBridgeTokens,
@@ -183,6 +185,8 @@ TF_DECLARE_PUBLIC_TOKENS(
   USDPREVSURF_OUTPUT_TOKEN_SEQ
   MDL_OUTPUT_TOKEN_SEQ
 );
+
+#undef PROCESS_PREFIX
 
 namespace constring
 {

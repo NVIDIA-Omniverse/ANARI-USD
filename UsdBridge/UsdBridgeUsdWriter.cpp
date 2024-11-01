@@ -7,6 +7,8 @@
 #include "UsdBridgeUsdWriter_Common.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
 
+#define PROCESS_PREFIX
+
 TF_DEFINE_PUBLIC_TOKENS(
   UsdBridgeTokens,
 
@@ -19,6 +21,8 @@ TF_DEFINE_PUBLIC_TOKENS(
   INDEX_TOKEN_SEQ
   MISC_TOKEN_SEQ
 );
+
+#undef PROCESS_PREFIX
 
 namespace constring
 {
@@ -72,14 +76,14 @@ namespace constring
 #endif
 }
   
-#define ATTRIB_TOKENS_ADD(r, data, elem) AttributeTokens.push_back(UsdBridgeTokens->elem);
+#define PROCESS_PREFIX(elem) AttributeTokens.push_back(UsdBridgeTokens->elem); // Converts any token sequence macro to add all tokens to list
 
 UsdBridgeUsdWriter::UsdBridgeUsdWriter(const UsdBridgeSettings& settings)
   : Settings(settings)
   , VolumeWriter(Create_VolumeWriter(), std::mem_fn(&UsdBridgeVolumeWriterI::Release))
 {
   // Initialize AttributeTokens with common known attribute names
-  BOOST_PP_SEQ_FOR_EACH(ATTRIB_TOKENS_ADD, ~, ATTRIB_TOKEN_SEQ)
+  ATTRIB_TOKEN_SEQ
 
   if(Settings.HostName)
     ConnectionSettings.HostName = Settings.HostName;
@@ -87,6 +91,8 @@ UsdBridgeUsdWriter::UsdBridgeUsdWriter(const UsdBridgeSettings& settings)
     ConnectionSettings.WorkingDirectory = Settings.OutputPath;
   FormatDirName(ConnectionSettings.WorkingDirectory);
 }
+
+#undef PROCESS_PREFIX // Reset the process prefix on the token sequence
 
 UsdBridgeUsdWriter::~UsdBridgeUsdWriter()
 {
