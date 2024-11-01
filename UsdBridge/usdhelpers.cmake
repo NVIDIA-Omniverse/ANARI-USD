@@ -41,6 +41,7 @@ function(flatten_and_cleanup_targets RESULT_TARGETS INIT_TARGETS)
     if((target_processed EQUAL -1) 
       AND NOT (${cur_target} MATCHES ${MATCH_SUFFIX})
       AND NOT (${cur_target} STREQUAL "dl")
+      AND NOT (${cur_target} STREQUAL "m")
       )
       list(APPEND flat_targets ${cur_target})
       
