@@ -195,10 +195,10 @@ namespace usdbridgenumerics
       // cosAngle = cos(pi/2) = 0.0f;
     }
 
-    quat[0] = cosAngle;
-    quat[1] = sinAxis[0];
-    quat[2] = sinAxis[1];
-    quat[3] = sinAxis[2];
+    quat[0] = sinAxis[0];
+    quat[1] = sinAxis[1];
+    quat[2] = sinAxis[2];
+    quat[3] = cosAngle;
   }
 }
 

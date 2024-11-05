@@ -166,7 +166,7 @@ namespace UsdBridgeArrays
     for (int i = 0; i < destSpan.size(); ++i)
     {
       destArray[i] = DestType(
-        DestScalarType(typedSrcData[i*4+3]), // note that the real component comes first in the quat's constructor
+        DestScalarType(typedSrcData[i*4+3]), // note that the real component comes first in the quat's constructor of USD, whereas the source data is assumed to be QUAT_IJKW (real component last)
         DestScalarType(typedSrcData[i*4]),
         DestScalarType(typedSrcData[i*4+1]),
         DestScalarType(typedSrcData[i*4+2]));
