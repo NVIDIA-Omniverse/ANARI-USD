@@ -11,7 +11,7 @@
 class UsdDataArray;
 struct UsdBridgeMeshData;
 
-static constexpr int MAX_ATTRIBS = 16;
+static constexpr int MAX_ATTRIBS = 16; // Coordinate with UsdGeometry::componentParamNames and UsdBridgeData.h
 
 enum class UsdGeometryComponents
 {
@@ -25,7 +25,19 @@ enum class UsdGeometryComponents
   ATTRIBUTE0,
   ATTRIBUTE1,
   ATTRIBUTE2,
-  ATTRIBUTE3
+  ATTRIBUTE3,
+  ATTRIBUTE4,
+  ATTRIBUTE5,
+  ATTRIBUTE6,
+  ATTRIBUTE7,
+  ATTRIBUTE8,
+  ATTRIBUTE9,
+  ATTRIBUTE10,
+  ATTRIBUTE11,
+  ATTRIBUTE12,
+  ATTRIBUTE13,
+  ATTRIBUTE14,
+  ATTRIBUTE15
 };
 
 struct UsdGeometryData
@@ -133,7 +145,19 @@ class UsdGeometry : public UsdBridgedBaseObject<UsdGeometry, UsdGeometryData, Us
       ComponentPair(UsdGeometryComponents::ATTRIBUTE0, "attribute0"),
       ComponentPair(UsdGeometryComponents::ATTRIBUTE1, "attribute1"),
       ComponentPair(UsdGeometryComponents::ATTRIBUTE2, "attribute2"),
-      ComponentPair(UsdGeometryComponents::ATTRIBUTE3, "attribute3")};
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE3, "attribute3"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE4, "attribute4"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE5, "attribute5"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE6, "attribute6"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE7, "attribute7"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE8, "attribute8"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE9, "attribute9"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE10, "attribute10"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE11, "attribute11"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE12, "attribute12"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE13, "attribute13"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE14, "attribute14"),
+      ComponentPair(UsdGeometryComponents::ATTRIBUTE15, "attribute15")};
 
   protected:
     bool deferCommit(UsdDevice* device) override;

@@ -395,7 +395,19 @@ struct UsdBridgeMeshData
     ATTRIBUTE1 = (1 << 5),
     ATTRIBUTE2 = (1 << 6),
     ATTRIBUTE3 = (1 << 7),
-    ALL = (1 << 8) - 1
+    ATTRIBUTE4 = (1 << 8),
+    ATTRIBUTE5 = (1 << 9),
+    ATTRIBUTE6 = (1 << 10),
+    ATTRIBUTE7 = (1 << 11),
+    ATTRIBUTE8 = (1 << 12),
+    ATTRIBUTE9 = (1 << 13),
+    ATTRIBUTE10 = (1 << 14),
+    ATTRIBUTE11 = (1 << 15),
+    ATTRIBUTE12 = (1 << 16),
+    ATTRIBUTE13 = (1 << 17),
+    ATTRIBUTE14 = (1 << 18),
+    ATTRIBUTE15 = (1 << 19),
+    ALL = (1 << 20) - 1
   };
   
   DataMemberId UpdatesToPerform = DataMemberId::ALL;
@@ -445,7 +457,19 @@ struct UsdBridgeInstancerData
     ATTRIBUTE1 = (1 << 10),
     ATTRIBUTE2 = (1 << 11),
     ATTRIBUTE3 = (1 << 12),
-    ALL = (1 << 13) - 1
+    ATTRIBUTE4 = (1 << 12),
+    ATTRIBUTE5 = (1 << 13),
+    ATTRIBUTE6 = (1 << 14),
+    ATTRIBUTE7 = (1 << 15),
+    ATTRIBUTE8 = (1 << 16),
+    ATTRIBUTE9 = (1 << 17),
+    ATTRIBUTE10 = (1 << 18),
+    ATTRIBUTE11 = (1 << 19),
+    ATTRIBUTE12 = (1 << 20),
+    ATTRIBUTE13 = (1 << 21),
+    ATTRIBUTE14 = (1 << 22),
+    ATTRIBUTE15 = (1 << 23),
+    ALL = (1 << 24) - 1
   };
 
   DataMemberId UpdatesToPerform = DataMemberId::ALL;
@@ -513,7 +537,19 @@ struct UsdBridgeCurveData
     ATTRIBUTE1 = (1 << 6),
     ATTRIBUTE2 = (1 << 7),
     ATTRIBUTE3 = (1 << 8),
-    ALL = (1 << 9) - 1
+    ATTRIBUTE4 = (1 << 9),
+    ATTRIBUTE5 = (1 << 10),
+    ATTRIBUTE6 = (1 << 11),
+    ATTRIBUTE7 = (1 << 12),
+    ATTRIBUTE8 = (1 << 13),
+    ATTRIBUTE9 = (1 << 14),
+    ATTRIBUTE10 = (1 << 15),
+    ATTRIBUTE11 = (1 << 16),
+    ATTRIBUTE12 = (1 << 17),
+    ATTRIBUTE13 = (1 << 18),
+    ATTRIBUTE14 = (1 << 19),
+    ATTRIBUTE15 = (1 << 20),
+    ALL = (1 << 21) - 1
   };
 
   DataMemberId UpdatesToPerform = DataMemberId::ALL;
