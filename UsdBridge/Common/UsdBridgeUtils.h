@@ -22,6 +22,12 @@ namespace ubutils
   const float* SrgbToLinearTable(); // returns a float[256] array
   float SrgbToLinear(float val);
   void SrgbToLinear3(float* color); // expects a float[3]
+
+  template<typename DMI>
+  DMI GetAttribBit(int attribIndex)
+  {
+    return (static_cast<DMI>(static_cast<int>(DMI::ATTRIBUTE0) << attribIndex));
+  }
 }
 
 #endif

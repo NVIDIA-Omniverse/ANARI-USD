@@ -139,7 +139,7 @@ namespace
       bool timeVarChecked = true;
       if(timeEval)
       {
-        DMI attributeId = DMI::ATTRIBUTE0 + attribIndex;
+        DMI attributeId = ubutils::GetAttribBit<DMI>(attribIndex);
         timeVarChecked = timeEval->IsTimeVarying(attributeId);
       }
 
@@ -542,7 +542,7 @@ namespace
     }
 
     using DMI = typename GeomDataType::DataMemberId;
-    DMI attributeId = DMI::ATTRIBUTE0 + attribIndex;
+    DMI attributeId = ubutils::GetAttribBit<DMI>(attribIndex);
 
     bool performsUpdate = updateEval.PerformsUpdate(attributeId);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(attributeId);

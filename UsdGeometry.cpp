@@ -767,8 +767,7 @@ void UsdGeometry::setAttributeTimeVarying(typename GeomDataType::DataMemberId& t
 
   for(size_t attribIdx = 0; attribIdx < attributeArray.size(); ++attribIdx)
   {
-    DMI dmiAttribBit = (static_cast<DMI>(static_cast<int>
-      (DMI::ATTRIBUTE0) << attribIdx));
+    DMI dmiAttribBit = ubutils::GetAttribBit<DMI>(attribIdx);
 
     timeVarying = timeVarying &
       (isBitSet(paramData.timeVarying, attribStartBit+(int)attribIdx) ? DMI::ALL : ~dmiAttribBit);
