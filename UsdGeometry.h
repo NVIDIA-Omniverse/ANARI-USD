@@ -45,7 +45,7 @@ struct UsdGeometryData
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
-  double timeStep = 0.0;
+  double timeStep = std::numeric_limits<float>::quiet_NaN();
   int timeVarying = 0xFFFFFFFF; // TimeVarying bits
 
   const UsdDataArray* vertexPositions = nullptr;

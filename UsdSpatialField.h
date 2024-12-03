@@ -18,7 +18,7 @@ struct UsdSpatialFieldData
   UsdSharedString* name = nullptr;
   UsdSharedString* usdName = nullptr;
 
-  double timeStep = 0.0;
+  double timeStep = std::numeric_limits<float>::quiet_NaN();
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying.
 
   const UsdDataArray* data = nullptr;
