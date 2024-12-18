@@ -153,8 +153,10 @@ if (USD_DEVICE_USE_OPENVDB)
     endif()
     set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/UsdBridgeVolumeWriter.cpp PROPERTIES COMPILE_FLAGS /bigobj)
   else()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-      _GLIBCXX_USE_CXX11_ABI=0 )
+    if(NOT ${USD_DEVICE_USE_CXX11_ABI})
+      target_compile_definitions(${PROJECT_NAME} PRIVATE
+        _GLIBCXX_USE_CXX11_ABI=0 )
+    endif()
   endif()
 
 endif()

@@ -73,10 +73,9 @@ else()
 endif()
 
 if(NOT DEFINED Imath_DIR) # Transitive deps
-  if(WIN32)
+  set(Imath_DIR "${USD_ROOT_DIR_CURRENT}/lib64/cmake/Imath")
+  if(NOT EXISTS ${Imath_DIR})
     set(Imath_DIR "${USD_ROOT_DIR_CURRENT}/lib/cmake/Imath")
-  else()
-    set(Imath_DIR "${USD_ROOT_DIR_CURRENT}/lib64/cmake/Imath")
   endif()
 endif()
 if(NOT DEFINED MaterialX_DIR)
@@ -100,6 +99,23 @@ endif()
 list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade usdLux usdUtils)
 flatten_and_cleanup_targets(USD_TARGETS "${USD_INIT_TARGETS}")
 message(STATUS "USD_TARGETS: ${USD_TARGETS}")
+
+# Find out whether USD was compiled with or without the CXX11 ABI
+if(NOT WIN32)
+  set(CXX11_COMPILE_OFF OFF)
+  check_file_and_substring(
+    "${USD_ROOT_DIR_CURRENT}/BUILD_INFO/CMakeCache.txt"
+    "-D_GLIBCXX_USE_CXX11_ABI=0"
+    CXX11_COMPILE_OFF)
+
+  if(${CXX11_COMPILE_OFF})
+    set(USE_CXX11_ABI_DEFAULT OFF)
+  else()
+    set(USE_CXX11_ABI_DEFAULT ON)
+  endif()
+
+  option(USD_DEVICE_USE_CXX11_ABI "" ${USE_CXX11_ABI_DEFAULT})
+endif()
 
 # Boost may have a custom include directory structure, just take the release ones
 
@@ -178,8 +194,10 @@ if (WIN32)
   target_link_directories(UsdBridge PUBLIC "${USD_PYTHON_LINK_DIRS}" "${USD_LIB_DIR}")
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
-  target_compile_definitions(UsdBridge PRIVATE _GLIBCXX_USE_CXX11_ABI=0 )
   target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
+  if(NOT ${USD_DEVICE_USE_CXX11_ABI})
+    target_compile_definitions(UsdBridge PRIVATE _GLIBCXX_USE_CXX11_ABI=0)
+  endif()
 endif()
 
 # Linking
