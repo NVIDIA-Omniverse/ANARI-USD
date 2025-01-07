@@ -853,8 +853,9 @@ void *UsdDevice::mapParameterArray1D(ANARIObject object,
   auto array = newArray1D(nullptr, nullptr, nullptr, dataType, numElements1);
   setParameter(object, name, ANARI_ARRAY1D, &array);
   *elementStride = anari::sizeOf(dataType);
+  bool paramExists = AnariToUsdObjectPtr(array)->useCount() > 1;
   AnariToUsdObjectPtr(array)->refDec(helium::RefType::PUBLIC);
-  return mapArray(array);
+  return paramExists ? mapArray(array) : nullptr;
 }
 
 void *UsdDevice::mapParameterArray2D(ANARIObject object,
@@ -867,8 +868,9 @@ void *UsdDevice::mapParameterArray2D(ANARIObject object,
   auto array = newArray2D(nullptr, nullptr, nullptr, dataType, numElements1, numElements2);
   setParameter(object, name, ANARI_ARRAY2D, &array);
   *elementStride = anari::sizeOf(dataType);
+  bool paramExists = AnariToUsdObjectPtr(array)->useCount() > 1;
   AnariToUsdObjectPtr(array)->refDec(helium::RefType::PUBLIC);
-  return mapArray(array);
+  return paramExists ? mapArray(array) : nullptr;
 }
 
 void *UsdDevice::mapParameterArray3D(ANARIObject object,
@@ -888,8 +890,9 @@ void *UsdDevice::mapParameterArray3D(ANARIObject object,
       numElements3);
   setParameter(object, name, ANARI_ARRAY3D, &array);
   *elementStride = anari::sizeOf(dataType);
+  bool paramExists = AnariToUsdObjectPtr(array)->useCount() > 1;
   AnariToUsdObjectPtr(array)->refDec(helium::RefType::PUBLIC);
-  return mapArray(array);
+  return paramExists ? mapArray(array) : nullptr;
 }
 
 void UsdDevice::unmapParameterArray(ANARIObject object, const char *name)
