@@ -8,12 +8,16 @@
 
 class UsdRenderer;
 class UsdWorld;
+class UsdCamera;
 
 struct UsdFrameData
 {
   UsdUint2 size = {0, 0};
   ANARIDataType color = ANARI_UNKNOWN;
   ANARIDataType depth = ANARI_UNKNOWN;
+  UsdCamera* camera = nullptr;
+
+  double time = 0.0;
 };
 
 class UsdFrame : public UsdParameterizedBaseObject<UsdFrame, UsdFrameData>
@@ -31,6 +35,7 @@ class UsdFrame : public UsdParameterizedBaseObject<UsdFrame, UsdFrameData>
     void unmapBuffer(const char* channel);
 
     void saveUsd(UsdDevice* device);
+    void renderFrame(UsdDevice* device);
 
   protected:
     bool deferCommit(UsdDevice* device) override;

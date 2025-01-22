@@ -5,6 +5,7 @@
 
 #include "UsdBridgeUsdWriter.h"
 #include "UsdBridgeCaches.h"
+#include "UsdBridgeRenderer.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
 
 #include <string>
@@ -18,6 +19,7 @@ CARB_GLOBALS("anariUsdBridge")
 
 #define BRIDGE_CACHE Internals->Cache
 #define BRIDGE_USDWRITER Internals->UsdWriter
+#define BRIDGE_RENDERER Internals->HydraRenderer
 
 namespace
 {
@@ -67,6 +69,7 @@ struct UsdBridgeInternals
 {
   UsdBridgeInternals(const UsdBridgeSettings& settings)
     : UsdWriter(settings)
+    , HydraRenderer(UsdWriter)
   {
     RefModCallbacks.AtNewRef = [this](UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache){
       // Increase the reference count for the child on creation of referencing prim
@@ -104,6 +107,9 @@ struct UsdBridgeInternals
   // USDWriter
   UsdBridgeUsdWriter UsdWriter;
 
+  // USD Hydra renderer
+  UsdBridgeRenderer HydraRenderer;
+
   // Material->geometry binding suggestion
   std::map<UsdBridgePrimCache*, SdfPath> MaterialToGeometryBinding;
 
@@ -113,6 +119,9 @@ struct UsdBridgeInternals
   // Diagnostic Manager
   std::unique_ptr<UsdBridgeDiagnosticMgrDelegate> DiagnosticDelegate;
   std::function<void (UsdBridgeDiagnosticMgrDelegate*)> DiagRemoveFunc;
+
+  // Camera
+  UsdCameraHandle LastUsedCamera { nullptr };
 
   // Temp arrays
   UsdBridgePrimCacheList TempPrimCaches;
@@ -1066,8 +1075,28 @@ void UsdBridge::SaveScene()
 {
   if (!SessionValid) return;
 
-  if(this->EnableSaving)
-    BRIDGE_USDWRITER.GetSceneStage()->Save();
+  BRIDGE_USDWRITER.SaveScene();
+}
+
+void UsdBridge::SetRenderCamera(UsdCameraHandle camera)
+{
+  if (!SessionValid) return;
+
+  if(camera.value != Internals->LastUsedCamera.value)
+  {
+    UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(camera);
+    BRIDGE_RENDERER.SetCameraPath(cache->PrimPath);
+
+    Internals->LastUsedCamera = camera;
+  }
+}
+
+void UsdBridge::RenderFrame(uint32_t width, uint32_t height, double timeStep)
+{
+  if (!SessionValid) return;
+
+  BRIDGE_RENDERER.Initialize();
+  BRIDGE_RENDERER.Render(width, height, timeStep);
 }
 
 void UsdBridge::ResetResourceUpdateState()
@@ -1088,8 +1117,7 @@ void UsdBridge::GarbageCollect()
       BRIDGE_USDWRITER.DeletePrim(cacheEntry);
     }
   );
-  if(this->EnableSaving)
-    BRIDGE_USDWRITER.GetSceneStage()->Save();
+  BRIDGE_USDWRITER.SaveScene();
 }
 
 const char* UsdBridge::GetPrimPath(UsdBridgeHandle* handle)

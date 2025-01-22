@@ -11,6 +11,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(CMakeDependentOption)
 include(usdhelpers.cmake)
 
+# Rendering option
+
+option(USD_DEVICE_RENDERING_ENABLED "Enable support for Hydra rendering of the USD output, with any optional Hydra backend." OFF)
+
 # Python
 
 list(PREPEND CMAKE_MODULE_PATH ${Python3_ROOT_DIR})
@@ -97,6 +101,9 @@ if(NOT (USD_ROOT_DIR_DEBUG STREQUAL USD_ROOT_DIR_RELEASE))
 endif()
 
 list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade usdLux usdUtils)
+if(${USD_DEVICE_RENDERING_ENABLED})
+  list(APPEND USD_INIT_TARGETS usdHydra usdImaging usdRender hgi)
+endif()
 flatten_and_cleanup_targets(USD_TARGETS "${USD_INIT_TARGETS}")
 message(STATUS "USD_TARGETS: ${USD_TARGETS}")
 
@@ -137,6 +144,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeUsdWriter_Material.cpp
   UsdBridgeUsdWriter_Volume.cpp
   UsdBridgeTimeEvaluator.cpp
+  UsdBridgeRenderer.cpp
   UsdBridgeRt.cpp
   UsdBridgeDiagnosticMgrDelegate.cpp
   UsdBridge.h
@@ -145,6 +153,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeUsdWriter_Common.h
   UsdBridgeUsdWriter_Arrays.h
   UsdBridgeTimeEvaluator.h
+  UsdBridgeRenderer.h
   UsdBridgeRt.h
   UsdBridgeDiagnosticMgrDelegate.h
   usd.h
@@ -174,6 +183,11 @@ target_include_directories(UsdBridge
 
 target_compile_definitions(UsdBridge
 	PRIVATE ${USD_DEVICE_TIME_DEFS})
+
+if(${USD_DEVICE_RENDERING_ENABLED})
+  target_compile_definitions(UsdBridge
+    PRIVATE "-DUSD_DEVICE_RENDERING_ENABLED")
+endif()
 
 # Platform-dependent operations
 

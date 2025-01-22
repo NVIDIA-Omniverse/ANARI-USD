@@ -5,12 +5,18 @@
 #include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdDevice.h"
+#include "UsdCamera.h"
 #include "anari/frontend/type_utility.h"
+
+#define CameraType ANARI_CAMERA
+using CameraUsdType = AnariToUsdBridgedObject<CameraType>::Type;
 
 DEFINE_PARAMETER_MAP(UsdFrame,
   REGISTER_PARAMETER_MACRO("size", ANARI_UINT32_VEC2, size)
   REGISTER_PARAMETER_MACRO("channel.color", ANARI_DATA_TYPE, color)
   REGISTER_PARAMETER_MACRO("channel.depth", ANARI_DATA_TYPE, depth)
+  REGISTER_PARAMETER_MACRO("camera", CameraType, camera)
+  REGISTER_PARAMETER_MACRO("usd::time", ANARI_FLOAT64, time)
 )
 
 UsdFrame::UsdFrame(UsdBridge* bridge)
@@ -89,4 +95,17 @@ char* UsdFrame::ReserveBuffer(ANARIDataType format)
 void UsdFrame::saveUsd(UsdDevice* device)
 {
   device->getUsdBridge()->SaveScene();
+}
+
+void UsdFrame::renderFrame(UsdDevice* device)
+{
+  const UsdFrameData& paramData = getReadParams();
+
+  if(paramData.camera)
+  {
+    UsdCameraHandle cameraHandle = paramData.camera->getUsdHandle();
+    device->getUsdBridge()->SetRenderCamera(cameraHandle);
+
+    device->getUsdBridge()->RenderFrame(paramData.size.Data[0], paramData.size.Data[1], paramData.time);
+  }
 }

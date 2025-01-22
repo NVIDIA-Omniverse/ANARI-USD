@@ -36,6 +36,7 @@ public:
 
   void SetExternalSceneStage(UsdStageRefPtr sceneStage);
   void SetEnableSaving(bool enableSaving);
+  void SaveScene();
 
   int FindSessionNumber();
   bool CreateDirectories();

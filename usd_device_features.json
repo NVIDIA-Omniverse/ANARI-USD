@@ -1143,6 +1143,18 @@
                     "description" : "Explicitly delete prim from USD output after commit"
                 }
             ]
+        }, {
+            "type" : "ANARI_FRAME",
+            "parameters" : [
+                {
+                    "name" : "usd::time",
+                    "types" : ["ANARI_FLOAT64"],
+                    "tags" : [],
+                    "default" : 0.0,
+                    "description" : "Timestep used for rendering a frame"
+                }
+            ]
+
         }
     ]
 }

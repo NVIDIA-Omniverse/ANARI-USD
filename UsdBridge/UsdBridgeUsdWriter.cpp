@@ -108,6 +108,12 @@ void UsdBridgeUsdWriter::SetEnableSaving(bool enableSaving)
   this->EnableSaving = enableSaving;
 }
 
+void UsdBridgeUsdWriter::SaveScene()
+{
+  if(this->EnableSaving)
+    this->SceneStage->Save();
+}
+
 int UsdBridgeUsdWriter::FindSessionNumber()
 {
   int sessionNr = Connect->MaxSessionNr();
@@ -292,8 +298,7 @@ bool UsdBridgeUsdWriter::OpenSceneStage()
     EndTime = this->SceneStage->GetEndTimeCode();
   }
 
-  if(this->EnableSaving)
-    this->SceneStage->Save();
+  this->SaveScene();
 
   return true;
 }

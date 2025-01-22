@@ -90,6 +90,9 @@ class UsdBridge
   
     void SaveScene();
 
+    void SetRenderCamera(UsdCameraHandle camera);
+    void RenderFrame(uint32_t width, uint32_t height, double timeStep);
+
     void ResetResourceUpdateState(); // Eg. clears all dirty flags on shared resources
 
     void GarbageCollect(); // Deletes all handles without parents (from Set<X>Refs) 

@@ -269,11 +269,9 @@ void UsdDevice::commit(UsdDevice* device)
   {
     initializeBridge();
   }
-  else
-  {
-    const UsdDeviceData& paramData = getReadParams();
-    internals->bridge->UpdateBeginEndTime(paramData.timeStep);
-  }
+
+  const UsdDeviceData& paramData = getReadParams();
+  internals->bridge->UpdateBeginEndTime(paramData.timeStep);
 }
 
 void UsdDevice::initializeBridge()
@@ -505,7 +503,9 @@ ANARICamera UsdDevice::newCamera(const char *type)
   logObjAllocation(object);
 #endif
 
-  return (ANARICamera)(object);
+  ANARICamera returnValue = (ANARICamera)(object);
+
+  return returnValue;
 }
 
 const char **UsdDevice::getObjectSubtypes(ANARIDataType objectType)
@@ -567,7 +567,11 @@ void UsdDevice::renderFrame(ANARIFrame frame)
   internals->bridge->ResetResourceUpdateState(); // Reset the modified flags for committed shared resources
 
   if(frame)
-    AnariToUsdObjectPtr(frame)->saveUsd(this);
+  {
+    UsdFrame* frameObjPtr = AnariToUsdObjectPtr(frame);
+    frameObjPtr->saveUsd(this);
+    frameObjPtr->renderFrame(this);
+  }
 }
 
 const char* UsdDevice::makeUniqueName(const char* name)
