@@ -340,6 +340,13 @@ enum class UsdBridgeVolumeFieldType
   COLOR
 };
 
+enum class UsdBridgeLightType
+{
+  DIRECTIONAL,
+  POINT,
+  DOME
+};
+
 enum class UsdBridgeLogLevel
 {
   STATUS,
@@ -726,6 +733,54 @@ struct UsdSamplerRefData
   UsdBridgeMaterialData::DataMemberId DataMemberId; // Material input parameter to connect to
 };
 
+struct UsdBridgeCommonLightData
+{
+  UsdFloat3 Color { 1.0f, 1.0f, 1.0f };
+  float Intensity = 1.0f;
+};
+
+struct UsdBridgeDirectionalLightData : public UsdBridgeCommonLightData
+{
+  enum class DataMemberId : uint32_t
+  {
+    NONE = 0,
+    COLOR = (1 << 0),
+    INTENSITY = (1 << 1),
+    DIRECTION = (1 << 2),
+    ALL = (1 << 3) - 1
+  };
+  DataMemberId TimeVarying = DataMemberId::ALL;
+
+  UsdFloat3 Direction { 0.0, 0.0f, -1.0f };
+};
+
+struct UsdBridgePointLightData : public UsdBridgeCommonLightData
+{
+  enum class DataMemberId : uint32_t
+  {
+    NONE = 0,
+    COLOR = (1 << 0),
+    INTENSITY = (1 << 1),
+    POSITION = (1 << 2),
+    ALL = (1 << 3) - 1
+  };
+  DataMemberId TimeVarying = DataMemberId::ALL;
+
+  UsdFloat3 Position { 0.0, 0.0f, 0.0f };
+};
+
+struct UsdBridgeDomeLightData : public UsdBridgeCommonLightData
+{
+  enum class DataMemberId : uint32_t
+  {
+    NONE = 0,
+    COLOR = (1 << 0),
+    INTENSITY = (1 << 1),
+    ALL = (1 << 2) - 1
+  };
+  DataMemberId TimeVarying = DataMemberId::ALL;
+};
+
 struct UsdBridgeCameraData
 {
   enum class DataMemberId : uint32_t
@@ -733,9 +788,9 @@ struct UsdBridgeCameraData
     NONE = 0,
     VIEW = (1 << 0), 
     PROJECTION = (1 << 1),
-    ALL = (1 << 9) - 1
+    ALL = (1 << 2) - 1
   };
-  DataMemberId TimeVarying = DataMemberId::NONE;
+  DataMemberId TimeVarying = DataMemberId::ALL;
 
   UsdFloat3 Position = {0.0f, 0.0f, 0.0f};
   UsdFloat3 Direction = {0.0f, 0.0f, -1.0f};
@@ -780,6 +835,9 @@ USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeCurveData);
 USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeVolumeData);
 USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeMaterialData);
 USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeSamplerData);
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeDirectionalLightData);
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgePointLightData);
+USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeDomeLightData);
 USDBRIDGE_ENABLE_BITMASK_OP(UsdBridgeCameraData);
 
 USDBRIDGE_ENABLE_ADDSUB_OP(UsdBridgeMeshData);

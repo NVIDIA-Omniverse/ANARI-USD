@@ -94,7 +94,7 @@ ANARI scene objects:
     - Attribute strings `primitiveId`, `worldPosition` and `worldNormal` are unsupported
     - the `<in/out>Transform` and `<in/out>Offset` parameters
 - Lights:
-    - unsupported for now
+    - Anything other than point and directional lights is unsupported
 - Properties:
     - `bounds` property not queryable (World, Instance, etc.)
 

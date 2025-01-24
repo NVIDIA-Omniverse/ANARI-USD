@@ -37,6 +37,7 @@ class UsdBridge
     bool CreateSpatialField(const char* name, UsdSpatialFieldHandle& handle);
     bool CreateMaterial(const char* name, UsdMaterialHandle& handle);
     bool CreateSampler(const char* name, UsdSamplerHandle& handle, UsdBridgeSamplerData::SamplerType type);
+    bool CreateLight(const char* name, UsdBridgeLightType lightType, UsdLightHandle& handle);
     bool CreateCamera(const char* name, UsdCameraHandle& handle);
   
     void DeleteWorld(UsdWorldHandle handle);
@@ -49,6 +50,7 @@ class UsdBridge
     void DeleteMaterial(UsdMaterialHandle handle);
     void DeleteSampler(UsdSamplerHandle handle);
     void DeleteCamera(UsdCameraHandle handle);
+    void DeleteLight(UsdLightHandle handle);
   
     void SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep, const int* instanceableValues);
     void SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep);
@@ -82,6 +84,9 @@ class UsdBridge
     void SetSpatialFieldData(UsdSpatialFieldHandle field, const UsdBridgeVolumeData& volumeData, double timeStep);
     void SetMaterialData(UsdMaterialHandle material, const UsdBridgeMaterialData& matData, double timeStep);
     void SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerData& samplerData, double timeStep);
+    void SetLightData(UsdLightHandle light, const UsdBridgeDirectionalLightData& lightData, double timeStep);
+    void SetLightData(UsdLightHandle light, const UsdBridgePointLightData& lightData, double timeStep);
+    void SetLightData(UsdLightHandle light, const UsdBridgeDomeLightData& lightData, double timeStep);
     void SetCameraData(UsdCameraHandle camera, const UsdBridgeCameraData& cameraData, double timeStep);
     void SetPrototypeData(UsdGeometryHandle geometry, const UsdBridgeInstancerRefData& instancerRefData); // UsdBridgeInstancerRefData::Shapes used to index into refs from last SetPrototypeRefs (if SHAPE_MESH)
 
@@ -113,15 +118,15 @@ class UsdBridge
     template<typename GeomDataType>
     void SetGeometryDataTemplate(UsdGeometryHandle geometry, const GeomDataType& geomData, double timeStep);
 
+    template<typename LightDataType>
+    void SetLightDataTemplate(UsdLightHandle light, const LightDataType& lightData, double timeStep);
+
     template<typename ParentHandleType, typename ChildHandleType>
     void SetNoClipRefs(ParentHandleType parentHandle, const ChildHandleType* childHandles, uint64_t numChildren, 
       const char* refPathExt, bool timeVarying, double timeStep, const int* instanceableValues = nullptr);
 
     template<typename ParentHandleType>
     void DeleteAllRefs(ParentHandleType parentHandle, const char* refPathExt, bool timeVarying, double timeStep);
-
-    void CreateRootPrimAndAttach(UsdBridgePrimCache* cacheEntry, const char* primPathCp, const char* layerId = nullptr);
-    void RemoveRootPrimAndDetach(UsdBridgePrimCache* cacheEntry, const char* primPathCp);
 
     UsdBridgeInternals* Internals;
   

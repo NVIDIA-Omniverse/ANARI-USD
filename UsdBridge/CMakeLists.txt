@@ -141,6 +141,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeCaches.cpp
   UsdBridgeUsdWriter.cpp
   UsdBridgeUsdWriter_Geometry.cpp
+  UsdBridgeUsdWriter_Lighting.cpp
   UsdBridgeUsdWriter_Material.cpp
   UsdBridgeUsdWriter_Volume.cpp
   UsdBridgeTimeEvaluator.cpp

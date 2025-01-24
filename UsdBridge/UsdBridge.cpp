@@ -34,6 +34,7 @@ namespace
   const char* const materialPathCp = "materials";
   const char* const samplerPathCp = "samplers";
   const char* const cameraPathCp = "cameras";
+  const char* const lightPathCp = "lights";
 
   // Parent path extensions for references in parent classes (Reference path)
   const char* const instancePathRp = "instances";
@@ -52,6 +53,7 @@ namespace
   const char* const materialPrimStagePf = "_Material";
   const char* const samplerPrimStagePf = "_Sampler";
   const char* const cameraPrimStagePf = "_Camera";
+  const char* const lightPrimStagePf = "_Light";
 
   // Postfixes for clip stage names
   const char* const geomClipPf = "_Geom_";
@@ -91,8 +93,17 @@ struct UsdBridgeInternals
       DiagRemoveFunc(DiagnosticDelegate.get());
   }
 
+  template<typename UsdHandleType>
+  bool CreateWorldIndependentObject(const char* name,
+    const char* objectPathCp, const char* objectPrimStagePf,
+    const std::function<void(UsdStageRefPtr, const SdfPath&)>& func,
+    UsdHandleType& handle);
+
   BoolEntryPair FindOrCreatePrim(const char* category, const char* name, ResourceCollectFunc collectFunc = nullptr);
   void FindAndDeletePrim(const UsdBridgeHandle& handle);
+
+  void CreateRootPrimAndAttach(UsdBridgePrimCache* cacheEntry, const char* primPathCp, const char* layerId = nullptr);
+  void RemoveRootPrimAndDetach(UsdBridgePrimCache* cacheEntry, const char* primPathCp);
 
   template<class T>
   const UsdBridgePrimCacheList& ExtractPrimCaches(const T* handles, uint64_t numHandles);
@@ -172,6 +183,18 @@ void UsdBridgeInternals::FindAndDeletePrim(const UsdBridgeHandle& handle)
   UsdWriter.DeletePrim(cacheEntry);
 
   Cache.RemovePrimCache(it, UsdWriter.LogObject);
+}
+
+void UsdBridgeInternals::CreateRootPrimAndAttach(UsdBridgePrimCache* cacheEntry, const char* primPathCp, const char* layerId)
+{
+  UsdWriter.AddRootPrim(cacheEntry, primPathCp, layerId);
+  Cache.AttachTopLevelPrim(cacheEntry);
+}
+
+void UsdBridgeInternals::RemoveRootPrimAndDetach(UsdBridgePrimCache* cacheEntry, const char* primPathCp)
+{
+  Cache.DetachTopLevelPrim(cacheEntry);
+  UsdWriter.RemoveRootPrim(cacheEntry, primPathCp);
 }
 
 template<class T>
@@ -310,7 +333,7 @@ bool UsdBridge::CreateWorld(const char* name, UsdWorldHandle& handle)
 
   if (!cacheExists)
   {
-    this->CreateRootPrimAndAttach(cacheEntry, worldPathCp);
+    Internals->CreateRootPrimAndAttach(cacheEntry, worldPathCp);
   }
   
   handle.value = cacheEntry;
@@ -509,35 +532,60 @@ bool UsdBridge::CreateSampler(const char* name, UsdSamplerHandle& handle, UsdBri
   return PrimIsNew(createResult);
 }
 
-bool UsdBridge::CreateCamera(const char* name, UsdCameraHandle& handle)
+template<typename UsdHandleType>
+bool UsdBridgeInternals::CreateWorldIndependentObject(
+  const char* name, const char* objectPathCp, const char* objectPrimStagePf,
+  const std::function<void(UsdStageRefPtr, const SdfPath&)>& initializeObjectFunc,
+  UsdHandleType& handle)
 {
-  if (!SessionValid) return false;
+  // Creates an object that is not (indirectly) referenced by the world,
+  // so it's creating a prim directly under the root with a reference to make the class prim concrete.
 
-  // Find or create a cache entry belonging to a prim located under worldPathCp in the usd.
-  BoolEntryPair createResult = Internals->FindOrCreatePrim(cameraPathCp, name);
+  // Find or create a cache entry belonging to a prim located under objectPathCp in the usd.
+  BoolEntryPair createResult = this->FindOrCreatePrim(objectPathCp, name);
   UsdBridgePrimCache* cacheEntry = createResult.second;
   bool cacheExists = createResult.first.second;
 
-  // The camera has no manifest, instead the primstage+path is directly referenced by the root camera
+  // The object has no value clips and manifest, instead the primstage+path is directly referenced by the root
   // instance prim.
   if (!cacheExists)
   {
-    const char* layerId = nullptr;
+    const char* layerId = nullptr; // The path to the referenced USD layer.
 #ifdef VALUE_CLIP_RETIMING
-    const UsdStagePair& stagePair = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, cameraPrimStagePf);
+    const UsdStagePair& stagePair = UsdWriter.FindOrCreatePrimStage(cacheEntry, objectPrimStagePf);
     layerId = stagePair.first.c_str();
-    UsdStageRefPtr camStage = stagePair.second;
+    UsdStageRefPtr objStage = stagePair.second;
 #else
-    UsdStageRefPtr camStage = BRIDGE_USDWRITER.GetSceneStage();
+    UsdStageRefPtr objStage = UsdWriter.GetSceneStage();
 #endif
 
-    BRIDGE_USDWRITER.InitializeUsdCamera(camStage, cacheEntry->PrimPath);
+    initializeObjectFunc(objStage, cacheEntry->PrimPath);
 
-    this->CreateRootPrimAndAttach(cacheEntry, cameraPathCp, layerId);
+    CreateRootPrimAndAttach(cacheEntry, objectPathCp, layerId);
   }
   
   handle.value = cacheEntry;
   return PrimIsNew(createResult); 
+}
+
+bool UsdBridge::CreateLight(const char* name, UsdBridgeLightType lightType, UsdLightHandle& handle)
+{
+  if (!SessionValid) return false;
+
+  auto initializeFunc = [Internals = this->Internals, lightType](UsdStageRefPtr stage, const SdfPath& path)
+    { BRIDGE_USDWRITER.InitializeUsdLight(stage, path, lightType); };
+
+  return Internals->CreateWorldIndependentObject(name, lightPathCp, lightPrimStagePf, initializeFunc, handle);
+}
+
+bool UsdBridge::CreateCamera(const char* name, UsdCameraHandle& handle)
+{
+  if (!SessionValid) return false;
+
+  auto initializeFunc = [Internals = this->Internals](UsdStageRefPtr stage, const SdfPath& path)
+    { BRIDGE_USDWRITER.InitializeUsdCamera(stage, path); };
+
+  return Internals->CreateWorldIndependentObject(name, cameraPathCp, cameraPrimStagePf, initializeFunc, handle);
 }
 
 void UsdBridge::DeleteWorld(UsdWorldHandle handle)
@@ -546,9 +594,9 @@ void UsdBridge::DeleteWorld(UsdWorldHandle handle)
 
   UsdBridgePrimCache* worldCache = BRIDGE_CACHE.ConvertToPrimCache(handle);
 
-  this->RemoveRootPrimAndDetach(worldCache, worldPathCp);
+  Internals->RemoveRootPrimAndDetach(worldCache, worldPathCp);
 
-  // Remove the abstract class 
+  // Remove the abstract class
   Internals->FindAndDeletePrim(handle);
 }
 
@@ -616,7 +664,19 @@ void UsdBridge::DeleteCamera(UsdCameraHandle handle)
 
   UsdBridgePrimCache* cameraCache = BRIDGE_CACHE.ConvertToPrimCache(handle);
 
-  this->RemoveRootPrimAndDetach(cameraCache, cameraPathCp);
+  Internals->RemoveRootPrimAndDetach(cameraCache, cameraPathCp);
+
+  // Remove the abstract class 
+  Internals->FindAndDeletePrim(handle);
+}
+
+void UsdBridge::DeleteLight(UsdLightHandle handle)
+{
+  if (handle.value == nullptr) return;
+
+  UsdBridgePrimCache* lightCache = BRIDGE_CACHE.ConvertToPrimCache(handle);
+
+  Internals->RemoveRootPrimAndDetach(lightCache, lightPathCp);
 
   // Remove the abstract class 
   Internals->FindAndDeletePrim(handle);
@@ -1000,6 +1060,46 @@ void UsdBridge::SetSamplerData(UsdSamplerHandle sampler, const UsdBridgeSamplerD
 #endif
 }
 
+template<typename LightDataType>
+void UsdBridge::SetLightDataTemplate(UsdLightHandle light, const LightDataType& lightData, double timeStep)
+{
+  if (light.value == nullptr) return;
+
+  UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(light);
+  SdfPath& lightPath = cache->PrimPath;
+
+  bool timeVarHasChanged =
+#ifdef VALUE_CLIP_RETIMING
+    cache->TimeVarBitsUpdate(lightData.TimeVarying);
+#else
+    false;
+#endif
+
+  UsdStageRefPtr lightStage = BRIDGE_USDWRITER.GetTimeVarStage(cache);
+
+  BRIDGE_USDWRITER.UpdateUsdLight(lightStage, lightPath, lightData, timeStep, timeVarHasChanged);
+
+#ifdef VALUE_CLIP_RETIMING
+  if(this->EnableSaving)
+    lightStage->Save();
+#endif
+}
+
+void UsdBridge::SetLightData(UsdLightHandle light, const UsdBridgeDirectionalLightData& lightData, double timeStep)
+{
+  SetLightDataTemplate<UsdBridgeDirectionalLightData>(light, lightData, timeStep);
+}
+
+void UsdBridge::SetLightData(UsdLightHandle light, const UsdBridgePointLightData& lightData, double timeStep)
+{
+  SetLightDataTemplate<UsdBridgePointLightData>(light, lightData, timeStep);
+}
+
+void UsdBridge::SetLightData(UsdLightHandle light, const UsdBridgeDomeLightData& lightData, double timeStep)
+{
+  SetLightDataTemplate<UsdBridgeDomeLightData>(light, lightData, timeStep);
+}
+
 void UsdBridge::SetCameraData(UsdCameraHandle camera, const UsdBridgeCameraData& cameraData, double timeStep)
 {
   if (camera.value == nullptr) return;
@@ -1128,18 +1228,6 @@ const char* UsdBridge::GetPrimPath(UsdBridgeHandle* handle)
   }
   else
     return nullptr;
-}
-
-void UsdBridge::CreateRootPrimAndAttach(UsdBridgePrimCache* cacheEntry, const char* primPathCp, const char* layerId)
-{
-  BRIDGE_USDWRITER.AddRootPrim(cacheEntry, primPathCp, layerId);
-  BRIDGE_CACHE.AttachTopLevelPrim(cacheEntry);
-}
- 
-void UsdBridge::RemoveRootPrimAndDetach(UsdBridgePrimCache* cacheEntry, const char* primPathCp)
-{
-  BRIDGE_CACHE.DetachTopLevelPrim(cacheEntry);
-  BRIDGE_USDWRITER.RemoveRootPrim(cacheEntry, primPathCp);
 }
 
 void UsdBridge::SetConnectionLogVerbosity(int logVerbosity)

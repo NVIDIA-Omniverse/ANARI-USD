@@ -113,7 +113,8 @@ public:
   UsdPrim InitializeUsdVolume(UsdStageRefPtr volumeStage, const SdfPath& volumePath, bool uniformPrim) const;
   UsdShadeMaterial InitializeUsdMaterial(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim) const;
   void InitializeUsdSampler(UsdStageRefPtr samplerStage,const SdfPath& samplerPrimPath, UsdBridgeSamplerData::SamplerType type, bool uniformPrim) const;
-  void InitializeUsdCamera(UsdStageRefPtr cameraStage, const SdfPath& geomPath);
+  void InitializeUsdLight(UsdStageRefPtr lightStage, const SdfPath& lightPath, UsdBridgeLightType lightType);
+  void InitializeUsdCamera(UsdStageRefPtr cameraStage, const SdfPath& cameraPath);
   UsdShadeShader GetOrCreateAttributeReader() const;
 
 #ifdef USE_INDEX_MATERIALS
@@ -145,6 +146,12 @@ public:
   void UpdateMdlShader(UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, const UsdBridgeMaterialData& matData, const UsdGeomPrimvarsAPI& boundGeomPrimvars, double timeStep);
   void UpdateUsdVolume(UsdStageRefPtr timeVarStage, UsdBridgePrimCache* cacheEntry, const UsdBridgeVolumeData& volumeData, double timeStep);
   void UpdateUsdSampler(UsdStageRefPtr timeVarStage, UsdBridgePrimCache* cacheEntry, const UsdBridgeSamplerData& samplerData, double timeStep);
+  void UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPath& lightPrimPath, 
+    const UsdBridgeDirectionalLightData& lightData, double timeStep, bool timeVarHasChanged);
+  void UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPath& lightPrimPath, 
+    const UsdBridgePointLightData& lightData, double timeStep, bool timeVarHasChanged);
+  void UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPath& lightPrimPath, 
+    const UsdBridgeDomeLightData& lightData, double timeStep, bool timeVarHasChanged);
   void UpdateUsdCamera(UsdStageRefPtr timeVarStage, const SdfPath& cameraPrimPath, 
     const UsdBridgeCameraData& cameraData, double timeStep, bool timeVarHasChanged);
   void UpdateUsdInstancerPrototypes(const SdfPath& instancerPath, const UsdBridgeInstancerRefData& geomRefData, const SdfPrimPathList& refProtoGeomPrimPaths, const char* protoShapePathRp);
