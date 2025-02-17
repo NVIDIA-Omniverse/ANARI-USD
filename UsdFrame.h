@@ -28,14 +28,17 @@ class UsdFrame : public UsdParameterizedBaseObject<UsdFrame, UsdFrameData>
 
     void remove(UsdDevice* device) override {}
 
-    const void* mapBuffer(const char* channel,
+    const void* mapBuffer(
+      const char* channel,
       uint32_t *width,
       uint32_t *height,
-      ANARIDataType *pixelType);
-    void unmapBuffer(const char* channel);
+      ANARIDataType *pixelType,
+      UsdDevice* device);
+    void unmapBuffer(const char* channel, UsdDevice* device);
 
     void saveUsd(UsdDevice* device);
     void renderFrame(UsdDevice* device);
+    bool frameReady(ANARIWaitMask mask, UsdDevice* device);
 
   protected:
     bool deferCommit(UsdDevice* device) override;
@@ -43,6 +46,10 @@ class UsdFrame : public UsdParameterizedBaseObject<UsdFrame, UsdFrameData>
     void doCommitRefs(UsdDevice* device) override {}
 
     char* ReserveBuffer(ANARIDataType format);
+
+    UsdUint2 renderBufferSize = {0, 0};
+    ANARIDataType renderBufferColorFormat = ANARI_UNKNOWN;
+    ANARIDataType renderBufferDepthFormat = ANARI_UNKNOWN;
 
     char* mappedColorMem = nullptr;
     char* mappedDepthMem = nullptr;

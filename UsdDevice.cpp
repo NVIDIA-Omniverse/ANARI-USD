@@ -508,6 +508,16 @@ ANARICamera UsdDevice::newCamera(const char *type)
   return returnValue;
 }
 
+ANARIObject UsdDevice::newObject(const char *objectType, const char *type)
+{
+  return nullptr;
+}
+
+void (*UsdDevice::getProcAddress(const char *name))(void)
+{
+  return nullptr;
+}
+
 const char **UsdDevice::getObjectSubtypes(ANARIDataType objectType)
 {
   return anari::usd::query_object_types(objectType);
@@ -560,7 +570,7 @@ void UsdDevice::renderFrame(ANARIFrame frame)
     initializeBridge();
 
   if(!isInitialized())
-      return;
+    return;
 
   flushCommitList();
 
@@ -572,6 +582,19 @@ void UsdDevice::renderFrame(ANARIFrame frame)
     frameObjPtr->saveUsd(this);
     frameObjPtr->renderFrame(this);
   }
+}
+
+int UsdDevice::frameReady(ANARIFrame frame, ANARIWaitMask mask)
+{
+  if(!isInitialized())
+    return 1;
+
+  if(frame)
+  {
+    UsdFrame* frameObjPtr = AnariToUsdObjectPtr(frame);
+    return frameObjPtr->frameReady(mask, this);
+  }
+  return 1;
 }
 
 const char* UsdDevice::makeUniqueName(const char* name)
@@ -812,14 +835,14 @@ const void * UsdDevice::frameBufferMap(
   ANARIDataType *pixelType)
 {
   if (fb)
-    return AnariToUsdObjectPtr(fb)->mapBuffer(channel, width, height, pixelType);
+    return AnariToUsdObjectPtr(fb)->mapBuffer(channel, width, height, pixelType, this);
   return nullptr;
 }
 
 void UsdDevice::frameBufferUnmap(ANARIFrame fb, const char *channel)
 {
   if (fb)
-    return AnariToUsdObjectPtr(fb)->unmapBuffer(channel);
+    return AnariToUsdObjectPtr(fb)->unmapBuffer(channel, this);
 }
 
 UsdBaseObject* UsdDevice::getBaseObjectPtr(ANARIObject object)

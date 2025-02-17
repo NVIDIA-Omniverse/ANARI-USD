@@ -18,11 +18,15 @@ public:
     ~UsdBridgeRenderer();
 
     // Sets up the scene and render delegates
-    void Initialize(const char* rendererName = "HdStormRenderer");
+    void Initialize(const char* rendererName = "hdStorm");
 
     void SetCameraPath(const pxr::SdfPath& cameraPath);
 
     void Render(uint32_t width, uint32_t height, double timeStep);
+
+    bool FrameReady(bool wait);
+    void* MapFrame();
+    void UnmapFrame();
 
     UsdBridgeUsdWriter& UsdWriter;
     UsdBridgeRendererInternals* Internals = nullptr;

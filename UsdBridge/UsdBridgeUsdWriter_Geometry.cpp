@@ -1078,6 +1078,7 @@ namespace
         shapePath = protoGeomPaths[protoGeomIdx];
       }
 
+      // All prototypes in USD are oriented lengthwise along the Z axis (relevant for cylinders and cones)
       UsdGeomXformable geomXformable;
       switch (geomRefData.Shapes[shapeIdx])
       {

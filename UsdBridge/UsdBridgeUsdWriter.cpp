@@ -428,10 +428,18 @@ const UsdStagePair& UsdBridgeUsdWriter::FindOrCreatePrimClipStage(UsdBridgePrimC
 }
 #endif
 
+
+void UsdBridgeUsdWriter::GetRootPrimPath(const SdfPath& name, const char* primPathCp, SdfPath& rootPrimPath)
+{
+  rootPrimPath = SdfPath(this->RootName);
+  rootPrimPath = rootPrimPath.AppendPath(SdfPath(primPathCp));
+  rootPrimPath = rootPrimPath.AppendPath(name);
+}
+
 void UsdBridgeUsdWriter::AddRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp, const char* layerId)
 {
-  SdfPath primPath(this->RootName + "/" + primPathCp);
-  primPath = primPath.AppendPath(primCache->Name);
+  SdfPath primPath;
+  GetRootPrimPath(primCache->Name, primPathCp, primPath);
 
   UsdPrim sceneGraphPrim = SceneStage->DefinePrim(primPath);
   assert(sceneGraphPrim);
@@ -451,8 +459,8 @@ void UsdBridgeUsdWriter::AddRootPrim(UsdBridgePrimCache* primCache, const char* 
 
 void UsdBridgeUsdWriter::RemoveRootPrim(UsdBridgePrimCache* primCache, const char* primPathCp)
 {
-  SdfPath primPath(this->RootName + "/" + primPathCp);
-  primPath = primPath.AppendPath(primCache->Name);
+  SdfPath primPath;
+  GetRootPrimPath(primCache->Name, primPathCp, primPath);
 
   this->SceneStage->RemovePrim(primPath);
 }
@@ -928,6 +936,7 @@ void UsdBridgeUsdWriter::InitializeUsdCamera(UsdStageRefPtr cameraStage, const S
   cameraPrim.CreateVerticalApertureAttr();
   cameraPrim.CreateFocalLengthAttr();
   cameraPrim.CreateClippingRangeAttr();
+  cameraPrim.CreateFocusDistanceAttr();
 }
 
 void UsdBridgeUsdWriter::BindMaterialToGeom(const SdfPath & refGeomPath, const SdfPath & refMatPath)
@@ -979,35 +988,50 @@ void UsdBridgeUsdWriter::UpdateUsdCamera(UsdStageRefPtr timeVarStage, const SdfP
   assert(cameraPrim);
 
   // Set the view matrix
-  GfVec3d eyePoint(cameraData.Position.Data);
+  GfVec3d position(cameraData.Position.Data);
   GfVec3d fwdDir(cameraData.Direction.Data);
-  GfVec3d upDir(cameraData.Up.Data);
-  GfVec3d lookAtPoint = eyePoint+fwdDir;
+  GfVec3d worldY(cameraData.Up.Data);
+  GfVec3d worldZ(-fwdDir);
 
-  GfMatrix4d viewMatrix;
-  viewMatrix.SetLookAt(eyePoint, lookAtPoint, upDir);
+  GfVec3d worldX = GfCross(worldY, worldZ);// Keep righthand (ccw) order while making sure the +z direction is -fwdDir
+  worldX.Normalize();
+  worldY = GfCross(worldZ, worldX);
+  worldY.Normalize();
+
+  // Row-major order, with pre-multiply rules (vector components scale the rows in multiply)
+  GfMatrix4d camMatrix(
+    worldX[0], worldX[1], worldX[2], 0.0,
+    worldY[0], worldY[1], worldY[2], 0.0,
+    worldZ[0], worldZ[1], worldZ[2], 0.0,
+    position[0], position[1], position[2], 1.0
+  );
 
   cameraPrim.ClearXformOpOrder();
   UsdGeomXformOp xformOp = cameraPrim.AddTransformOp();
-  ClearAndSetUsdAttribute(xformOp.GetAttr(), viewMatrix, timeEval.Eval(DMI::VIEW),
+  ClearAndSetUsdAttribute(xformOp.GetAttr(), camMatrix, timeEval.Eval(DMI::VIEW),
     timeVarHasChanged && !timeEval.IsTimeVarying(DMI::VIEW));
+
+  const GfVec3f camScaling(0.01f); // Add a default cam scaling for UI purposes
+  UsdGeomXformOp scaleOp = cameraPrim.AddScaleOp();
+  scaleOp.GetAttr().Set(camScaling, UsdTimeCode::Default());
   
-  // Helper function for the projection matrix
+  // Helper function for the projection matrix (takes fov in degrees)
   GfCamera gfCam;
-  gfCam.SetPerspectiveFromAspectRatioAndFieldOfView(cameraData.Aspect, cameraData.Fovy, GfCamera::FOVVertical);
+  gfCam.SetPerspectiveFromAspectRatioAndFieldOfView(cameraData.Aspect, GfRadiansToDegrees(cameraData.Fovy), GfCamera::FOVVertical);
 
   // Update all attributes affected by SetPerspectiveFromAspectRatioAndFieldOfView (see implementation)
   UsdTimeCode projectTime = timeEval.Eval(DMI::PROJECTION);
   bool clearProjAttrib = timeVarHasChanged && !timeEval.IsTimeVarying(DMI::PROJECTION);
+  //float focusDistance = 400.0f;
 
   ClearAndSetUsdAttribute(cameraPrim.GetProjectionAttr(), 
-    gfCam.GetProjection() == GfCamera::Perspective ? 
-      UsdGeomTokens->perspective : UsdGeomTokens->orthographic, 
+    (gfCam.GetProjection() == GfCamera::Perspective) ? UsdGeomTokens->perspective : UsdGeomTokens->orthographic, 
     projectTime, clearProjAttrib);
   ClearAndSetUsdAttribute(cameraPrim.GetHorizontalApertureAttr(), gfCam.GetHorizontalAperture(), projectTime, clearProjAttrib);
   ClearAndSetUsdAttribute(cameraPrim.GetVerticalApertureAttr(), gfCam.GetVerticalAperture(), projectTime, clearProjAttrib);
   ClearAndSetUsdAttribute(cameraPrim.GetFocalLengthAttr(), gfCam.GetFocalLength(), projectTime, clearProjAttrib);
   ClearAndSetUsdAttribute(cameraPrim.GetClippingRangeAttr(), GfVec2f(cameraData.Near, cameraData.Far), projectTime, clearProjAttrib);
+  //ClearAndSetUsdAttribute(cameraPrim.GetFocusDistanceAttr(), focusDistance, projectTime, clearProjAttrib);
 }
 
 void UsdBridgeUsdWriter::UpdateBeginEndTime(double timeStep)

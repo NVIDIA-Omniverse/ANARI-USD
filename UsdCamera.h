@@ -26,8 +26,8 @@ struct UsdCameraData
 
   // perspective/orthographic
   float aspect = 1.0f;
-  float near = 1.0f;
-  float far = 10000;
+  float near = 0.01f;
+  float far = 1000.0f;
   float fovy = M_PI/3.0f;
   float height = 1.0f;
 };

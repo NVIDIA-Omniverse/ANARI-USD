@@ -1178,6 +1178,13 @@ void UsdBridge::SaveScene()
   BRIDGE_USDWRITER.SaveScene();
 }
 
+void UsdBridge::InitializeRendering()
+{
+  if (!SessionValid) return;
+
+  BRIDGE_RENDERER.Initialize();
+}
+
 void UsdBridge::SetRenderCamera(UsdCameraHandle camera)
 {
   if (!SessionValid) return;
@@ -1185,7 +1192,10 @@ void UsdBridge::SetRenderCamera(UsdCameraHandle camera)
   if(camera.value != Internals->LastUsedCamera.value)
   {
     UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(camera);
-    BRIDGE_RENDERER.SetCameraPath(cache->PrimPath);
+    SdfPath cameraPath;
+    BRIDGE_USDWRITER.GetRootPrimPath(cache->Name, cameraPathCp, cameraPath);
+
+    BRIDGE_RENDERER.SetCameraPath(cameraPath);
 
     Internals->LastUsedCamera = camera;
   }
@@ -1195,8 +1205,28 @@ void UsdBridge::RenderFrame(uint32_t width, uint32_t height, double timeStep)
 {
   if (!SessionValid) return;
 
-  BRIDGE_RENDERER.Initialize();
   BRIDGE_RENDERER.Render(width, height, timeStep);
+}
+
+bool UsdBridge::FrameReady(bool wait)
+{
+  if (!SessionValid) return true;
+
+  return BRIDGE_RENDERER.FrameReady(wait);
+}
+
+void* UsdBridge::MapFrame()
+{
+  if (!SessionValid) return nullptr;
+
+  return BRIDGE_RENDERER.MapFrame();
+}
+
+void UsdBridge::UnmapFrame()
+{
+  if (!SessionValid) return;
+
+  BRIDGE_RENDERER.UnmapFrame();
 }
 
 void UsdBridge::ResetResourceUpdateState()

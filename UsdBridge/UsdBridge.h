@@ -95,8 +95,12 @@ class UsdBridge
   
     void SaveScene();
 
+    void InitializeRendering();
     void SetRenderCamera(UsdCameraHandle camera);
     void RenderFrame(uint32_t width, uint32_t height, double timeStep);
+    bool FrameReady(bool wait);
+    void* MapFrame();
+    void UnmapFrame();
 
     void ResetResourceUpdateState(); // Eg. clears all dirty flags on shared resources
 

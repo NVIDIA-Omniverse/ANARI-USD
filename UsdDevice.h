@@ -113,6 +113,12 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
 
     ANARIWorld newWorld() override;
 
+    // Extension interface ///////////////////////////////////////////////////////
+
+    ANARIObject newObject(const char *objectType, const char *type) override;
+
+    void (*getProcAddress(const char *name))(void) override;
+
     // Query functions ////////////////////////////////////////////////////////
 
     const char ** getObjectSubtypes(ANARIDataType objectType) override;
@@ -189,7 +195,7 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
     ANARIRenderer newRenderer(const char *type) override;
 
     void renderFrame(ANARIFrame frame) override;
-    int frameReady(ANARIFrame, ANARIWaitMask) override { return 1; }
+    int frameReady(ANARIFrame frame, ANARIWaitMask mask) override;
     void discardFrame(ANARIFrame) override {}
 
     // UsdParameterizedBaseObject interface ///////////////////////////////////////////////////////////

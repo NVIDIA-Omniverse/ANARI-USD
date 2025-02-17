@@ -40,27 +40,33 @@ bool UsdFrame::doCommitData(UsdDevice* device)
   return false;
 }
 
-const void* UsdFrame::mapBuffer(const char *channel,
+const void* UsdFrame::mapBuffer(
+  const char *channel,
   uint32_t *width,
   uint32_t *height,
-  ANARIDataType *pixelType)
+  ANARIDataType *pixelType,
+  UsdDevice* device)
 {
-  const UsdFrameData& paramData = getReadParams();
-
-  *width = paramData.size.Data[0];
-  *height = paramData.size.Data[1];
+  *width = renderBufferSize.Data[0];
+  *height = renderBufferSize.Data[1];
   *pixelType = ANARI_UNKNOWN;
 
   if (strEquals(channel, "channel.color"))
   {
-    mappedColorMem = ReserveBuffer(paramData.color);
-    *pixelType = paramData.color;
+    if(void* deviceBuffer = device->getUsdBridge()->MapFrame())
+    {
+      *pixelType = ANARI_UFIXED8_VEC4;
+      return deviceBuffer;
+    }
+
+    mappedColorMem = ReserveBuffer(renderBufferColorFormat);
+    *pixelType = renderBufferColorFormat;
     return mappedColorMem;
   }
   else if (strEquals(channel, "channel.depth"))
   {
-    mappedDepthMem = ReserveBuffer(paramData.depth);
-    *pixelType = paramData.depth;
+    mappedDepthMem = ReserveBuffer(renderBufferDepthFormat);
+    *pixelType = renderBufferDepthFormat;
     return mappedDepthMem;
   }
 
@@ -70,8 +76,10 @@ const void* UsdFrame::mapBuffer(const char *channel,
   return nullptr;
 }
 
-void UsdFrame::unmapBuffer(const char *channel)
+void UsdFrame::unmapBuffer(const char *channel, UsdDevice* device)
 {
+  device->getUsdBridge()->UnmapFrame();
+
   if (strEquals(channel, "channel.color"))
   {
     delete[] mappedColorMem;
@@ -86,9 +94,8 @@ void UsdFrame::unmapBuffer(const char *channel)
 
 char* UsdFrame::ReserveBuffer(ANARIDataType format)
 {
-  const UsdFrameData& paramData = getReadParams();
   size_t formatSize = anari::sizeOf(format);
-  size_t memSize = formatSize * paramData.size.Data[0] * paramData.size.Data[1];
+  size_t memSize = formatSize * renderBufferSize.Data[0] * renderBufferSize.Data[1];
   return new char[memSize];
 }
 
@@ -103,9 +110,22 @@ void UsdFrame::renderFrame(UsdDevice* device)
 
   if(paramData.camera)
   {
+    device->getUsdBridge()->InitializeRendering();
+
     UsdCameraHandle cameraHandle = paramData.camera->getUsdHandle();
     device->getUsdBridge()->SetRenderCamera(cameraHandle);
 
+    // Cache the renderbuffer properties belonging to this frame
+    renderBufferSize = paramData.size;
+    renderBufferColorFormat = paramData.color;
+    renderBufferDepthFormat = paramData.depth;
+
+    // Render (to a renderbuffer)
     device->getUsdBridge()->RenderFrame(paramData.size.Data[0], paramData.size.Data[1], paramData.time);
   }
+}
+
+bool UsdFrame::frameReady(ANARIWaitMask mask, UsdDevice* device)
+{
+  return device->getUsdBridge()->FrameReady(mask == ANARI_WAIT);
 }
