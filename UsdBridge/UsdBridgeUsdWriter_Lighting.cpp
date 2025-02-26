@@ -87,7 +87,7 @@ void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPa
   viewMatrix.SetLookAt(eyePoint, lookAtPoint, approxUpDir);
 
   lightPrim.ClearXformOpOrder();
-  UsdGeomXformOp xformOp = lightPrim.AddTransformOp(UsdGeomXformOp::PrecisionFloat);
+  UsdGeomXformOp xformOp = lightPrim.AddTransformOp();
   ClearAndSetUsdAttribute(xformOp.GetAttr(), viewMatrix, timeEval.Eval(DMI::DIRECTION),
     timeVarHasChanged && !timeEval.IsTimeVarying(DMI::DIRECTION));
 }

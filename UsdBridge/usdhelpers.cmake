@@ -42,6 +42,8 @@ function(flatten_and_cleanup_targets RESULT_TARGETS INIT_TARGETS)
       AND NOT (${cur_target} MATCHES ${MATCH_SUFFIX})
       AND NOT (${cur_target} STREQUAL "dl")
       AND NOT (${cur_target} STREQUAL "m")
+      AND NOT (${cur_target} STREQUAL "opengl32")
+      AND NOT (${cur_target} STREQUAL "MaterialXGenMsl")
       )
       list(APPEND flat_targets ${cur_target})
       
