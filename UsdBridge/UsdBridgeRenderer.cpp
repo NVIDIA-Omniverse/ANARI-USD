@@ -38,7 +38,7 @@
 #include <memory>
 #include <string>
 
-#define USDBRIDGE_RENDERER_USE_ENGINEGL
+//#define USDBRIDGE_RENDERER_USE_ENGINEGL
 
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
 #include <pxr/usdImaging/usdImagingGL/engine.h>
@@ -58,7 +58,7 @@ public:
 #endif
   }
 
-  void Initialize(const char* rendererName)
+  void Initialize(const char* rendererName, pxr::UsdStageRefPtr stage)
   {
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
     pxr::UsdImagingGLEngine::Parameters initParams;
@@ -107,7 +107,7 @@ public:
       SceneDelegate->Populate(stage->GetPseudoRoot());
       //SceneDelegate->AddCube(SdfPath("/MyCube1"), GfMatrix4f(1));
 
-      TaskController = new pxr::HdxTaskController(RenderIndex, TaskControllerPath);
+      TaskController = new pxr::HdxTaskController(RenderIndex, TaskControllerId);
 
       RenderEngine = new pxr::HdEngine();
     }
@@ -129,8 +129,8 @@ public:
   void CreateRenderBuffers()
   {
     //RenderIndex->InsertBprim(
-    //  pxr::HdPrimTypeTokens->renderBuffer, SceneDelegate, RenderBufferPath);
-    //pxr::HdBprim* bprim = RenderIndex->GetBprim(pxr::HdPrimTypeTokens->renderBuffer, RenderBufferPath);
+    //  pxr::HdPrimTypeTokens->renderBuffer, SceneDelegate, RenderBufferId);
+    //pxr::HdBprim* bprim = RenderIndex->GetBprim(pxr::HdPrimTypeTokens->renderBuffer, RenderBufferId);
     //RenderBuffer = dynamic_cast<pxr::HdRenderBuffer*>(bprim);
     //if(!RenderBuffer)
     //{
@@ -147,7 +147,7 @@ public:
     //    isConverged = RenderBuffer->IsConverged();
 //
     //  RenderBuffer->Finalize(nullptr);
-    //  RenderIndex->RemoveBprim(pxr::HdPrimTypeTokens->renderBuffer, RenderBufferPath);
+    //  RenderIndex->RemoveBprim(pxr::HdPrimTypeTokens->renderBuffer, RenderBufferId);
     //}
     //RenderBuffer = nullptr;
   }
@@ -211,15 +211,18 @@ public:
   pxr::HdRenderDelegate* RenderDelegate = nullptr;
   pxr::UsdImagingDelegate* SceneDelegate = nullptr;
 
-  pxr::SdfPath TaskControllerPath {"/taskController"};
   pxr::HdxTaskController* TaskController = nullptr;
 
-  pxr::SdfPath RenderBufferPath {"/renderBuffer"};
   pxr::HdRenderBuffer* RenderBuffer = nullptr;
 
   pxr::HdEngine* RenderEngine = nullptr;
-  pxr::UsdImagingGLEngine* RenderEngineGL = nullptr;
 
+#ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
+  pxr::UsdImagingGLEngine* RenderEngineGL = nullptr;
+#endif
+
+  pxr::SdfPath RenderBufferId {"/UsdDeviceRenderBuffer"};
+  pxr::SdfPath TaskControllerId {"/UsdDeviceTaskController"};
   pxr::SdfPath SceneDelegateId { "/UsdDeviceSceneDelegate" };
   pxr::SdfPath RenderSetupTaskId { "/UsdDeviceRenderSetupTask" };
   pxr::SdfPath RenderTaskId { "/UsdDeviceRenderTask" };
@@ -259,8 +262,8 @@ void UsdBridgeRenderer::Initialize(const char* rendererName)
     return;
 
   static int lala = 0;
-  //if(lala++ < 4)
-  //  return;
+  if(lala++ < 4)
+    return;
 
   if(Internals->CachedRendererName == rendererName)
     return;
@@ -273,7 +276,7 @@ void UsdBridgeRenderer::Initialize(const char* rendererName)
   {
     Internals->CreateRenderSettings(stage); // This could be sit a more overarching initialization phase, but it's ok here as well
 
-    Internals->Initialize(rendererName);
+    Internals->Initialize(rendererName, stage);
 
     SetCameraPath(Internals->CameraPath);
   }
@@ -352,7 +355,7 @@ void UsdBridgeRenderer::Render(uint32_t width, uint32_t height, double timeStep)
   //auto& setupTaskId = Internals->RenderSetupTaskId;
   //auto& taskId = Internals->RenderTaskId;
   //auto& sceneDelegate = Internals->SceneDelegate;
-  ////auto& taskController = Internals->TaskController;
+  auto& taskController = Internals->TaskController;
 
   //Internals->RenderIndex->InsertTask<pxr::HdxRenderSetupTask>(sceneDelegate, setupTaskId);
   //Internals->RenderIndex->InsertTask<pxr::HdxRenderTask>(sceneDelegate, taskId);
