@@ -4,6 +4,7 @@
 #include "UsdBridgeRenderer.h"
 #include "UsdBridgeUsdWriter.h"
 #include "UsdBridgeUsdWriter_Common.h"
+#include "UsdBridgeDiagnosticMgrDelegate.h"
 
 #ifdef USD_DEVICE_RENDERING_ENABLED
 
@@ -32,6 +33,7 @@
 #include <pxr/imaging/hdx/selectionTracker.h>
 #include <pxr/imaging/hdx/taskController.h>
 #include <pxr/imaging/hdx/tokens.h>
+#include <pxr/imaging/glf/simpleLightingContext.h>
 #include <pxr/imaging/glf/diagnostic.h>
 
 #include <vector>
@@ -42,6 +44,21 @@
 
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
 #include <pxr/usdImaging/usdImagingGL/engine.h>
+
+// Allow access to the task controller for AOV control
+class UsdBridgeImagingGLEngine : public pxr::UsdImagingGLEngine
+{
+  public:
+    UsdBridgeImagingGLEngine(pxr::UsdImagingGLEngine::Parameters params)
+      : pxr::UsdImagingGLEngine(params)
+    {}
+
+    pxr::HdxTaskController* GetTaskController()
+    {
+      return _GetTaskController();
+    }
+};
+
 #endif
 
 class UsdBridgeRendererInternals
@@ -63,7 +80,7 @@ public:
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
     pxr::UsdImagingGLEngine::Parameters initParams;
     initParams.rendererPluginId = TfToken(rendererName);
-    RenderEngineGL = new pxr::UsdImagingGLEngine(initParams);
+    RenderEngineGL = new UsdBridgeImagingGLEngine(initParams);
     RenderEngineGL->SetRendererAov(pxr::HdAovTokens->color);
     RenderEngineGL->SetOverrideWindowPolicy(pxr::CameraUtilMatchVertically);
     Initialized = true;
@@ -103,13 +120,15 @@ public:
       pxr::HdDriverVector drivers { RenderDriver };
       RenderIndex = pxr::HdRenderIndex::New(RenderDelegate, drivers);
 
-      SceneDelegate = new pxr::UsdImagingDelegate(RenderIndex, SceneDelegateId);
+      SceneDelegate = new pxr::UsdImagingDelegate(RenderIndex, SdfPath::AbsoluteRootPath());
       SceneDelegate->Populate(stage->GetPseudoRoot());
       //SceneDelegate->AddCube(SdfPath("/MyCube1"), GfMatrix4f(1));
 
       TaskController = new pxr::HdxTaskController(RenderIndex, TaskControllerId);
 
       RenderEngine = new pxr::HdEngine();
+
+      LightingContextForOpenGLState = GlfSimpleLightingContext::New();
     }
     else
     {
@@ -162,19 +181,13 @@ public:
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
 
       RenderEngineGL->SetRenderBufferSize(pxr::GfVec2i(width, height));
+      pxr::HdxTaskController* taskController = RenderEngineGL->GetTaskController();
 
 #else
       TaskController->SetRenderOutputs({pxr::HdAovTokens->color});
       TaskController->SetRenderBufferSize(pxr::GfVec2i(width, height));
 
-      pxr::HdAovDescriptor colorSettings(
-        pxr::HdFormatUNorm8Vec4,
-        false,
-        pxr::VtValue(GfVec4f(0.0f, 1.0f, 0.0f, 1.0f)));
-      TaskController->SetRenderOutputSettings(pxr::HdAovTokens->color, colorSettings);
-      pxr::HdAovDescriptor depthSettings = TaskController->GetRenderOutputSettings(pxr::HdAovTokens->depth);
-      depthSettings.multiSampled = false;
-      TaskController->SetRenderOutputSettings(pxr::HdAovTokens->depth, depthSettings);
+      pxr::HdxTaskController* taskController = TaskController;
 
       // Create a renderbuffer if necessary
       //if(RenderBuffer)
@@ -195,6 +208,14 @@ public:
       //  RenderBuffer2->Allocate(dimensions, format, multiSampled);
       //lala++;
 #endif
+      pxr::HdAovDescriptor colorSettings(
+        pxr::HdFormatUNorm8Vec4,
+        false,
+        pxr::VtValue(GfVec4f(0.0f, 1.0f, 0.0f, 1.0f)));
+      taskController->SetRenderOutputSettings(pxr::HdAovTokens->color, colorSettings);
+      pxr::HdAovDescriptor depthSettings = taskController->GetRenderOutputSettings(pxr::HdAovTokens->depth);
+      depthSettings.multiSampled = false;
+      taskController->SetRenderOutputSettings(pxr::HdAovTokens->depth, depthSettings);
 
       CachedWidth = width;
       CachedHeight = height;
@@ -218,18 +239,20 @@ public:
   pxr::HdEngine* RenderEngine = nullptr;
 
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
-  pxr::UsdImagingGLEngine* RenderEngineGL = nullptr;
+  UsdBridgeImagingGLEngine* RenderEngineGL = nullptr;
 #endif
 
   pxr::SdfPath RenderBufferId {"/UsdDeviceRenderBuffer"};
   pxr::SdfPath TaskControllerId {"/UsdDeviceTaskController"};
-  pxr::SdfPath SceneDelegateId { "/UsdDeviceSceneDelegate" };
+  //pxr::SdfPath SceneDelegateId { "/UsdDeviceSceneDelegate" };
   pxr::SdfPath RenderSetupTaskId { "/UsdDeviceRenderSetupTask" };
   pxr::SdfPath RenderTaskId { "/UsdDeviceRenderTask" };
   std::string RenderSettingsPath { "/Render/PrimarySettings" };
   pxr::UsdRenderSettings RenderSettings;
 
   pxr::HdStTextureUtils::AlignedBuffer<uint8_t> MappedColorTextureBuffer;
+
+  pxr::GlfSimpleLightingContextRefPtr LightingContextForOpenGLState;
 
   const char* CachedRendererName = nullptr;
   uint32_t CachedWidth = 0;
@@ -262,8 +285,8 @@ void UsdBridgeRenderer::Initialize(const char* rendererName)
     return;
 
   static int lala = 0;
-  if(lala++ < 4)
-    return;
+  //if(lala++ < 4)
+  //  return;
 
   if(Internals->CachedRendererName == rendererName)
     return;
@@ -278,7 +301,8 @@ void UsdBridgeRenderer::Initialize(const char* rendererName)
 
     Internals->Initialize(rendererName, stage);
 
-    SetCameraPath(Internals->CameraPath);
+    if(!Internals->CameraPath.IsEmpty())
+      SetCameraPath(Internals->CameraPath);
   }
 }
 
@@ -296,6 +320,8 @@ void UsdBridgeRenderer::SetCameraPath(const SdfPath& cameraPath)
   Internals->RenderEngineGL->SetCameraPath(cameraPath);
 #else
   Internals->TaskController->SetCameraPath(cameraPath);
+  Internals->SceneDelegate->SetCameraForSampling(cameraPath);
+  UsdBridgeLogMacro(UsdWriter.LogObject, UsdBridgeLogLevel::WARNING, "CAMERA " << cameraPath.GetString());
 #endif
 
   UsdWriter.SaveScene();
@@ -355,7 +381,6 @@ void UsdBridgeRenderer::Render(uint32_t width, uint32_t height, double timeStep)
   //auto& setupTaskId = Internals->RenderSetupTaskId;
   //auto& taskId = Internals->RenderTaskId;
   //auto& sceneDelegate = Internals->SceneDelegate;
-  auto& taskController = Internals->TaskController;
 
   //Internals->RenderIndex->InsertTask<pxr::HdxRenderSetupTask>(sceneDelegate, setupTaskId);
   //Internals->RenderIndex->InsertTask<pxr::HdxRenderTask>(sceneDelegate, taskId);
@@ -371,12 +396,17 @@ void UsdBridgeRenderer::Render(uint32_t width, uint32_t height, double timeStep)
   //sceneDelegate->UpdateTask(taskId, HdTokens->collection, pxr::VtValue(collection));
   //renderSetupTask->SyncParams(sceneDelegate, taskParams);
 
+  auto& taskController = Internals->TaskController;
   taskController->SetCollection(collection);
   taskController->SetFraming(framing);
 
   //Internals->RenderEngine->SetTaskContextData(pxr::HdxTokens->renderPassState, pxr::VtValue(renderPassState)); // This is done by HdxRenderSetupTask::Execute
   pxr::HdxSelectionTrackerSharedPtr emptySelection = std::make_shared<pxr::HdxSelectionTracker>();
   Internals->RenderEngine->SetTaskContextData(pxr::HdxTokens->selectionState, VtValue(emptySelection));
+
+  Internals->LightingContextForOpenGLState->SetUseLighting(true);
+  taskController->SetLightingState(Internals->LightingContextForOpenGLState);
+  Internals->RenderEngine->SetTaskContextData(pxr::HdxTokens->lightingContext, VtValue(Internals->LightingContextForOpenGLState));
 
   HdTaskSharedPtrVector tasks = taskController->GetRenderingTasks();
   Internals->RenderEngine->Execute(Internals->RenderIndex,
@@ -415,23 +445,27 @@ void* UsdBridgeRenderer::MapFrame()
     return nullptr;
 
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
-  auto colorTextureHandle = Internals->RenderEngineGL->GetAovTexture(pxr::HdAovTokens->color);
+  //auto colorTextureHandle = Internals->RenderEngineGL->GetAovTexture(pxr::HdAovTokens->color);
+//
+  //if (!colorTextureHandle)
+  //    return nullptr;
+//
+  //Internals->CheckTexture = colorTextureHandle->GetDescriptor();
+//
+  //Internals->CheckSize = 0;
+  //Internals->MappedColorTextureBuffer = pxr::HdStTextureUtils::HgiTextureReadback(
+  //    Internals->RenderEngineGL->GetHgi(), colorTextureHandle, &Internals->CheckSize);
+  //void* retValue = Internals->MappedColorTextureBuffer.get();
 
-  if (!colorTextureHandle)
-      return nullptr;
-
-  Internals->CheckTexture = colorTextureHandle->GetDescriptor();
-
-  Internals->CheckSize = 0;
-  Internals->MappedColorTextureBuffer = pxr::HdStTextureUtils::HgiTextureReadback(
-      Internals->RenderEngineGL->GetHgi(), colorTextureHandle, &Internals->CheckSize);
-  void* retValue = Internals->MappedColorTextureBuffer.get();
+  pxr::HdRenderBuffer* renderBuffer =
+    Internals->RenderEngineGL->GetAovRenderBuffer(pxr::HdAovTokens->color);
 
 #else
 
   pxr::HdRenderBuffer* renderBuffer =
     Internals->TaskController->GetRenderOutput(pxr::HdAovTokens->color);
-    //Internals->RenderEngineGL->GetAovRenderBuffer(pxr::HdAovTokens->color);
+
+#endif
 
   renderBuffer->Resolve();
 
@@ -441,7 +475,7 @@ void* UsdBridgeRenderer::MapFrame()
   Internals->CheckMSAA = renderBuffer->IsMultiSampled();
   void* retValue = renderBuffer->Map();
 
-#endif
+
 
   pxr::GLF_POST_PENDING_GL_ERRORS();
   return retValue;

@@ -28,6 +28,7 @@ public:
     void* MapFrame();
     void UnmapFrame();
 
+protected:
     UsdBridgeUsdWriter& UsdWriter;
     UsdBridgeRendererInternals* Internals = nullptr;
 };
