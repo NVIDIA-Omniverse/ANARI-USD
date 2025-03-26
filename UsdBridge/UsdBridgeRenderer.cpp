@@ -26,8 +26,11 @@
 #include <pxr/imaging/hgi/tokens.h>
 #include <pxr/imaging/hgi/texture.h>
 #include <pxr/usd/usdRender/settings.h>
+#include <pxr/usd/usdRender/product.h>
+#include <pxr/usd/usdRender/var.h>
 #include <pxr/usd/usdRender/tokens.h>
 #include <pxr/usdImaging/usdImaging/delegate.h>
+#include <pxr/imaging/hdx/colorCorrectionTask.h>
 #include <pxr/imaging/hdx/renderSetupTask.h>
 #include <pxr/imaging/hdx/renderTask.h>
 #include <pxr/imaging/hdx/selectionTracker.h>
@@ -40,9 +43,11 @@
 #include <memory>
 #include <string>
 
-//#define USDBRIDGE_RENDERER_USE_ENGINEGL
+#define USDBRIDGE_RENDERER_USE_ENGINEGL
+#define USDBRIDGE_RENDERER_USE_COLORTEXTURE
 
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
+
 #include <pxr/usdImaging/usdImagingGL/engine.h>
 
 // Allow access to the task controller for AOV control
@@ -69,7 +74,6 @@ public:
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
     delete RenderEngineGL;
 #else
-    DestroyRenderBuffers();
     RendererPlugin = nullptr;
     SetDelegatesAndIndex(nullptr);
 #endif
@@ -100,6 +104,7 @@ public:
 #endif
   }
 
+#ifndef USDBRIDGE_RENDERER_USE_ENGINEGL
   void SetDelegatesAndIndex(pxr::UsdStageRefPtr stage)
   {
     delete RenderEngine;
@@ -137,38 +142,24 @@ public:
       RenderDriver = nullptr;
     }
   }
+#endif
 
   void CreateRenderSettings(pxr::UsdStageRefPtr stage)
   {
     stage->SetMetadata(pxr::UsdRenderTokens->renderSettingsPrimPath, pxr::VtValue(RenderSettingsPath));
     RenderSettings = GetOrDefinePrim<pxr::UsdRenderSettings>(stage, pxr::SdfPath(RenderSettingsPath));
     RenderSettings.CreateResolutionAttr();
-  }
+    RenderSettings.CreateCameraRel();
 
-  void CreateRenderBuffers()
-  {
-    //RenderIndex->InsertBprim(
-    //  pxr::HdPrimTypeTokens->renderBuffer, SceneDelegate, RenderBufferId);
-    //pxr::HdBprim* bprim = RenderIndex->GetBprim(pxr::HdPrimTypeTokens->renderBuffer, RenderBufferId);
-    //RenderBuffer = dynamic_cast<pxr::HdRenderBuffer*>(bprim);
-    //if(!RenderBuffer)
-    //{
-    //  //Throw error
-    //}
-  }
+    RenderProduct = GetOrDefinePrim<pxr::UsdRenderProduct>(stage, pxr::SdfPath(RenderProductPath));
+    RenderProduct.CreateResolutionAttr();
+    RenderProduct.CreateCameraRel();
+    RenderProduct.CreateOrderedVarsRel();
 
-  void DestroyRenderBuffers()
-  {
-    //if(RenderBuffer)
-    //{
-    //  bool isConverged = RenderBuffer->IsConverged();
-    //  while(!isConverged)
-    //    isConverged = RenderBuffer->IsConverged();
-//
-    //  RenderBuffer->Finalize(nullptr);
-    //  RenderIndex->RemoveBprim(pxr::HdPrimTypeTokens->renderBuffer, RenderBufferId);
-    //}
-    //RenderBuffer = nullptr;
+    pxr::SdfPath renderVarSdf(RenderVarPath);
+    pxr::UsdRenderVar renderVarPrim = GetOrDefinePrim<pxr::UsdRenderVar>(stage, renderVarSdf);
+    renderVarPrim.CreateSourceNameAttr(pxr::VtValue(RenderVarSource));
+    RenderProduct.GetOrderedVarsRel().AddTarget(renderVarSdf);
   }
 
   void ChangeResolution(uint32_t width, uint32_t height, UsdBridgeUsdWriter& usdWriter)
@@ -176,38 +167,19 @@ public:
     if(width != CachedWidth || height != CachedHeight)
     {
       RenderSettings.GetResolutionAttr().Set(pxr::GfVec2i((int)width, (int)height));
+      RenderProduct.GetResolutionAttr().Set(pxr::GfVec2i((int)width, (int)height));
       usdWriter.SaveScene();
 
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
-
       RenderEngineGL->SetRenderBufferSize(pxr::GfVec2i(width, height));
       pxr::HdxTaskController* taskController = RenderEngineGL->GetTaskController();
-
 #else
       TaskController->SetRenderOutputs({pxr::HdAovTokens->color});
       TaskController->SetRenderBufferSize(pxr::GfVec2i(width, height));
 
       pxr::HdxTaskController* taskController = TaskController;
-
-      // Create a renderbuffer if necessary
-      //if(RenderBuffer)
-      //{
-      //  DestroyRenderBuffers();
-      //}
-      //if(!RenderBuffer)
-      //  CreateRenderBuffers();
-
-      // Allocate the buffer with desired dimensions and format
-      //pxr::GfVec3i dimensions(width, height, 1);
-      //pxr::HdFormat format = pxr::HdFormatUNorm8Vec4;
-      //bool multiSampled = false;
-      //static int lala = 0;
-      //if(lala == 0)
-      //  RenderBuffer->Allocate(dimensions, format, multiSampled);
-      //else
-      //  RenderBuffer2->Allocate(dimensions, format, multiSampled);
-      //lala++;
 #endif
+
       pxr::HdAovDescriptor colorSettings(
         pxr::HdFormatUNorm8Vec4,
         false,
@@ -222,9 +194,23 @@ public:
     }
   }
 
+  void SetLightingState(
+    GlfSimpleLightVector const &lights,
+    GlfSimpleMaterial const &material,
+    GfVec4f const &sceneAmbient)
+  {
+    LightingContextForOpenGLState->SetLights(lights);
+    LightingContextForOpenGLState->SetMaterial(material);
+    LightingContextForOpenGLState->SetSceneAmbient(sceneAmbient);
+    LightingContextForOpenGLState->SetUseLighting(lights.size() > 0);
+
+    TaskController->SetLightingState(LightingContextForOpenGLState);
+  }
+
   pxr::SdfPath CameraPath;
 
   pxr::HdRendererPluginHandle RendererPlugin = nullptr;
+  pxr::TfToken RendererPluginId;
   pxr::HgiUniquePtr RenderHgi = nullptr;
 
   pxr::HdDriver* RenderDriver = nullptr;
@@ -248,7 +234,11 @@ public:
   pxr::SdfPath RenderSetupTaskId { "/UsdDeviceRenderSetupTask" };
   pxr::SdfPath RenderTaskId { "/UsdDeviceRenderTask" };
   std::string RenderSettingsPath { "/Render/PrimarySettings" };
+  std::string RenderProductPath { "/Render/PrimaryProduct" };
+  std::string RenderVarPath { "/Render/Vars/LdrColor" };
+  std::string RenderVarSource { "LdrColor" };
   pxr::UsdRenderSettings RenderSettings;
+  pxr::UsdRenderProduct RenderProduct;
 
   pxr::HdStTextureUtils::AlignedBuffer<uint8_t> MappedColorTextureBuffer;
 
@@ -284,10 +274,6 @@ void UsdBridgeRenderer::Initialize(const char* rendererName)
   if(Internals->Initialized)
     return;
 
-  static int lala = 0;
-  //if(lala++ < 4)
-  //  return;
-
   if(Internals->CachedRendererName == rendererName)
     return;
 
@@ -299,6 +285,7 @@ void UsdBridgeRenderer::Initialize(const char* rendererName)
   {
     Internals->CreateRenderSettings(stage); // This could be sit a more overarching initialization phase, but it's ok here as well
 
+    Internals->RendererPluginId = pxr::HdRendererPluginRegistry::GetInstance().GetDefaultPluginId(true);
     Internals->Initialize(rendererName, stage);
 
     if(!Internals->CameraPath.IsEmpty())
@@ -315,6 +302,8 @@ void UsdBridgeRenderer::SetCameraPath(const SdfPath& cameraPath)
 
   Internals->RenderSettings.GetCameraRel().ClearTargets(false);
   Internals->RenderSettings.GetCameraRel().AddTarget(cameraPath);
+  Internals->RenderProduct.GetCameraRel().ClearTargets(false);
+  Internals->RenderProduct.GetCameraRel().AddTarget(cameraPath);
 
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
   Internals->RenderEngineGL->SetCameraPath(cameraPath);
@@ -343,69 +332,89 @@ void UsdBridgeRenderer::Render(uint32_t width, uint32_t height, double timeStep)
   //renderPassState->SetFraming(framing);
   Internals->ChangeResolution(width, height, UsdWriter);
 
+  pxr::GfVec4f sceneAmbient(0.01f, 0.01f, 0.01f, 1.0f);
+  pxr::GlfSimpleMaterial material;
+  std::vector<pxr::GlfSimpleLight> lights;
+
+  // Check if the render mode requires lights
+  if (true) {
+      // Ambient light located at the camera
+      if (true) {
+          pxr::GlfSimpleLight ambientLight;
+          ambientLight.SetAmbient(GfVec4f(0.0f, 0.0f, 0.0f, 0.0f));
+          ambientLight.SetPosition(GfVec4f(1.14013255, 0.592924118, -3.45756054, 1.00000000));
+          lights.push_back(ambientLight);
+      }
+
+      // Set material properties
+      float kA = 0.2f;
+      float kS = 0.1f;
+      material.SetAmbient(GfVec4f(kA, kA, kA, 1.0f));
+      material.SetSpecular(GfVec4f(kS, kS, kS, 1.0f));
+      material.SetShininess(32.0f);
+  }
+
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
 
   pxr::UsdImagingGLRenderParams glRenderParams;
   glRenderParams.frame = pxr::UsdTimeCode(0.0f);
   glRenderParams.clearColor = pxr::GfVec4f(0.0f, 1.0f, 0.0f, 1.0f);
   glRenderParams.gammaCorrectColors = false;
+  glRenderParams.enableLighting = true;
+  glRenderParams.enableSceneLights = true;
+  glRenderParams.enableSceneMaterials = true;
+
+  // Corrections
+  glRenderParams.enableSampleAlphaToCoverage = true;
+  glRenderParams.enableIdRender =false;
+  glRenderParams.applyRenderState = true;
+  glRenderParams.highlight = false; //taskController->SetEnableSelection
+  glRenderParams.clearColor = pxr::GfVec4f(0.0707399994, 0.0707399994, 0.0707399994, 1.00000000);
+  glRenderParams.colorCorrectionMode = pxr::HdxColorCorrectionTokens->sRGB;
+
+  //glRenderParams.bboxes.push_back(pxr::GfBBox3d(pxr::GfRange3d(pxr::GfVec3d(-1,-1,-1), pxr::GfVec3d(1,1,1))));
+  //glRenderParams.bboxes.push_back(pxr::GfBBox3d(pxr::GfRange3d(pxr::GfVec3d(-1,-1,-1), pxr::GfVec3d(1,1,1))));
+  //glRenderParams.bboxLineColor = pxr::GfVec4f(0.670740008, 0.670740008, 0.670740008, 1.00000000);
 
   Internals->RenderEngineGL->SetFraming(framing);
+
+  Internals->RenderEngineGL->SetLightingState(lights, material, sceneAmbient);
 
   Internals->RenderEngineGL->Render(UsdWriter.GetSceneStage()->GetPseudoRoot(), glRenderParams);
 
 #else
 
+  auto& taskController = Internals->TaskController;
+
+  Internals->SetLightingState(lights, material, sceneAmbient);
+
   Internals->SceneDelegate->SetTime(pxr::UsdTimeCode(0.0f));
 
-  //pxr::HdxRenderTaskParams taskParams;
+  pxr::HdxRenderTaskParams taskParams;
+  taskParams.overrideColor = pxr::GfVec4f(.0f, .0f, .0f, .0f);
+  taskParams.wireframeColor = pxr::GfVec4f(.0f, .0f, .0f, .0f);
+  taskParams.enableLighting = true;
+  taskParams.enableIdRender = false;
+  taskParams.depthBiasUseDefault = true;
+  taskParams.depthFunc = pxr::HdCmpFuncLess;
+  taskParams.cullStyle = pxr::HdCullStyleNothing;
+  taskParams.alphaThreshold = 0.1f;
+  taskParams.enableSceneMaterials = true;
+  taskParams.enableSceneLights = true;
 
-  // Set up offscreen rendering
-  //if(Internals->RenderBuffer)
-  //{
-  //  pxr::HdRenderPassAovBindingVector aovBindings;
-  //  pxr::HdRenderPassAovBinding colorBinding;
-  //  colorBinding.aovName = pxr::HdAovTokens->color; // Standard color AOV
-  //  colorBinding.renderBuffer = Internals->RenderBuffer; // HdRenderBuffer pointer
-  //  colorBinding.clearValue = pxr::VtValue(GfVec4f(0.0f, 0.0f, 0.0f, 1.0f));
-  //  aovBindings.push_back(colorBinding);
-  //  //renderPassState->SetAovBindings(aovBindings);
-  //  taskParams.aovBindings.push_back(colorBinding);
-  //}
+  taskController->SetRenderParams(taskParams);
+  taskController->SetEnableSelection(false);
 
-  //renderPass->Sync();
-  //Internals->RenderDelegate->CommitResources(&Internals->RenderIndex->GetChangeTracker());
-  //renderPass->Execute(renderPassState, {});
+  pxr::HdxColorCorrectionTaskParams hdParams;
+  hdParams.colorCorrectionMode = pxr::HdxColorCorrectionTokens->sRGB;
+  taskController->SetColorCorrectionParams(hdParams);
 
-  // Rendertasks require hdx, which require opengl, so this cannot be used yet
-  //auto& setupTaskId = Internals->RenderSetupTaskId;
-  //auto& taskId = Internals->RenderTaskId;
-  //auto& sceneDelegate = Internals->SceneDelegate;
-
-  //Internals->RenderIndex->InsertTask<pxr::HdxRenderSetupTask>(sceneDelegate, setupTaskId);
-  //Internals->RenderIndex->InsertTask<pxr::HdxRenderTask>(sceneDelegate, taskId);
-  //auto renderSetupTask = dynamic_cast<pxr::HdxRenderSetupTask*>(
-  //  Internals->RenderIndex->GetTask(setupTaskId).get());
-  //auto renderTask = Internals->RenderIndex->GetTask(taskId);
-  //std::vector<pxr::HdTaskSharedPtr> tasks = {renderTask};
-
-  //taskParams.useAovMultiSample = false;
-  //taskParams.resolveAovMultiSample = false;
-  //taskParams.framing = framing;
-  //sceneDelegate->UpdateTask(taskId, HdTokens->params, pxr::VtValue(taskParams));
-  //sceneDelegate->UpdateTask(taskId, HdTokens->collection, pxr::VtValue(collection));
-  //renderSetupTask->SyncParams(sceneDelegate, taskParams);
-
-  auto& taskController = Internals->TaskController;
   taskController->SetCollection(collection);
   taskController->SetFraming(framing);
 
   //Internals->RenderEngine->SetTaskContextData(pxr::HdxTokens->renderPassState, pxr::VtValue(renderPassState)); // This is done by HdxRenderSetupTask::Execute
   pxr::HdxSelectionTrackerSharedPtr emptySelection = std::make_shared<pxr::HdxSelectionTracker>();
   Internals->RenderEngine->SetTaskContextData(pxr::HdxTokens->selectionState, VtValue(emptySelection));
-
-  Internals->LightingContextForOpenGLState->SetUseLighting(true);
-  taskController->SetLightingState(Internals->LightingContextForOpenGLState);
   Internals->RenderEngine->SetTaskContextData(pxr::HdxTokens->lightingContext, VtValue(Internals->LightingContextForOpenGLState));
 
   HdTaskSharedPtrVector tasks = taskController->GetRenderingTasks();
@@ -444,27 +453,43 @@ void* UsdBridgeRenderer::MapFrame()
   if(!Internals->Initialized)
     return nullptr;
 
-#ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
-  //auto colorTextureHandle = Internals->RenderEngineGL->GetAovTexture(pxr::HdAovTokens->color);
-//
-  //if (!colorTextureHandle)
-  //    return nullptr;
-//
-  //Internals->CheckTexture = colorTextureHandle->GetDescriptor();
-//
-  //Internals->CheckSize = 0;
-  //Internals->MappedColorTextureBuffer = pxr::HdStTextureUtils::HgiTextureReadback(
-  //    Internals->RenderEngineGL->GetHgi(), colorTextureHandle, &Internals->CheckSize);
-  //void* retValue = Internals->MappedColorTextureBuffer.get();
+#ifdef USDBRIDGE_RENDERER_USE_COLORTEXTURE
 
-  pxr::HdRenderBuffer* renderBuffer =
-    Internals->RenderEngineGL->GetAovRenderBuffer(pxr::HdAovTokens->color);
+#ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
+  auto colorTextureHandle = Internals->RenderEngineGL->GetAovTexture(pxr::HdAovTokens->color);
+  auto hgi = Internals->RenderEngineGL->GetHgi();
+#else
+  auto hgi = Internals->RenderHgi.get();
+  pxr::VtValue aov;
+  pxr::HgiTextureHandle colorTextureHandle;
+
+  if (Internals->RenderEngine->GetTaskContextData(pxr::HdAovTokens->color, &aov)) {
+      if (aov.IsHolding<pxr::HgiTextureHandle>()) {
+        colorTextureHandle = aov.Get<pxr::HgiTextureHandle>();
+      }
+  }
+#endif
+
+  if (!colorTextureHandle)
+      return nullptr;
+
+  Internals->CheckTexture = colorTextureHandle->GetDescriptor();
+
+  Internals->CheckSize = 0;
+  Internals->MappedColorTextureBuffer = pxr::HdStTextureUtils::HgiTextureReadback(
+    hgi, colorTextureHandle, &Internals->CheckSize);
+
+  pxr::GLF_POST_PENDING_GL_ERRORS();
+  return Internals->MappedColorTextureBuffer.get();
 
 #else
 
+#ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
+  pxr::HdRenderBuffer* renderBuffer =
+    Internals->RenderEngineGL->GetAovRenderBuffer(pxr::HdAovTokens->color);
+#else
   pxr::HdRenderBuffer* renderBuffer =
     Internals->TaskController->GetRenderOutput(pxr::HdAovTokens->color);
-
 #endif
 
   renderBuffer->Resolve();
@@ -475,10 +500,11 @@ void* UsdBridgeRenderer::MapFrame()
   Internals->CheckMSAA = renderBuffer->IsMultiSampled();
   void* retValue = renderBuffer->Map();
 
-
-
   pxr::GLF_POST_PENDING_GL_ERRORS();
   return retValue;
+
+#endif
+
 }
 
 void UsdBridgeRenderer::UnmapFrame()
@@ -487,6 +513,8 @@ void UsdBridgeRenderer::UnmapFrame()
     return;
 
   pxr::GLF_POST_PENDING_GL_ERRORS();
+
+#ifndef USDBRIDGE_RENDERER_USE_COLORTEXTURE
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
   pxr::HdRenderBuffer* renderBuffer =
     Internals->RenderEngineGL->GetAovRenderBuffer(pxr::HdAovTokens->color);
@@ -496,6 +524,7 @@ void UsdBridgeRenderer::UnmapFrame()
 #endif
   if(renderBuffer)
     renderBuffer->Unmap();
+#endif
 }
 
 
