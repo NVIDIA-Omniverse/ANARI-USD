@@ -129,6 +129,7 @@ void logDeallocationThroughDevice(UsdDevice* device, const void* ptr, ANARIDataT
 // Anari <=> USD conversions
 UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType);
 UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType);
+ANARIDataType UsdBridgeToAnariType(UsdBridgeType anariType);
 const char* AnariTypeToString(ANARIDataType anariType);
 const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo);
 std::pair<bool, const char*> GetGeomDependentAttributeName(const char* anariAttrib, bool perInstance, const UsdSharedString*const* attribNames, size_t numAttribNames,

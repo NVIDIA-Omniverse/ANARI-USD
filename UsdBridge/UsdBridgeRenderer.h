@@ -18,14 +18,14 @@ public:
     ~UsdBridgeRenderer();
 
     // Sets up the scene and render delegates
-    void Initialize(const char* rendererName = "HdStormRendererPlugin");
+    void Initialize(const char* rendererName = "HdCyclesPlugin");
 
     void SetCameraPath(const pxr::SdfPath& cameraPath);
 
     void Render(uint32_t width, uint32_t height, double timeStep);
 
     bool FrameReady(bool wait);
-    void* MapFrame();
+    void* MapFrame(UsdBridgeType& returnFormat);
     void UnmapFrame();
 
 protected:

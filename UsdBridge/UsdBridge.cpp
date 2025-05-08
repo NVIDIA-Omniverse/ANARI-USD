@@ -1137,6 +1137,8 @@ void UsdBridge::SetPrototypeData(UsdGeometryHandle geometry, const UsdBridgeInst
 
 void UsdBridge::ChangeMaterialInputAttributes(UsdMaterialHandle material, const MaterialInputAttribName* inputAttribs, size_t numInputAttribs, double timeStep, MaterialDMI timeVarying)
 {
+  // This function only applies to materials being bound to a different (type of) geometry, which means that for example attribute connection names can change
+
   if (material.value == nullptr) return;
 
   UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(material);
@@ -1215,11 +1217,11 @@ bool UsdBridge::FrameReady(bool wait)
   return BRIDGE_RENDERER.FrameReady(wait);
 }
 
-void* UsdBridge::MapFrame()
+void* UsdBridge::MapFrame(UsdBridgeType& returnFormat)
 {
   if (!SessionValid) return nullptr;
 
-  return BRIDGE_RENDERER.MapFrame();
+  return BRIDGE_RENDERER.MapFrame(returnFormat);
 }
 
 void UsdBridge::UnmapFrame()

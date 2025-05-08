@@ -219,6 +219,76 @@ UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType)
   }
 }
 
+ANARIDataType UsdBridgeToAnariType(UsdBridgeType bridgeType)
+{
+  switch (bridgeType)
+  {
+  case UsdBridgeType::BOOL: return ANARI_BOOL;
+  case UsdBridgeType::UCHAR: return ANARI_UINT8;
+  case UsdBridgeType::UCHAR_SRGB_R: return ANARI_UFIXED8_R_SRGB;
+  case UsdBridgeType::CHAR: return ANARI_INT8;
+  case UsdBridgeType::USHORT: return ANARI_UINT16;
+  case UsdBridgeType::SHORT: return ANARI_INT16;
+  case UsdBridgeType::UINT: return ANARI_UINT32;
+  case UsdBridgeType::INT: return ANARI_INT32;
+  case UsdBridgeType::ULONG: return ANARI_UINT64;
+  case UsdBridgeType::LONG: return ANARI_INT64;
+  case UsdBridgeType::FLOAT: return ANARI_FLOAT32;
+  case UsdBridgeType::DOUBLE: return ANARI_FLOAT64;
+  case UsdBridgeType::UCHAR2: return ANARI_UINT8_VEC2;
+  case UsdBridgeType::UCHAR_SRGB_RA: return ANARI_UFIXED8_RA_SRGB;
+  case UsdBridgeType::CHAR2: return ANARI_INT8_VEC2;
+  case UsdBridgeType::USHORT2: return ANARI_UINT16_VEC2;
+  case UsdBridgeType::SHORT2: return ANARI_INT16_VEC2;
+  case UsdBridgeType::UINT2: return ANARI_UINT32_VEC2;
+  case UsdBridgeType::INT2: return ANARI_INT32_VEC2;
+  case UsdBridgeType::ULONG2: return ANARI_UINT64_VEC2;
+  case UsdBridgeType::LONG2: return ANARI_INT64_VEC2;
+  case UsdBridgeType::FLOAT2: return ANARI_FLOAT32_VEC2;
+  case UsdBridgeType::DOUBLE2: return ANARI_FLOAT64_VEC2;
+  case UsdBridgeType::UCHAR3: return ANARI_UINT8_VEC3;
+  case UsdBridgeType::UCHAR_SRGB_RGB: return ANARI_UFIXED8_RGB_SRGB;
+  case UsdBridgeType::CHAR3: return ANARI_INT8_VEC3;
+  case UsdBridgeType::USHORT3: return ANARI_UINT16_VEC3;
+  case UsdBridgeType::SHORT3: return ANARI_INT16_VEC3;
+  case UsdBridgeType::UINT3: return ANARI_UINT32_VEC3;
+  case UsdBridgeType::INT3: return ANARI_INT32_VEC3;
+  case UsdBridgeType::ULONG3: return ANARI_UINT64_VEC3;
+  case UsdBridgeType::LONG3: return ANARI_INT64_VEC3;
+  case UsdBridgeType::FLOAT3: return ANARI_FLOAT32_VEC3;
+  case UsdBridgeType::DOUBLE3: return ANARI_FLOAT64_VEC3;
+  case UsdBridgeType::UCHAR4: return ANARI_UINT8_VEC4;
+  case UsdBridgeType::UCHAR_SRGB_RGBA: return ANARI_UFIXED8_RGBA_SRGB;
+  case UsdBridgeType::CHAR4: return ANARI_INT8_VEC4;
+  case UsdBridgeType::USHORT4: return ANARI_UINT16_VEC4;
+  case UsdBridgeType::SHORT4: return ANARI_INT16_VEC4;
+  case UsdBridgeType::UINT4: return ANARI_UINT32_VEC4;
+  case UsdBridgeType::INT4: return ANARI_INT32_VEC4;
+  case UsdBridgeType::ULONG4: return ANARI_UINT64_VEC4;
+  case UsdBridgeType::LONG4: return ANARI_INT64_VEC4;
+  case UsdBridgeType::FLOAT4: return ANARI_FLOAT32_VEC4;
+  case UsdBridgeType::DOUBLE4: return ANARI_FLOAT64_VEC4;
+  case UsdBridgeType::INT_PAIR: return ANARI_INT32_BOX1;
+  case UsdBridgeType::INT_PAIR2: return ANARI_INT32_BOX2;
+  case UsdBridgeType::INT_PAIR3: return ANARI_INT32_BOX3;
+  case UsdBridgeType::INT_PAIR4: return ANARI_INT32_BOX4;
+  case UsdBridgeType::FLOAT_PAIR: return ANARI_FLOAT32_BOX1;
+  case UsdBridgeType::FLOAT_PAIR2: return ANARI_FLOAT32_BOX2;
+  case UsdBridgeType::FLOAT_PAIR3: return ANARI_FLOAT32_BOX3;
+  case UsdBridgeType::FLOAT_PAIR4: return ANARI_FLOAT32_BOX4;
+  case UsdBridgeType::ULONG_PAIR: return ANARI_UINT64_REGION1;
+  case UsdBridgeType::ULONG_PAIR2: return ANARI_UINT64_REGION2;
+  case UsdBridgeType::ULONG_PAIR3: return ANARI_UINT64_REGION3;
+  case UsdBridgeType::ULONG_PAIR4: return ANARI_UINT64_REGION4;
+  case UsdBridgeType::FLOAT_MAT2: return ANARI_FLOAT32_MAT2;
+  case UsdBridgeType::FLOAT_MAT3: return ANARI_FLOAT32_MAT3;
+  case UsdBridgeType::FLOAT_MAT4: return ANARI_FLOAT32_MAT4;
+  case UsdBridgeType::FLOAT_MAT2x3: return ANARI_FLOAT32_MAT2x3;
+  case UsdBridgeType::FLOAT_MAT3x4: return ANARI_FLOAT32_MAT3x4;
+  default: return ANARI_UNKNOWN;
+  }
+}
+
 template<int T>
 struct AnariTypeStringConverter : public anari::ANARITypeProperties<T>
 {

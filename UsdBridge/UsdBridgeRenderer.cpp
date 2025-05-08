@@ -180,10 +180,13 @@ public:
       pxr::HdxTaskController* taskController = TaskController;
 #endif
 
-      pxr::HdAovDescriptor colorSettings(
-        pxr::HdFormatUNorm8Vec4,
-        false,
-        pxr::VtValue(GfVec4f(0.0f, 1.0f, 0.0f, 1.0f)));
+      pxr::HdAovDescriptor colorSettings = taskController->GetRenderOutputSettings(pxr::HdAovTokens->color);
+      colorSettings.multiSampled = false;
+      colorSettings.clearValue = GfVec4f(0.0f, 1.0f, 0.0f, 1.0f);
+      if(colorSettings.format != pxr::HdFormatUNorm8Vec4 &&
+        colorSettings.format != pxr::HdFormatFloat32Vec4 &&
+        colorSettings.format != pxr::HdFormatSNorm8Vec4)
+        colorSettings.format = pxr::HdFormatUNorm8Vec4;
       taskController->SetRenderOutputSettings(pxr::HdAovTokens->color, colorSettings);
       pxr::HdAovDescriptor depthSettings = taskController->GetRenderOutputSettings(pxr::HdAovTokens->depth);
       depthSettings.multiSampled = false;
@@ -192,6 +195,37 @@ public:
       CachedWidth = width;
       CachedHeight = height;
     }
+  }
+
+  void SetFixedLights()
+  {
+    pxr::GfVec4f sceneAmbient(0.01f, 0.01f, 0.01f, 1.0f);
+    pxr::GlfSimpleMaterial material;
+    std::vector<pxr::GlfSimpleLight> lights;
+
+    // Check if the render mode requires lights
+    if (true) {
+        // Ambient light located at the camera
+        if (true) {
+            pxr::GlfSimpleLight ambientLight;
+            ambientLight.SetAmbient(GfVec4f(0.0f, 0.0f, 0.0f, 0.0f));
+            ambientLight.SetPosition(GfVec4f(1.14013255, 0.592924118, -3.45756054, 1.00000000));
+            lights.push_back(ambientLight);
+        }
+
+        // Set material properties
+        float kA = 0.2f;
+        float kS = 0.1f;
+        material.SetAmbient(GfVec4f(kA, kA, kA, 1.0f));
+        material.SetSpecular(GfVec4f(kS, kS, kS, 1.0f));
+        material.SetShininess(32.0f);
+    }
+
+  #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
+    RenderEngineGL->SetLightingState(lights, material, sceneAmbient);
+  #else
+    SetLightingState(lights, material, sceneAmbient);
+  #endif
   }
 
   void SetLightingState(
@@ -205,6 +239,36 @@ public:
     LightingContextForOpenGLState->SetUseLighting(lights.size() > 0);
 
     TaskController->SetLightingState(LightingContextForOpenGLState);
+  }
+
+  UsdBridgeType ConvertTextureFormat(pxr::HgiFormat hgiFormat)
+  {
+    switch(hgiFormat)
+    {
+      case pxr::HgiFormatUNorm8Vec4:
+        return UsdBridgeType::UCHAR4;
+      case pxr::HgiFormatSNorm8Vec4:
+        return UsdBridgeType::UCHAR_SRGB_RGBA;
+      case pxr::HgiFormatFloat32Vec4:
+        return UsdBridgeType::FLOAT4;
+      default:
+        return UsdBridgeType::UNDEFINED;
+    }
+  }
+
+  UsdBridgeType ConvertRenderBufferFormat(pxr::HdFormat hdFormat)
+  {
+    switch(hdFormat)
+    {
+      case pxr::HdFormatUNorm8Vec4:
+        return UsdBridgeType::UCHAR4;
+      case pxr::HdFormatSNorm8Vec4:
+        return UsdBridgeType::CHAR4;
+      case pxr::HdFormatFloat32Vec4:
+        return UsdBridgeType::FLOAT4;
+      default:
+        return UsdBridgeType::UNDEFINED;
+    }
   }
 
   pxr::SdfPath CameraPath;
@@ -248,12 +312,8 @@ public:
   uint32_t CachedWidth = 0;
   uint32_t CachedHeight = 0;
 
-  uint32_t CheckWidth = 0;
-  uint32_t CheckHeight = 0;
-  pxr::HdFormat CheckFormat;
-  bool CheckMSAA = false;
-  pxr::HgiTextureDesc CheckTexture;
-  size_t CheckSize = 0;
+  pxr::HgiTextureDesc MappedTextureDesc;
+  size_t MappedSize = 0;
 
   bool Initialized = false;
 };
@@ -332,27 +392,7 @@ void UsdBridgeRenderer::Render(uint32_t width, uint32_t height, double timeStep)
   //renderPassState->SetFraming(framing);
   Internals->ChangeResolution(width, height, UsdWriter);
 
-  pxr::GfVec4f sceneAmbient(0.01f, 0.01f, 0.01f, 1.0f);
-  pxr::GlfSimpleMaterial material;
-  std::vector<pxr::GlfSimpleLight> lights;
-
-  // Check if the render mode requires lights
-  if (true) {
-      // Ambient light located at the camera
-      if (true) {
-          pxr::GlfSimpleLight ambientLight;
-          ambientLight.SetAmbient(GfVec4f(0.0f, 0.0f, 0.0f, 0.0f));
-          ambientLight.SetPosition(GfVec4f(1.14013255, 0.592924118, -3.45756054, 1.00000000));
-          lights.push_back(ambientLight);
-      }
-
-      // Set material properties
-      float kA = 0.2f;
-      float kS = 0.1f;
-      material.SetAmbient(GfVec4f(kA, kA, kA, 1.0f));
-      material.SetSpecular(GfVec4f(kS, kS, kS, 1.0f));
-      material.SetShininess(32.0f);
-  }
+  //Internals->SetFixedLights();
 
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
 
@@ -369,7 +409,7 @@ void UsdBridgeRenderer::Render(uint32_t width, uint32_t height, double timeStep)
   glRenderParams.enableIdRender =false;
   glRenderParams.applyRenderState = true;
   glRenderParams.highlight = false; //taskController->SetEnableSelection
-  glRenderParams.clearColor = pxr::GfVec4f(0.0707399994, 0.0707399994, 0.0707399994, 1.00000000);
+  glRenderParams.clearColor = pxr::GfVec4f(0.0, 1.0, 0.0, 1.00000000);
   glRenderParams.colorCorrectionMode = pxr::HdxColorCorrectionTokens->sRGB;
 
   //glRenderParams.bboxes.push_back(pxr::GfBBox3d(pxr::GfRange3d(pxr::GfVec3d(-1,-1,-1), pxr::GfVec3d(1,1,1))));
@@ -378,15 +418,11 @@ void UsdBridgeRenderer::Render(uint32_t width, uint32_t height, double timeStep)
 
   Internals->RenderEngineGL->SetFraming(framing);
 
-  Internals->RenderEngineGL->SetLightingState(lights, material, sceneAmbient);
-
   Internals->RenderEngineGL->Render(UsdWriter.GetSceneStage()->GetPseudoRoot(), glRenderParams);
 
 #else
 
   auto& taskController = Internals->TaskController;
-
-  Internals->SetLightingState(lights, material, sceneAmbient);
 
   Internals->SceneDelegate->SetTime(pxr::UsdTimeCode(0.0f));
 
@@ -442,13 +478,13 @@ bool UsdBridgeRenderer::FrameReady(bool wait)
   bool isConverged = renderBuffer->IsConverged();
   if(wait)
   {
-    while(!isConverged)
-      isConverged = renderBuffer->IsConverged();
+    //while(!isConverged)
+    //  isConverged = renderBuffer->IsConverged();
   }
-  return isConverged;
+  return true;
 }
 
-void* UsdBridgeRenderer::MapFrame()
+void* UsdBridgeRenderer::MapFrame(UsdBridgeType& returnFormat)
 {
   if(!Internals->Initialized)
     return nullptr;
@@ -473,11 +509,12 @@ void* UsdBridgeRenderer::MapFrame()
   if (!colorTextureHandle)
       return nullptr;
 
-  Internals->CheckTexture = colorTextureHandle->GetDescriptor();
-
-  Internals->CheckSize = 0;
+  Internals->MappedTextureDesc = colorTextureHandle->GetDescriptor();
+  Internals->MappedSize = 0;
   Internals->MappedColorTextureBuffer = pxr::HdStTextureUtils::HgiTextureReadback(
-    hgi, colorTextureHandle, &Internals->CheckSize);
+    hgi, colorTextureHandle, &Internals->MappedSize);
+
+  returnFormat = Internals->ConvertTextureFormat(Internals->MappedTextureDesc.format);
 
   pxr::GLF_POST_PENDING_GL_ERRORS();
   return Internals->MappedColorTextureBuffer.get();
@@ -494,10 +531,8 @@ void* UsdBridgeRenderer::MapFrame()
 
   renderBuffer->Resolve();
 
-  Internals->CheckWidth = renderBuffer->GetWidth();
-  Internals->CheckHeight = renderBuffer->GetHeight();
-  Internals->CheckFormat = renderBuffer->GetFormat();
-  Internals->CheckMSAA = renderBuffer->IsMultiSampled();
+  returnFormat = Internals->ConvertRenderBufferFormat(renderBuffer->GetFormat());
+
   void* retValue = renderBuffer->Map();
 
   pxr::GLF_POST_PENDING_GL_ERRORS();

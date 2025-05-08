@@ -53,9 +53,11 @@ const void* UsdFrame::mapBuffer(
 
   if (strEquals(channel, "channel.color"))
   {
-    if(void* deviceBuffer = device->getUsdBridge()->MapFrame())
+    UsdBridgeType usdBridgeFormat;
+    if(void* deviceBuffer = device->getUsdBridge()->MapFrame(usdBridgeFormat))
     {
-      *pixelType = ANARI_UFIXED8_VEC4;
+      *pixelType = (usdBridgeFormat == UsdBridgeType::UCHAR4) ?
+        ANARI_UFIXED8_VEC4 : UsdBridgeToAnariType(usdBridgeFormat);
       return deviceBuffer;
     }
 
