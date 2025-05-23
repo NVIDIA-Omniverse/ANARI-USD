@@ -40,6 +40,8 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   PROCESS_PREFIX(attribute13) \
   PROCESS_PREFIX(attribute14) \
   PROCESS_PREFIX(attribute15) \
+  PROCESS_PREFIX(displayColor) \
+  PROCESS_PREFIX(displayOpacity) \
   PROCESS_PREFIX(color) \
   PROCESS_PREFIX(ids) \
   PROCESS_PREFIX(widths) \
@@ -60,6 +62,7 @@ using TimeEvaluator = UsdBridgeTimeEvaluator<T>;
   PROCESS_PREFIX((PrimVarReader_Float2, "UsdPrimvarReader_float2")) \
   PROCESS_PREFIX((PrimVarReader_Float3, "UsdPrimvarReader_float3")) \
   PROCESS_PREFIX((PrimVarReader_Float4, "UsdPrimvarReader_float4")) \
+  PROCESS_PREFIX((PrimVarReader_Int, "UsdPrimvarReader_int")) \
   PROCESS_PREFIX(UsdUVTexture) \
   PROCESS_PREFIX(fallback) \
   PROCESS_PREFIX(r) \
@@ -473,44 +476,31 @@ namespace
     return SdfPath(result);
   }
 
-  const TfToken& GetPsAttributeReaderId(UsdBridgeMaterialData::DataMemberId dataMemberId)
+  template<bool PreviewSurface>
+  SdfPath GetDisplayOpacityReaderPathPf()
   {
-    using DMI = UsdBridgeMaterialData::DataMemberId;
+    const char* const displayOpacityAttribReaderPrimPf_ps = "displayopacityattribreader_ps";
+    const char* const displayOpacityAttribReaderPrimPf_mdl = "displayopacityattribreader_mdl";
 
-    switch(dataMemberId)
-    {
-      case DMI::DIFFUSE: { return UsdBridgeTokens->PrimVarReader_Float4; break; } // float4 instead of float4, to fix implicit conversion issue in storm
-      case DMI::OPACITY: { return UsdBridgeTokens->PrimVarReader_Float; break; } 
-      case DMI::EMISSIVECOLOR: { return UsdBridgeTokens->PrimVarReader_Float3; break; } 
-      case DMI::EMISSIVEINTENSITY: { return UsdBridgeTokens->PrimVarReader_Float; break; } 
-      case DMI::ROUGHNESS: { return UsdBridgeTokens->PrimVarReader_Float; break; } 
-      case DMI::METALLIC: { return UsdBridgeTokens->PrimVarReader_Float; break; } 
-      case DMI::IOR: { return UsdBridgeTokens->PrimVarReader_Float; break; } 
-
-      default: { assert(false); break; }
-    };
-
-    return UsdBridgeTokens->PrimVarReader_Float;
+    return SdfPath(PreviewSurface ? displayOpacityAttribReaderPrimPf_ps : displayOpacityAttribReaderPrimPf_mdl);
   }
 
-  const TfToken& GetMdlAttributeReaderSubId(UsdBridgeMaterialData::DataMemberId dataMemberId)
+  const TfToken& GetPsAttributeReaderSubId(const SdfValueTypeName& readerOutputType)
   {
-    using DMI = UsdBridgeMaterialData::DataMemberId;
+    if(readerOutputType == SdfValueTypeNames->Float4)
+      return UsdBridgeTokens->PrimVarReader_Float4;
+    if(readerOutputType == SdfValueTypeNames->Float3)
+      return UsdBridgeTokens->PrimVarReader_Float3;
+    if(readerOutputType == SdfValueTypeNames->Color3f)
+      return UsdBridgeTokens->PrimVarReader_Float3;
+    if(readerOutputType == SdfValueTypeNames->Float2)
+      return UsdBridgeTokens->PrimVarReader_Float2;
+    if(readerOutputType == SdfValueTypeNames->Float)
+      return UsdBridgeTokens->PrimVarReader_Float;
+    if(readerOutputType == SdfValueTypeNames->Int)
+      return UsdBridgeTokens->PrimVarReader_Int;
 
-    switch(dataMemberId)
-    {
-      case DMI::DIFFUSE: { return UsdBridgeTokens->data_lookup_float4; break; }
-      case DMI::OPACITY: { return UsdBridgeTokens->data_lookup_float; break; } 
-      case DMI::EMISSIVECOLOR: { return UsdBridgeTokens->data_lookup_color; break; }
-      case DMI::EMISSIVEINTENSITY: { return UsdBridgeTokens->data_lookup_float; break; } 
-      case DMI::ROUGHNESS: { return UsdBridgeTokens->data_lookup_float; break; } 
-      case DMI::METALLIC: { return UsdBridgeTokens->data_lookup_float; break; } 
-      case DMI::IOR: { return UsdBridgeTokens->data_lookup_float; break; } 
-
-      default: { assert(false); break; }
-    };
-
-    return UsdBridgeTokens->data_lookup_float4;
+    return UsdBridgeTokens->PrimVarReader_Float3;
   }
 
   const TfToken& GetMdlAttributeReaderSubId(const SdfValueTypeName& readerOutputType)
@@ -536,28 +526,6 @@ namespace
 
     return UsdBridgeTokens->data_lookup_float4;
   }
-
-  const SdfValueTypeName& GetAttributeOutputType(UsdBridgeMaterialData::DataMemberId dataMemberId)
-  {
-    using DMI = UsdBridgeMaterialData::DataMemberId;
-
-    // An educated guess for the type belonging to a particular attribute bound to material inputs
-    switch(dataMemberId)
-    {
-      case DMI::DIFFUSE: { return SdfValueTypeNames->Float4; break; } // Typically bound to the color array, containing rgb and a information.
-      case DMI::OPACITY: { return SdfValueTypeNames->Float; break; } 
-      case DMI::EMISSIVECOLOR: { return SdfValueTypeNames->Color3f; break; } 
-      case DMI::EMISSIVEINTENSITY: { return SdfValueTypeNames->Float; break; } 
-      case DMI::ROUGHNESS: { return SdfValueTypeNames->Float; break; } 
-      case DMI::METALLIC: { return SdfValueTypeNames->Float; break; } 
-      case DMI::IOR: { return SdfValueTypeNames->Float; break; } 
-
-      default: assert(false); break;
-    };
-    
-    return SdfValueTypeNames->Float;
-  }
-
 
   const TfToken& GetSamplerAssetSubId(int numComponents)
   {

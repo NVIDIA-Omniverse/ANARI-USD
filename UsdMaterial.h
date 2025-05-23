@@ -82,8 +82,9 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     using MaterialInputAttribNamePair = std::pair<MaterialDMI, const char*>;
 
     template<typename ValueType>
-    void changeMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param,
-      MaterialDMI dataMemberId, const UsdGeometryData& geomParamData, UsdDevice* device, const UsdLogInfo& logInfo);
+    void changeMaterialInputSource(const UsdMaterialMultiTypeParameter<ValueType>& param,
+      MaterialDMI dataMemberId, const UsdGeometryData& geomParamData, bool forceUpdate,
+      UsdDevice* device, const UsdLogInfo& logInfo);
 
     template<typename ValueType>
     bool getSamplerRefData(const UsdMaterialMultiTypeParameter<ValueType>& param, double refTimeStep,
@@ -92,7 +93,8 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     template<typename ValueType>
     void assignParameterToMaterialInput(
       const UsdMaterialMultiTypeParameter<ValueType>& param, 
-      UsdBridgeMaterialData::MaterialInput<ValueType>& matInput, 
+      UsdBridgeMaterialData::MaterialInput<ValueType>& matInput,
+      bool useDisplayColorOpacity,
       const UsdLogInfo& logInfo);
 
     bool deferCommit(UsdDevice* device) override;
@@ -104,6 +106,7 @@ class UsdMaterial : public UsdBridgedBaseObject<UsdMaterial, UsdMaterialData, Us
     bool isPbr = false;
 
     bool perInstance = false; // Whether material is attached to a point instancer
+    bool isBound = false;
 
     OptionalList<MaterialInputAttribNamePair> materialInputAttributes;
     OptionalList<UsdSamplerHandle> samplerHandles;

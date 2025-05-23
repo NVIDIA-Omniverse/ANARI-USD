@@ -131,9 +131,10 @@ UsdBridgeType AnariToUsdBridgeType(ANARIDataType anariType);
 UsdBridgeType AnariToUsdBridgeType_Flattened(ANARIDataType anariType);
 ANARIDataType UsdBridgeToAnariType(UsdBridgeType anariType);
 const char* AnariTypeToString(ANARIDataType anariType);
-const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo);
-std::pair<bool, const char*> GetGeomDependentAttributeName(const char* anariAttrib, bool perInstance, const UsdSharedString*const* attribNames, size_t numAttribNames,
-  const UsdLogInfo& logInfo);
+const char* AnariAttributeToUsdName(const char* param, bool perInstance, bool useDisplayColorOpacity, const UsdLogInfo& logInfo);
+bool HasFixedAttributeType(const char* anariAttrib);
+std::pair<bool, const char*> GetGeomDependentAttributeName(const char* anariAttrib, bool perInstance, bool useDisplayColorOpacity,
+  const UsdSharedString*const* attribNames, size_t numAttribNames, const UsdLogInfo& logInfo);
 UsdBridgeMaterialData::AlphaModes AnariToUsdAlphaMode(const char* alphaMode);
 ANARIStatusSeverity UsdBridgeLogLevelToAnariSeverity(UsdBridgeLogLevel level);
 

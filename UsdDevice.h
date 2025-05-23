@@ -45,6 +45,7 @@ struct UsdDeviceData
   bool outputMaterial = true;
   bool outputPreviewSurfaceShader = true;
   bool outputMdlShader = true;
+  bool useDisplayColorOpacity = false;
 };
 
 class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<UsdDevice, UsdDeviceData>

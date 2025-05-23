@@ -89,15 +89,6 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
 
   bool hasGeometry = paramData.geometry;
   bool hasMaterial = device->getReadParams().outputMaterial && paramData.material;
-  if(hasGeometry && hasMaterial && updateBoundParameters)
-  {
-    const UsdGeometryData& geomParamData = paramData.geometry->getReadParams();
-
-    // The geometry to which a material binds has an effect on attribute reader (geom primvar) names, and output types
-    paramData.material->updateBoundParameters(paramData.geometry->isInstanced(), geomParamData, device);
-
-    updateBoundParameters = false;
-  }
 
   // Make sure the references are updated on the Bridge side.
   if (hasGeometry)
@@ -108,14 +99,26 @@ void UsdSurface::doCommitRefs(UsdDevice* device)
     if(hasMaterial)
     {
       double matObjTimeStep = paramData.material->getReadParams().timeStep;
+      bool isInstanced = paramData.geometry->isInstanced();
+
+      // This function needs to be called after the geometry-material mapping is known to the bridge.
+      std::function<void()> updateBoundParamsFunc;
+      if (updateBoundParameters)
+      {
+        updateBoundParamsFunc = [material = paramData.material, isInstanced, geomParamData, device]() {
+          material->updateBoundParameters(isInstanced, geomParamData, device);
+        };
+        updateBoundParameters = false;
+      }
 
       usdBridge->SetGeometryMaterialRef(usdHandle, 
         paramData.geometry->getUsdHandle(), 
         paramData.material->getUsdHandle(), 
         worldTimeStep,
         selectRefTime(paramData.geometryRefTimeStep, geomObjTimeStep, worldTimeStep),
-        selectRefTime(paramData.materialRefTimeStep, matObjTimeStep, worldTimeStep)
-        );
+        selectRefTime(paramData.materialRefTimeStep, matObjTimeStep, worldTimeStep),
+        updateBoundParamsFunc
+      );
     }
     else
     {

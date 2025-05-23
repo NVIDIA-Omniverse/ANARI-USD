@@ -14,6 +14,7 @@ namespace
   {
     UsdBridgeRt& UsdRtData;
     const GeomDataType& GeomData;
+    const UsdBridgeSettings& Settings;
     uint64_t NumPrims;
     UsdBridgeUpdateEvaluator<const GeomDataType>& UpdateEval;
     TimeEvaluator<GeomDataType>& TimeEval;
@@ -21,6 +22,7 @@ namespace
   #define UNPACK_UPDATE_ARGS\
     UsdBridgeRt& usdRtData = updateArgs.UsdRtData;\
     const GeomDataType& geomData = updateArgs.GeomData;\
+    const UsdBridgeSettings& settings = updateArgs.Settings;\
     uint64_t numPrims = updateArgs.NumPrims;\
     UsdBridgeUpdateEvaluator<const GeomDataType>& updateEval = updateArgs.UpdateEval;\
     TimeEvaluator<GeomDataType>& timeEval = updateArgs.TimeEval;
@@ -52,7 +54,7 @@ namespace
   template<typename ReturnEltType = UsdBridgeNoneType>
   UsdBridgeSpanI<ReturnEltType>* UpdateUsdAttribute_Safe( UsdBridgeRt& usdRtData,
     const UsdBridgeLogObject& logObj, const void* arrayData, UsdBridgeType arrayDataType, size_t arrayNumElements,
-    ::PXR_NS::UsdAttribute& attrib, ::PXR_NS::UsdTimeCode& timeCode, bool writeToAttrib = true)
+    ::PXR_NS::UsdAttribute& attrib, ::PXR_NS::UsdTimeCode& timeCode, bool writeToAttrib = true) // writeToAttrib is irrelevant when arrayData is nullptr
   {
     UsdBridgeSpanI<ReturnEltType>* rtSpan = nullptr;
 
@@ -102,13 +104,9 @@ namespace
     }
 
     if (timeVarChecked)
-    {
       primvarApi.CreatePrimvar(UsdBridgeTokens->color, SdfValueTypeNames->Float4Array);
-    }
     else
-    {
       primvarApi.RemovePrimvar(UsdBridgeTokens->color);
-    }
   }
 
   template<typename GeomDataType>
@@ -192,7 +190,13 @@ namespace
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::INDICES, CreateFaceVertexCountsAttr, UsdBridgeTokens->faceVertexIndices);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::NORMALS, CreateNormalsAttr, UsdBridgeTokens->normals);
 
-    CreateUsdGeomColorPrimvars(primvarApi, meshData, settings, timeEval);
+    if(!settings.UseDisplayColorOpacity)
+      CreateUsdGeomColorPrimvars(primvarApi, meshData, settings, timeEval);
+    else
+    {
+      CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::COLORS, CreateDisplayColorAttr, UsdBridgeTokens->displayColor);
+      CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::COLORS, CreateDisplayOpacityAttr, UsdBridgeTokens->displayOpacity);
+    }
 
     if(settings.EnableStTexCoords)
       CreateUsdGeomTexturePrimvars(primvarApi, meshData, settings, timeEval);
@@ -603,17 +607,27 @@ namespace
 
     bool performsUpdate = updateEval.PerformsUpdate(DMI::COLORS);
     bool timeVaryingUpdate = timeEval.IsTimeVarying(DMI::COLORS);
+    bool useDisplayColorOpacity = settings.UseDisplayColorOpacity;
 
-    UsdGeomPrimvar uniformDispPrimvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->color);
-    UsdGeomPrimvar timeVarDispPrimvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->color);
+    UsdGeomPrimvar uniformColorPrimvar = uniformPrimvars.GetPrimvar(useDisplayColorOpacity ? UsdBridgeTokens->displayColor : UsdBridgeTokens->color);
+    UsdGeomPrimvar timeVarColorPrimvar = timeVarPrimvars.GetPrimvar(useDisplayColorOpacity ? UsdBridgeTokens->displayColor : UsdBridgeTokens->color);
+    UsdGeomPrimvar uniformOpacityPrimvar, timeVarOpacityPrimvar;
+    if(useDisplayColorOpacity)
+    {
+      uniformOpacityPrimvar = uniformPrimvars.GetPrimvar(UsdBridgeTokens->displayOpacity);
+      timeVarOpacityPrimvar = timeVarPrimvars.GetPrimvar(UsdBridgeTokens->displayOpacity);
+    }
 
-    ClearUsdAttributes(uniformDispPrimvar.GetAttr(), timeVarDispPrimvar.GetAttr(), timeVaryingUpdate);
+    ClearUsdAttributes(uniformColorPrimvar.GetAttr(), timeVarColorPrimvar.GetAttr(), timeVaryingUpdate);
+    if(useDisplayColorOpacity)
+      ClearUsdAttributes(uniformOpacityPrimvar.GetAttr(), timeVarOpacityPrimvar.GetAttr(), timeVaryingUpdate);
 
     if (performsUpdate)
     {
       UsdTimeCode timeCode = timeEval.Eval(DMI::COLORS);
 
-      UsdAttribute colorAttrib = timeVaryingUpdate ? timeVarDispPrimvar : uniformDispPrimvar;
+      UsdAttribute colorAttrib = timeVaryingUpdate ? timeVarColorPrimvar.GetAttr() : uniformColorPrimvar.GetAttr();
+      UsdAttribute opacityAttrib = useDisplayColorOpacity ? (timeVaryingUpdate ? timeVarOpacityPrimvar.GetAttr() : uniformOpacityPrimvar.GetAttr()) : UsdAttribute();
 
       if (geomData.Colors != nullptr)
       {
@@ -622,24 +636,46 @@ namespace
         UsdBridgeType arrayDataType = geomData.ColorsType;
         assert(colorAttrib);
 
-        // Get a span of type GfVec4f
-        UsdBridgeSpanI<GfVec4f>* colorsSpan = UpdateUsdAttribute_Safe<GfVec4f>(usdRtData, writer->LogObject, nullptr, arrayDataType, arrayNumElements, colorAttrib, timeCode);
-
-        if(colorsSpan)
+        if(!useDisplayColorOpacity)
         {
-          // Write full color array to the span, using its type
-          UsdBridgeArrays::WriteToSpanColor(writer->LogObject, *colorsSpan, arrayData, arrayNumElements, arrayDataType);
-          // Assign the span to the color attribute
-          colorsSpan->AssignToAttrib();
+          // Get a span of type GfVec4f
+          UsdBridgeSpanI<GfVec4f>* colorsSpan = UpdateUsdAttribute_Safe<GfVec4f>(usdRtData, writer->LogObject, nullptr, arrayDataType, arrayNumElements, colorAttrib, timeCode);
+
+          if(colorsSpan)
+          {
+            // Write full color array to the span, using its type
+            UsdBridgeArrays::WriteToSpanColor(writer->LogObject, *colorsSpan, arrayData, arrayNumElements, arrayDataType);
+            // Assign the span to the color attribute
+            colorsSpan->AssignToAttrib();
+          }
+        }
+        else
+        {
+          // Get spans for color and opacity
+          UsdBridgeSpanI<GfVec3f>* colorsSpan = UpdateUsdAttribute_Safe<GfVec3f>(usdRtData, writer->LogObject, nullptr, arrayDataType, arrayNumElements, colorAttrib, timeCode);
+          UsdBridgeSpanI<float>* opacitySpan = UpdateUsdAttribute_Safe<float>(usdRtData, writer->LogObject, nullptr, arrayDataType, arrayNumElements, opacityAttrib, timeCode);
+
+          if(colorsSpan && opacitySpan)
+          {
+            // Write split color array to the spans, using its type
+            UsdBridgeArrays::WriteToSpanColorSplit(writer->LogObject, *colorsSpan, *opacitySpan, arrayData, arrayNumElements, arrayDataType);
+            // Assign the spans to their attributes
+            colorsSpan->AssignToAttrib();
+            opacitySpan->AssignToAttrib();
+          }
         }
 
         // Per face or per-vertex interpolation. This will break timesteps that have been written before.
         TfToken colorInterpolation = geomData.PerPrimColors ? UsdGeomTokens->uniform : UsdGeomTokens->vertex;
-        uniformDispPrimvar.SetInterpolation(colorInterpolation);
+        uniformColorPrimvar.SetInterpolation(colorInterpolation);
+        if(useDisplayColorOpacity)
+          uniformOpacityPrimvar.SetInterpolation(colorInterpolation);
       }
       else
       {
         colorAttrib.Set(SdfValueBlock(), timeCode);
+        if(useDisplayColorOpacity)
+          opacityAttrib.Set(SdfValueBlock(), timeCode);
       }
     }
   }
@@ -1196,7 +1232,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
 
   UsdBridgeRt usdRtData(this->SceneStage, meshPath);
 
-  UsdGeomUpdateArguments<UsdBridgeMeshData> updateArgs = { usdRtData, geomData, numPrims, updateEval, timeEval };
+  UsdGeomUpdateArguments<UsdBridgeMeshData> updateArgs = { usdRtData, geomData, Settings, numPrims, updateEval, timeEval };
   UsdGeomUpdateAttribArgs<UsdGeomMesh> attribArgs = { this->LogObject, timeVarGeom, uniformGeom };
   UsdGeomUpdatePrimvarArgs primvarArgs = { this, timeVarPrimvars, uniformPrimvars };
 
@@ -1230,7 +1266,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     assert(timeVarGeom);
     UsdGeomPrimvarsAPI timeVarPrimvars(timeVarGeom);
 
-    UsdGeomUpdateArguments<UsdBridgeInstancerData> updateArgs = { usdRtData, geomData, numPrims, updateEval, timeEval };
+    UsdGeomUpdateArguments<UsdBridgeInstancerData> updateArgs = { usdRtData, geomData, Settings, numPrims, updateEval, timeEval };
     UsdGeomUpdateAttribArgs<UsdGeomPoints> attribArgs = { this->LogObject, timeVarGeom, uniformGeom };
     UsdGeomUpdatePrimvarArgs primvarArgs = { this, timeVarPrimvars, uniformPrimvars };
 
@@ -1253,7 +1289,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
     assert(timeVarGeom);
     UsdGeomPrimvarsAPI timeVarPrimvars(timeVarGeom);
 
-    UsdGeomUpdateArguments<UsdBridgeInstancerData> updateArgs = { usdRtData, geomData, numPrims, updateEval, timeEval };
+    UsdGeomUpdateArguments<UsdBridgeInstancerData> updateArgs = { usdRtData, geomData, Settings, numPrims, updateEval, timeEval };
     UsdGeomUpdateAttribArgs<UsdGeomPointInstancer> attribArgs = { this->LogObject, timeVarGeom, uniformGeom };
     UsdGeomUpdatePrimvarArgs primvarArgs = { this, timeVarPrimvars, uniformPrimvars };
 
@@ -1291,7 +1327,7 @@ void UsdBridgeUsdWriter::UpdateUsdGeometry(const UsdStagePtr& timeVarStage, cons
 
   UsdBridgeRt usdRtData(this->SceneStage, curvePath);
 
-  UsdGeomUpdateArguments<UsdBridgeCurveData> updateArgs = { usdRtData, geomData, numPrims, updateEval, timeEval };
+  UsdGeomUpdateArguments<UsdBridgeCurveData> updateArgs = { usdRtData, geomData, Settings, numPrims, updateEval, timeEval };
   UsdGeomUpdateAttribArgs<UsdGeomBasisCurves> attribArgs = { this->LogObject, timeVarGeom, uniformGeom };
   UsdGeomUpdatePrimvarArgs primvarArgs = { this, timeVarPrimvars, uniformPrimvars };
 

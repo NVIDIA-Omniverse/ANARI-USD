@@ -74,8 +74,9 @@ void UsdMaterial::remove(UsdDevice* device)
 }
 
 template<typename ValueType>
-void UsdMaterial::changeMaterialInputSourceName(const UsdMaterialMultiTypeParameter<ValueType>& param,
-  MaterialDMI dataMemberId, const UsdGeometryData& geomParamData, UsdDevice* device, const UsdLogInfo& logInfo)
+void UsdMaterial::changeMaterialInputSource(const UsdMaterialMultiTypeParameter<ValueType>& param,
+  MaterialDMI dataMemberId, const UsdGeometryData& geomParamData, bool forceUpdate,
+  UsdDevice* device, const UsdLogInfo& logInfo)
 {
   UsdSharedString* anariAttribStr = nullptr;
   param.Get(anariAttribStr); // If an input parameter is of string type, returns the pointer of the string (otherwise untouched)
@@ -84,9 +85,11 @@ void UsdMaterial::changeMaterialInputSourceName(const UsdMaterialMultiTypeParame
   if(anariAttrib)
   {
     auto [hasMeshDependentAttribs, meshDependentAttribName] =
-      GetGeomDependentAttributeName(anariAttrib, perInstance, geomParamData.attributeNames, MAX_ATTRIBS, logInfo);
+      GetGeomDependentAttributeName(anariAttrib, perInstance, device->getReadParams().useDisplayColorOpacity, geomParamData.attributeNames, MAX_ATTRIBS, logInfo);
 
-    if(hasMeshDependentAttribs)
+    bool hasFixedAttributeType = HasFixedAttributeType(anariAttrib);
+
+    if(forceUpdate || hasMeshDependentAttribs || !hasFixedAttributeType)
       materialInputAttributes.push_back(UsdBridge::MaterialInputAttribName(dataMemberId, meshDependentAttribName));
   }
   else if(param.type == SamplerType)
@@ -140,13 +143,13 @@ bool UsdMaterial::getSamplerRefData(const UsdMaterialMultiTypeParameter<ValueTyp
 
 template<typename ValueType>
 void UsdMaterial::assignParameterToMaterialInput(const UsdMaterialMultiTypeParameter<ValueType>& param, 
-  UsdBridgeMaterialData::MaterialInput<ValueType>& matInput, const UsdLogInfo& logInfo)
+  UsdBridgeMaterialData::MaterialInput<ValueType>& matInput, bool useDisplayColorOpacity, const UsdLogInfo& logInfo)
 {
   param.Get(matInput.Value);
 
   UsdSharedString* anariAttribStr = nullptr;
   matInput.SrcAttrib = param.Get(anariAttribStr) ? 
-    AnariAttributeToUsdName(anariAttribStr->c_str(), perInstance, logInfo) : 
+    AnariAttributeToUsdName(anariAttribStr->c_str(), perInstance, useDisplayColorOpacity, logInfo) :
     nullptr; 
 
   UsdSampler* sampler = nullptr;
@@ -155,6 +158,16 @@ void UsdMaterial::assignParameterToMaterialInput(const UsdMaterialMultiTypeParam
 
 void UsdMaterial::updateBoundParameters(bool boundToInstance, const UsdGeometryData& geomParamData, UsdDevice* device)
 { 
+  // The geometry to which a material binds has an effect on:
+  // - attribute reader (geom primvar) names,
+  // - attribute reader output types
+  // These will have been setup initially in commit() with UsdBridge::SetMaterialData using UpdateUsdMaterial, which is correct for:
+  // - the attribute reader names except those that are geometry type dependent
+  // - the types of those attributes that are predetermined (points, normals)
+  // For anything else or in case no geometry has been bound before,
+  // the material's attribute reader needs to be updated to use the correct type given the new geometry.
+  // This is done here with UsdMaterial::changeMaterialInputSource().
+
   perInstance = boundToInstance;
 
   UsdBridge* usdBridge = device->getUsdBridge();
@@ -168,13 +181,14 @@ void UsdMaterial::updateBoundParameters(bool boundToInstance, const UsdGeometryD
   // Fix up any parameters that have a geometry-type-dependent name set as source attribute
   materialInputAttributes.clear();
 
-  changeMaterialInputSourceName(paramData.color, DMI::DIFFUSE, geomParamData, device, logInfo);
-  changeMaterialInputSourceName(paramData.opacity, DMI::OPACITY, geomParamData, device, logInfo);
-  changeMaterialInputSourceName(paramData.emissiveColor, DMI::EMISSIVECOLOR, geomParamData, device, logInfo);
-  changeMaterialInputSourceName(paramData.emissiveIntensity, DMI::EMISSIVEINTENSITY, geomParamData, device, logInfo);
-  changeMaterialInputSourceName(paramData.roughness, DMI::ROUGHNESS, geomParamData, device, logInfo);
-  changeMaterialInputSourceName(paramData.metallic, DMI::METALLIC, geomParamData, device, logInfo);
-  changeMaterialInputSourceName(paramData.ior, DMI::IOR, geomParamData, device, logInfo);
+  bool forceUpdate = !isBound;
+  changeMaterialInputSource(paramData.color, DMI::DIFFUSE, geomParamData, forceUpdate, device, logInfo);
+  changeMaterialInputSource(paramData.opacity, DMI::OPACITY, geomParamData, forceUpdate, device, logInfo);
+  changeMaterialInputSource(paramData.emissiveColor, DMI::EMISSIVECOLOR, geomParamData, forceUpdate, device, logInfo);
+  changeMaterialInputSource(paramData.emissiveIntensity, DMI::EMISSIVEINTENSITY, geomParamData, forceUpdate, device, logInfo);
+  changeMaterialInputSource(paramData.roughness, DMI::ROUGHNESS, geomParamData, forceUpdate, device, logInfo);
+  changeMaterialInputSource(paramData.metallic, DMI::METALLIC, geomParamData, forceUpdate, device, logInfo);
+  changeMaterialInputSource(paramData.ior, DMI::IOR, geomParamData, forceUpdate, device, logInfo);
 
   DMI timeVarying;
   setMaterialTimeVarying(timeVarying);
@@ -182,6 +196,8 @@ void UsdMaterial::updateBoundParameters(bool boundToInstance, const UsdGeometryD
   // Fixup attribute name and type depending on the newly bound geometry
   if(materialInputAttributes.size())
     usdBridge->ChangeMaterialInputAttributes(usdHandle, materialInputAttributes.data(), materialInputAttributes.size(), dataTimeStep, timeVarying);
+
+  isBound = true;
 }
 
 bool UsdMaterial::deferCommit(UsdDevice* device)
@@ -218,15 +234,17 @@ bool UsdMaterial::doCommitData(UsdDevice* device)
     matData.AlphaMode = AnariToUsdAlphaMode(UsdSharedString::c_str(paramData.alphaMode));
     matData.AlphaCutoff = paramData.alphaCutoff;
 
+    bool useDisplayColorOpacity = device->getReadParams().useDisplayColorOpacity;
+
     UsdLogInfo logInfo = {device, this, ANARI_MATERIAL, getName()};
     
-    assignParameterToMaterialInput(paramData.color, matData.Diffuse, logInfo);
-    assignParameterToMaterialInput(paramData.opacity, matData.Opacity, logInfo);
-    assignParameterToMaterialInput(paramData.emissiveColor, matData.Emissive, logInfo);
-    assignParameterToMaterialInput(paramData.emissiveIntensity, matData.EmissiveIntensity, logInfo);
-    assignParameterToMaterialInput(paramData.roughness, matData.Roughness, logInfo);
-    assignParameterToMaterialInput(paramData.metallic, matData.Metallic, logInfo);
-    assignParameterToMaterialInput(paramData.ior, matData.Ior, logInfo);
+    assignParameterToMaterialInput(paramData.color, matData.Diffuse, useDisplayColorOpacity, logInfo);
+    assignParameterToMaterialInput(paramData.opacity, matData.Opacity, useDisplayColorOpacity, logInfo);
+    assignParameterToMaterialInput(paramData.emissiveColor, matData.Emissive, useDisplayColorOpacity, logInfo);
+    assignParameterToMaterialInput(paramData.emissiveIntensity, matData.EmissiveIntensity, useDisplayColorOpacity, logInfo);
+    assignParameterToMaterialInput(paramData.roughness, matData.Roughness, useDisplayColorOpacity, logInfo);
+    assignParameterToMaterialInput(paramData.metallic, matData.Metallic, useDisplayColorOpacity, logInfo);
+    assignParameterToMaterialInput(paramData.ior, matData.Ior, useDisplayColorOpacity, logInfo);
 
     setMaterialTimeVarying(matData.TimeVarying);
 

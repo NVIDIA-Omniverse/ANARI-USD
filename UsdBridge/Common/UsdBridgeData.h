@@ -363,14 +363,15 @@ struct UsdBridgeLogObject
 
 struct UsdBridgeSettings
 {
-  const char* HostName;             // Name of the remote server 
-  const char* OutputPath;           // Directory for output (on server if HostName is not empty) 
-  bool CreateNewSession;            // Find a new session directory on creation of the bridge, or re-use the last opened one (leave contents intact). 
-  bool BinaryOutput;                // Select usda or usd output.
+  const char* HostName = nullptr;           // Name of the remote server
+  const char* OutputPath = nullptr;         // Directory for output (on server if HostName is not empty)
+  bool CreateNewSession = true;             // Find a new session directory on creation of the bridge, or re-use the last opened one (leave contents intact).
+  bool BinaryOutput = false;                // Select usda or usd output.
 
-  // Output settings
-  bool EnablePreviewSurfaceShader;
-  bool EnableMdlShader;
+  // USD conversion options
+  bool EnablePreviewSurfaceShader = true;   // Output the preview surface shader for materials
+  bool EnableMdlShader = true;              // Output the mdl shader for materials
+  bool UseDisplayColorOpacity = false;      // When true, use displayColor and displayOpacity primvars instead of a color primvar with alpha channel
 
   // About to be deprecated
   static constexpr bool EnableStTexCoords = false;

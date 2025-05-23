@@ -88,7 +88,7 @@ void UsdSampler::updateBoundParameters(bool boundToInstance, const UsdSharedStri
   const char* inAttribName = UsdSharedString::c_str(paramData.inAttribute);
   
   auto [hasMeshDependentAttribs, meshDependentAttribName] = 
-    GetGeomDependentAttributeName(inAttribName, perInstance, attribNames, numAttribNames, logInfo);
+    GetGeomDependentAttributeName(inAttribName, perInstance, device->getReadParams().useDisplayColorOpacity, attribNames, numAttribNames, logInfo);
 
   if(hasMeshDependentAttribs)
   {
@@ -154,7 +154,7 @@ bool UsdSampler::doCommitData(UsdDevice* device)
         double worldTimeStep = device->getReadParams().timeStep;
         double dataTimeStep = selectObjTime(paramData.timeStep, worldTimeStep);
 
-        samplerData.InAttribute = AnariAttributeToUsdName(UsdSharedString::c_str(paramData.inAttribute), perInstance, logInfo);
+        samplerData.InAttribute = AnariAttributeToUsdName(UsdSharedString::c_str(paramData.inAttribute), perInstance, device->getReadParams().useDisplayColorOpacity, logInfo);
       
         if(paramData.imageUrl)
         {

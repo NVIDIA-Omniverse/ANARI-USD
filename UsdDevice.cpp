@@ -47,7 +47,8 @@ public:
       deviceParams.createNewSession,
       deviceParams.outputBinary,
       deviceParams.outputPreviewSurfaceShader,
-      deviceParams.outputMdlShader
+      deviceParams.outputMdlShader,
+      deviceParams.useDisplayColorOpacity
     };
 
     bridge = std::make_unique<UsdBridge>(bridgeSettings);
@@ -91,6 +92,7 @@ DEFINE_PARAMETER_MAP(UsdDevice,
   REGISTER_PARAMETER_MACRO("usd::output.material", ANARI_BOOL, outputMaterial)
   REGISTER_PARAMETER_MACRO("usd::output.previewSurfaceShader", ANARI_BOOL, outputPreviewSurfaceShader)
   REGISTER_PARAMETER_MACRO("usd::output.mdlShader", ANARI_BOOL, outputMdlShader)
+  REGISTER_PARAMETER_MACRO("usd::output.displayColorOpacity", ANARI_BOOL, useDisplayColorOpacity)
 )
 
 void UsdDevice::clearDeviceParameters()

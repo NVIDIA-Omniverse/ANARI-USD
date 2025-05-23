@@ -300,7 +300,7 @@ const char* AnariTypeToString(ANARIDataType anariType)
   return anari::anariTypeInvoke<const char*, AnariTypeStringConverter>(anariType);
 }
 
-const char* AnariAttributeToUsdName(const char* param, bool perInstance, const UsdLogInfo& logInfo)
+const char* AnariAttributeToUsdName(const char* param, bool perInstance, bool useDisplayColorOpacity, const UsdLogInfo& logInfo)
 {
   if(strEquals(param, "worldPosition")
   || strEquals(param, "worldNormal"))
@@ -319,22 +319,32 @@ const char* AnariAttributeToUsdName(const char* param, bool perInstance, const U
   {
     return "normals";
   }
-  //else if(!strncmp(param, "attribute", 9))
+  else if(strEquals(param, "color") && useDisplayColorOpacity)
+  {
+    return "displayColor";
+  }
+  //else if(strEquals(param, "opacity") && useDisplayColorOpacity)
   //{
-  //  return param;
+  //  return "displayOpacity";
   //}
   return param; // The generic case just returns the param itself
 }
 
-std::pair<bool, const char*> GetGeomDependentAttributeName(const char* anariAttrib, bool perInstance, const UsdSharedString*const* attribNames, size_t numAttribNames,
-  const UsdLogInfo& logInfo)
+bool HasFixedAttributeType(const char* anariAttrib)
+{
+  return strEquals(anariAttrib, "objectPosition")
+    || strEquals(anariAttrib, "objectNormal")
+    || strEquals(anariAttrib, "color");
+}
+
+std::pair<bool, const char*> GetGeomDependentAttributeName(const char* anariAttrib, bool perInstance, bool useDisplayColorOpacity,
+  const UsdSharedString*const* attribNames, size_t numAttribNames, const UsdLogInfo& logInfo)
 {
   static const char* genericAttribPrefix = "attribute";
   const char* usdAttribName = anariAttrib;
 
   bool hasPositionAttrib = strEquals(anariAttrib, "objectPosition");
-  if(hasPositionAttrib)
-    usdAttribName = AnariAttributeToUsdName(anariAttrib, perInstance, logInfo);
+  usdAttribName = AnariAttributeToUsdName(anariAttrib, perInstance, useDisplayColorOpacity, logInfo);
   
   bool hasGenericAttrib = strcmp(anariAttrib, genericAttribPrefix) > 0;
   if(hasGenericAttrib)

@@ -759,7 +759,7 @@ void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geome
   BRIDGE_USDWRITER.UnbindMaterialFromGeom(refGeomPath);
 }
 
-void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep)
+void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep, std::function<void()> updateBoundParamsFunc)
 {
   if (surface.value == nullptr) return;
   if (geometry.value == nullptr || material.value == nullptr) return;
@@ -767,6 +767,14 @@ void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHand
   UsdBridgePrimCache* surfaceCache = BRIDGE_CACHE.ConvertToPrimCache(surface);
   UsdBridgePrimCache* geometryCache = BRIDGE_CACHE.ConvertToPrimCache(geometry);
   UsdBridgePrimCache* materialCache = BRIDGE_CACHE.ConvertToPrimCache(material);
+
+  // For updating material attribute reader output types, update the suggested material->geompath mapping.
+  // Since multiple geometries can be bound to a material, only one is taken, so it is up to the user to ensure correct attribute connection types.
+  SdfPath& geomPrimPath = geometryCache->PrimPath;
+  Internals->MaterialToGeometryBinding[material.value] = geomPrimPath;
+
+  if(updateBoundParamsFunc)
+    updateBoundParamsFunc();
 
   constexpr bool timeVarying = false;
   constexpr bool valueClip = true;
@@ -779,11 +787,6 @@ void UsdBridge::SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHand
   // Update the references
   SdfPath refGeomPath = BRIDGE_USDWRITER.AddRef(surfaceCache, geometryCache, geometryPathRp, timeVarying, valueClip, true, geomClipPf, timeStep, geomTimeStep, instanceable, Internals->RefModCallbacks); // Can technically be timeVarying, but would be a bit confusing. Instead, timevary the surface.
   SdfPath refMatPath = BRIDGE_USDWRITER.AddRef(surfaceCache, materialCache, materialPathRp, timeVarying, valueClip, false, nullptr, timeStep, matTimeStep, instanceable, Internals->RefModCallbacks);
-
-  // For updating material attribute reader output types, update the suggested material->geompath mapping.
-  // Since multiple geometries can be bound to a material, only one is taken, so it is up to the user to ensure correct attribute connection types.
-  SdfPath& geomPrimPath = geometryCache->PrimPath;
-  Internals->MaterialToGeometryBinding[material.value] = geomPrimPath;
 
   // Bind the referencing material to the referencing geom prim (as they are within same scope in this usd prim)
   BRIDGE_USDWRITER.BindMaterialToGeom(refGeomPath, refMatPath);

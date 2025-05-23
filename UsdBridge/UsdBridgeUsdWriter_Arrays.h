@@ -189,11 +189,11 @@ namespace UsdBridgeArrays
     }
   }
 
-  template<typename DestType, typename SourceScalarType, int NumComponents>
+  template<typename DestType, typename SourceComponentType, int NumComponents>
   void WriteToSpanConvertVector(const void* data, UsdBridgeSpanI<DestType>& destSpan)
   {
     using DestScalarType = typename DestType::ScalarType;
-    const SourceScalarType* typedSrcData = (SourceScalarType*)data;
+    const SourceComponentType* typedSrcData = (SourceComponentType*)data;
     DestType* destArray = destSpan.begin();
     for (int i = 0; i < destSpan.size(); ++i)
     {
@@ -202,30 +202,15 @@ namespace UsdBridgeArrays
     }
   }
 
-  template<typename InputEltType, int numComponents>
+  template<typename SourceComponentType, int numComponents>
   void WriteToSpanExpandToColor(const void* data, UsdBridgeSpanI<GfVec4f>& destSpan)
   {
-    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
+    const SourceComponentType* typedInput = reinterpret_cast<const SourceComponentType*>(data);
+    constexpr bool needsNormalization = std::is_integral<SourceComponentType>::value;
+    constexpr double normFactor = needsNormalization ?
+        1.0 / static_cast<double>(std::numeric_limits<SourceComponentType>::max()) : 1.0;
     size_t i = 0;
     // No memcopies, as input is not guaranteed to be of float type
-    if(numComponents == 1)
-      for (auto& destElt : destSpan)
-      { destElt = GfVec4f(typedInput[i], 0.0f, 0.0f, 1.0f); ++i; }
-    if(numComponents == 2)
-      for (auto& destElt : destSpan)
-      { destElt = GfVec4f(typedInput[i*2], typedInput[i*2+1], 0.0f, 1.0f); ++i; }
-    if(numComponents == 3)
-      for (auto& destElt : destSpan)
-      { destElt = GfVec4f(typedInput[i*3], typedInput[i*3+1], typedInput[i*3+2], 1.0f); ++i; }
-  }
-
-  template<typename InputEltType, int numComponents>
-  void WriteToSpanExpandToColorNormalize(const void* data, UsdBridgeSpanI<GfVec4f>& destSpan)
-  {
-    const InputEltType* typedInput = reinterpret_cast<const InputEltType*>(data);
-    double normFactor = 1.0 / (double)std::numeric_limits<InputEltType>::max(); // float may not be enough for uint32_t
-    // No memcopies, as input is not guaranteed to be of float type
-    size_t i = 0;
     if(numComponents == 1)
       for (auto& destElt : destSpan)
       { destElt = GfVec4f(typedInput[i]*normFactor, 0.0f, 0.0f, 1.0f); ++i; }
@@ -236,8 +221,17 @@ namespace UsdBridgeArrays
       for (auto& destElt : destSpan)
       { destElt = GfVec4f(typedInput[i*3]*normFactor, typedInput[i*3+1]*normFactor, typedInput[i*3+2]*normFactor, 1.0f); ++i; }
     if(numComponents == 4)
-      for (auto& destElt : destSpan)
-      { destElt = GfVec4f(typedInput[i*4]*normFactor, typedInput[i*4+1]*normFactor, typedInput[i*4+2]*normFactor, typedInput[i*4+3]*normFactor); ++i; }
+    {
+      if(std::is_same<SourceComponentType, float>::value)
+        WriteToSpanCopy<GfVec4f>(data, destSpan);
+      else if(std::is_same<SourceComponentType, double>::value)
+        WriteToSpanConvert<GfVec4f, GfVec4d>(data, destSpan);
+      else
+      {
+        for (auto& destElt : destSpan)
+        { destElt = GfVec4f(typedInput[i*4]*normFactor, typedInput[i*4+1]*normFactor, typedInput[i*4+2]*normFactor, typedInput[i*4+3]*normFactor); ++i; }
+      }
+    }
   }
 
   template<int numComponents>
@@ -262,20 +256,113 @@ namespace UsdBridgeArrays
       { destElt = GfVec4f(srgbTable[typedInput[i*4]], srgbTable[typedInput[i*4+1]], srgbTable[typedInput[i*4+2]], typedInput[i*4+3]*normFactor); ++i; }
   }
 
-  #define WRITE_SPAN_MACRO(EltType) \
-    WriteToSpanCopy<EltType>(arrayData, destSpan)
+  template<typename SourceComponentType, int numComponents>
+  void WriteToSpanExpandToColorSplit(const void* data, UsdBridgeSpanI<GfVec3f>& rgbSpan, UsdBridgeSpanI<float>& alphaSpan)
+  {
+    const SourceComponentType* typedInput = reinterpret_cast<const SourceComponentType*>(data);
+    constexpr bool needsNormalization = std::is_integral<SourceComponentType>::value;
+    constexpr double normFactor = needsNormalization ?
+        1.0 / static_cast<double>(std::numeric_limits<SourceComponentType>::max()) : 1.0;
 
-  #define WRITE_SPAN_MACRO_CONVERT(DestType, SrcType) \
-    WriteToSpanConvert<DestType, SrcType>(arrayData, destSpan)
+    if(numComponents == 1)
+    {
+      size_t i = 0;
+      for (auto& destElt : rgbSpan)
+      { destElt = GfVec3f(typedInput[i] * normFactor, 0.0f, 0.0f); ++i; }
 
-  #define WRITE_SPAN_MACRO_EXPAND_COL(EltType, NumComponents) \
-    WriteToSpanExpandToColor<EltType, NumComponents>(arrayData, destSpan)
+      for (auto& destElt : alphaSpan)
+      { destElt = 1.0f; }
+    }
+    else if(numComponents == 2)
+    {
+      size_t i = 0;
+      for (auto& destElt : rgbSpan)
+      { destElt = GfVec3f(typedInput[i*2] * normFactor, typedInput[i*2+1] * normFactor, 0.0f); ++i; }
 
-  #define WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(EltType, NumComponents) \
-    WriteToSpanExpandToColorNormalize<EltType, NumComponents>(arrayData, destSpan)
+      for (auto& destElt : alphaSpan)
+      { destElt = 1.0f; }
+    }
+    else if(numComponents == 3)
+    {
+      size_t i = 0;
+      if(std::is_same<SourceComponentType, float>::value)
+        WriteToSpanCopy<GfVec3f>(data, rgbSpan);
+      else if(std::is_same<SourceComponentType, double>::value)
+        WriteToSpanConvert<GfVec3f, GfVec3d>(data, rgbSpan);
+      else
+      {
+        for (auto& destElt : rgbSpan)
+        { destElt = GfVec3f(typedInput[i*3] * normFactor, typedInput[i*3+1] * normFactor, typedInput[i*3+2] * normFactor); ++i; }
+      }
+
+      for (auto& destElt : alphaSpan)
+      { destElt = 1.0f; }
+    }
+    else if(numComponents == 4)
+    {
+      size_t i = 0;
+      for (auto& destElt : rgbSpan)
+      { destElt = GfVec3f(typedInput[i*4] * normFactor, typedInput[i*4+1] * normFactor, typedInput[i*4+2] * normFactor); ++i; }
+
+      i = 0;
+      for (auto& destElt : alphaSpan)
+      { destElt = typedInput[i*4+3] * normFactor; ++i; }
+    }
+  }
+
+  template<int numComponents>
+  void WriteToSpanExpandSRGBToColorSplit(const void* data, UsdBridgeSpanI<GfVec3f>& rgbSpan, UsdBridgeSpanI<float>& alphaSpan)
+  {
+    const unsigned char* typedInput = reinterpret_cast<const unsigned char*>(data);
+    const float* srgbTable = ubutils::SrgbToLinearTable();
+    const float normFactor = 1.0f / 255.0f;
+
+    if(numComponents == 1)
+    {
+      size_t i = 0;
+      for (auto& destElt : rgbSpan)
+      { destElt = GfVec3f(srgbTable[typedInput[i]], 0.0f, 0.0f); ++i; }
+      for (auto& destElt : alphaSpan)
+      { destElt = 1.0f; }
+    }
+    else if(numComponents == 2)
+    {
+      size_t i = 0;
+      for (auto& destElt : rgbSpan)
+      { destElt = GfVec3f(srgbTable[typedInput[i*2]], srgbTable[typedInput[i*2+1]], 0.0f); ++i; }
+      for (auto& destElt : alphaSpan)
+      { destElt = 1.0f; }
+    }
+    else if(numComponents == 3)
+    {
+      size_t i = 0;
+      for (auto& destElt : rgbSpan)
+      { destElt = GfVec3f(srgbTable[typedInput[i*3]], srgbTable[typedInput[i*3+1]], srgbTable[typedInput[i*3+2]]); ++i; }
+      for (auto& destElt : alphaSpan)
+      { destElt = 1.0f; }
+    }
+    else if(numComponents == 4)
+    {
+      size_t i = 0;
+      for (auto& destElt : rgbSpan)
+      { destElt = GfVec3f(srgbTable[typedInput[i*4]], srgbTable[typedInput[i*4+1]], srgbTable[typedInput[i*4+2]]); ++i; }
+      i = 0;
+      for (auto& destElt : alphaSpan)
+      { destElt = typedInput[i*4+3] * normFactor; ++i; }
+    }
+  }
+
+  #define WRITE_SPAN_MACRO_EXPAND_COL(CompType, NumComponents) \
+    WriteToSpanExpandToColor<CompType, NumComponents>(arrayData, destSpan)
 
   #define WRITE_SPAN_MACRO_EXPAND_SGRB(NumComponents) \
     WriteToSpanExpandSRGBToColor<NumComponents>(arrayData, destSpan)
+
+  #define WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(CompType, NumComponents) \
+    WriteToSpanExpandToColorSplit<CompType, NumComponents>(arrayData, rgbSpan, alphaSpan)
+
+  #define WRITE_SPAN_MACRO_EXPAND_SRGB_SPLIT(NumComponents) \
+    WriteToSpanExpandSRGBToColorSplit<NumComponents>(arrayData, rgbSpan, alphaSpan)
 
   // Assigns color data array to GfVec4f span
   void WriteToSpanColor(const UsdBridgeLogObject& logObj, UsdBridgeSpanI<GfVec4f>& destSpan,
@@ -291,31 +378,79 @@ namespace UsdBridgeArrays
 
     switch (arrayType)
     {
-      case UsdBridgeType::UCHAR: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint8_t, 1); break; }
-      case UsdBridgeType::UCHAR2: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint8_t, 2); break; }
-      case UsdBridgeType::UCHAR3: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint8_t, 3); break; }
-      case UsdBridgeType::UCHAR4: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint8_t, 4); break; }
+      case UsdBridgeType::UCHAR: {WRITE_SPAN_MACRO_EXPAND_COL(uint8_t, 1); break; }
+      case UsdBridgeType::UCHAR2: {WRITE_SPAN_MACRO_EXPAND_COL(uint8_t, 2); break; }
+      case UsdBridgeType::UCHAR3: {WRITE_SPAN_MACRO_EXPAND_COL(uint8_t, 3); break; }
+      case UsdBridgeType::UCHAR4: {WRITE_SPAN_MACRO_EXPAND_COL(uint8_t, 4); break; }
       case UsdBridgeType::UCHAR_SRGB_R: {WRITE_SPAN_MACRO_EXPAND_SGRB(1); break; }
       case UsdBridgeType::UCHAR_SRGB_RA: {WRITE_SPAN_MACRO_EXPAND_SGRB(2); break; }
       case UsdBridgeType::UCHAR_SRGB_RGB: {WRITE_SPAN_MACRO_EXPAND_SGRB(3); break; }
       case UsdBridgeType::UCHAR_SRGB_RGBA: {WRITE_SPAN_MACRO_EXPAND_SGRB(4); break; }
-      case UsdBridgeType::USHORT: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint16_t, 1); break; }
-      case UsdBridgeType::USHORT2: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint16_t, 2); break; }
-      case UsdBridgeType::USHORT3: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint16_t, 3); break; }
-      case UsdBridgeType::USHORT4: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint16_t, 4); break; }
-      case UsdBridgeType::UINT: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint32_t, 1); break; }
-      case UsdBridgeType::UINT2: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint32_t, 2); break; }
-      case UsdBridgeType::UINT3: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint32_t, 3); break; }
-      case UsdBridgeType::UINT4: {WRITE_SPAN_MACRO_EXPAND_NORMALIZE_COL(uint32_t, 4); break; }
+      case UsdBridgeType::USHORT: {WRITE_SPAN_MACRO_EXPAND_COL(uint16_t, 1); break; }
+      case UsdBridgeType::USHORT2: {WRITE_SPAN_MACRO_EXPAND_COL(uint16_t, 2); break; }
+      case UsdBridgeType::USHORT3: {WRITE_SPAN_MACRO_EXPAND_COL(uint16_t, 3); break; }
+      case UsdBridgeType::USHORT4: {WRITE_SPAN_MACRO_EXPAND_COL(uint16_t, 4); break; }
+      case UsdBridgeType::UINT: {WRITE_SPAN_MACRO_EXPAND_COL(uint32_t, 1); break; }
+      case UsdBridgeType::UINT2: {WRITE_SPAN_MACRO_EXPAND_COL(uint32_t, 2); break; }
+      case UsdBridgeType::UINT3: {WRITE_SPAN_MACRO_EXPAND_COL(uint32_t, 3); break; }
+      case UsdBridgeType::UINT4: {WRITE_SPAN_MACRO_EXPAND_COL(uint32_t, 4); break; }
       case UsdBridgeType::FLOAT: {WRITE_SPAN_MACRO_EXPAND_COL(float, 1); break; }
       case UsdBridgeType::FLOAT2: {WRITE_SPAN_MACRO_EXPAND_COL(float,2); break; }
       case UsdBridgeType::FLOAT3: {WRITE_SPAN_MACRO_EXPAND_COL(float, 3); break; }
-      case UsdBridgeType::FLOAT4: {WRITE_SPAN_MACRO(GfVec4f); break; }
+      case UsdBridgeType::FLOAT4: {WRITE_SPAN_MACRO_EXPAND_COL(float, 4); break; }
       case UsdBridgeType::DOUBLE: {WRITE_SPAN_MACRO_EXPAND_COL(double, 1); break; }
       case UsdBridgeType::DOUBLE2: {WRITE_SPAN_MACRO_EXPAND_COL(double, 2); break; }
       case UsdBridgeType::DOUBLE3: {WRITE_SPAN_MACRO_EXPAND_COL(double, 3); break; }
-      case UsdBridgeType::DOUBLE4: {WRITE_SPAN_MACRO_CONVERT(GfVec4f, GfVec4d); break; }
-      default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4) or UCHAR_SRGB_<X>."); break; }
+      case UsdBridgeType::DOUBLE4: {WRITE_SPAN_MACRO_EXPAND_COL(double, 4); break; }
+      default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is is attempting to update with data that is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4) or UCHAR_SRGB_<X>."); break; }
+    }
+  }
+
+  void WriteToSpanColorSplit(const UsdBridgeLogObject& logObj, UsdBridgeSpanI<GfVec3f>& rgbSpan, UsdBridgeSpanI<float>& alphaSpan,
+    const void* arrayData, size_t arrayNumElements, UsdBridgeType arrayType)
+  {
+    size_t rgbSpanSize = rgbSpan.size();
+    size_t alphaSpanSize = alphaSpan.size();
+
+    if(rgbSpanSize != alphaSpanSize)
+    {
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "RGB span size (" << rgbSpanSize << ") does not match alpha span size (" << alphaSpanSize << "), so copy is aborted");
+      return;
+    }
+
+    if(rgbSpanSize != arrayNumElements)
+    {
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Usd Attribute span sizes (" << rgbSpanSize << ") do not correspond to number of array elements to write (" << arrayNumElements << "), so copy is aborted");
+      return;
+    }
+
+    switch (arrayType)
+    {
+      case UsdBridgeType::UCHAR: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint8_t, 1); break; }
+      case UsdBridgeType::UCHAR2: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint8_t, 2); break; }
+      case UsdBridgeType::UCHAR3: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint8_t, 3); break; }
+      case UsdBridgeType::UCHAR4: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint8_t, 4); break; }
+      case UsdBridgeType::UCHAR_SRGB_R: {WRITE_SPAN_MACRO_EXPAND_SRGB_SPLIT(1); break; }
+      case UsdBridgeType::UCHAR_SRGB_RA: {WRITE_SPAN_MACRO_EXPAND_SRGB_SPLIT(2); break; }
+      case UsdBridgeType::UCHAR_SRGB_RGB: {WRITE_SPAN_MACRO_EXPAND_SRGB_SPLIT(3); break; }
+      case UsdBridgeType::UCHAR_SRGB_RGBA: {WRITE_SPAN_MACRO_EXPAND_SRGB_SPLIT(4); break; }
+      case UsdBridgeType::USHORT: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint16_t, 1); break; }
+      case UsdBridgeType::USHORT2: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint16_t, 2); break; }
+      case UsdBridgeType::USHORT3: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint16_t, 3); break; }
+      case UsdBridgeType::USHORT4: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint16_t, 4); break; }
+      case UsdBridgeType::UINT: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint32_t, 1); break; }
+      case UsdBridgeType::UINT2: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint32_t, 2); break; }
+      case UsdBridgeType::UINT3: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint32_t, 3); break; }
+      case UsdBridgeType::UINT4: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(uint32_t, 4); break; }
+      case UsdBridgeType::FLOAT: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(float, 1); break; }
+      case UsdBridgeType::FLOAT2: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(float, 2); break; }
+      case UsdBridgeType::FLOAT3: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(float, 3); break; }
+      case UsdBridgeType::FLOAT4: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(float, 4); break; }
+      case UsdBridgeType::DOUBLE: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(double, 1); break; }
+      case UsdBridgeType::DOUBLE2: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(double, 2); break; }
+      case UsdBridgeType::DOUBLE3: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(double, 3); break; }
+      case UsdBridgeType::DOUBLE4: {WRITE_SPAN_MACRO_EXPAND_COL_SPLIT(double, 4); break; }
+      default: { UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "UsdGeom color primvar is attempting to update with data that is not of type (UCHAR/USHORT/UINT/FLOAT/DOUBLE)(1/2/3/4) or UCHAR_SRGB_<X>."); break; }
     }
   }
 }
