@@ -371,7 +371,7 @@ struct UsdBridgeSettings
   // USD conversion options
   bool EnablePreviewSurfaceShader = true;   // Output the preview surface shader for materials
   bool EnableMdlShader = true;              // Output the mdl shader for materials
-  bool UseDisplayColorOpacity = false;      // When true, use displayColor and displayOpacity primvars instead of a color primvar with alpha channel
+  bool UseDisplayColorOpacity = true;      // When true, use displayColor and displayOpacity primvars instead of a color primvar with alpha channel
 
   // About to be deprecated
   static constexpr bool EnableStTexCoords = false;
