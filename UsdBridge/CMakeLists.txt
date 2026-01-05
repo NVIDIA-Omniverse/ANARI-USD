@@ -51,9 +51,9 @@ else()
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
-  set(USD_ROOT_DIR_CURRENT "${USD_ROOT_DIR_RELEASE}")
-else()
   set(USD_ROOT_DIR_CURRENT "${USD_ROOT_DIR_DEBUG}")
+else()
+  set(USD_ROOT_DIR_CURRENT "${USD_ROOT_DIR_RELEASE}")
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -86,9 +86,20 @@ if(NOT DEFINED MaterialX_DIR)
   set(MaterialX_DIR "${USD_ROOT_DIR_CURRENT}/lib/cmake/MaterialX")
 endif()
 
-# Search in config mode
+# Find TBB BEFORE processing USD (USD targets reference TBB::tbb)
+if(DEFINED TBB_ROOT)
+  # Add our custom cmake directory to module path for FindTBB.cmake
+  list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+  find_package(TBB REQUIRED COMPONENTS tbb)
+  list(POP_FRONT CMAKE_MODULE_PATH)
+
+  # Disable USD's own TBB finding since we already found it
+  set(PXR_FIND_TBB_IN_CONFIG OFF)
+endif()
+
+# Search in config mode (USD will now skip TBB finding and use our targets)
 find_package(pxr REQUIRED
-  PATHS ${USD_ROOT_DIR_CURRENT})
+  HINTS ${USD_ROOT_DIR_CURRENT})
 
 if(NOT (USD_ROOT_DIR_DEBUG STREQUAL USD_ROOT_DIR_RELEASE))
   set(USD_DEBUG_TARGET_CMAKE "${USD_ROOT_DIR_DEBUG}/cmake/pxrTargets-debug.cmake")
@@ -100,7 +111,7 @@ if(NOT (USD_ROOT_DIR_DEBUG STREQUAL USD_ROOT_DIR_RELEASE))
   endif()
 endif()
 
-list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade usdLux usdUtils)
+list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade usdLux usdUtils plug)
 if(${USD_DEVICE_RENDERING_ENABLED})
   find_package(OpenGL REQUIRED)
   list(APPEND USD_INIT_TARGETS usdHydra usdImaging usdRender hgi hdx glf usdImagingGL)

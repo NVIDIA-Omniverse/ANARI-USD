@@ -18,6 +18,9 @@
 #include <pxr/base/trace/reporter.h>
 #include <pxr/base/trace/trace.h>
 #include <pxr/base/vt/array.h>
+#include <pxr/base/plug/registry.h>
+#include <pxr/base/plug/plugin.h>
+#include <pxr/usd/ar/resolver.h>
 #include <pxr/base/gf/range3f.h>
 #include <pxr/base/gf/rotation.h>
 #include <pxr/base/gf/half.h>

@@ -7,6 +7,9 @@
 #include "UsdBridgeUsdWriter_Common.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
 
+#include <filesystem>
+#include <typeinfo>
+
 #define PROCESS_PREFIX
 
 TF_DEFINE_PUBLIC_TOKENS(
@@ -75,7 +78,74 @@ namespace constring
   const char* const indexColorMapPf = "indexcolormap";
 #endif
 }
-  
+
+#ifdef OMNIVERSE_CONNECTION_ENABLE
+namespace
+{
+  // Initialize USD plugins, particularly for registering the Omni USD Resolver
+  void InitializeUsdPlugins(const UsdBridgeLogObject& logObj)
+  {
+    // Try to load Omniverse USD Resolver plugin by finding USD's plugin directory
+    PlugRegistry& registry = PlugRegistry::GetInstance();
+
+    // Find a known USD plugin to determine the plugin directory structure
+    PlugPluginPtrVector allPlugins = registry.GetAllPlugins();
+    std::string usdPluginPath;
+
+    // Look for a core USD plugin (like usd) to find the plugin directory
+    for (auto& plugin : allPlugins)
+    {
+      std::string name = plugin->GetName();
+      std::string path = plugin->GetPath();
+
+      // Look for core USD plugins that should always be present
+      if (name == "usd")
+      {
+        usdPluginPath = path;
+        UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::STATUS, "Found USD plugin reference: " << name << " at " << path);
+        break;
+      }
+    }
+
+    if (!usdPluginPath.empty())
+    {
+      // Parse the USD plugin path to find the plugin directory structure
+      std::filesystem::path usdPath(usdPluginPath);
+      std::filesystem::path installDir = usdPath.parent_path().parent_path();
+      std::filesystem::path resolverPluginDir = installDir / "plugin" / "omni_usd_resolver" / "resources";
+
+      std::string resolverPluginPath = resolverPluginDir.string();
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::STATUS, "Attempting to register plugins from: " << resolverPluginPath);
+
+      registry.RegisterPlugins(resolverPluginPath);
+    }
+    else
+    {
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::WARNING, "Could not find USD plugin to determine plugin directory structure");
+    }
+
+#ifndef NDEBUG
+    // DEBUG: List all loaded plugins (refresh after potential registration)
+    PlugPluginPtrVector plugins = registry.GetAllPlugins();
+    UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::STATUS, "=== USD Plugins (Total: " << plugins.size() << ") ===");
+
+    for (auto& plugin : plugins)
+    {
+      std::string pluginName = plugin->GetName();
+      std::string pluginPath = plugin->GetPath();
+      bool isLoaded = plugin->IsLoaded();
+      UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::STATUS, "Plugin: " << pluginName << " | Path: " << pluginPath << " | Loaded: " << (isLoaded ? "YES" : "NO"));
+    }
+
+    // DEBUG: Check active resolver
+    ArResolver& resolver = ArGetResolver();
+    std::string resolverType = typeid(resolver).name();
+    UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::STATUS, "Active resolver type: " << resolverType);
+#endif
+  }
+}
+#endif
+
 #define PROCESS_PREFIX(elem) AttributeTokens.push_back(UsdBridgeTokens->elem); // Converts any token sequence macro to add all tokens to list
 
 UsdBridgeUsdWriter::UsdBridgeUsdWriter(const UsdBridgeSettings& settings)
@@ -201,6 +271,11 @@ bool UsdBridgeUsdWriter::CreateMdlFiles()
 
 bool UsdBridgeUsdWriter::InitializeSession()
 {
+#ifdef OMNIVERSE_CONNECTION_ENABLE
+  // Initialize USD plugins for Omni USD Resolver support before any connection is made
+  InitializeUsdPlugins(this->LogObject);
+#endif
+
   if (ConnectionSettings.HostName.empty())
   {
     if(ConnectionSettings.WorkingDirectory.compare("void") == 0)
