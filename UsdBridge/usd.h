@@ -20,7 +20,6 @@
 #include <pxr/base/vt/array.h>
 #include <pxr/base/plug/registry.h>
 #include <pxr/base/plug/plugin.h>
-#include <pxr/usd/ar/resolver.h>
 #include <pxr/base/gf/range3f.h>
 #include <pxr/base/gf/rotation.h>
 #include <pxr/base/gf/half.h>
@@ -55,4 +54,6 @@
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/materialBindingAPI.h>
 #include <pxr/usd/kind/registry.h>
+#include <pxr/usd/ar/resolver.h>
+#include <pxr/usd/ar/resolverContextBinder.h>
 #pragma warning(pop)
