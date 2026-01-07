@@ -205,7 +205,15 @@ endif()
 # Platform-dependent operations
 
 if (WIN32)
+
   target_compile_definitions(UsdBridge PRIVATE "-DBOOST_ALL_DYN_LINK")
+
+  option(USD_NO_BOOST_PYTHON "Disable auto-linking within OpenUSD to prevent unwanted boost_python dependencies" OFF)
+  if(USD_NO_BOOST_PYTHON)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+      "-DBOOST_PYTHON_NO_LIB") # Disable auto-linking to prevent unwanted boost_python dependencies
+  endif()
+
   # Figure out the vc toolset of the boost libs included with the USD install
   file(GLOB Boost_libfiles "${USD_ROOT_DIR_RELEASE}/lib/boost*")
   if(Boost_libfiles)
@@ -215,10 +223,12 @@ if (WIN32)
     message(STATUS "Usd-boost VC toolset: ${Boost_lib_toolset}")
     target_compile_definitions(UsdBridge PRIVATE "-DBOOST_LIB_TOOLSET=\"${Boost_lib_toolset}\"")
   endif()
+
   # Combination of boost and python causes pragma linking issues for both libraries.
   message(STATUS "Python link dirs: ${USD_PYTHON_LINK_DIRS}")
   # Make sure to set link dirs public, since this is a static lib, so the dynamic boost libs will propagate to the parent project. 
   target_link_directories(UsdBridge PUBLIC "${USD_PYTHON_LINK_DIRS}" "${USD_LIB_DIR}")
+
 else()
   set(PLATFORM_LIBS pthread dl stdc++fs)
   target_link_libraries(UsdBridge PRIVATE general ${PLATFORM_LIBS} )
