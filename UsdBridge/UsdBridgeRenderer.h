@@ -18,7 +18,7 @@ public:
     ~UsdBridgeRenderer();
 
     // Sets up the scene and render delegates
-    void Initialize(const char* rendererName = "HdPrmanLoaderRendererPlugin");
+    void Initialize(const char* rendererName = "HdStormRendererPlugin");
 
     void SetCameraPath(const pxr::SdfPath& cameraPath);
 
