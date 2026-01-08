@@ -97,6 +97,20 @@ if(DEFINED TBB_ROOT)
   set(PXR_FIND_TBB_IN_CONFIG OFF)
 endif()
 
+# Create OpenSubdiv target BEFORE processing USD
+if(${USD_DEVICE_RENDERING_ENABLED} AND NOT TARGET opensubdiv::opensubdiv)
+  if(WIN32)
+    set(OPENSUBDIV_LIB "${USD_ROOT_DIR_CURRENT}/lib/osdCPU.lib")
+  else()
+    set(OPENSUBDIV_LIB "${USD_ROOT_DIR_CURRENT}/lib/libosdCPU.so")
+  endif()
+  add_library(opensubdiv::opensubdiv STATIC IMPORTED GLOBAL)
+  set_target_properties(opensubdiv::opensubdiv PROPERTIES
+    IMPORTED_LOCATION "${OPENSUBDIV_LIB}"
+    INTERFACE_INCLUDE_DIRECTORIES "${USD_ROOT_DIR_CURRENT}/include"
+  )
+endif()
+
 # Search in config mode (USD will now skip TBB finding and use our targets)
 find_package(pxr REQUIRED
   HINTS ${USD_ROOT_DIR_CURRENT})
@@ -210,7 +224,7 @@ if (WIN32)
 
   option(USD_NO_BOOST_PYTHON "Disable auto-linking within OpenUSD to prevent unwanted boost_python dependencies" OFF)
   if(USD_NO_BOOST_PYTHON)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
+    target_compile_definitions(UsdBridge PRIVATE
       "-DBOOST_PYTHON_NO_LIB") # Disable auto-linking to prevent unwanted boost_python dependencies
   endif()
 
@@ -304,6 +318,13 @@ if(${INSTALL_USD_DEPS})
     DIRECTORY "$<$<NOT:$<CONFIG:Debug>>:${USD_ROOT_DIR_RELEASE}/bin/>$<$<CONFIG:Debug>:${USD_ROOT_DIR_DEBUG}/bin/>"
     DESTINATION ${PLATFORM_INSTALL_LIBDIR}
     FILES_MATCHING PATTERN "*${CMAKE_SHARED_LIBRARY_SUFFIX}*")
+
+  #Install USD plugins (hdStorm, usdShaders, sdrGlslfx, etc.)
+  set(USD_PLUGIN_DIR "$<$<NOT:$<CONFIG:Debug>>:${USD_ROOT_DIR_RELEASE}/plugin>$<$<CONFIG:Debug>:${USD_ROOT_DIR_DEBUG}/plugin>")
+  install(
+    DIRECTORY "${USD_PLUGIN_DIR}/"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/plugin/")
+  message(STATUS "Installing USD plugins from: ${USD_PLUGIN_DIR}")
 
   #Install Python
   message(STATUS "Python runtime library dirs: ${PY_SHARED_LIB_DIR}")
