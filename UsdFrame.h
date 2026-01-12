@@ -16,6 +16,8 @@ struct UsdFrameData
   ANARIDataType color = ANARI_UNKNOWN;
   ANARIDataType depth = ANARI_UNKNOWN;
   UsdCamera* camera = nullptr;
+  UsdRenderer* renderer = nullptr;
+  UsdWorld* world = nullptr;
 
   double time = 0.0;
 };

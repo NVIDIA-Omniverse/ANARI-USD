@@ -95,7 +95,8 @@ class UsdBridge
   
     void SaveScene();
 
-    void InitializeRendering();
+    void InitializeRendering(const char* hydraRendererName = nullptr);
+    void SetRenderWorld(UsdWorldHandle world);
     void SetRenderCamera(UsdCameraHandle camera);
     void RenderFrame(uint32_t width, uint32_t height, double timeStep);
     bool FrameReady(bool wait);

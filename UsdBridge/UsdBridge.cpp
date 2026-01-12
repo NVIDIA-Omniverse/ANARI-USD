@@ -147,6 +147,9 @@ struct UsdBridgeInternals
   // Camera
   UsdCameraHandle LastUsedCamera { nullptr };
 
+  // World
+  UsdWorldHandle LastUsedWorld { nullptr };
+
   // Temp arrays
   UsdBridgePrimCacheList TempPrimCaches;
   SdfPrimPathList TempPrimPaths;
@@ -1196,24 +1199,49 @@ void UsdBridge::SaveScene()
   BRIDGE_USDWRITER.SaveScene();
 }
 
-void UsdBridge::InitializeRendering()
+void UsdBridge::InitializeRendering(const char* hydraRendererName)
 {
   if (!SessionValid) return;
+
+  const char* rendererName = hydraRendererName ? hydraRendererName : "HdStormRendererPlugin";
 
 #if USE_RENDER_CONTEXT_SYSTEM
   if(!Internals->RendererCore.IsInitialized())
   {
-    Internals->RendererCore.Initialize("HdStormRendererPlugin");
+    Internals->RendererCore.Initialize(rendererName);
     Internals->RenderContext = CreateRenderContext(
         RenderContextMode::Shared,
         &Internals->RendererCore,
         Internals->UsdWriter,
-        "HdStormRendererPlugin",
+        rendererName,
         pxr::SdfPath("/UsdDeviceRenderContext"));
   }
 #else
   BRIDGE_RENDERER.Initialize();
 #endif
+}
+
+void UsdBridge::SetRenderWorld(UsdWorldHandle world)
+{
+  if (!SessionValid) return;
+
+  if(world.value != Internals->LastUsedWorld.value)
+  {
+    UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(world);
+    SdfPath worldPath;
+    BRIDGE_USDWRITER.GetRootPrimPath(cache->Name, worldPathCp, worldPath);
+
+#if USE_RENDER_CONTEXT_SYSTEM
+    if (Internals->RenderContext)
+    {
+      Internals->RenderContext->SetWorldPath(worldPath);
+    }
+#else
+    BRIDGE_RENDERER.SetWorldPath(worldPath);
+#endif
+
+    Internals->LastUsedWorld = world;
+  }
 }
 
 void UsdBridge::SetRenderCamera(UsdCameraHandle camera)

@@ -272,6 +272,7 @@ public:
   }
 
   pxr::SdfPath CameraPath;
+  pxr::SdfPath WorldPath;
 
   pxr::HdRendererPluginHandle RendererPlugin = nullptr;
   pxr::TfToken RendererPluginId;
@@ -374,6 +375,11 @@ void UsdBridgeRenderer::SetCameraPath(const SdfPath& cameraPath)
 #endif
 
   UsdWriter.SaveScene();
+}
+
+void UsdBridgeRenderer::SetWorldPath(const SdfPath& worldPath)
+{
+  Internals->WorldPath = worldPath;
 }
 
 void UsdBridgeRenderer::Render(uint32_t width, uint32_t height, double timeStep)
@@ -578,6 +584,10 @@ void UsdBridgeRenderer::Initialize(const char* rendererName)
 }
 
 void UsdBridgeRenderer::SetCameraPath(const pxr::SdfPath& cameraPath)
+{
+}
+
+void UsdBridgeRenderer::SetWorldPath(const pxr::SdfPath& worldPath)
 {
 }
 

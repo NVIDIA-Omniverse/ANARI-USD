@@ -8,6 +8,8 @@
 #include "UsdDeviceQueries.h"
 
 DEFINE_PARAMETER_MAP(UsdRenderer,
+  REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
+  REGISTER_PARAMETER_MACRO("usd::hydraRendererName", ANARI_STRING, hydraRendererName)
 )
 
 UsdRenderer::UsdRenderer()
@@ -28,6 +30,12 @@ int UsdRenderer::getProperty(const char * name, ANARIDataType type, void * mem, 
   }
 
   return 0;
+}
+
+const char* UsdRenderer::getHydraRendererName() const
+{
+  const UsdRendererData& paramData = getReadParams();
+  return paramData.hydraRendererName ? paramData.hydraRendererName->c_str() : nullptr;
 }
 
 bool UsdRenderer::deferCommit(UsdDevice* device)

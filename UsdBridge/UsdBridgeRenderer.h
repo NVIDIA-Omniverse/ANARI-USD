@@ -21,6 +21,7 @@ public:
     void Initialize(const char* rendererName = "HdStormRendererPlugin");
 
     void SetCameraPath(const pxr::SdfPath& cameraPath);
+    void SetWorldPath(const pxr::SdfPath& worldPath);
 
     void Render(uint32_t width, uint32_t height, double timeStep);
 
