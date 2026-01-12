@@ -43,7 +43,7 @@
 #include <memory>
 #include <string>
 
-#define USDBRIDGE_RENDERER_USE_ENGINEGL
+//#define USDBRIDGE_RENDERER_USE_ENGINEGL
 #define USDBRIDGE_RENDERER_USE_COLORTEXTURE
 
 #ifdef USDBRIDGE_RENDERER_USE_ENGINEGL
@@ -590,7 +590,7 @@ bool UsdBridgeRenderer::FrameReady(bool wait)
   return true;
 }
 
-void* UsdBridgeRenderer::MapFrame()
+void* UsdBridgeRenderer::MapFrame(UsdBridgeType& returnFormat)
 {
   return nullptr;
 }

@@ -172,6 +172,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeUsdWriter_Volume.cpp
   UsdBridgeTimeEvaluator.cpp
   UsdBridgeRenderer.cpp
+  UsdBridgeRenderContext.cpp
   UsdBridgeRt.cpp
   UsdBridgeDiagnosticMgrDelegate.cpp
   UsdBridge.h
@@ -181,6 +182,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeUsdWriter_Arrays.h
   UsdBridgeTimeEvaluator.h
   UsdBridgeRenderer.h
+  UsdBridgeRenderContext.h
   UsdBridgeRt.h
   UsdBridgeDiagnosticMgrDelegate.h
   usd.h

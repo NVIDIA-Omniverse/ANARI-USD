@@ -6,6 +6,7 @@
 #include "UsdBridgeUsdWriter.h"
 #include "UsdBridgeCaches.h"
 #include "UsdBridgeRenderer.h"
+#include "UsdBridgeRenderContext.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
 
 #include <string>
@@ -20,6 +21,9 @@ CARB_GLOBALS("anariUsdBridge")
 #define BRIDGE_CACHE Internals->Cache
 #define BRIDGE_USDWRITER Internals->UsdWriter
 #define BRIDGE_RENDERER Internals->HydraRenderer
+
+// Temporary: Use new render context system instead of old renderer
+#define USE_RENDER_CONTEXT_SYSTEM 1
 
 namespace
 {
@@ -72,6 +76,9 @@ struct UsdBridgeInternals
   UsdBridgeInternals(const UsdBridgeSettings& settings)
     : UsdWriter(settings)
     , HydraRenderer(UsdWriter)
+#if USE_RENDER_CONTEXT_SYSTEM
+    , RendererCore(UsdWriter)
+#endif
   {
     RefModCallbacks.AtNewRef = [this](UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache){
       // Increase the reference count for the child on creation of referencing prim
@@ -118,8 +125,14 @@ struct UsdBridgeInternals
   // USDWriter
   UsdBridgeUsdWriter UsdWriter;
 
-  // USD Hydra renderer
+  // USD Hydra renderer (old system)
   UsdBridgeRenderer HydraRenderer;
+
+#if USE_RENDER_CONTEXT_SYSTEM
+  // USD Hydra renderer (new system for testing)
+  UsdBridgeRendererCore RendererCore;
+  std::unique_ptr<UsdBridgeRenderContext> RenderContext;
+#endif
 
   // Material->geometry binding suggestion
   std::map<UsdBridgePrimCache*, SdfPath> MaterialToGeometryBinding;
@@ -1187,7 +1200,20 @@ void UsdBridge::InitializeRendering()
 {
   if (!SessionValid) return;
 
+#if USE_RENDER_CONTEXT_SYSTEM
+  if(!Internals->RendererCore.IsInitialized())
+  {
+    Internals->RendererCore.Initialize("HdStormRendererPlugin");
+    Internals->RenderContext = CreateRenderContext(
+        RenderContextMode::Shared,
+        &Internals->RendererCore,
+        Internals->UsdWriter,
+        "HdStormRendererPlugin",
+        pxr::SdfPath("/UsdDeviceRenderContext"));
+  }
+#else
   BRIDGE_RENDERER.Initialize();
+#endif
 }
 
 void UsdBridge::SetRenderCamera(UsdCameraHandle camera)
@@ -1200,7 +1226,14 @@ void UsdBridge::SetRenderCamera(UsdCameraHandle camera)
     SdfPath cameraPath;
     BRIDGE_USDWRITER.GetRootPrimPath(cache->Name, cameraPathCp, cameraPath);
 
+#if USE_RENDER_CONTEXT_SYSTEM
+    if (Internals->RenderContext)
+    {
+      Internals->RenderContext->SetCameraPath(cameraPath);
+    }
+#else
     BRIDGE_RENDERER.SetCameraPath(cameraPath);
+#endif
 
     Internals->LastUsedCamera = camera;
   }
@@ -1210,28 +1243,58 @@ void UsdBridge::RenderFrame(uint32_t width, uint32_t height, double timeStep)
 {
   if (!SessionValid) return;
 
+#if USE_RENDER_CONTEXT_SYSTEM
+  if (Internals->RenderContext)
+  {
+    Internals->RenderContext->Render(width, height, timeStep);
+  }
+#else
   BRIDGE_RENDERER.Render(width, height, timeStep);
+#endif
 }
 
 bool UsdBridge::FrameReady(bool wait)
 {
   if (!SessionValid) return true;
 
+#if USE_RENDER_CONTEXT_SYSTEM
+  if (Internals->RenderContext)
+  {
+    return Internals->RenderContext->FrameReady(wait);
+  }
+  return true;
+#else
   return BRIDGE_RENDERER.FrameReady(wait);
+#endif
 }
 
 void* UsdBridge::MapFrame(UsdBridgeType& returnFormat)
 {
   if (!SessionValid) return nullptr;
 
+#if USE_RENDER_CONTEXT_SYSTEM
+  if (Internals->RenderContext)
+  {
+    return Internals->RenderContext->MapFrame(returnFormat);
+  }
+  return nullptr;
+#else
   return BRIDGE_RENDERER.MapFrame(returnFormat);
+#endif
 }
 
 void UsdBridge::UnmapFrame()
 {
   if (!SessionValid) return;
 
+#if USE_RENDER_CONTEXT_SYSTEM
+  if (Internals->RenderContext)
+  {
+    Internals->RenderContext->UnmapFrame();
+  }
+#else
   BRIDGE_RENDERER.UnmapFrame();
+#endif
 }
 
 void UsdBridge::ResetResourceUpdateState()
