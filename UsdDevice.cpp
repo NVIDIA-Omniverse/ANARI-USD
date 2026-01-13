@@ -676,6 +676,7 @@ void UsdDevice::flushCommitList()
   writeTypeToUsd<(int)ANARI_WORLD>();
 
   writeTypeToUsd<(int)ANARI_CAMERA>();
+  writeTypeToUsd<(int)ANARI_FRAME>();
 
   removePrimsFromUsd();
 
@@ -821,7 +822,8 @@ int UsdDevice::getProperty(ANARIObject object,
 
 ANARIFrame UsdDevice::newFrame()
 {
-  UsdFrame* object = new UsdFrame(internals->bridge.get());
+  const char* name = makeUniqueName("Frame");
+  UsdFrame* object = new UsdFrame(name, this);
 #ifdef CHECK_MEMLEAKS
   logObjAllocation(object);
 #endif

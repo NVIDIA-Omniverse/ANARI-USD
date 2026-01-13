@@ -173,6 +173,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeTimeEvaluator.cpp
   UsdBridgeRenderer.cpp
   UsdBridgeRenderContext.cpp
+  UsdRenderManager.cpp
   UsdBridgeRt.cpp
   UsdBridgeDiagnosticMgrDelegate.cpp
   UsdBridge.h
@@ -183,6 +184,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeTimeEvaluator.h
   UsdBridgeRenderer.h
   UsdBridgeRenderContext.h
+  UsdRenderManager.h
   UsdBridgeRt.h
   UsdBridgeDiagnosticMgrDelegate.h
   usd.h

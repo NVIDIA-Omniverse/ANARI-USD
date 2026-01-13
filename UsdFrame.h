@@ -3,8 +3,7 @@
 
 #pragma once
 
-#include "UsdBaseObject.h"
-#include "UsdParameterizedObject.h"
+#include "UsdBridgedBaseObject.h"
 
 class UsdRenderer;
 class UsdWorld;
@@ -12,6 +11,9 @@ class UsdCamera;
 
 struct UsdFrameData
 {
+  UsdSharedString* name = nullptr;
+  UsdSharedString* usdName = nullptr;
+
   UsdUint2 size = {0, 0};
   ANARIDataType color = ANARI_UNKNOWN;
   ANARIDataType depth = ANARI_UNKNOWN;
@@ -22,13 +24,13 @@ struct UsdFrameData
   double time = 0.0;
 };
 
-class UsdFrame : public UsdParameterizedBaseObject<UsdFrame, UsdFrameData>
+class UsdFrame : public UsdBridgedBaseObject<UsdFrame, UsdFrameData, UsdFrameHandle>
 {
   public:
-    UsdFrame(UsdBridge* bridge);
+    UsdFrame(const char* name, UsdDevice* device);
     ~UsdFrame();
 
-    void remove(UsdDevice* device) override {}
+    void remove(UsdDevice* device) override;
 
     const void* mapBuffer(
       const char* channel,
@@ -48,6 +50,11 @@ class UsdFrame : public UsdParameterizedBaseObject<UsdFrame, UsdFrameData>
     void doCommitRefs(UsdDevice* device) override {}
 
     char* ReserveBuffer(ANARIDataType format);
+
+    UsdBridge* cachedBridge = nullptr;
+
+    // Registration state - frame is registered on first commit
+    void* registeredFrameState = nullptr;
 
     UsdUint2 renderBufferSize = {0, 0};
     ANARIDataType renderBufferColorFormat = ANARI_UNKNOWN;

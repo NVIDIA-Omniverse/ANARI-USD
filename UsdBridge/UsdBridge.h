@@ -95,13 +95,18 @@ class UsdBridge
   
     void SaveScene();
 
-    void InitializeRendering(const char* hydraRendererName = nullptr);
-    void SetRenderWorld(UsdWorldHandle world);
-    void SetRenderCamera(UsdCameraHandle camera);
-    void RenderFrame(uint32_t width, uint32_t height, double timeStep);
-    bool FrameReady(bool wait);
-    void* MapFrame(UsdBridgeType& returnFormat);
-    void UnmapFrame();
+    // Multi-frame rendering API
+    void RegisterFrame(const char* frameName);
+    void UnregisterFrame(const char* frameName);
+    void UnregisterFrameByState(void* frameState); // Unregister by state pointer (for name changes)
+    void* GetFrameState(const char* frameName); // Returns opaque pointer for identity comparison
+    void SetFrameRenderer(const char* frameName, const char* hydraRendererName);
+    void SetFrameWorld(const char* frameName, UsdWorldHandle world);
+    void SetFrameCamera(const char* frameName, UsdCameraHandle camera);
+    void RenderFrame(const char* frameName, uint32_t width, uint32_t height, double timeStep);
+    bool FrameReady(const char* frameName, bool wait);
+    void* MapFrame(const char* frameName, UsdBridgeType& returnFormat);
+    void UnmapFrame(const char* frameName);
 
     void ResetResourceUpdateState(); // Eg. clears all dirty flags on shared resources
 

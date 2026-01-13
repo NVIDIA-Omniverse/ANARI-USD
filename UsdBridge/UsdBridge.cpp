@@ -7,6 +7,7 @@
 #include "UsdBridgeCaches.h"
 #include "UsdBridgeRenderer.h"
 #include "UsdBridgeRenderContext.h"
+#include "UsdRenderManager.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
 
 #include <string>
@@ -21,9 +22,6 @@ CARB_GLOBALS("anariUsdBridge")
 #define BRIDGE_CACHE Internals->Cache
 #define BRIDGE_USDWRITER Internals->UsdWriter
 #define BRIDGE_RENDERER Internals->HydraRenderer
-
-// Temporary: Use new render context system instead of old renderer
-#define USE_RENDER_CONTEXT_SYSTEM 1
 
 namespace
 {
@@ -76,9 +74,7 @@ struct UsdBridgeInternals
   UsdBridgeInternals(const UsdBridgeSettings& settings)
     : UsdWriter(settings)
     , HydraRenderer(UsdWriter)
-#if USE_RENDER_CONTEXT_SYSTEM
-    , RendererCore(UsdWriter)
-#endif
+    , RenderManager(UsdWriter)
   {
     RefModCallbacks.AtNewRef = [this](UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache){
       // Increase the reference count for the child on creation of referencing prim
@@ -125,14 +121,11 @@ struct UsdBridgeInternals
   // USDWriter
   UsdBridgeUsdWriter UsdWriter;
 
-  // USD Hydra renderer (old system)
+  // USD Hydra renderer (old system - deprecated)
   UsdBridgeRenderer HydraRenderer;
 
-#if USE_RENDER_CONTEXT_SYSTEM
-  // USD Hydra renderer (new system for testing)
-  UsdBridgeRendererCore RendererCore;
-  std::unique_ptr<UsdBridgeRenderContext> RenderContext;
-#endif
+  // USD Render Manager (new multi-frame system)
+  UsdRenderManager RenderManager;
 
   // Material->geometry binding suggestion
   std::map<UsdBridgePrimCache*, SdfPath> MaterialToGeometryBinding;
@@ -143,12 +136,6 @@ struct UsdBridgeInternals
   // Diagnostic Manager
   std::unique_ptr<UsdBridgeDiagnosticMgrDelegate> DiagnosticDelegate;
   std::function<void (UsdBridgeDiagnosticMgrDelegate*)> DiagRemoveFunc;
-
-  // Camera
-  UsdCameraHandle LastUsedCamera { nullptr };
-
-  // World
-  UsdWorldHandle LastUsedWorld { nullptr };
 
   // Temp arrays
   UsdBridgePrimCacheList TempPrimCaches;
@@ -1199,130 +1186,93 @@ void UsdBridge::SaveScene()
   BRIDGE_USDWRITER.SaveScene();
 }
 
-void UsdBridge::InitializeRendering(const char* hydraRendererName)
+// =============================================================================
+// Multi-frame rendering API
+// =============================================================================
+
+void UsdBridge::RegisterFrame(const char* frameName)
 {
   if (!SessionValid) return;
 
-  const char* rendererName = hydraRendererName ? hydraRendererName : "HdStormRendererPlugin";
-
-#if USE_RENDER_CONTEXT_SYSTEM
-  if(!Internals->RendererCore.IsInitialized())
-  {
-    Internals->RendererCore.Initialize(rendererName);
-    Internals->RenderContext = CreateRenderContext(
-        RenderContextMode::Shared,
-        &Internals->RendererCore,
-        Internals->UsdWriter,
-        rendererName,
-        pxr::SdfPath("/UsdDeviceRenderContext"));
-  }
-#else
-  BRIDGE_RENDERER.Initialize();
-#endif
+  Internals->RenderManager.RegisterFrame(frameName);
 }
 
-void UsdBridge::SetRenderWorld(UsdWorldHandle world)
+void UsdBridge::UnregisterFrame(const char* frameName)
 {
   if (!SessionValid) return;
 
-  if(world.value != Internals->LastUsedWorld.value)
-  {
-    UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(world);
-    SdfPath worldPath;
-    BRIDGE_USDWRITER.GetRootPrimPath(cache->Name, worldPathCp, worldPath);
-
-#if USE_RENDER_CONTEXT_SYSTEM
-    if (Internals->RenderContext)
-    {
-      Internals->RenderContext->SetWorldPath(worldPath);
-    }
-#else
-    BRIDGE_RENDERER.SetWorldPath(worldPath);
-#endif
-
-    Internals->LastUsedWorld = world;
-  }
+  Internals->RenderManager.UnregisterFrame(frameName);
 }
 
-void UsdBridge::SetRenderCamera(UsdCameraHandle camera)
+void UsdBridge::UnregisterFrameByState(void* frameState)
 {
   if (!SessionValid) return;
 
-  if(camera.value != Internals->LastUsedCamera.value)
-  {
-    UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(camera);
-    SdfPath cameraPath;
-    BRIDGE_USDWRITER.GetRootPrimPath(cache->Name, cameraPathCp, cameraPath);
-
-#if USE_RENDER_CONTEXT_SYSTEM
-    if (Internals->RenderContext)
-    {
-      Internals->RenderContext->SetCameraPath(cameraPath);
-    }
-#else
-    BRIDGE_RENDERER.SetCameraPath(cameraPath);
-#endif
-
-    Internals->LastUsedCamera = camera;
-  }
+  Internals->RenderManager.UnregisterFrameByState(frameState);
 }
 
-void UsdBridge::RenderFrame(uint32_t width, uint32_t height, double timeStep)
-{
-  if (!SessionValid) return;
-
-#if USE_RENDER_CONTEXT_SYSTEM
-  if (Internals->RenderContext)
-  {
-    Internals->RenderContext->Render(width, height, timeStep);
-  }
-#else
-  BRIDGE_RENDERER.Render(width, height, timeStep);
-#endif
-}
-
-bool UsdBridge::FrameReady(bool wait)
-{
-  if (!SessionValid) return true;
-
-#if USE_RENDER_CONTEXT_SYSTEM
-  if (Internals->RenderContext)
-  {
-    return Internals->RenderContext->FrameReady(wait);
-  }
-  return true;
-#else
-  return BRIDGE_RENDERER.FrameReady(wait);
-#endif
-}
-
-void* UsdBridge::MapFrame(UsdBridgeType& returnFormat)
+void* UsdBridge::GetFrameState(const char* frameName)
 {
   if (!SessionValid) return nullptr;
 
-#if USE_RENDER_CONTEXT_SYSTEM
-  if (Internals->RenderContext)
-  {
-    return Internals->RenderContext->MapFrame(returnFormat);
-  }
-  return nullptr;
-#else
-  return BRIDGE_RENDERER.MapFrame(returnFormat);
-#endif
+  return Internals->RenderManager.GetFrameState(frameName);
 }
 
-void UsdBridge::UnmapFrame()
+void UsdBridge::SetFrameRenderer(const char* frameName, const char* hydraRendererName)
 {
   if (!SessionValid) return;
 
-#if USE_RENDER_CONTEXT_SYSTEM
-  if (Internals->RenderContext)
-  {
-    Internals->RenderContext->UnmapFrame();
-  }
-#else
-  BRIDGE_RENDERER.UnmapFrame();
-#endif
+  Internals->RenderManager.SetFrameRenderer(frameName, hydraRendererName);
+}
+
+void UsdBridge::SetFrameWorld(const char* frameName, UsdWorldHandle world)
+{
+  if (!SessionValid) return;
+
+  UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(world);
+  SdfPath worldPath;
+  BRIDGE_USDWRITER.GetRootPrimPath(cache->Name, worldPathCp, worldPath);
+
+  Internals->RenderManager.SetFrameWorld(frameName, worldPath);
+}
+
+void UsdBridge::SetFrameCamera(const char* frameName, UsdCameraHandle camera)
+{
+  if (!SessionValid) return;
+
+  UsdBridgePrimCache* cache = BRIDGE_CACHE.ConvertToPrimCache(camera);
+  SdfPath cameraPath;
+  BRIDGE_USDWRITER.GetRootPrimPath(cache->Name, cameraPathCp, cameraPath);
+
+  Internals->RenderManager.SetFrameCamera(frameName, cameraPath);
+}
+
+void UsdBridge::RenderFrame(const char* frameName, uint32_t width, uint32_t height, double timeStep)
+{
+  if (!SessionValid) return;
+
+  Internals->RenderManager.Render(frameName, width, height, timeStep);
+}
+
+bool UsdBridge::FrameReady(const char* frameName, bool wait)
+{
+  if (!SessionValid) return true;
+
+  return Internals->RenderManager.FrameReady(frameName, wait);
+}
+
+void* UsdBridge::MapFrame(const char* frameName, UsdBridgeType& returnFormat)
+{
+  if (!SessionValid) return nullptr;
+
+  return Internals->RenderManager.MapFrame(frameName, returnFormat);
+}
+
+void UsdBridge::UnmapFrame(const char* frameName)
+{
+  if (!SessionValid) return;
+
+  Internals->RenderManager.UnmapFrame(frameName);
 }
 
 void UsdBridge::ResetResourceUpdateState()
