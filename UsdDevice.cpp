@@ -17,7 +17,7 @@
 #include "UsdFrame.h"
 #include "UsdLight.h"
 #include "UsdCamera.h"
-#include "UsdDeviceQueries.h"
+#include "UsdDevice_queries.h"
 
 #include <cstdarg>
 #include <cstdio>

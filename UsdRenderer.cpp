@@ -5,7 +5,7 @@
 #include "UsdBridge/UsdBridge.h"
 #include "UsdAnari.h"
 #include "UsdDevice.h"
-#include "UsdDeviceQueries.h"
+#include "UsdDevice_queries.h"
 
 DEFINE_PARAMETER_MAP(UsdRenderer,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
