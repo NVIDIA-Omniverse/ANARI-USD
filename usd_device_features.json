@@ -1144,6 +1144,16 @@
                 }
             ]
         }, {
+            "type" : "ANARI_RENDERER",
+            "parameters" : [
+                {
+                    "name" : "usd::hydraRendererName",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "Name of the Hydra renderer plugin to use (e.g. HdStormRendererPlugin)"
+                }
+            ]
+        }, {
             "type" : "ANARI_FRAME",
             "parameters" : [
                 {
@@ -1154,7 +1164,6 @@
                     "description" : "Timestep used for rendering a frame"
                 }
             ]
-
         }
     ]
 }

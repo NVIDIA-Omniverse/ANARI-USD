@@ -134,7 +134,7 @@ set(USDModule_SOURCES
   UsdFrame.cpp
   UsdLight.cpp
   UsdCamera.cpp
-  UsdDeviceQueries.cpp)
+  UsdDevice_queries.cpp)
 
 set(USDModule_HEADERS
   UsdCommonMacros.h
