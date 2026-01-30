@@ -11,7 +11,8 @@ enum class UsdWorldComponents
 {
   INSTANCES = 0,
   SURFACES,
-  VOLUMES
+  VOLUMES,
+  LIGHTS
 };
 
 struct UsdWorldData
@@ -23,6 +24,7 @@ struct UsdWorldData
   UsdDataArray* instances = nullptr;
   UsdDataArray* surfaces = nullptr;
   UsdDataArray* volumes = nullptr;
+  UsdDataArray* lights = nullptr;
 };
 
 class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHandle, UsdWorldComponents>
@@ -36,7 +38,8 @@ class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHan
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdWorldComponents::INSTANCES, "instance"),
       ComponentPair(UsdWorldComponents::SURFACES, "surface"),
-      ComponentPair(UsdWorldComponents::VOLUMES, "volume")};
+      ComponentPair(UsdWorldComponents::VOLUMES, "volume"),
+      ComponentPair(UsdWorldComponents::LIGHTS, "light")};
 
   protected:
 
@@ -47,5 +50,6 @@ class UsdWorld : public UsdBridgedBaseObject<UsdWorld, UsdWorldData, UsdWorldHan
     std::vector<UsdInstanceHandle> instanceHandles; // for convenience
     std::vector<UsdSurfaceHandle> surfaceHandles; // for convenience
     std::vector<UsdVolumeHandle> volumeHandles; // for convenience
+    std::vector<UsdLightHandle> lightHandles; // for convenience
     std::vector<int> instanceableValues; // for convenience
 };

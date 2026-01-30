@@ -6,6 +6,7 @@
 #include "UsdInstance.h"
 #include "UsdSurface.h"
 #include "UsdVolume.h"
+#include "UsdLight.h"
 #include "UsdDevice.h"
 #include "UsdDataArray.h"
 #include "UsdGroup.h"
@@ -13,9 +14,11 @@
 #define InstanceType ANARI_INSTANCE
 #define SurfaceType ANARI_SURFACE
 #define VolumeType ANARI_VOLUME
+#define LightType ANARI_LIGHT
 using InstanceUsdType = AnariToUsdBridgedObject<InstanceType>::Type;
 using SurfaceUsdType = AnariToUsdBridgedObject<SurfaceType>::Type;
 using VolumeUsdType = AnariToUsdBridgedObject<VolumeType>::Type;
+using LightUsdType = AnariToUsdBridgedObject<LightType>::Type;
 
 DEFINE_PARAMETER_MAP(UsdWorld,
   REGISTER_PARAMETER_MACRO("name", ANARI_STRING, name)
@@ -24,6 +27,7 @@ DEFINE_PARAMETER_MAP(UsdWorld,
   REGISTER_PARAMETER_MACRO("instance", ANARI_ARRAY, instances)
   REGISTER_PARAMETER_MACRO("surface", ANARI_ARRAY, surfaces)
   REGISTER_PARAMETER_MACRO("volume", ANARI_ARRAY, volumes)
+  REGISTER_PARAMETER_MACRO("light", ANARI_ARRAY, lights)
 )
 
 constexpr UsdWorld::ComponentPair UsdWorld::componentParamNames[]; // Workaround for C++14's lack of inlining constexpr arrays
@@ -52,7 +56,8 @@ bool UsdWorld::deferCommit(UsdDevice* device)
 
   if(UsdObjectNotInitialized<InstanceUsdType>(paramData.instances) ||
     UsdObjectNotInitialized<SurfaceUsdType>(paramData.surfaces) || 
-    UsdObjectNotInitialized<VolumeUsdType>(paramData.volumes))
+    UsdObjectNotInitialized<VolumeUsdType>(paramData.volumes) ||
+    UsdObjectNotInitialized<LightUsdType>(paramData.lights))
   {
     return true;
   }
@@ -90,6 +95,7 @@ void UsdWorld::doCommitRefs(UsdDevice* device)
   bool instancesTimeVarying = isTimeVarying(UsdWorldComponents::INSTANCES);
   bool surfacesTimeVarying = isTimeVarying(UsdWorldComponents::SURFACES);
   bool volumesTimeVarying = isTimeVarying(UsdWorldComponents::VOLUMES);
+  bool lightsTimeVarying = isTimeVarying(UsdWorldComponents::LIGHTS);
 
   UsdLogInfo logInfo(device, this, ANARI_WORLD, this->getName());
 
@@ -104,4 +110,9 @@ void UsdWorld::doCommitRefs(UsdDevice* device)
   ManageRefArray<VolumeType, ANARIVolume, UsdVolume>(usdHandle, paramData.volumes, volumesTimeVarying, timeStep,
     volumeHandles, instanceableValues, &UsdBridge::SetVolumeRefs, &UsdBridge::DeleteVolumeRefs,
     usdBridge, logInfo, "UsdGroup commit failed: 'volume' array elements should be of type ANARI_VOLUME");
+
+  // Lights are not instanceable; UsdLight::isInstanceable() always returns false.
+  ManageRefArray<LightType, ANARILight, UsdLight>(usdHandle, paramData.lights, lightsTimeVarying, timeStep,
+    lightHandles, instanceableValues, &UsdBridge::SetLightRefs, &UsdBridge::DeleteLightRefs,
+    usdBridge, logInfo, "UsdWorld commit failed: 'light' array elements should be of type ANARI_LIGHT");
 }

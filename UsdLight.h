@@ -43,6 +43,9 @@ class UsdLight : public UsdBridgedBaseObject<UsdLight, UsdLightData, UsdLightHan
 
     void remove(UsdDevice* device) override;
 
+    // Lights are not instanceable.
+    bool isInstanceable() const { return false; }
+
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdLightComponents::COLOR, "color"),
       ComponentPair(UsdLightComponents::INTENSITY, "intensity"),

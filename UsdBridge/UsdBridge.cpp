@@ -42,6 +42,7 @@ namespace
   const char* const instancePathRp = "instances";
   const char* const surfacePathRp = "surfaces";
   const char* const volumePathRp = "volumes";
+  const char* const lightPathRp = "lights";
   const char* const geometryPathRp = "geometry"; // created in surface parent class
   const char* const fieldPathRp = "spatialfield"; // created in volume parent class
   const char* const materialPathRp = "material"; // created in surface parent class
@@ -412,6 +413,31 @@ bool UsdBridge::CreateVolume(const char * name, UsdVolumeHandle& handle)
   return PrimIsNew(createResult);
 }
 
+bool UsdBridge::CreateLight(const char* name, UsdBridgeLightType lightType, UsdLightHandle& handle)
+{
+  if (!SessionValid) return false;
+
+  BoolEntryPair createResult = Internals->FindOrCreatePrim(lightPathCp, name);
+  UsdBridgePrimCache* cacheEntry = createResult.second;
+  bool cacheExists = createResult.first.second;
+
+  // No manifest or value clip (stages) are created for lights, so we just create the extra prim stage only.
+  if (!cacheExists)
+  {
+#ifdef VALUE_CLIP_RETIMING
+    const UsdStagePair& stagePair = BRIDGE_USDWRITER.FindOrCreatePrimStage(cacheEntry, lightPrimStagePf);
+    UsdStageRefPtr objStage = stagePair.second;
+#else
+    UsdStageRefPtr objStage = BRIDGE_USDWRITER.GetSceneStage();
+#endif
+
+    BRIDGE_USDWRITER.InitializeUsdLight(objStage, cacheEntry->PrimPath, lightType);
+  }
+
+  handle.value = cacheEntry;
+  return PrimIsNew(createResult);
+}
+
 template<typename GeomDataType>
 bool UsdBridge::CreateGeometryTemplate(const char* name, UsdGeometryHandle& handle, const GeomDataType& geomData)
 {
@@ -571,16 +597,6 @@ bool UsdBridgeInternals::CreateWorldIndependentObject(
   return PrimIsNew(createResult); 
 }
 
-bool UsdBridge::CreateLight(const char* name, UsdBridgeLightType lightType, UsdLightHandle& handle)
-{
-  if (!SessionValid) return false;
-
-  auto initializeFunc = [Internals = this->Internals, lightType](UsdStageRefPtr stage, const SdfPath& path)
-    { BRIDGE_USDWRITER.InitializeUsdLight(stage, path, lightType); };
-
-  return Internals->CreateWorldIndependentObject(name, lightPathCp, lightPrimStagePf, initializeFunc, handle);
-}
-
 bool UsdBridge::CreateCamera(const char* name, UsdCameraHandle& handle)
 {
   if (!SessionValid) return false;
@@ -631,6 +647,14 @@ void UsdBridge::DeleteVolume(UsdVolumeHandle handle)
   Internals->FindAndDeletePrim(handle);
 }
 
+void UsdBridge::DeleteLight(UsdLightHandle handle)
+{
+  if (handle.value == nullptr) return;
+
+  // Remove the abstract class
+  Internals->FindAndDeletePrim(handle);
+}
+
 void UsdBridge::DeleteGeometry(UsdGeometryHandle handle)
 {
   if (handle.value == nullptr) return;
@@ -668,18 +692,6 @@ void UsdBridge::DeleteCamera(UsdCameraHandle handle)
   UsdBridgePrimCache* cameraCache = BRIDGE_CACHE.ConvertToPrimCache(handle);
 
   Internals->RemoveRootPrimAndDetach(cameraCache, cameraPathCp);
-
-  // Remove the abstract class 
-  Internals->FindAndDeletePrim(handle);
-}
-
-void UsdBridge::DeleteLight(UsdLightHandle handle)
-{
-  if (handle.value == nullptr) return;
-
-  UsdBridgePrimCache* lightCache = BRIDGE_CACHE.ConvertToPrimCache(handle);
-
-  Internals->RemoveRootPrimAndDetach(lightCache, lightPathCp);
 
   // Remove the abstract class 
   Internals->FindAndDeletePrim(handle);
@@ -740,6 +752,11 @@ void UsdBridge::SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volum
 void UsdBridge::SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep, const int* instanceableValues)
 {
   SetNoClipRefs(group, volumes, numVolumes, volumePathRp, timeVarying, timeStep, instanceableValues);
+}
+
+void UsdBridge::SetLightRefs(UsdWorldHandle world, const UsdLightHandle* lights, uint64_t numLights, bool timeVarying, double timeStep, const int* instanceableValues)
+{
+  SetNoClipRefs(world, lights, numLights, lightPathRp, timeVarying, timeStep, instanceableValues);
 }
 
 void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep)
@@ -909,6 +926,11 @@ void UsdBridge::DeleteVolumeRefs(UsdWorldHandle world, bool timeVarying, double 
 void UsdBridge::DeleteVolumeRefs(UsdGroupHandle group, bool timeVarying, double timeStep)
 {
   DeleteAllRefs(group, volumePathRp, timeVarying, timeStep);
+}
+
+void UsdBridge::DeleteLightRefs(UsdWorldHandle world, bool timeVarying, double timeStep)
+{
+  DeleteAllRefs(world, lightPathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteGeometryRef(UsdSurfaceHandle surface, double timeStep)

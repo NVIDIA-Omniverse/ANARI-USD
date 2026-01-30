@@ -31,13 +31,13 @@ class UsdBridge
     bool CreateGroup(const char* name, UsdGroupHandle& handle);
     bool CreateSurface(const char* name, UsdSurfaceHandle& handle);
     bool CreateVolume(const char* name, UsdVolumeHandle& handle);
+    bool CreateLight(const char* name, UsdBridgeLightType lightType, UsdLightHandle& handle);
     bool CreateGeometry(const char* name, UsdGeometryHandle& handle, const UsdBridgeMeshData& meshData);
     bool CreateGeometry(const char* name, UsdGeometryHandle& handle, const UsdBridgeInstancerData& instancerData);
     bool CreateGeometry(const char* name, UsdGeometryHandle& handle, const UsdBridgeCurveData& curveData);
     bool CreateSpatialField(const char* name, UsdSpatialFieldHandle& handle);
     bool CreateMaterial(const char* name, UsdMaterialHandle& handle);
     bool CreateSampler(const char* name, UsdSamplerHandle& handle, UsdBridgeSamplerData::SamplerType type);
-    bool CreateLight(const char* name, UsdBridgeLightType lightType, UsdLightHandle& handle);
     bool CreateCamera(const char* name, UsdCameraHandle& handle);
   
     void DeleteWorld(UsdWorldHandle handle);
@@ -45,12 +45,12 @@ class UsdBridge
     void DeleteGroup(UsdGroupHandle handle);
     void DeleteSurface(UsdSurfaceHandle handle);
     void DeleteVolume(UsdVolumeHandle handle);
+    void DeleteLight(UsdLightHandle handle);
     void DeleteGeometry(UsdGeometryHandle handle);
     void DeleteSpatialField(UsdSpatialFieldHandle handle);
     void DeleteMaterial(UsdMaterialHandle handle);
     void DeleteSampler(UsdSamplerHandle handle);
     void DeleteCamera(UsdCameraHandle handle);
-    void DeleteLight(UsdLightHandle handle);
   
     void SetInstanceRefs(UsdWorldHandle world, const UsdInstanceHandle* instances, uint64_t numInstances, bool timeVarying, double timeStep, const int* instanceableValues);
     void SetGroupRef(UsdInstanceHandle instance, UsdGroupHandle group, bool timeVarying, double timeStep);
@@ -58,6 +58,7 @@ class UsdBridge
     void SetSurfaceRefs(UsdGroupHandle group, const UsdSurfaceHandle* surfaces, uint64_t numSurfaces, bool timeVarying, double timeStep, const int* instanceableValues);
     void SetVolumeRefs(UsdWorldHandle world, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep, const int* instanceableValues);
     void SetVolumeRefs(UsdGroupHandle group, const UsdVolumeHandle* volumes, uint64_t numVolumes, bool timeVarying, double timeStep, const int* instanceableValues);
+    void SetLightRefs(UsdWorldHandle world, const UsdLightHandle* lights, uint64_t numLights, bool timeVarying, double timeStep, const int* instanceableValues);
     void SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep);
     void SetGeometryMaterialRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, UsdMaterialHandle material, double timeStep, double geomTimeStep, double matTimeStep, std::function<void()> updateBoundParamsFunc = nullptr);
     void SetSpatialFieldRef(UsdVolumeHandle volume, UsdSpatialFieldHandle field, double timeStep, double fieldTimeStep);
@@ -70,6 +71,7 @@ class UsdBridge
     void DeleteSurfaceRefs(UsdGroupHandle group, bool timeVarying, double timeStep);
     void DeleteVolumeRefs(UsdWorldHandle world, bool timeVarying, double timeStep);
     void DeleteVolumeRefs(UsdGroupHandle group, bool timeVarying, double timeStep);
+    void DeleteLightRefs(UsdWorldHandle world, bool timeVarying, double timeStep);
     void DeleteGeometryRef(UsdSurfaceHandle surface, double timeStep);
     void DeleteSpatialFieldRef(UsdVolumeHandle volume, double timeStep);
     void DeleteMaterialRef(UsdSurfaceHandle surface, double timeStep);

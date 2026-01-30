@@ -22,6 +22,7 @@
 // To enable output that usdview can digest (just a single float)
 //#define USDBRIDGE_VOL_FLOAT1_OUTPUT
 
+// TIME_CLIP_STAGES implies VALUE_CLIP_RETIMING (only a few object types supporting timing actually output one stage per valueclip timestep)
 #if defined(TIME_CLIP_STAGES) && !defined(VALUE_CLIP_RETIMING)
 #define VALUE_CLIP_RETIMING
 #endif
