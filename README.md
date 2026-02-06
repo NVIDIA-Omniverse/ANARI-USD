@@ -112,7 +112,9 @@ If you have separate release and debug versions of USD, (or standalone OpenVDB, 
 - Locate the `usd`, `omni_usd_resolver`, `omni_client_library` and `python` folders in the `_build/target-deps` subfolder
 - The location of the previous four subfolders respectively can directly be set as `USD_ROOT_DIR`, `OMNIUSDRESOLVER_ROOT_DIR`, `OMNICLIENT_ROOT_DIR`, `Python3_ROOT_DIR` in the ANARI CMake (superbuild) configuration, as demonstrated in [Building the ANARI USD device](#building-the-anari-usd-device).
 
-#### Building USD Manually #
+#### Building OpenUSD Manually #
+
+(These instructions may be out of date for current versions of OpenUSD)
 
 - The environment variable BOOST_ROOT should *not* be set
 - On Linux:
