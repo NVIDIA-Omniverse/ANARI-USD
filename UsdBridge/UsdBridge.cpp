@@ -313,6 +313,9 @@ bool UsdBridge::OpenSession(UsdBridgeLogCallback logCallback, void* logUserData)
   SessionValid = BRIDGE_USDWRITER.InitializeSession();
   SessionValid = SessionValid && BRIDGE_USDWRITER.OpenSceneStage();
 
+  if(SessionValid)
+    BRIDGE_USDWRITER.CreateParallelEncapsulatingFile();
+
   return SessionValid;
 }
 

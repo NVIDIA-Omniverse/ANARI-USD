@@ -12,6 +12,7 @@
 #include <stdint.h>
 
 class UsdBridge;
+class UsdBridgeParallelController;
 
 struct UsdBridgePrimCache;
 struct UsdBridgeHandle
@@ -373,6 +374,11 @@ struct UsdBridgeSettings
   bool EnablePreviewSurfaceShader = true;   // Output the preview surface shader for materials
   bool EnableMdlShader = true;              // Output the mdl shader for materials
   bool UseDisplayColorOpacity = true;      // When true, use displayColor and displayOpacity primvars instead of a color primvar with alpha channel
+
+  // MPI parallel support (KHR_DATA_PARALLEL_MPI)
+  int MpiRank = -1;                         // MPI rank of this process (-1 = no MPI)
+  int MpiSize = -1;                         // Total number of MPI processes (-1 = no MPI)
+  UsdBridgeParallelController* ParallelController = nullptr; // Abstract controller for collective operations (owned by caller)
 
   // About to be deprecated
   static constexpr bool EnableStTexCoords = false;

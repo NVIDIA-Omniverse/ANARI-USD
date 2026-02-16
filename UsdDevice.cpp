@@ -19,6 +19,8 @@
 #include "UsdCamera.h"
 #include "UsdDevice_queries.h"
 
+#include "UsdBridge/Common/UsdBridgeParallelController.h"
+
 #include <cstdarg>
 #include <cstdio>
 #include <set>
@@ -26,6 +28,10 @@
 #include <sstream>
 #include <algorithm>
 #include <limits>
+
+#ifdef USD_DEVICE_MPI_ENABLED
+#include "UsdMpiController.h"
+#endif
 
 static char deviceName[] = "usd";
 
@@ -50,6 +56,13 @@ public:
       deviceParams.outputMdlShader,
       deviceParams.useDisplayColorOpacity
     };
+
+    if(mpiController)
+    {
+      bridgeSettings.MpiRank = mpiController->GetRank();
+      bridgeSettings.MpiSize = mpiController->GetSize();
+      bridgeSettings.ParallelController = mpiController.get();
+    }
 
     bridge = std::make_unique<UsdBridge>(bridgeSettings);
 
@@ -77,6 +90,9 @@ public:
   bool enableSaving = true;
   std::unique_ptr<UsdBridge> bridge;
   SceneStagePtr externalSceneStage{nullptr};
+
+  // MPI parallel support (KHR_DATA_PARALLEL_MPI)
+  std::unique_ptr<UsdBridgeParallelController> mpiController;
 
   std::set<std::string> uniqueNames;
 };
@@ -223,6 +239,21 @@ void UsdDevice::filterSetParam(
     if(type == ANARI_VOID_POINTER)
       internals->externalSceneStage = const_cast<void *>(mem);
   }
+  else if(strEquals(name, "mpiCommunicator"))
+  {
+    if(type == ANARI_VOID_POINTER)
+    {
+#ifdef USD_DEVICE_MPI_ENABLED
+      if(mem)
+        internals->mpiController = std::make_unique<UsdMpiController>(mem);
+      else
+        internals->mpiController.reset();
+#else
+      reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_OPERATION,
+        "mpiCommunicator parameter set but USD device was not built with MPI support (USD_DEVICE_MPI_ENABLED)");
+#endif
+    }
+  }
   else if (strEquals(name, "usd::enableSaving"))
   {
     if(type == ANARI_BOOL)
@@ -255,6 +286,10 @@ void UsdDevice::filterResetParam(const char * name)
   else if (strEquals(name, "statusCallbackUserData"))
   {
     userSetStatusUserData = nullptr;
+  }
+  else if (strEquals(name, "mpiCommunicator"))
+  {
+    internals->mpiController.reset();
   }
   else if (!strEquals(name, "usd::garbageCollect")
     && !strEquals(name, "usd::removeUnusedNames"))
@@ -302,6 +337,14 @@ void UsdDevice::initializeBridge()
     reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_WARNING, ANARI_STATUS_INVALID_ARGUMENT,
       "Usd Device parameter 'usd::serialize.location' not set, defaulting to './'");
     internals->outputLocation = "./";
+  }
+
+  if(internals->mpiController)
+  {
+    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_INFO, ANARI_STATUS_NO_ERROR,
+      "MPI rank %d/%d: output to '%s'",
+      internals->mpiController->GetRank(), internals->mpiController->GetSize(),
+      internals->outputLocation.c_str());
   }
 
   if (!internals->CreateNewBridge(paramData, &reportBridgeStatus, this))

@@ -46,6 +46,8 @@ public:
   bool InitializeSession();
   void ResetSession();
 
+  void CreateParallelEncapsulatingFile();
+
   bool OpenSceneStage();
   UsdStageRefPtr GetSceneStage() const;
   UsdStageRefPtr GetTimeVarStage(UsdBridgePrimCache* cache
@@ -212,6 +214,7 @@ protected:
   bool EnableSaving = true;
   std::string SceneFileName;
   std::string SessionDirectory;
+  std::string MpiBaseSessionDirectory; // Session directory without rank suffix (only set when MPI active)
   std::string RootName;
   std::string RootClassName;
 #ifdef CUSTOM_PBR_MDL 

@@ -6,6 +6,7 @@
 #include "UsdBridgeMdlStrings.h"
 #include "UsdBridgeUsdWriter_Common.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
+#include "Common/UsdBridgeParallelController.h"
 
 #include <filesystem>
 #include <typeinfo>
@@ -60,6 +61,9 @@ namespace constring
 
   const char* const fullSceneNameBin = "FullScene.usd";
   const char* const fullSceneNameAscii = "FullScene.usda";
+
+  const char* const parallelSceneNameBin = "ParallelScene.usda";
+  const char* const parallelSceneNameAscii = "ParallelScene.usda";
 
   const char* const mdlShaderAssetName = "OmniPBR.mdl";
   const char* const mdlSupportAssetName = "nvidia/support_definitions.mdl";
@@ -201,7 +205,15 @@ bool UsdBridgeUsdWriter::CreateDirectories()
 
   //Connect->RemoveFolder(SessionDirectory.c_str(), true, true);
   bool folderMayExist = !Settings.CreateNewSession;
-  
+
+  // When MPI is active, create the shared session base directory first (Session_N/),
+  // then the rank-specific subdirectory (Session_N/rank_R/).
+  // CreateFolder only creates one level, so the parent must exist.
+  if(!MpiBaseSessionDirectory.empty())
+  {
+    valid = valid && Connect->CreateFolder(MpiBaseSessionDirectory.c_str(), true, true);
+  }
+
   valid = valid && Connect->CreateFolder(SessionDirectory.c_str(), true, folderMayExist);
 
 #ifdef VALUE_CLIP_RETIMING
@@ -288,8 +300,33 @@ bool UsdBridgeUsdWriter::InitializeSession()
 
   Connect->Initialize(ConnectionSettings, this->LogObject);
 
-  SessionNumber = FindSessionNumber();
-  SessionDirectory = constring::sessionPf + std::to_string(SessionNumber) + "/";
+  if(Settings.ParallelController)
+  {
+    // Only rank 0 discovers the session number through the Connection
+    int sessionNr = -1;
+    if(Settings.ParallelController->GetRank() == 0)
+      sessionNr = FindSessionNumber();
+
+    // Broadcast from rank 0 to all ranks
+    Settings.ParallelController->BroadcastInt(sessionNr);
+    SessionNumber = sessionNr;
+  }
+  else
+  {
+    SessionNumber = FindSessionNumber();
+  }
+
+  std::string sessionBase = constring::sessionPf + std::to_string(SessionNumber) + "/";
+
+  if(Settings.MpiRank >= 0 && Settings.MpiSize > 0)
+  {
+    MpiBaseSessionDirectory = sessionBase;
+    SessionDirectory = sessionBase + "rank_" + std::to_string(Settings.MpiRank) + "/";
+  }
+  else
+  {
+    SessionDirectory = sessionBase;
+  }
 
   bool valid = true;
 
@@ -311,6 +348,50 @@ void UsdBridgeUsdWriter::ResetSession()
 {
   this->SessionNumber = -1;
   this->SceneStage = nullptr;
+  this->MpiBaseSessionDirectory.clear();
+}
+
+void UsdBridgeUsdWriter::CreateParallelEncapsulatingFile()
+{
+  if(Settings.MpiRank != 0 || Settings.MpiSize <= 0)
+    return;
+
+  bool binary = Settings.BinaryOutput;
+  const char* sceneFileName = binary ? constring::fullSceneNameBin : constring::fullSceneNameAscii;
+
+  // The encapsulating file sits in the session base directory (alongside rank subdirs)
+  std::string encFileName = MpiBaseSessionDirectory + (binary ? constring::parallelSceneNameBin : constring::parallelSceneNameAscii);
+  const char* absEncFilePath = Connect->GetUrl(encFileName.c_str());
+
+  UsdStageRefPtr encStage = UsdStage::CreateNew(absEncFilePath);
+  if(!encStage)
+  {
+    UsdBridgeLogMacro(this->LogObject, UsdBridgeLogLevel::ERR,
+      "Failed to create parallel encapsulating USD file at " << absEncFilePath);
+    return;
+  }
+
+  SdfPath rootPath("/Root");
+  UsdPrim rootPrim = encStage->DefinePrim(rootPath);
+  encStage->SetDefaultPrim(rootPrim);
+
+  for(int rank = 0; rank < Settings.MpiSize; ++rank)
+  {
+    // Reference path is relative from encapsulating file location (same directory)
+    std::string rankRelPath = "./rank_" + std::to_string(rank) + "/" + sceneFileName;
+
+    std::string rankPrimName = "rank_" + std::to_string(rank);
+    SdfPath rankPrimPath = rootPath.AppendChild(TfToken(rankPrimName));
+
+    UsdPrim rankPrim = encStage->DefinePrim(rankPrimPath);
+    rankPrim.GetReferences().AddReference(rankRelPath, SdfPath("/Root"));
+  }
+
+  encStage->Save();
+
+  UsdBridgeLogMacro(this->LogObject, UsdBridgeLogLevel::STATUS,
+    "Created parallel encapsulating USD file at " << absEncFilePath
+    << " referencing " << Settings.MpiSize << " ranks");
 }
 
 bool UsdBridgeUsdWriter::OpenSceneStage()

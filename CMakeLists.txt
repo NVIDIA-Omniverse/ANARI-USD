@@ -183,6 +183,15 @@ target_link_libraries(anari_library_usd
 	PRIVATE anari::helium UsdBridge
 )
 
+option(USD_DEVICE_MPI_ENABLED "Enable MPI support for parallel USD output (KHR_DATA_PARALLEL_MPI)" OFF)
+if(USD_DEVICE_MPI_ENABLED)
+  find_package(MPI REQUIRED COMPONENTS CXX)
+  target_sources(anari_library_usd PRIVATE UsdMpiController.cpp)
+  target_compile_definitions(anari_library_usd PRIVATE -DUSD_DEVICE_MPI_ENABLED)
+  target_link_libraries(anari_library_usd PRIVATE MPI::MPI_CXX)
+  message(STATUS "MPI support enabled for USD device")
+endif()
+
 option(USD_DEVICE_BUILD_EXAMPLES "Build USD device examples" OFF)
 if(USD_DEVICE_BUILD_EXAMPLES)
   add_subdirectory(examples)

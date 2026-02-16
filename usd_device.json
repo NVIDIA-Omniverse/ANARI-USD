@@ -23,6 +23,7 @@
             "khr_sampler_image3d",
             "khr_spatial_field_structured_regular",
             "khr_volume_transfer_function1d",
+            "khr_data_parallel_mpi",
             "usd_device_features"
         ]
     }
