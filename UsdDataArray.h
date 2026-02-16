@@ -100,8 +100,8 @@ class UsdDataArray : public UsdParameterizedBaseObject<UsdDataArray, UsdDataArra
     bool CheckFormatting(UsdDevice* device);
 
     // Ref manipulation on arrays of anariobjects
-    void incRef(const ANARIObject* anariObjects, uint64_t numAnariObjects);
-    void decRef(const ANARIObject* anariObjects, uint64_t numAnariObjects);
+    void incRef(ANARIObject* anariObjects, uint64_t numAnariObjects);
+    void decRef(ANARIObject* anariObjects, uint64_t numAnariObjects);
 
     // Private memory management
     void allocPrivateData();
@@ -113,7 +113,7 @@ class UsdDataArray : public UsdParameterizedBaseObject<UsdDataArray, UsdDataArra
     void CreateMappedObjectCopy();
     void TransferAndRemoveMappedObjectCopy();
 
-    const void* data = nullptr;
+    void* data = nullptr;
     ANARIMemoryDeleter dataDeleter = nullptr;
     const void* deleterUserData = nullptr;
     ANARIDataType type;
@@ -121,7 +121,7 @@ class UsdDataArray : public UsdParameterizedBaseObject<UsdDataArray, UsdDataArra
     size_t dataSizeInBytes;
     bool isPrivate;
 
-    const void* mappedObjectCopy;
+    void* mappedObjectCopy;
 
 #ifdef CHECK_MEMLEAKS
     UsdDevice* allocDevice;

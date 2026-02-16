@@ -11,7 +11,7 @@ DEFINE_PARAMETER_MAP(UsdDataArray,
   REGISTER_PARAMETER_MACRO("usd::name", ANARI_STRING, usdName)
 )
 
-#define TO_OBJ_PTR reinterpret_cast<const ANARIObject*>
+#define TO_OBJ_PTR reinterpret_cast<ANARIObject*>
 
 UsdDataArray::UsdDataArray(const void *appMemory,
   ANARIMemoryDeleter deleter,
@@ -26,7 +26,7 @@ UsdDataArray::UsdDataArray(const void *appMemory,
   UsdDevice* device
 )
   : UsdParameterizedBaseObject<UsdDataArray, UsdDataArrayParams>(ANARI_ARRAY)
-  , data(appMemory)
+  , data(const_cast<void*>(appMemory))
   , dataDeleter(deleter)
   , deleterUserData(userData)
   , type(dataType)
@@ -112,7 +112,7 @@ void * UsdDataArray::map(UsdDevice * device)
     CreateMappedObjectCopy();
   }
 
-  return const_cast<void *>(data);
+  return data;
 }
 
 void UsdDataArray::unmap(UsdDevice * device)
@@ -172,21 +172,21 @@ bool UsdDataArray::CheckFormatting(UsdDevice* device)
   return true;
 }
 
-void UsdDataArray::incRef(const ANARIObject* anariObjects, uint64_t numAnariObjects)
+void UsdDataArray::incRef(ANARIObject* anariObjects, uint64_t numAnariObjects)
 {
-  for (int i = 0; i < numAnariObjects; ++i)
+  for (uint64_t i = 0; i < numAnariObjects; ++i)
   {
-    const UsdBaseObject* baseObj = (reinterpret_cast<const UsdBaseObject*>(anariObjects[i]));
+    UsdBaseObject* baseObj = reinterpret_cast<UsdBaseObject*>(anariObjects[i]);
     if (baseObj)
       baseObj->refInc(helium::RefType::INTERNAL);
   }
 }
 
-void UsdDataArray::decRef(const ANARIObject* anariObjects, uint64_t numAnariObjects)
+void UsdDataArray::decRef(ANARIObject* anariObjects, uint64_t numAnariObjects)
 {
-  for (int i = 0; i < numAnariObjects; ++i)
+  for (uint64_t i = 0; i < numAnariObjects; ++i)
   {
-    const UsdBaseObject* baseObj = (reinterpret_cast<const UsdBaseObject*>(anariObjects[i]));
+    UsdBaseObject* baseObj = reinterpret_cast<UsdBaseObject*>(anariObjects[i]);
 #ifdef CHECK_MEMLEAKS
     allocDevice->logObjDeallocation(baseObj);
 #endif
@@ -212,7 +212,7 @@ void UsdDataArray::allocPrivateData()
 
 void UsdDataArray::freePrivateData(bool mappedCopy)
 {
-  const void*& memToFree = mappedCopy ? mappedObjectCopy : data;
+  void*& memToFree = mappedCopy ? mappedObjectCopy : data;
 
 #ifdef CHECK_MEMLEAKS
   allocDevice->logRawDeallocation(memToFree);
@@ -238,7 +238,7 @@ void UsdDataArray::publicToPrivateData()
   const void* appMemory = data;
   allocPrivateData();
 
-  std::memcpy(const_cast<void *>(data), appMemory, dataSizeInBytes); // In case of object array, Refcount 'transfers' to the copy (splits off user-managed public refcount)
+  std::memcpy(data, appMemory, dataSizeInBytes); // In case of object array, Refcount 'transfers' to the copy (splits off user-managed public refcount)
 
   // Delete appMemory if appropriate
   freePublicData(appMemory);
@@ -252,30 +252,30 @@ void UsdDataArray::CreateMappedObjectCopy()
   allocPrivateData();
 
   // Transfer contents over to new memory, keep old one for managing references later on.
-  std::memcpy(const_cast<void *>(data), mappedObjectCopy, dataSizeInBytes);
+  std::memcpy(data, mappedObjectCopy, dataSizeInBytes);
 }
 
 void UsdDataArray::TransferAndRemoveMappedObjectCopy()
 {
-  const ANARIObject* newAnariObjects = TO_OBJ_PTR(data);
-  const ANARIObject* oldAnariObjects = TO_OBJ_PTR(mappedObjectCopy);
+  ANARIObject* newAnariObjects = TO_OBJ_PTR(data);
+  ANARIObject* oldAnariObjects = TO_OBJ_PTR(mappedObjectCopy);
   uint64_t numAnariObjects = layout.numItems1;
 
   // First, increase reference counts of all objects that different in the new object array
-  for (int i = 0; i < numAnariObjects; ++i)
+  for (uint64_t i = 0; i < numAnariObjects; ++i)
   {
-    const UsdBaseObject* newObj = (reinterpret_cast<const UsdBaseObject*>(newAnariObjects[i]));
-    const UsdBaseObject* oldObj = (reinterpret_cast<const UsdBaseObject*>(oldAnariObjects[i]));
+    UsdBaseObject* newObj = reinterpret_cast<UsdBaseObject*>(newAnariObjects[i]);
+    UsdBaseObject* oldObj = reinterpret_cast<UsdBaseObject*>(oldAnariObjects[i]);
 
     if (newObj != oldObj && newObj)
       newObj->refInc(helium::RefType::INTERNAL);
   }
 
   // Then, decrease reference counts of all objects that are different in the original array (which will delete those that not referenced anymore)
-  for (int i = 0; i < numAnariObjects; ++i)
+  for (uint64_t i = 0; i < numAnariObjects; ++i)
   {
-    const UsdBaseObject* newObj = (reinterpret_cast<const UsdBaseObject*>(newAnariObjects[i]));
-    const UsdBaseObject* oldObj = (reinterpret_cast<const UsdBaseObject*>(oldAnariObjects[i]));
+    UsdBaseObject* newObj = reinterpret_cast<UsdBaseObject*>(newAnariObjects[i]);
+    UsdBaseObject* oldObj = reinterpret_cast<UsdBaseObject*>(oldAnariObjects[i]);
 
     if (newObj != oldObj && oldObj)
     {
