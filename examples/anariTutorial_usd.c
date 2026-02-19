@@ -92,7 +92,7 @@ float color[] = { 0.0f,
   1.0f };
 float opacities[] = {
   0.5f,
-  1.0f};
+  0.3f};
 float texcoord[] = {
   0.0f,
   0.0f,

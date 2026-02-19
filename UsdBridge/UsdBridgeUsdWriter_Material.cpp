@@ -354,9 +354,11 @@ namespace
     attributeReader.CreateImplementationSourceAttr(VtValue(UsdBridgeTokens->sourceAsset));
     attributeReader.SetSourceAsset(SdfAssetPath(constring::mdlSupportAssetName), UsdBridgeTokens->mdl);
 
-    // Only set subidentifier if provided
+    // Set subidentifier: use provided readerId, or default to data_lookup_float (matching the default Float output type)
     if (!readerId.IsEmpty())
       attributeReader.SetSourceAssetSubIdentifier(readerId, UsdBridgeTokens->mdl);
+    else
+      attributeReader.SetSourceAssetSubIdentifier(UsdBridgeTokens->data_lookup_float, UsdBridgeTokens->mdl);
 
     // Input name and output type are tightly coupled; output type cannot be timevarying, so neither can the name
     attributeReader.CreateInput(UsdBridgeTokens->name, SdfValueTypeNames->String);
