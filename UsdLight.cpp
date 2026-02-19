@@ -69,8 +69,8 @@ void UsdLight::CopyParameters(const UsdLightData& paramData,UsdBridgePointLightD
 
   lightData.Color = paramData.color;
   lightData.Intensity = (paramData.intensity == -1.0f) ?
-    ((paramData.power == -1.0f) ? 1.0f : paramData.power/(4*M_PI))
-    : paramData.irradiance;
+    ((paramData.power == -1.0f) ? paramData.irradiance : paramData.power/(4*M_PI))
+    : paramData.intensity;
   lightData.Position = paramData.position;
 
   lightData.TimeVarying = DMI::ALL

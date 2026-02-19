@@ -36,7 +36,7 @@ UsdCamera::~UsdCamera()
 {
 #ifdef OBJECT_LIFETIME_EQUALS_USD_LIFETIME
   if(cachedBridge)
-    cachedBridge->DeleteGroup(usdHandle);
+    cachedBridge->DeleteCamera(usdHandle);
 #endif
 }
 

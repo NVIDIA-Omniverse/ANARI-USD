@@ -938,9 +938,12 @@ namespace
       ShadeGraphTypeConversionNodeContext conversionContext(
         sceneStage, matPrimPath, GetAttributeReaderPathPf<PreviewSurface>(dataMemberId).GetString().c_str());
 
+      // Connect the output of the uniform reader to the input (attribute) of the main shader (and possible conversion nodes)
       const TfToken& outputToken = PreviewSurface ? UsdBridgeTokens->result : UsdBridgeTokens->out;
       UpdateShaderInput_ShadeNode<PreviewSurface>(uniformShadPrim, timeVarShadPrim, inputToken, uniformReaderPrim, outputToken, conversionContext);
 
+      // If there are any side effects of connecting the reader to the attribute (such as an opacity channel which is connected alongside),
+      // do it here.
       UpdateShaderIndirectInput<PreviewSurface>(sceneStage, timeVarStage,
         matPrimPath, boundGeomPrimvars, attribNameToken, uniformReaderPrim, dataMemberId, writer->Settings);
     }
@@ -1498,6 +1501,35 @@ namespace
 
     UpdateAttributeReaderName<PreviewSurface>(uniformAttribReader, newNameToken);
     UpdateAttributeReaderOutput<PreviewSurface>(uniformAttribReader, boundGeomPrimvars, newNameToken);
+
+    // Re-establish the main shader connection with the (potentially updated) reader output type,
+    // so that InsertMdlShaderTypeConversionNodes can create appropriate conversion nodes.
+    // No need to look up the timevar shader prim; UpdateShaderInput_ShadeNode only uses it
+    // for clearing timevar values, which is has already been performed in UpdateShaderInput().
+    UsdShadeShader uniformTargetPrim;
+    TfToken inputToken;
+
+    if(!PreviewSurface && dataMemberId == DMI::OPACITY)
+    {
+      SdfPath opMulPrimPath = matPrimPath.AppendPath(SdfPath(constring::mdlOpacityMulPrimPf));
+      uniformTargetPrim = UsdShadeShader::Get(sceneStage, opMulPrimPath);
+      inputToken = UsdBridgeTokens->b;
+    }
+    else
+    {
+      SdfPath shadPrimPath = matPrimPath.AppendPath(SdfPath(
+        PreviewSurface ? constring::psShaderPrimPf : constring::mdlShaderPrimPf));
+      uniformTargetPrim = UsdShadeShader::Get(sceneStage, shadPrimPath);
+      inputToken = GetMaterialShaderInputToken<PreviewSurface>(dataMemberId);
+    }
+
+    ShadeGraphTypeConversionNodeContext conversionContext(
+      sceneStage, matPrimPath, GetAttributeReaderPathPf<PreviewSurface>(dataMemberId).GetString().c_str());
+
+    const TfToken& outputToken = PreviewSurface ? UsdBridgeTokens->result : UsdBridgeTokens->out;
+    UpdateShaderInput_ShadeNode<PreviewSurface>(uniformTargetPrim, UsdShadeShader(), inputToken,
+      uniformAttribReader, outputToken, conversionContext);
+
     UpdateShaderIndirectInput<PreviewSurface>(sceneStage, timeVarStage,
       matPrimPath, boundGeomPrimvars, newNameToken, uniformAttribReader, dataMemberId, settings);
   }

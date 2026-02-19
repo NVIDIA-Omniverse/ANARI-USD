@@ -180,8 +180,7 @@ static void reportBridgeStatus(UsdBridgeLogLevel level, void* device, const char
 {
   ANARIStatusSeverity severity = UsdBridgeLogLevelToAnariSeverity(level);
 
-  va_list arglist;
-  ((UsdDevice*)device)->reportStatus(nullptr, ANARI_UNKNOWN, severity, ANARI_STATUS_NO_ERROR, message, arglist);
+  ((UsdDevice*)device)->reportStatus(nullptr, ANARI_UNKNOWN, severity, ANARI_STATUS_NO_ERROR, "%s", message);
 }
 
 void UsdDevice::reportStatus(void* source,
@@ -748,7 +747,7 @@ void UsdDevice::clearResourceStringList()
 void UsdDevice::removeFromVolumeList(UsdVolume* volume)
 {
   auto it = std::find(volumeList.begin(), volumeList.end(), volume);
-  if(it == volumeList.end())
+  if(it != volumeList.end())
   {
     *it = volumeList.back();
     volumeList.pop_back();

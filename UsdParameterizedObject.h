@@ -264,14 +264,14 @@ protected:
           std::memcpy(destAddress, srcAddress, numBytes);
 
           if(isRefCounted(srcType))
-            safeRefInc(destAddress, destType, true);
+            safeRefInc(destAddress, srcType, true);
         }
 
         // If a string object has been created, decrease its public refcount (1 at creation)
         if (sharedStr)
         {
           assert(sharedStr->useCount() == 2); // Single public and internal reference
-          sharedStr->refDec();
+          sharedStr->refDec(helium::RefType::PUBLIC);
         }
 
         // Update the type for multitype params (so far only data has been updated)

@@ -120,7 +120,7 @@ static std::vector<float> generateVoxels(
     for (int j = 0; j < dims[1]; j++) {
       for (int i = 0; i < dims[0]; i++) {
         // index in array
-        size_t index = size_t(k) * size_t(dims[2]) * size_t(dims[1])
+        size_t index = size_t(k) * size_t(dims[1]) * size_t(dims[0])
             + size_t(j) * size_t(dims[0]) + size_t(i);
 
         // compute volume value

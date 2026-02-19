@@ -206,7 +206,10 @@ class UsdBridgedBaseObject : public UsdParameterizedBaseObject<T, D>
     {
       UsdBridge* usdBridge = device->getUsdBridge();
       if(usdBridge && usdHandle.value)
+      {
         (usdBridge->*func)(usdHandle);
+        usdHandle.value = nullptr; // Prevent dangling pointer after prim cache removal
+      }
     }
 
     const char* uniqueName;

@@ -570,9 +570,15 @@ ANARIInstance createGlyphsInstance(ANARIDevice dev, TestParameters_t testParams,
 
 void changeAndRender(ANARIDevice dev, ANARIArray1D positionArray, ANARIFrame frame)
 {
+  float origPositions[3];
   float* positions = (float*)(anariMapArray(dev, positionArray));
   if(positions)
   {
+    // Save original values
+    origPositions[0] = positions[0];
+    origPositions[1] = positions[1];
+    origPositions[2] = positions[2];
+
     // Change one element to something recognizable
     positions[0] = 123.0f;
     positions[1] = 456.0f;
@@ -582,6 +588,16 @@ void changeAndRender(ANARIDevice dev, ANARIArray1D positionArray, ANARIFrame fra
 
   anariRenderFrame(dev, frame);
   anariFrameReady(dev, frame, ANARI_WAIT);
+
+  // Restore original position values so consecutive test runs are unaffected
+  positions = (float*)(anariMapArray(dev, positionArray));
+  if(positions)
+  {
+    positions[0] = origPositions[0];
+    positions[1] = origPositions[1];
+    positions[2] = origPositions[2];
+  }
+  anariUnmapArray(dev, positionArray);
 }
 
 void doTest(TestParameters_t testParams)

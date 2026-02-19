@@ -56,7 +56,7 @@ UsdSampler::UsdSampler(const char* name, const char* type, UsdDevice* device)
   else if (strEquals(type, "image3D"))
     samplerType = SAMPLER_3D;
   else
-    device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdSampler '%s' construction failed: type %s not supported", getName(), name);
+    device->reportStatus(this, ANARI_SAMPLER, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT, "UsdSampler '%s' construction failed: type %s not supported", getName(), type);
 }
 
 UsdSampler::~UsdSampler()

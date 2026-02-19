@@ -36,8 +36,8 @@ class UsdLight : public UsdBridgedBaseObject<UsdLight, UsdLightData, UsdLightHan
 {
   public:
     UsdLight(
-      const char* type,
       const char* name,
+      const char* type,
       UsdDevice* device);
     ~UsdLight();
 
