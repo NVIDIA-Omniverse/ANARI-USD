@@ -891,8 +891,9 @@ int main(int argc, const char **argv)
   testParams.useVertexColors = 0;
   doTest(testParams);
 
-  // Using indices (and vertex colors)
+  // Using glyph mesh (and vertex colors)
   testParams.useGlyphMesh = 1;
+  testParams.useVertexColors = 1;
   doTest(testParams);
 
   return 0;
