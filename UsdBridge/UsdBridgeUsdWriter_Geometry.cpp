@@ -110,6 +110,29 @@ namespace
   }
 
   template<typename GeomDataType>
+  void CreateUsdGeomDisplayColorOpacityPrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const UsdBridgeSettings& settings, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
+  {
+    using DMI = typename GeomDataType::DataMemberId;
+
+    bool timeVarChecked = true;
+    if(timeEval)
+    {
+      timeVarChecked = timeEval->IsTimeVarying(DMI::COLORS);
+    }
+
+    if(timeVarChecked)
+    {
+      primvarApi.CreatePrimvar(UsdBridgeTokens->displayColor, SdfValueTypeNames->Color3fArray);
+      primvarApi.CreatePrimvar(UsdBridgeTokens->displayOpacity, SdfValueTypeNames->FloatArray);
+    }
+    else
+    {
+      primvarApi.RemovePrimvar(UsdBridgeTokens->displayColor);
+      primvarApi.RemovePrimvar(UsdBridgeTokens->displayOpacity);
+    }
+  }
+
+  template<typename GeomDataType>
   void CreateUsdGeomTexturePrimvars(UsdGeomPrimvarsAPI& primvarApi, const GeomDataType& geomData, const UsdBridgeSettings& settings, const TimeEvaluator<GeomDataType>* timeEval = nullptr)
   {
     using DMI = typename GeomDataType::DataMemberId;
@@ -219,7 +242,13 @@ namespace
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::ORIENTATIONS, CreateNormalsAttr, UsdBridgeTokens->normals);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::SCALES, CreateWidthsAttr, UsdBridgeTokens->widths);
 
-    CreateUsdGeomColorPrimvars(primvarApi, instancerData, settings, timeEval);
+    if(!settings.UseDisplayColorOpacity)
+      CreateUsdGeomColorPrimvars(primvarApi, instancerData, settings, timeEval);
+    else
+    {
+      CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::COLORS, CreateDisplayColorAttr, UsdBridgeTokens->displayColor);
+      CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::COLORS, CreateDisplayOpacityAttr, UsdBridgeTokens->displayOpacity);
+    }
 
     if(settings.EnableStTexCoords)
       CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
@@ -243,7 +272,10 @@ namespace
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::ORIENTATIONS, CreateOrientationsAttr, UsdBridgeTokens->orientations);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::SCALES, CreateScalesAttr, UsdBridgeTokens->scales);
 
-    CreateUsdGeomColorPrimvars(primvarApi, instancerData, settings, timeEval);
+    if(!settings.UseDisplayColorOpacity)
+      CreateUsdGeomColorPrimvars(primvarApi, instancerData, settings, timeEval);
+    else
+      CreateUsdGeomDisplayColorOpacityPrimvars(primvarApi, instancerData, settings, timeEval);
 
     if(settings.EnableStTexCoords)
       CreateUsdGeomTexturePrimvars(primvarApi, instancerData, settings, timeEval);
@@ -270,7 +302,13 @@ namespace
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::NORMALS, CreateNormalsAttr, UsdBridgeTokens->normals);
     CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::SCALES, CreateWidthsAttr, UsdBridgeTokens->widths);
 
-    CreateUsdGeomColorPrimvars(primvarApi, curveData, settings, timeEval);
+    if(!settings.UseDisplayColorOpacity)
+      CreateUsdGeomColorPrimvars(primvarApi, curveData, settings, timeEval);
+    else
+    {
+      CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::COLORS, CreateDisplayColorAttr, UsdBridgeTokens->displayColor);
+      CREATE_REMOVE_TIMEVARYING_ATTRIB_QUALIFIED(DMI::COLORS, CreateDisplayOpacityAttr, UsdBridgeTokens->displayOpacity);
+    }
 
     if(settings.EnableStTexCoords)
       CreateUsdGeomTexturePrimvars(primvarApi, curveData, settings, timeEval);
