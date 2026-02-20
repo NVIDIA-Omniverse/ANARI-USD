@@ -24,7 +24,8 @@ struct UsdFrameData
   double time = 0.0;
 };
 
-class UsdFrame : public UsdBridgedBaseObject<UsdFrame, UsdFrameData, UsdFrameHandle>
+// This is a bridged object, but it does not have a handle associated to a prim.
+class UsdFrame : public UsdBridgedBaseObject<UsdFrame, UsdFrameData, UsdBridgeHandle>
 {
   public:
     UsdFrame(const char* name, UsdDevice* device);
@@ -51,7 +52,7 @@ class UsdFrame : public UsdBridgedBaseObject<UsdFrame, UsdFrameData, UsdFrameHan
 
     char* ReserveBuffer(ANARIDataType format);
 
-    UsdBridge* cachedBridge = nullptr;
+    UsdBridge* frameBridge = nullptr;
 
     // Registration state - frame is registered on first commit
     void* registeredFrameState = nullptr;

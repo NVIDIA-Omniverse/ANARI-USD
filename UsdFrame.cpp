@@ -31,14 +31,14 @@ DEFINE_PARAMETER_MAP(UsdFrame,
 UsdFrame::UsdFrame(const char* name, UsdDevice* device)
   : BridgedBaseObjectType(ANARI_FRAME, name, device)
 {
-  cachedBridge = device->getUsdBridge();
+  frameBridge = device->getUsdBridge();
 }
 
 UsdFrame::~UsdFrame()
 {
   if (registeredFrameState)
   {
-    cachedBridge->UnregisterFrame(getName());
+    frameBridge->UnregisterFrame(getName());
   }
   delete[] mappedColorMem;
   delete[] mappedDepthMem;
@@ -48,7 +48,7 @@ void UsdFrame::remove(UsdDevice* device)
 {
   if (registeredFrameState)
   {
-    cachedBridge->UnregisterFrame(getName());
+    frameBridge->UnregisterFrame(getName());
     registeredFrameState = nullptr;
   }
 }
@@ -60,13 +60,15 @@ bool UsdFrame::deferCommit(UsdDevice* device)
 
 bool UsdFrame::doCommitData(UsdDevice* device)
 {
-  if (!cachedBridge)
+  if (!frameBridge)
+    frameBridge = device->getUsdBridge();
+  if (!frameBridge)
     return false;
 
   // The name of this frame determines the renderproduct prim registration in USD.
   // Check if name changed or first registration
   const char* frameName = getName();
-  void* currentFrameState = cachedBridge->GetFrameState(frameName);
+  void* currentFrameState = frameBridge->GetFrameState(frameName);
 
   if (registeredFrameState == nullptr || registeredFrameState != currentFrameState)
   {
@@ -74,11 +76,11 @@ bool UsdFrame::doCommitData(UsdDevice* device)
     if (registeredFrameState)
     {
       // Name changed - unregister old frame by its state pointer
-      cachedBridge->UnregisterFrameByState(registeredFrameState);
+      frameBridge->UnregisterFrameByState(registeredFrameState);
     }
 
-    cachedBridge->RegisterFrame(frameName);
-    registeredFrameState = cachedBridge->GetFrameState(frameName);
+    frameBridge->RegisterFrame(frameName);
+    registeredFrameState = frameBridge->GetFrameState(frameName);
   }
 
   return false;
@@ -101,7 +103,7 @@ const void* UsdFrame::mapBuffer(
     if (registeredFrameState)
     {
       UsdBridgeType usdBridgeFormat;
-      if(void* deviceBuffer = cachedBridge->MapFrame(getName(), usdBridgeFormat))
+      if(void* deviceBuffer = frameBridge->MapFrame(getName(), usdBridgeFormat))
       {
         *pixelType = (usdBridgeFormat == UsdBridgeType::UCHAR4) ?
           ANARI_UFIXED8_VEC4 : UsdBridgeToAnariType(usdBridgeFormat);
@@ -130,7 +132,7 @@ void UsdFrame::unmapBuffer(const char *channel, UsdDevice* device)
 {
   if (registeredFrameState)
   {
-    cachedBridge->UnmapFrame(getName());
+    frameBridge->UnmapFrame(getName());
   }
 
   if (strEquals(channel, "channel.color"))
@@ -154,9 +156,11 @@ char* UsdFrame::ReserveBuffer(ANARIDataType format)
 
 void UsdFrame::saveUsd(UsdDevice* device)
 {
-  if (cachedBridge)
+  if (!frameBridge)
+    frameBridge = device->getUsdBridge();
+  if (frameBridge)
   {
-    cachedBridge->SaveScene();
+    frameBridge->SaveScene();
   }
 }
 
@@ -168,7 +172,9 @@ void UsdFrame::renderFrame(UsdDevice* device)
   if(UsdObjectNotInitialized<CameraUsdType>(paramData.camera))
     return;
 
-  if (!cachedBridge || !registeredFrameState)
+  if (!frameBridge)
+    frameBridge = device->getUsdBridge();
+  if (!frameBridge || !registeredFrameState)
     return;
 
   const char* frameName = getName();
@@ -179,18 +185,18 @@ void UsdFrame::renderFrame(UsdDevice* device)
   {
     hydraRendererName = paramData.renderer->getHydraRendererName();
   }
-  cachedBridge->SetFrameRenderer(frameName, hydraRendererName);
+  frameBridge->SetFrameRenderer(frameName, hydraRendererName);
 
   // Set world path if world is provided and has a valid handle
   if(!UsdObjectNotInitialized<WorldUsdType>(paramData.world))
   {
     UsdWorldHandle worldHandle = paramData.world->getUsdHandle();
-    cachedBridge->SetFrameWorld(frameName, worldHandle);
+    frameBridge->SetFrameWorld(frameName, worldHandle);
   }
 
   // Set camera
   UsdCameraHandle cameraHandle = paramData.camera->getUsdHandle();
-  cachedBridge->SetFrameCamera(frameName, cameraHandle);
+  frameBridge->SetFrameCamera(frameName, cameraHandle);
 
   // Cache the renderbuffer properties belonging to this frame
   renderBufferSize = paramData.size;
@@ -198,7 +204,7 @@ void UsdFrame::renderFrame(UsdDevice* device)
   renderBufferDepthFormat = paramData.depth;
 
   // Render (to a renderbuffer)
-  cachedBridge->RenderFrame(frameName, paramData.size.Data[0], paramData.size.Data[1], paramData.time);
+  frameBridge->RenderFrame(frameName, paramData.size.Data[0], paramData.size.Data[1], paramData.time);
 }
 
 bool UsdFrame::frameReady(ANARIWaitMask mask, UsdDevice* device)
@@ -206,5 +212,5 @@ bool UsdFrame::frameReady(ANARIWaitMask mask, UsdDevice* device)
   if (!registeredFrameState)
     return true;
 
-  return cachedBridge->FrameReady(getName(), mask == ANARI_WAIT);
+  return frameBridge->FrameReady(getName(), mask == ANARI_WAIT);
 }

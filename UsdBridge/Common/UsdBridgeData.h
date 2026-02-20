@@ -31,7 +31,6 @@ struct UsdShaderHandle : public UsdBridgeHandle {};
 struct UsdMaterialHandle : public UsdBridgeHandle {};
 struct UsdLightHandle : public UsdBridgeHandle {};
 struct UsdCameraHandle : public UsdBridgeHandle {};
-struct UsdFrameHandle : public UsdBridgeHandle {};
 
 enum class UsdBridgeType
 {
