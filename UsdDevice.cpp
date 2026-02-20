@@ -1,4 +1,4 @@
-﻿// Copyright 2020 The Khronos Group
+// Copyright 2020 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdDevice.h"
@@ -681,6 +681,8 @@ void UsdDevice::addToCommitList(UsdBaseObject* object, bool commitData)
       [&object](const CommitListType& entry) -> bool { return entry.first.ptr == object; });
     if(it == commitList.end())
       commitList.emplace_back(CommitListType(object, commitData));
+    else
+      it->second = it->second && commitData;
   }
 }
 
