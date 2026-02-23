@@ -9,6 +9,7 @@
 #include "UsdBridgeRenderContext.h"
 #include "UsdRenderManager.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
+#include "Common/UsdBridgeParallelController.h"	
 
 #include <string>
 #include <memory>
@@ -312,6 +313,11 @@ bool UsdBridge::OpenSession(UsdBridgeLogCallback logCallback, void* logUserData)
 
   SessionValid = BRIDGE_USDWRITER.InitializeSession();
   SessionValid = SessionValid && BRIDGE_USDWRITER.OpenSceneStage();
+
+  // Ensure all ranks have created their scene stages before rank 0
+  // writes the encapsulating file that references them.
+  if(SessionValid && BRIDGE_USDWRITER.Settings.ParallelController)
+    BRIDGE_USDWRITER.Settings.ParallelController->Barrier();
 
   if(SessionValid)
     BRIDGE_USDWRITER.CreateParallelEncapsulatingFile();

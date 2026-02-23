@@ -201,18 +201,14 @@ bool UsdBridgeUsdWriter::CreateDirectories()
 {
   bool valid = true;
 
-  valid = Connect->CreateFolder("", true, true);
+  // When MPI is active, rank 0 has already created the root output folder and
+  // MpiBaseSessionDirectory before the barrier in InitializeSession.
+  // If MPI is not active, create the root output folder here.
+  if(MpiBaseSessionDirectory.empty())
+    valid = Connect->CreateFolder("", true, true);
 
   //Connect->RemoveFolder(SessionDirectory.c_str(), true, true);
   bool folderMayExist = !Settings.CreateNewSession;
-
-  // When MPI is active, create the shared session base directory first (Session_N/),
-  // then the rank-specific subdirectory (Session_N/rank_R/).
-  // CreateFolder only creates one level, so the parent must exist.
-  if(!MpiBaseSessionDirectory.empty())
-  {
-    valid = valid && Connect->CreateFolder(MpiBaseSessionDirectory.c_str(), true, true);
-  }
 
   valid = valid && Connect->CreateFolder(SessionDirectory.c_str(), true, folderMayExist);
 
@@ -322,6 +318,13 @@ bool UsdBridgeUsdWriter::InitializeSession()
   {
     MpiBaseSessionDirectory = sessionBase;
     SessionDirectory = sessionBase + "rank_" + std::to_string(Settings.MpiRank) + "/";
+
+    if(Settings.ParallelController->GetRank() == 0)
+    {
+      Connect->CreateFolder("", true, true);
+      Connect->CreateFolder(MpiBaseSessionDirectory.c_str(), true, true);
+    }
+    Settings.ParallelController->Barrier();
   }
   else
   {

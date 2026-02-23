@@ -108,10 +108,9 @@ int main(int argc, char **argv)
   anari::setParameter(d, d, "usd::serialize.location", "./mpi_output");
 
   // Set the MPI communicator — this is the key KHR_DATA_PARALLEL_MPI parameter.
-  // The device receives a pointer to the MPI_Comm via ANARI_VOID_POINTER.
+  // ANARI_VOID_POINTER is passed by value, so mem = &comm directly.
   MPI_Comm comm = MPI_COMM_WORLD;
-  void* commPtr = &comm;
-  anariSetParameter(d, d, "mpiCommunicator", ANARI_VOID_POINTER, &commPtr);
+  anariSetParameter(d, d, "mpiCommunicator", ANARI_VOID_POINTER, &comm);
 
   // Commit device parameters (triggers bridge initialization with MPI sync)
   anari::commitParameters(d, d);
