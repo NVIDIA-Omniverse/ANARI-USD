@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <array>
 #include <random>
 
@@ -22,6 +24,8 @@ using vec3 = std::array<float, 3>;
 using vec4 = std::array<float, 4>;
 using box3 = std::array<vec3, 2>;
 
+ANARIStatusSeverity g_minSeverity = ANARI_SEVERITY_WARNING;
+
 void statusFunc(const void *userData,
     ANARIDevice device,
     ANARIObject source,
@@ -35,6 +39,8 @@ void statusFunc(const void *userData,
   (void)source;
   (void)sourceType;
   (void)code;
+  if (severity > g_minSeverity)
+    return;
   if (severity == ANARI_SEVERITY_FATAL_ERROR) {
     fprintf(stderr, "[FATAL] %s\n", message);
   } else if (severity == ANARI_SEVERITY_ERROR) {
@@ -257,6 +263,7 @@ void GravityVolume::commit()
 
   // create and setup light
   auto light = anari::newObject<anari::Light>(d, "directional");
+  anari::setParameter(d, light, "irradiance", 1000.0f);
   anari::commitParameters(d, light);
   anari::setAndReleaseParameter(
       d, m_world, "light", anari::newArray1D(d, &light));
@@ -268,17 +275,24 @@ void GravityVolume::commit()
 
 int main(int argc, const char **argv)
 {
-  (void)argc;
-  (void)argv;
+  for (int i = 1; i < argc; ++i)
+  {
+    if (strcmp(argv[i], "-v") == 0 && i + 1 < argc)
+    {
+      int v = atoi(argv[++i]);
+      if (v >= 0 && v <= 5)
+        g_minSeverity = (ANARIStatusSeverity)v;
+    }
+  }
   stbi_flip_vertically_on_write(1);
 
   // image size
   uvec2 imgSize = {1024 /*width*/, 768 /*height*/};
 
   // camera
-  vec3 cam_pos = {0.f, 0.f, 0.f};
+  vec3 cam_pos = {2.5f, 3.5f, -2.5f};
   vec3 cam_up = {0.f, 1.f, 0.f};
-  vec3 cam_view = {0.1f, 0.f, 1.f};
+  vec3 cam_view = {-0.45f, -0.63f, 0.63f};
 
   // triangle mesh array
   vec3 vertex[] = {{-1.0f, -1.0f, 3.0f},

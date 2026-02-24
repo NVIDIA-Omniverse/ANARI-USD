@@ -630,10 +630,15 @@ void doTest(TestParameters_t testParams)
   texData.textureSize[0] = textureSize[0];
   texData.textureSize[1] = textureSize[1];
 
-  // camera
-  float cam_pos[] = { 0.f, 0.f, 0.f };
-  float cam_up[] = { 0.f, 1.f, 0.f };
-  float cam_view[] = { 0.1f, 0.f, 1.f };
+  // camera (scene-dependent placement, top-down looking into -X/-Z)
+  float cam_up[] = {0.f, 1.f, 0.f};
+  float cam_pos_mesh[] = {9.0f, 13.0f, 16.0f};
+  float cam_view_mesh[] = {-1.0f, -1.5f, -1.0f};
+  float cam_pos_grid[] = {393.26795f, 570.90515f, 822.79516f};
+  float cam_view_grid[] = {-0.5f, -0.7f, -2.0f};     
+  float* cam_pos = (testParams.testType == TEST_MESH) ? cam_pos_mesh : cam_pos_grid;
+  float* cam_view = (testParams.testType == TEST_MESH) ? cam_view_mesh : cam_view_grid;
+  float cam_far = (testParams.testType == TEST_MESH) ? 1000.0f : 1500.0f;
 
   printf("initialize ANARI...");
 
@@ -679,6 +684,7 @@ void doTest(TestParameters_t testParams)
   anariSetParameter(dev, camera, "position", ANARI_FLOAT32_VEC3, cam_pos);
   anariSetParameter(dev, camera, "direction", ANARI_FLOAT32_VEC3, cam_view);
   anariSetParameter(dev, camera, "up", ANARI_FLOAT32_VEC3, cam_up);
+  anariSetParameter(dev, camera, "far", ANARI_FLOAT32, &cam_far);
   anariCommitParameters(dev, camera); // commit each object to indicate mods are done
 
   printf("done!\n");
@@ -711,6 +717,8 @@ void doTest(TestParameters_t testParams)
   // create and setup light for Ambient Occlusion
   ANARILight light = anariNewLight(dev, "ambient");
   anariSetParameter(dev, light, "name", ANARI_STRING, "tutorialLight");
+  float lightIntensity = 1000.0f;
+  anariSetParameter(dev, light, "intensity", ANARI_FLOAT32, &lightIntensity);
   anariCommitParameters(dev, light);
   ANARIArray1D array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1);
   anariCommitParameters(dev, array);
@@ -807,6 +815,8 @@ void doTest(TestParameters_t testParams)
 
 int main(int argc, const char **argv)
 {
+  parseArgs(argc, argv);
+
   TestParameters_t testParams;
 
   testParams.testType = TEST_MESH;

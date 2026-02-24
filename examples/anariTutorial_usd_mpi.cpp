@@ -12,6 +12,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <array>
 #include <mpi.h>
 
@@ -24,6 +25,8 @@ using ivec3 = std::array<int, 3>;
 using vec3 = std::array<float, 3>;
 using vec4 = std::array<float, 4>;
 using box3 = std::array<vec3, 2>;
+
+ANARIStatusSeverity g_minSeverity = ANARI_SEVERITY_WARNING;
 
 void statusFunc(const void *userData,
     ANARIDevice device,
@@ -38,6 +41,8 @@ void statusFunc(const void *userData,
   (void)source;
   (void)sourceType;
   (void)code;
+  if (severity > g_minSeverity)
+    return;
   if (severity == ANARI_SEVERITY_FATAL_ERROR)
     fprintf(stderr, "[FATAL] %s\n", message);
   else if (severity == ANARI_SEVERITY_ERROR)
@@ -48,11 +53,23 @@ void statusFunc(const void *userData,
     fprintf(stderr, "[PERF ] %s\n", message);
   else if (severity == ANARI_SEVERITY_INFO)
     fprintf(stderr, "[INFO ] %s\n", message);
+  else if (severity == ANARI_SEVERITY_DEBUG)
+    fprintf(stderr, "[DEBUG] %s\n", message);
 }
 
 int main(int argc, char **argv)
 {
   MPI_Init(&argc, &argv);
+
+  for (int i = 1; i < argc; ++i)
+  {
+    if (strcmp(argv[i], "-v") == 0 && i + 1 < argc)
+    {
+      int v = atoi(argv[++i]);
+      if (v >= 0 && v <= 5)
+        g_minSeverity = (ANARIStatusSeverity)v;
+    }
+  }
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -64,9 +81,9 @@ int main(int argc, char **argv)
   uvec2 imgSize = {1024, 768};
 
   // camera (shared across ranks, but only matters for rendering)
-  vec3 cam_pos = {(float)size, 0.f, -5.f};
+  vec3 cam_pos = {14, 14, 14};
   vec3 cam_up = {0.f, 1.f, 0.f};
-  vec3 cam_view = {0.f, 0.f, 1.f};
+  vec3 cam_view = {-1.0f, -1.3f, -1.0f};
 
   // Each rank creates a triangle mesh offset along X by its rank index.
   float xOffset = rank * 3.0f;
@@ -156,6 +173,7 @@ int main(int argc, char **argv)
 
   // light
   auto light = anari::newObject<anari::Light>(d, "directional");
+  anari::setParameter(d, light, "irradiance", 1000.0f);
   anari::commitParameters(d, light);
   anari::setAndReleaseParameter(
       d, world, "light", anari::newArray1D(d, &light));

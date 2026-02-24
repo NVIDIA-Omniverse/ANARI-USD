@@ -4,9 +4,30 @@
 #pragma once
 
 #include <math.h>
+#include <string.h>
 #define PI 3.14159265
 
 const char *g_libraryType = "usd";
+
+// Severity threshold for status messages (default: warning and above).
+// Maps to ANARIStatusSeverity values: 0=fatal, 1=error, 2=warning,
+// 3=perf, 4=info, 5=debug.
+ANARIStatusSeverity g_minSeverity = ANARI_SEVERITY_WARNING;
+
+void parseArgs(int argc, const char **argv)
+{
+  for (int i = 1; i < argc; ++i)
+  {
+    if (strcmp(argv[i], "-v") == 0 && i + 1 < argc)
+    {
+      int v = atoi(argv[++i]);
+      if (v >= 0 && v <= 5)
+        g_minSeverity = (ANARIStatusSeverity)v;
+      else
+        fprintf(stderr, "Invalid verbosity level %d, expected 0-5\n", v);
+    }
+  }
+}
 
 #ifdef _WIN32
 const char* texFile = "d:/models/texture.png";
@@ -27,6 +48,8 @@ void statusFunc(const void *userData,
   const char *message)
 {
   (void)userData;
+  if (severity > g_minSeverity)
+    return;
   if (severity == ANARI_SEVERITY_FATAL_ERROR)
   {
     fprintf(stderr, "[FATAL] %s\n", message);

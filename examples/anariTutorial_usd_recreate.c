@@ -17,6 +17,8 @@
 
 int main(int argc, const char **argv)
 {
+  parseArgs(argc, argv);
+
   stbi_flip_vertically_on_write(1);
 
   // image size
@@ -28,9 +30,9 @@ int main(int argc, const char **argv)
   textureData = generateTexture(textureSize, numTexComponents);
 
   // camera
-  float cam_pos[] = {0.f, 0.f, 0.f};
+  float cam_pos[] = {9.0f, 13.0f, 16.0f};
   float cam_up[] = {0.f, 1.f, 0.f};
-  float cam_view[] = {0.1f, 0.f, 1.f};
+  float cam_view[] = {-1.0f, -1.5f, -1.0f};
 
   float transform[16] = {
     3.0f, 0.0f, 0.0f, 0.0f,
@@ -258,6 +260,8 @@ int main(int argc, const char **argv)
     // create and setup light for Ambient Occlusion
     ANARILight light = anariNewLight(dev, "ambient");
     anariSetParameter(dev, light, "name", ANARI_STRING, "tutorialLight");
+    float lightIntensity = 1000.0f;
+    anariSetParameter(dev, light, "intensity", ANARI_FLOAT32, &lightIntensity);
     anariCommitParameters(dev, light);
     array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1);
     anariCommitParameters(dev, array);

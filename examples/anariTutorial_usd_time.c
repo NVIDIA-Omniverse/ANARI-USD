@@ -17,6 +17,8 @@
 
 int main(int argc, const char **argv)
 {
+  parseArgs(argc, argv);
+
   stbi_flip_vertically_on_write(1);
 
   // image size
@@ -28,9 +30,9 @@ int main(int argc, const char **argv)
   textureData = generateTexture(textureSize, numTexComponents);
 
   // camera
-  float cam_pos[] = {0.f, 0.f, 0.f};
+  float cam_pos[] = {78.0f, 117.0f, 130.0f};
   float cam_up[] = {0.f, 1.f, 0.f};
-  float cam_view[] = {0.1f, 0.f, 1.f};
+  float cam_view[] = {-1.0f, -1.5f, -1.0f};
 
   float transform[16] = {
     3.0f, 0.0f, 0.0f, 0.0f,
@@ -325,6 +327,8 @@ int main(int argc, const char **argv)
     // create and setup light for Ambient Occlusion
     ANARILight light = anariNewLight(dev, "ambient");
     anariSetParameter(dev, light, "name", ANARI_STRING, "tutorialLight");
+    float lightIntensity = 1000.0f;
+    anariSetParameter(dev, light, "intensity", ANARI_FLOAT32, &lightIntensity);
     anariCommitParameters(dev, light);
     array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1);
     anariCommitParameters(dev, array);
@@ -533,6 +537,7 @@ int main(int argc, const char **argv)
     ANARIMaterial mat;
     ANARISurface surface;
     ANARIGroup group;
+    ANARILight light;
 
     {
       mesh = anariNewGeometry(dev, "sphere");
@@ -615,12 +620,25 @@ int main(int argc, const char **argv)
       anariCommitParameters(dev, instance);
     }
 
-    // put the instance in the world
     anariSetParameter(dev, world, "name", ANARI_STRING, "tutorialWorld");
+
+    // put the instance in the world
     array = anariNewArray1D(dev, &instance, 0, 0, ANARI_INSTANCE, 1);
     anariCommitParameters(dev, array);
     anariSetParameter(dev, world, "instance", ANARI_ARRAY, &array);
     anariRelease(dev, instance);
+    anariRelease(dev, array);
+
+    // Add the light as well
+    light = anariNewLight(dev, "ambient");
+    anariSetParameter(dev, light, "name", ANARI_STRING, "tutorialLight");
+    float lightIntensity = 1000.0f;
+    anariSetParameter(dev, light, "intensity", ANARI_FLOAT32, &lightIntensity);
+    anariCommitParameters(dev, light);
+    array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1);
+    anariCommitParameters(dev, array);
+    anariSetParameter(dev, world, "light", ANARI_ARRAY, &array);
+    anariRelease(dev, light);
     anariRelease(dev, array);
 
     anariCommitParameters(dev, world);
