@@ -15,6 +15,7 @@ DEFINE_PARAMETER_MAP(UsdLight,
   REGISTER_PARAMETER_MACRO("irradiance", ANARI_FLOAT32, irradiance)
   REGISTER_PARAMETER_MACRO("intensity", ANARI_FLOAT32, intensity)
   REGISTER_PARAMETER_MACRO("power", ANARI_FLOAT32, power)
+  REGISTER_PARAMETER_MACRO("radiance", ANARI_FLOAT32, radiance)
 )
 
 namespace
@@ -68,16 +69,17 @@ void UsdLight::CopyParameters(const UsdLightData& paramData,UsdBridgePointLightD
   typedef UsdBridgePointLightData::DataMemberId DMI;
 
   lightData.Color = paramData.color;
-  lightData.Intensity = (paramData.intensity == -1.0f) ?
-    ((paramData.power == -1.0f) ? paramData.irradiance : paramData.power/(4*M_PI))
-    : paramData.intensity;
+  lightData.Intensity = (paramData.intensity != -1.0f) ? paramData.intensity
+    : (paramData.power != -1.0f) ? paramData.power / (4 * M_PI)
+    : (paramData.radiance != -1.0f) ? paramData.radiance
+    : 1.0f;
   lightData.Position = paramData.position;
 
   lightData.TimeVarying = DMI::ALL
     & (isTimeVarying(CType::COLOR) ? DMI::ALL : ~DMI::COLOR)
     & (isTimeVarying(CType::INTENSITY) ? DMI::ALL : ~DMI::INTENSITY)
     & (isTimeVarying(CType::POWER) ? DMI::ALL : ~DMI::INTENSITY)
-    & (isTimeVarying(CType::IRRADIANCE) ? DMI::ALL : ~DMI::INTENSITY)
+    & (isTimeVarying(CType::RADIANCE) ? DMI::ALL : ~DMI::INTENSITY)
     & (isTimeVarying(CType::POSITION) ? DMI::ALL : ~DMI::POSITION);
 }
 

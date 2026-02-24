@@ -957,6 +957,15 @@ SdfPath UsdBridgeUsdWriter::AddRef_Impl(UsdBridgePrimCache* parentCache, UsdBrid
       references.ClearReferences();
       references.AddInternalReference(childCache->PrimPath);
       //referencingPrim.SetInstanceable(true);
+#ifdef VALUE_CLIP_RETIMING
+      // If the child has a prim stage but is not value-clipped/retimed, add a reference to the prim stage.
+      if(!valueClip)
+      {
+        auto it = childCache->ClipStages.find(UsdBridgePrimCache::PrimStageTimeCode);
+        if(it != childCache->ClipStages.end())
+          references.AddReference(it->second.first, childCache->PrimPath);
+      }
+#endif
     }
 
     refModCallbacks.AtNewRef(parentCache, childCache);

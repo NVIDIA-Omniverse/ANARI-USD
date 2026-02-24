@@ -88,6 +88,7 @@ void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPa
 
   lightPrim.ClearXformOpOrder();
   UsdGeomXformOp xformOp = lightPrim.AddTransformOp();
+
   ClearAndSetUsdAttribute(xformOp.GetAttr(), viewMatrix, timeEval.Eval(DMI::DIRECTION),
     timeVarHasChanged && !timeEval.IsTimeVarying(DMI::DIRECTION));
 }
@@ -105,6 +106,7 @@ void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPa
 
   lightPrim.ClearXformOpOrder();
   UsdGeomXformOp translOp = lightPrim.AddTranslateOp(UsdGeomXformOp::PrecisionFloat);
+
   ClearAndSetUsdAttribute(translOp.GetAttr(), position, timeEval.Eval(DMI::POSITION),
     timeVarHasChanged && !timeEval.IsTimeVarying(DMI::POSITION));
 }

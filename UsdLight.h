@@ -13,6 +13,7 @@ enum class UsdLightComponents
   INTENSITY,
   IRRADIANCE,
   POWER,
+  RADIANCE,
   POSITION,
   DIRECTION
 };
@@ -30,6 +31,7 @@ struct UsdLightData
   float irradiance = -1.0f;
   float intensity = -1.0f;
   float power = -1.0f;
+  float radiance = -1.0f;
 };
 
 class UsdLight : public UsdBridgedBaseObject<UsdLight, UsdLightData, UsdLightHandle, UsdLightComponents>
@@ -51,6 +53,7 @@ class UsdLight : public UsdBridgedBaseObject<UsdLight, UsdLightData, UsdLightHan
       ComponentPair(UsdLightComponents::INTENSITY, "intensity"),
       ComponentPair(UsdLightComponents::IRRADIANCE, "irradiance"),
       ComponentPair(UsdLightComponents::POWER, "power"),
+      ComponentPair(UsdLightComponents::RADIANCE, "radiance"),
       ComponentPair(UsdLightComponents::POSITION, "position"),
       ComponentPair(UsdLightComponents::DIRECTION, "direction")};
 
