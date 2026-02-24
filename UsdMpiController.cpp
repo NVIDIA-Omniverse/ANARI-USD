@@ -22,6 +22,22 @@ UsdMpiController::UsdMpiController(const void* mpiCommPtr)
 
 UsdMpiController::~UsdMpiController() = default;
 
+std::unique_ptr<UsdMpiController> UsdMpiController::CreateDefault()
+{
+  int initialized = 0;
+  MPI_Initialized(&initialized);
+  if(!initialized)
+    return nullptr;
+
+  int size = 0;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if(size <= 1)
+    return nullptr;
+
+  MPI_Comm world = MPI_COMM_WORLD;
+  return std::make_unique<UsdMpiController>(&world);
+}
+
 int UsdMpiController::GetRank() const
 {
   return m_impl->rank;

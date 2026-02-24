@@ -1,4 +1,4 @@
-﻿// Copyright 2020 The Khronos Group
+// Copyright 2020 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdDevice.h"
@@ -56,6 +56,11 @@ public:
       deviceParams.outputMdlShader,
       deviceParams.useDisplayColorOpacity
     };
+
+#ifdef USD_DEVICE_MPI_ENABLED
+    if(!mpiController)
+      mpiController = UsdMpiController::CreateDefault();
+#endif
 
     if(mpiController)
     {

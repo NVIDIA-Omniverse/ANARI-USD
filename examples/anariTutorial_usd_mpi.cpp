@@ -126,6 +126,8 @@ int main(int argc, char **argv)
 
   // Set the MPI communicator — this is the key KHR_DATA_PARALLEL_MPI parameter.
   // ANARI_VOID_POINTER is passed by value, so mem = &comm directly.
+  // MPI_COMM_WORLD is technically already set by default on the device in MPI environments,
+  // but this is for demonstration purposes.
   MPI_Comm comm = MPI_COMM_WORLD;
   anariSetParameter(d, d, "mpiCommunicator", ANARI_VOID_POINTER, &comm);
 

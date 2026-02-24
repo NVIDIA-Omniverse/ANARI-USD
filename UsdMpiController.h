@@ -17,6 +17,9 @@ public:
   explicit UsdMpiController(const void* mpiCommPtr);
   ~UsdMpiController() override;
 
+  // Returns a controller using MPI_COMM_WORLD if MPI is initialized, nullptr otherwise.
+  static std::unique_ptr<UsdMpiController> CreateDefault();
+
   int GetRank() const override;
   int GetSize() const override;
   void BroadcastInt(int& value) override;
