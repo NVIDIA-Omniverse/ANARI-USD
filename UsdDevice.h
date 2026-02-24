@@ -261,7 +261,7 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
       ANARIStatusSeverity severity,
       ANARIStatusCode statusCode,
       const char *format,
-      va_list& arglist);
+      va_list* arglist);
 
   protected:
     UsdBaseObject* getBaseObjectPtr(ANARIObject object);

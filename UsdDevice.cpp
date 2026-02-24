@@ -1,4 +1,4 @@
-// Copyright 2020 The Khronos Group
+﻿// Copyright 2020 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdDevice.h"
@@ -172,7 +172,7 @@ void UsdDevice::reportStatus(void* source,
   va_list arglist;
 
   va_start(arglist, format);
-  reportStatus(source, sourceType, severity, statusCode, format, arglist);
+  reportStatus(source, sourceType, severity, statusCode, format, &arglist);
   va_end(arglist);
 }
 
@@ -180,7 +180,7 @@ static void reportBridgeStatus(UsdBridgeLogLevel level, void* device, const char
 {
   ANARIStatusSeverity severity = UsdBridgeLogLevelToAnariSeverity(level);
 
-  ((UsdDevice*)device)->reportStatus(nullptr, ANARI_UNKNOWN, severity, ANARI_STATUS_NO_ERROR, "%s", message);
+  ((UsdDevice*)device)->reportStatus(nullptr, ANARI_UNKNOWN, severity, ANARI_STATUS_NO_ERROR, message, nullptr);
 }
 
 void UsdDevice::reportStatus(void* source,
@@ -188,16 +188,25 @@ void UsdDevice::reportStatus(void* source,
   ANARIStatusSeverity severity,
   ANARIStatusCode statusCode,
   const char *format,
-  va_list& arglist)
+  va_list* arglist)
 {
-  va_list arglist_copy;
-  va_copy(arglist_copy, arglist);
-  int count = std::vsnprintf(nullptr, 0, format, arglist);
+  if(arglist)
+  {
+    va_list arglist_copy;
+    va_copy(arglist_copy, *arglist);
+    int count = std::vsnprintf(nullptr, 0, format, *arglist);
 
-  lastStatusMessage.resize(count + 1);
+    lastStatusMessage.resize(count + 1);
 
-  std::vsnprintf(lastStatusMessage.data(), count + 1, format, arglist_copy);
-  va_end(arglist_copy);
+    std::vsnprintf(lastStatusMessage.data(), count + 1, format, arglist_copy);
+    va_end(arglist_copy);
+  }
+  else
+  {
+    int count = strlen(format);
+    lastStatusMessage.resize(count + 1);
+    std::snprintf(lastStatusMessage.data(), count + 1, format);
+  }
 
   if (statusFunc != nullptr)
   {
