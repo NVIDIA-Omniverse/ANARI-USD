@@ -632,7 +632,7 @@ namespace
 
   template<bool PreviewSurface>
   UsdShadeShader InitializeAttributeReader_Impl(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim,
-    UsdBridgeMaterialData::DataMemberId dataMemberId, const TimeEvaluator<UsdBridgeMaterialData>* timeEval, const SdfPath& attribReaderPath = SdfPath())
+    UsdBridgeMaterialData::DataMemberId dataMemberId, const TimeEvaluator<UsdBridgeMaterialData>* timeEval, const SdfPath attribReaderPath = SdfPath())
   {
     using DMI = UsdBridgeMaterialData::DataMemberId;
 

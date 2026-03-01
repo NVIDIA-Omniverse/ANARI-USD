@@ -51,7 +51,7 @@ namespace
     const LightDataType& lightData, double timeStep, bool timeVarHasChanged,
     const TimeEvaluator<LightDataType>& timeEval)
   {
-    typedef LightDataType::DataMemberId DMI;
+    typedef typename LightDataType::DataMemberId DMI;
 
     UsdLightPrimType lightPrim = UsdLightPrimType::Get(timeVarStage, lightPrimPath);
     assert(lightPrim);
@@ -70,7 +70,7 @@ namespace
 void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPath& lightPrimPath, 
     const UsdBridgeDirectionalLightData& lightData, double timeStep, bool timeVarHasChanged)
 {
-  typedef UsdBridgeDirectionalLightData::DataMemberId DMI;
+  typedef typename UsdBridgeDirectionalLightData::DataMemberId DMI;
 
   const TimeEvaluator<UsdBridgeDirectionalLightData> timeEval(lightData, timeStep);
   UsdLuxDistantLight lightPrim = UpdateUsdLightCommon<UsdBridgeDirectionalLightData, UsdLuxDistantLight>(
@@ -96,7 +96,7 @@ void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPa
 void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPath& lightPrimPath, 
   const UsdBridgePointLightData& lightData, double timeStep, bool timeVarHasChanged)
 {
-  typedef UsdBridgePointLightData::DataMemberId DMI;
+  typedef typename UsdBridgePointLightData::DataMemberId DMI;
 
   const TimeEvaluator<UsdBridgePointLightData> timeEval(lightData, timeStep);
   UsdLuxSphereLight lightPrim = UpdateUsdLightCommon<UsdBridgePointLightData, UsdLuxSphereLight>(
@@ -114,7 +114,7 @@ void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPa
 void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPath& lightPrimPath, 
   const UsdBridgeDomeLightData& lightData, double timeStep, bool timeVarHasChanged)
 {
-  typedef UsdBridgeDomeLightData::DataMemberId DMI;
+  typedef typename UsdBridgeDomeLightData::DataMemberId DMI;
 
   const TimeEvaluator<UsdBridgeDomeLightData> timeEval(lightData, timeStep);
   UsdLuxDomeLight lightPrim = UpdateUsdLightCommon<UsdBridgeDomeLightData, UsdLuxDomeLight>(
