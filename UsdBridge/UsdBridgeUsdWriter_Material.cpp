@@ -632,7 +632,7 @@ namespace
 
   template<bool PreviewSurface>
   UsdShadeShader InitializeAttributeReader_Impl(UsdStageRefPtr materialStage, const SdfPath& matPrimPath, bool uniformPrim,
-    UsdBridgeMaterialData::DataMemberId dataMemberId, const TimeEvaluator<UsdBridgeMaterialData>* timeEval, const SdfPath attribReaderPath = SdfPath())
+    UsdBridgeMaterialData::DataMemberId dataMemberId, const TimeEvaluator<UsdBridgeMaterialData>* timeEval, const SdfPath& attribReaderPath = SdfPath())
   {
     using DMI = UsdBridgeMaterialData::DataMemberId;
 
@@ -712,7 +712,7 @@ namespace
 
   template<bool PreviewSurface>
   void GetOrCreateAttributeReaders(UsdStageRefPtr sceneStage, UsdStageRefPtr timeVarStage, const SdfPath& matPrimPath, UsdBridgeMaterialData::DataMemberId dataMemberId,
-    UsdShadeShader& uniformReaderPrim, SdfPath& attribReaderPath = SdfPath())
+    UsdShadeShader& uniformReaderPrim, const SdfPath& attribReaderPath = SdfPath())
   {
     uniformReaderPrim = InitializeAttributeReader_Impl<PreviewSurface>(sceneStage, matPrimPath, true, dataMemberId, nullptr, attribReaderPath);
     //if(timeVarStage && (timeVarStage != sceneStage))
