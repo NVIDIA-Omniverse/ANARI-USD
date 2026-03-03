@@ -253,6 +253,7 @@ namespace FrameOps
         if (!renderBuffer)
             return nullptr;
 
+        GLF_POST_PENDING_GL_ERRORS();
         renderBuffer->Resolve();
         returnFormat = ConvertRenderBufferFormat(renderBuffer->GetFormat());
 
@@ -453,6 +454,7 @@ public:
     {
         TaskController = new HdxTaskController(renderIndex, TaskControllerId);
         TaskController->SetRenderOutputs({HdAovTokens->color});
+        TaskController->SetEnablePresentation(false);
         LightingContext = GlfSimpleLightingContext::New();
 
         RenderSettingsData.CreatePrims(stage);
@@ -547,6 +549,8 @@ void UsdBridgeRenderContextShared::Render(uint32_t width, uint32_t height, doubl
     HdxSelectionTrackerSharedPtr emptySelection = std::make_shared<HdxSelectionTracker>();
     Core.GetEngine()->SetTaskContextData(HdxTokens->selectionState, VtValue(emptySelection));
     Core.GetEngine()->SetTaskContextData(HdxTokens->lightingContext, VtValue(ContextData->LightingContext));
+
+    GLF_POST_PENDING_GL_ERRORS();
 
     HdTaskSharedPtrVector tasks = ContextData->TaskController->GetRenderingTasks();
     Core.GetEngine()->Execute(Core.GetRenderIndex(), &tasks);
