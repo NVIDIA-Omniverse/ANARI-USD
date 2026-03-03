@@ -308,7 +308,7 @@ int main(int argc, const char **argv)
 
     // create renderer
     ANARIRenderer renderer =
-      anariNewRenderer(dev, "pathtracer"); // choose path tracing renderer
+      anariNewRenderer(dev, "hydra");
 
     // complete setup of renderer
     float bgColor[4] = { 1.f, 1.f, 1.f, 1.f }; // white

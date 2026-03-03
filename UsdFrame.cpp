@@ -179,12 +179,13 @@ void UsdFrame::renderFrame(UsdDevice* device)
 
   const char* frameName = getName();
 
-  // Set up the renderer for this frame
-  const char* hydraRendererName = nullptr;
-  if(paramData.renderer)
-  {
-    hydraRendererName = paramData.renderer->getHydraRendererName();
-  }
+  // Only render when a hydra-subtype renderer is assigned
+  if(!paramData.renderer)
+    return;
+  if(!paramData.renderer->isHydraRenderer())
+    return;
+
+  const char* hydraRendererName = paramData.renderer->getHydraRendererName();
   frameBridge->SetFrameRenderer(frameName, hydraRendererName);
 
   // Set world path if world is provided and has a valid handle

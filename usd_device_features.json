@@ -1145,6 +1145,11 @@
             ]
         }, {
             "type" : "ANARI_RENDERER",
+            "parameters" : []
+        }, {
+            "type" : "ANARI_RENDERER",
+            "name" : "hydra",
+            "description" : "Hydra-based renderer, enables rendering through a Hydra delegate",
             "parameters" : [
                 {
                     "name" : "usd::hydraRendererName",

@@ -12,8 +12,9 @@ DEFINE_PARAMETER_MAP(UsdRenderer,
   REGISTER_PARAMETER_MACRO("usd::hydraRendererName", ANARI_STRING, hydraRendererName)
 )
 
-UsdRenderer::UsdRenderer()
+UsdRenderer::UsdRenderer(const char* subtype)
   : UsdParameterizedBaseObject<UsdRenderer, UsdRendererData>(ANARI_RENDERER)
+  , hydraRenderer(subtype && (strEquals(subtype, "hydra") || strEquals(subtype, "default")))
 {
 }
 

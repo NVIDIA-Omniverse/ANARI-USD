@@ -608,7 +608,14 @@ const void *UsdDevice::getParameterInfo(ANARIDataType objectType,
 
 ANARIRenderer UsdDevice::newRenderer(const char *type)
 {
-  UsdRenderer* object = new UsdRenderer();
+  if (!type || (!strEquals(type, "default") && !strEquals(type, "hydra")))
+  {
+    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+      "Unrecognized renderer subtype '%s'. Supported subtypes: 'default', 'hydra'.", type ? type : "(null)");
+    return nullptr;
+  }
+
+  UsdRenderer* object = new UsdRenderer(type);
 #ifdef CHECK_MEMLEAKS
   logObjAllocation(object);
 #endif

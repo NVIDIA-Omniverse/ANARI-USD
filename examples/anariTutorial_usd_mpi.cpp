@@ -184,7 +184,7 @@ int main(int argc, char **argv)
   anari::commitParameters(d, world);
 
   // renderer
-  auto renderer = anari::newObject<anari::Renderer>(d, "default");
+  auto renderer = anari::newObject<anari::Renderer>(d, "hydra");
   anari::setParameter(d, renderer, "name", "MainRenderer");
   vec4 bgColor = {1.f, 1.f, 1.f, 1.f};
   anari::setParameter(d, renderer, "backgroundColor", bgColor);

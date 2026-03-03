@@ -15,13 +15,14 @@ struct UsdRendererData
 class UsdRenderer : public UsdParameterizedBaseObject<UsdRenderer, UsdRendererData>
 {
   public:
-    UsdRenderer();
+    UsdRenderer(const char* subtype);
     ~UsdRenderer();
 
     void remove(UsdDevice* device) override {}
 
     int getProperty(const char * name, ANARIDataType type, void * mem, uint64_t size, UsdDevice* device) override;
 
+    bool isHydraRenderer() const { return hydraRenderer; }
     const char* getHydraRendererName() const;
 
   protected:
@@ -30,4 +31,5 @@ class UsdRenderer : public UsdParameterizedBaseObject<UsdRenderer, UsdRendererDa
     void doCommitRefs(UsdDevice* device) override {}
 
     UsdBridge* usdBridge;
+    bool hydraRenderer = false;
 };
