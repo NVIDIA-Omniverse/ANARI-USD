@@ -5,7 +5,6 @@
 
 #include "UsdBridgeUsdWriter.h"
 #include "UsdBridgeCaches.h"
-#include "UsdBridgeRenderer.h"
 #include "UsdBridgeRenderContext.h"
 #include "UsdRenderManager.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
@@ -75,7 +74,6 @@ struct UsdBridgeInternals
 {
   UsdBridgeInternals(const UsdBridgeSettings& settings)
     : UsdWriter(settings)
-    , HydraRenderer(UsdWriter)
     , RenderManager(UsdWriter)
   {
     RefModCallbacks.AtNewRef = [this](UsdBridgePrimCache* parentCache, UsdBridgePrimCache* childCache){
@@ -122,9 +120,6 @@ struct UsdBridgeInternals
 
   // USDWriter
   UsdBridgeUsdWriter UsdWriter;
-
-  // USD Hydra renderer (old system - deprecated)
-  UsdBridgeRenderer HydraRenderer;
 
   // USD Render Manager (new multi-frame system)
   UsdRenderManager RenderManager;

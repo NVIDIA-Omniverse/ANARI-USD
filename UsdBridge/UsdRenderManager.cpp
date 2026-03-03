@@ -4,6 +4,7 @@
 #include "UsdRenderManager.h"
 #include "UsdBridgeRenderContext.h"
 #include "UsdBridgeUsdWriter.h"
+#include "UsdBridgeUtils.h"
 
 #ifdef USD_DEVICE_RENDERING_ENABLED
 
@@ -89,26 +90,35 @@ void UsdRenderManager::SetFrameRenderer(const char* frameName, const char* hydra
     // Get or create the core for this renderer
     state->Core = GetOrCreateCore(rendererName);
 
-    if (state->Core && state->Core->IsInitialized())
+    if (!state->Core || !state->Core->IsInitialized())
     {
-        // Create a new context for this frame using the frame name
-        pxr::SdfPath contextId("/RenderContext_" + std::string(frameName));
-        state->Context = CreateRenderContext(
-            RenderContextMode::Shared,
-            state->Core,
-            UsdWriter,
-            rendererName,
-            contextId);
+        UsdBridgeLogMacro(UsdWriter.LogObject, UsdBridgeLogLevel::ERR, "Hydra renderer core failed to initialize for '" << rendererName << "', rendering will be disabled for frame '" << frameName << "'");
+        return;
+    }
 
-        // Restore camera and world paths if they were set
-        if (!state->CameraPath.IsEmpty() && state->Context)
-        {
-            state->Context->SetCameraPath(state->CameraPath);
-        }
-        if (!state->WorldPath.IsEmpty() && state->Context)
-        {
-            state->Context->SetWorldPath(state->WorldPath);
-        }
+    // Create a new context for this frame using the frame name
+    pxr::SdfPath contextId("/RenderContext_" + std::string(frameName));
+    state->Context = CreateRenderContext(
+        RenderContextMode::Shared,
+        state->Core,
+        UsdWriter,
+        rendererName,
+        contextId);
+
+    if (!state->Context || !state->Context->IsInitialized())
+    {
+        UsdBridgeLogMacro(UsdWriter.LogObject, UsdBridgeLogLevel::ERR, "Failed to create render context for frame '" << frameName << "' with renderer '" << rendererName << "'");
+        return;
+    }
+
+    // Restore camera and world paths if they were set
+    if (!state->CameraPath.IsEmpty())
+    {
+        state->Context->SetCameraPath(state->CameraPath);
+    }
+    if (!state->WorldPath.IsEmpty())
+    {
+        state->Context->SetWorldPath(state->WorldPath);
     }
 }
 

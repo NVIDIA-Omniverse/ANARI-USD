@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdBridgeRenderContext.h"
+#include "UsdBridgeGLContext.h"
 #include "UsdBridgeUsdWriter.h"
 #include "UsdBridgeUsdWriter_Common.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
@@ -45,7 +46,7 @@
 #include <memory>
 #include <string>
 
-#define USDBRIDGE_RENDERER_USE_COLORTEXTURE
+//#define USDBRIDGE_RENDERER_USE_COLORTEXTURE
 
 
 
@@ -288,31 +289,57 @@ public:
         RenderDelegateHandle = nullptr;
     }
 
-    void Initialize(const char* rendererPluginName, UsdStageRefPtr stage)
+    void Initialize(const char* rendererPluginName, UsdStageRefPtr stage, const UsdBridgeLogObject& logObj)
     {
+        if (!EnsureOpenGLContext())
+        {
+            UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Failed to create OpenGL context for Hydra renderer '" << rendererPluginName << "'");
+            return;
+        }
+
         HdRendererPluginHandle rendererPlugin = 
             HdRendererPluginRegistry::GetInstance().GetOrCreateRendererPlugin(
                 TfToken(rendererPluginName));
 
-        if (rendererPlugin)
+        if (!rendererPlugin)
         {
-            RenderDelegateHandle = rendererPlugin->CreateDelegate();
-
-            if (RenderDelegateHandle)
-            {
-                RenderHgi = Hgi::CreatePlatformDefaultHgi();
-                RenderDriver = new HdDriver{HgiTokens->renderDriver, VtValue(RenderHgi.get())};
-                HdDriverVector drivers{RenderDriver};
-                RenderIndex = HdRenderIndex::New(RenderDelegateHandle.Get(), drivers);
-
-                SceneDelegate = new UsdImagingDelegate(RenderIndex, SdfPath::AbsoluteRootPath());
-                SceneDelegate->Populate(stage->GetPseudoRoot());
-
-                RenderEngine = new HdEngine();
-
-                Initialized = true;
-            }
+            UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Failed to find Hydra renderer plugin '" << rendererPluginName << "'");
+            return;
         }
+
+        RenderDelegateHandle = rendererPlugin->CreateDelegate();
+
+        if (!RenderDelegateHandle)
+        {
+            UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Failed to create render delegate for Hydra renderer '" << rendererPluginName << "'");
+            return;
+        }
+
+        RenderHgi = Hgi::CreatePlatformDefaultHgi();
+        if (!RenderHgi)
+        {
+            UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Failed to create Hgi (GPU interface) for Hydra renderer '" << rendererPluginName << "'");
+            RenderDelegateHandle = nullptr;
+            return;
+        }
+
+        RenderDriver = new HdDriver{HgiTokens->renderDriver, VtValue(RenderHgi.get())};
+        HdDriverVector drivers{RenderDriver};
+        RenderIndex = HdRenderIndex::New(RenderDelegateHandle.Get(), drivers);
+
+        if (!RenderIndex)
+        {
+            UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Failed to create HdRenderIndex for Hydra renderer '" << rendererPluginName << "'");
+            RenderDelegateHandle = nullptr;
+            return;
+        }
+
+        SceneDelegate = new UsdImagingDelegate(RenderIndex, SdfPath::AbsoluteRootPath());
+        SceneDelegate->Populate(stage->GetPseudoRoot());
+
+        RenderEngine = new HdEngine();
+
+        Initialized = true;
     }
 
     HdPluginRenderDelegateUniqueHandle RenderDelegateHandle;
@@ -345,7 +372,7 @@ void UsdBridgeRendererCore::Initialize(const char* rendererPluginName)
     UsdStageRefPtr stage = UsdWriter.GetSceneStage();
     if (stage)
     {
-        Data->Initialize(rendererPluginName, stage);
+        Data->Initialize(rendererPluginName, stage, UsdWriter.LogObject);
     }
 }
 
@@ -626,8 +653,14 @@ public:
         delete RenderEngineGL;
     }
 
-    void Initialize(const char* rendererPluginName, UsdStageRefPtr stage)
+    void Initialize(const char* rendererPluginName, UsdStageRefPtr stage, const UsdBridgeLogObject& logObj)
     {
+        if (!EnsureOpenGLContext())
+        {
+            UsdBridgeLogMacro(logObj, UsdBridgeLogLevel::ERR, "Failed to create OpenGL context for standalone Hydra renderer '" << rendererPluginName << "'");
+            return;
+        }
+
         UsdImagingGLEngine::Parameters initParams;
         initParams.rendererPluginId = TfToken(rendererPluginName);
         RenderEngineGL = new UsdBridgeStandaloneEngine(initParams);
@@ -660,7 +693,7 @@ UsdBridgeRenderContextStandalone::UsdBridgeRenderContextStandalone(
     UsdStageRefPtr stage = UsdWriter.GetSceneStage();
     if (stage)
     {
-        ContextData->Initialize(rendererPluginName, stage);
+        ContextData->Initialize(rendererPluginName, stage, UsdWriter.LogObject);
     }
 }
 
