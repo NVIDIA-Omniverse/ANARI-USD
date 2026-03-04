@@ -511,7 +511,13 @@ void UsdBridgeRenderContextShared::Render(uint32_t width, uint32_t height, doubl
     if (!ContextData->Initialized)
         return;
 
-    Core.GetSceneDelegate()->SetTime(UsdTimeCode(timeStep));
+    UsdImagingDelegate* sceneDelegate = Core.GetSceneDelegate();
+    sceneDelegate->ApplyPendingUpdates();
+    sceneDelegate->SetTime(UsdTimeCode(timeStep));
+
+    // Not sure if required, play around with this if issues arise
+    //sceneDelegate->SetSceneMaterialsEnabled(true);
+    //sceneDelegate->SetSceneLightsEnabled(true);
 
     ContextData->SetResolution(width, height, Core.GetUsdWriter());
 
