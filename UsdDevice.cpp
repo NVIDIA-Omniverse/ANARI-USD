@@ -1,4 +1,4 @@
-// Copyright 2020 The Khronos Group
+﻿// Copyright 2020 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdDevice.h"
@@ -23,6 +23,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
 #include <set>
 #include <memory>
 #include <sstream>
@@ -208,9 +209,9 @@ void UsdDevice::reportStatus(void* source,
   }
   else
   {
-    int count = strlen(format);
+    int count = static_cast<int>(strlen(format));
     lastStatusMessage.resize(count + 1);
-    std::snprintf(lastStatusMessage.data(), count + 1, format);
+    std::memcpy(lastStatusMessage.data(), format, count + 1);
   }
 
   if (statusFunc != nullptr)
@@ -610,7 +611,7 @@ ANARIRenderer UsdDevice::newRenderer(const char *type)
 {
   if (!type || (!strEquals(type, "default") && !strEquals(type, "hydra")))
   {
-    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_ERROR, ANARI_STATUS_INVALID_ARGUMENT,
+    reportStatus(this, ANARI_DEVICE, ANARI_SEVERITY_DEBUG, ANARI_STATUS_INVALID_ARGUMENT,
       "Unrecognized renderer subtype '%s'. Supported subtypes: 'default', 'hydra'.", type ? type : "(null)");
     return nullptr;
   }
