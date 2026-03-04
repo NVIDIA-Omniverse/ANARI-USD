@@ -105,8 +105,9 @@ const void* UsdFrame::mapBuffer(
       UsdBridgeType usdBridgeFormat;
       if(void* deviceBuffer = frameBridge->MapFrame(getName(), usdBridgeFormat))
       {
-        *pixelType = (usdBridgeFormat == UsdBridgeType::UCHAR4) ?
-          ANARI_UFIXED8_VEC4 : UsdBridgeToAnariType(usdBridgeFormat);
+        ANARIDataType nativeType = UsdBridgeToAnariType(usdBridgeFormat);
+        *pixelType = (anari::sizeOf(renderBufferColorFormat) == anari::sizeOf(nativeType))
+          ? renderBufferColorFormat : nativeType;
         return deviceBuffer;
       }
     }
