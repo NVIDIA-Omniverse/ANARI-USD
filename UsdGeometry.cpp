@@ -1145,6 +1145,8 @@ void UsdGeometry::updateGeomData(UsdDevice* device, UsdBridge* usdBridge, UsdBri
   else
   {
     meshData.NumIndices = meshData.NumPoints; // Vertices are implicitly indexed consecutively (FaceVertexCount determines how many prims)
+    // AssignArrayToTypedAttribute dispatches on this type even when Indices is null (span fill only); must not be UNDEFINED.
+    meshData.IndicesType = UsdBridgeType::INT;
   }
 
   //meshData.UpdatesToPerform = Still to be implemented
