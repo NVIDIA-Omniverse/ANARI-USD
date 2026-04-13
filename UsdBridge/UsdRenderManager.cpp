@@ -3,10 +3,9 @@
 
 #include "UsdRenderManager.h"
 #include "UsdBridgeRenderContext.h"
+#include "UsdBridgeRenderSettingsState.h"
 #include "UsdBridgeUsdWriter.h"
 #include "UsdBridgeUtils.h"
-
-#ifdef USD_DEVICE_RENDERING_ENABLED
 
 UsdRenderManager::UsdRenderManager(UsdBridgeUsdWriter& usdWriter)
     : UsdWriter(usdWriter)
@@ -17,8 +16,10 @@ UsdRenderManager::~UsdRenderManager()
 {
     // Clear frames first (contexts depend on cores)
     Frames.clear();
+#ifdef USD_DEVICE_RENDERING_ENABLED
     // Then clear cores
     Cores.clear();
+#endif
 }
 
 void UsdRenderManager::RegisterFrame(const char* frameName)
@@ -27,10 +28,15 @@ void UsdRenderManager::RegisterFrame(const char* frameName)
         return;
 
     std::string name(frameName);
-    if (Frames.find(name) == Frames.end())
-    {
-        Frames[name] = FrameState();
-    }
+    auto result = Frames.emplace(name, FrameState());
+    if (!result.second)
+        return;
+
+    FrameState& state = result.first->second;
+    pxr::SdfPath contextId(std::string("/RenderContext_") + name);
+    state.UsdRenderState.InitializePaths(contextId);
+    state.UsdRenderState.CreatePrims(UsdWriter.GetSceneStage());
+    UsdWriter.SaveScene();
 }
 
 void UsdRenderManager::UnregisterFrame(const char* frameName)
@@ -73,6 +79,55 @@ UsdRenderManager::FrameState* UsdRenderManager::GetFrameStateInternal(const char
     return &it->second;
 }
 
+void UsdRenderManager::SetFrameCamera(const char* frameName, const pxr::SdfPath& cameraPath)
+{
+    FrameState* state = GetFrameStateInternal(frameName);
+    if (!state)
+        return;
+
+    if (state->UsdRenderState.SetCameraPath(cameraPath))
+        UsdWriter.SaveScene();
+
+    if (state->CameraPath != cameraPath)
+    {
+        state->CameraPath = cameraPath;
+
+        if (state->Context)
+            state->Context->SetCameraPath(cameraPath);
+    }
+}
+
+void UsdRenderManager::SetFrameWorld(const char* frameName, const pxr::SdfPath& worldPath)
+{
+    FrameState* state = GetFrameStateInternal(frameName);
+    if (!state)
+        return;
+
+    state->WorldPath = worldPath;
+
+    if (state->Context)
+        state->Context->SetWorldPath(worldPath);
+}
+
+void UsdRenderManager::SetFrameRenderSize(const char* frameName, uint32_t width, uint32_t height)
+{
+    FrameState* state = GetFrameStateInternal(frameName);
+    if (!state)
+        return;
+
+    if (state->UsdRenderState.SetResolution(width, height))
+        UsdWriter.SaveScene();
+
+    if (state->Context)
+        state->Context->SetRenderBufferSize(width, height);
+}
+
+// -----------------------------------------------------------------------------
+// Hydra in-process rendering (stubs when USD_DEVICE_RENDERING_ENABLED is off)
+// -----------------------------------------------------------------------------
+
+#ifdef USD_DEVICE_RENDERING_ENABLED
+
 void UsdRenderManager::SetFrameRenderer(const char* frameName, const char* hydraRendererName)
 {
     FrameState* state = GetFrameStateInternal(frameName);
@@ -111,55 +166,21 @@ void UsdRenderManager::SetFrameRenderer(const char* frameName, const char* hydra
         return;
     }
 
-    // Restore camera and world paths if they were set
+    // Restore camera and world paths if they were set (USD camera rels are already authored via SetFrameCamera)
     if (!state->CameraPath.IsEmpty())
-    {
         state->Context->SetCameraPath(state->CameraPath);
-    }
     if (!state->WorldPath.IsEmpty())
-    {
         state->Context->SetWorldPath(state->WorldPath);
-    }
 }
 
-void UsdRenderManager::SetFrameCamera(const char* frameName, const pxr::SdfPath& cameraPath)
-{
-    FrameState* state = GetFrameStateInternal(frameName);
-    if (!state)
-        return;
-
-    state->CameraPath = cameraPath;
-
-    if (state->Context)
-    {
-        state->Context->SetCameraPath(cameraPath);
-    }
-}
-
-void UsdRenderManager::SetFrameWorld(const char* frameName, const pxr::SdfPath& worldPath)
-{
-    FrameState* state = GetFrameStateInternal(frameName);
-    if (!state)
-        return;
-
-    state->WorldPath = worldPath;
-
-    if (state->Context)
-    {
-        state->Context->SetWorldPath(worldPath);
-    }
-}
-
-void UsdRenderManager::Render(const char* frameName, uint32_t width, uint32_t height, double timeStep)
+void UsdRenderManager::Render(const char* frameName, double timeStep)
 {
     FrameState* state = GetFrameStateInternal(frameName);
     if (!state)
         return;
 
     if (state->Context)
-    {
-        state->Context->Render(width, height, timeStep);
-    }
+        state->Context->Render(timeStep);
 }
 
 bool UsdRenderManager::FrameReady(const char* frameName, bool wait)
@@ -225,54 +246,13 @@ UsdBridgeRendererCore* UsdRenderManager::GetOrCreateCore(const char* hydraRender
     return corePtr;
 }
 
-#else // USD_DEVICE_RENDERING_ENABLED
-
-// Stub implementations when rendering is disabled
-
-UsdRenderManager::UsdRenderManager(UsdBridgeUsdWriter& usdWriter)
-    : UsdWriter(usdWriter)
-{
-}
-
-UsdRenderManager::~UsdRenderManager()
-{
-}
-
-void UsdRenderManager::RegisterFrame(const char* frameName)
-{
-}
-
-void UsdRenderManager::UnregisterFrame(const char* frameName)
-{
-}
-
-void UsdRenderManager::UnregisterFrameByState(void* frameState)
-{
-}
-
-void* UsdRenderManager::GetFrameState(const char* frameName)
-{
-    return nullptr;
-}
-
-UsdRenderManager::FrameState* UsdRenderManager::GetFrameStateInternal(const char* frameName)
-{
-    return nullptr;
-}
+#else // !USD_DEVICE_RENDERING_ENABLED
 
 void UsdRenderManager::SetFrameRenderer(const char* frameName, const char* hydraRendererName)
 {
 }
 
-void UsdRenderManager::SetFrameCamera(const char* frameName, const pxr::SdfPath& cameraPath)
-{
-}
-
-void UsdRenderManager::SetFrameWorld(const char* frameName, const pxr::SdfPath& worldPath)
-{
-}
-
-void UsdRenderManager::Render(const char* frameName, uint32_t width, uint32_t height, double timeStep)
+void UsdRenderManager::Render(const char* frameName, double timeStep)
 {
 }
 

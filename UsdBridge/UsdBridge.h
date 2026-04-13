@@ -105,7 +105,8 @@ class UsdBridge
     void SetFrameRenderer(const char* frameName, const char* hydraRendererName);
     void SetFrameWorld(const char* frameName, UsdWorldHandle world);
     void SetFrameCamera(const char* frameName, UsdCameraHandle camera);
-    void RenderFrame(const char* frameName, uint32_t width, uint32_t height, double timeStep);
+    void SetFrameRenderSize(const char* frameName, uint32_t width, uint32_t height);
+    void RenderFrame(const char* frameName, double timeStep);
     bool FrameReady(const char* frameName, bool wait);
     void* MapFrame(const char* frameName, UsdBridgeType& returnFormat);
     void UnmapFrame(const char* frameName);

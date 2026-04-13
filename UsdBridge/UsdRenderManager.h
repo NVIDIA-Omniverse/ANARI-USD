@@ -5,6 +5,7 @@
 #define UsdRenderManager_h
 
 #include "UsdBridgeData.h"
+#include "UsdBridgeRenderSettingsState.h"
 #include "usd.h"
 #include <memory>
 #include <unordered_map>
@@ -35,9 +36,10 @@ public:
     void SetFrameRenderer(const char* frameName, const char* hydraRendererName);
     void SetFrameCamera(const char* frameName, const pxr::SdfPath& cameraPath);
     void SetFrameWorld(const char* frameName, const pxr::SdfPath& worldPath);
+    void SetFrameRenderSize(const char* frameName, uint32_t width, uint32_t height);
 
     // Render operations
-    void Render(const char* frameName, uint32_t width, uint32_t height, double timeStep);
+    void Render(const char* frameName, double timeStep);
     bool FrameReady(const char* frameName, bool wait);
     void* MapFrame(const char* frameName, UsdBridgeType& returnFormat);
     void UnmapFrame(const char* frameName);
@@ -61,6 +63,7 @@ private:
         std::string RendererName;
         pxr::SdfPath CameraPath;
         pxr::SdfPath WorldPath;
+        UsdBridgeRenderSettingsState UsdRenderState;
         UsdBridgeRendererCore* Core = nullptr;
         std::unique_ptr<UsdBridgeRenderContext> Context;
     };

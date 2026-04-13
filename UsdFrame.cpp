@@ -83,6 +83,13 @@ bool UsdFrame::doCommitData(UsdDevice* device)
     registeredFrameState = frameBridge->GetFrameState(frameName);
   }
 
+  // Size is plain frame data (no object refs); safe to sync at commit for USD render product resolution.
+  const UsdFrameData& paramData = getReadParams();
+  if (paramData.size.Data[0] > 0 && paramData.size.Data[1] > 0)
+  {
+    frameBridge->SetFrameRenderSize(frameName, paramData.size.Data[0], paramData.size.Data[1]);
+  }
+
   return false;
 }
 
@@ -206,7 +213,7 @@ void UsdFrame::renderFrame(UsdDevice* device)
   renderBufferDepthFormat = paramData.depth;
 
   // Render (to a renderbuffer)
-  frameBridge->RenderFrame(frameName, paramData.size.Data[0], paramData.size.Data[1], paramData.time);
+  frameBridge->RenderFrame(frameName, paramData.time);
 }
 
 bool UsdFrame::frameReady(ANARIWaitMask mask, UsdDevice* device)

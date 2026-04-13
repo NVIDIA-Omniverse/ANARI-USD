@@ -1273,11 +1273,18 @@ void UsdBridge::SetFrameCamera(const char* frameName, UsdCameraHandle camera)
   Internals->RenderManager.SetFrameCamera(frameName, cameraPath);
 }
 
-void UsdBridge::RenderFrame(const char* frameName, uint32_t width, uint32_t height, double timeStep)
+void UsdBridge::SetFrameRenderSize(const char* frameName, uint32_t width, uint32_t height)
 {
   if (!SessionValid) return;
 
-  Internals->RenderManager.Render(frameName, width, height, timeStep);
+  Internals->RenderManager.SetFrameRenderSize(frameName, width, height);
+}
+
+void UsdBridge::RenderFrame(const char* frameName, double timeStep)
+{
+  if (!SessionValid) return;
+
+  Internals->RenderManager.Render(frameName, timeStep);
 }
 
 bool UsdBridge::FrameReady(const char* frameName, bool wait)

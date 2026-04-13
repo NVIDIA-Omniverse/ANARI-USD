@@ -4,7 +4,6 @@
 #include "UsdBridgeRenderContext.h"
 #include "UsdBridgeGLContext.h"
 #include "UsdBridgeUsdWriter.h"
-#include "UsdBridgeUsdWriter_Common.h"
 #include "UsdBridgeDiagnosticMgrDelegate.h"
 
 #ifdef USD_DEVICE_RENDERING_ENABLED
@@ -27,10 +26,6 @@
 #include <pxr/imaging/hgi/hgi.h>
 #include <pxr/imaging/hgi/tokens.h>
 #include <pxr/imaging/hgi/texture.h>
-#include <pxr/usd/usdRender/settings.h>
-#include <pxr/usd/usdRender/product.h>
-#include <pxr/usd/usdRender/var.h>
-#include <pxr/usd/usdRender/tokens.h>
 #include <pxr/usdImaging/usdImaging/delegate.h>
 #include <pxr/imaging/hdx/colorCorrectionTask.h>
 #include <pxr/imaging/hdx/renderSetupTask.h>
@@ -97,89 +92,15 @@ struct MappedFrameState
 #endif
 };
 
-// Struct to manage render settings prims (used by both context types)
-struct RenderSettingsState
-{
-    std::string SettingsPath;
-    std::string ProductPath;
-    std::string VarPath;
-
-    UsdRenderSettings Settings;
-    UsdRenderProduct Product;
-
-    void InitializePaths(const SdfPath& contextId)
-    {
-        std::string contextName = contextId.GetName();
-        SettingsPath = "/Render/" + contextName + "/Settings";
-        ProductPath = "/Render/" + contextName + "/Product";
-        VarPath = "/Render/" + contextName + "/Vars/LdrColor";
-    }
-
-    void CreatePrims(UsdStageRefPtr stage)
-    {
-        if (!stage)
-            return;
-
-        // Create RenderSettings prim
-        Settings = GetOrDefinePrim<UsdRenderSettings>(stage, SdfPath(SettingsPath));
-        Settings.CreateResolutionAttr();
-        Settings.CreateCameraRel();
-
-        // Create RenderProduct prim
-        Product = GetOrDefinePrim<UsdRenderProduct>(stage, SdfPath(ProductPath));
-        Product.CreateResolutionAttr();
-        Product.CreateCameraRel();
-        Product.CreateOrderedVarsRel();
-
-        // Create RenderVar prim and link to product
-        SdfPath renderVarSdf(VarPath);
-        UsdRenderVar renderVarPrim = GetOrDefinePrim<UsdRenderVar>(stage, renderVarSdf);
-        renderVarPrim.CreateSourceNameAttr(VtValue(std::string("LdrColor")));
-        Product.GetOrderedVarsRel().AddTarget(renderVarSdf);
-    }
-
-    void SetResolution(uint32_t width, uint32_t height)
-    {
-        if (Settings)
-        {
-            Settings.GetResolutionAttr().Set(GfVec2i((int)width, (int)height));
-        }
-        if (Product)
-        {
-            Product.GetResolutionAttr().Set(GfVec2i((int)width, (int)height));
-        }
-    }
-
-    void SetCameraPath(const SdfPath& cameraPath)
-    {
-        if (Settings)
-        {
-            Settings.GetCameraRel().ClearTargets(false);
-            Settings.GetCameraRel().AddTarget(cameraPath);
-        }
-        if (Product)
-        {
-            Product.GetCameraRel().ClearTargets(false);
-            Product.GetCameraRel().AddTarget(cameraPath);
-        }
-    }
-};
-
-// Common base data for render context internals
+// Common base data for render context internals (Hydra only; USD render settings live in UsdRenderManager)
 struct RenderContextInternalsBase
 {
     SdfPath CameraPath;
     SdfPath WorldPath;
-    RenderSettingsState RenderSettingsData;
     uint32_t CachedWidth = 0;
     uint32_t CachedHeight = 0;
     MappedFrameState FrameState;
     bool Initialized = false;
-
-    void InitializeBase(const SdfPath& contextId)
-    {
-        RenderSettingsData.InitializePaths(contextId);
-    }
 
     // Check if resolution changed and update cache
     bool ResolutionChanged(uint32_t width, uint32_t height) const
@@ -206,14 +127,14 @@ struct RenderContextInternalsBase
         taskController->SetRenderOutputSettings(HdAovTokens->depth, depthSettings);
     }
 
-    // Update resolution and save - call after setting buffer size on engine/controller
-    void UpdateResolutionState(uint32_t width, uint32_t height, UsdBridgeUsdWriter& usdWriter)
+    void CommitResolutionCache(uint32_t width, uint32_t height)
     {
-        RenderSettingsData.SetResolution(width, height);
-        usdWriter.SaveScene();
         CachedWidth = width;
         CachedHeight = height;
     }
+
+    uint32_t ResolutionWidth() const { return CachedWidth; }
+    uint32_t ResolutionHeight() const { return CachedHeight; }
 };
 
 // Common frame operations that work with any source of render buffer / texture
@@ -424,52 +345,50 @@ public:
 
     void SetCameraPath(const SdfPath& cameraPath) override;
     void SetWorldPath(const SdfPath& worldPath) override;
-    void Render(uint32_t width, uint32_t height, double timeStep) override;
+    void SetRenderBufferSize(uint32_t width, uint32_t height) override;
+    void Render(double timeStep) override;
     bool FrameReady(bool wait) override;
     void* MapFrame(UsdBridgeType& returnFormat) override;
     void UnmapFrame() override;
     bool IsInitialized() const override;
 
 private:
-    class Internals;
-    std::unique_ptr<Internals> ContextData;
+    class InternalData;
+    std::unique_ptr<InternalData> Internals;
     UsdBridgeRendererCore& Core;
 };
 
-class UsdBridgeRenderContextShared::Internals : public RenderContextInternalsBase
+class UsdBridgeRenderContextShared::InternalData : public RenderContextInternalsBase
 {
 public:
-    Internals(const SdfPath& contextId)
+    InternalData(const SdfPath& contextId)
         : TaskControllerId(contextId)
     {
-        InitializeBase(contextId);
     }
 
-    ~Internals()
+    ~InternalData()
     {
         delete TaskController;
     }
 
-    void Initialize(HdRenderIndex* renderIndex, UsdStageRefPtr stage)
+    void Initialize(HdRenderIndex* renderIndex)
     {
         TaskController = new HdxTaskController(renderIndex, TaskControllerId);
         TaskController->SetRenderOutputs({HdAovTokens->color});
         TaskController->SetEnablePresentation(false);
         LightingContext = GlfSimpleLightingContext::New();
 
-        RenderSettingsData.CreatePrims(stage);
-
         Initialized = true;
     }
 
-    void SetResolution(uint32_t width, uint32_t height, UsdBridgeUsdWriter& usdWriter)
+    void SetResolution(uint32_t width, uint32_t height)
     {
         if (!ResolutionChanged(width, height))
             return;
 
         TaskController->SetRenderBufferSize(GfVec2i(width, height));
         ConfigureAovSettings(TaskController);
-        UpdateResolutionState(width, height, usdWriter);
+        CommitResolutionCache(width, height);
     }
 
     SdfPath TaskControllerId;
@@ -479,11 +398,11 @@ public:
 
 UsdBridgeRenderContextShared::UsdBridgeRenderContextShared(UsdBridgeRendererCore& core, const SdfPath& contextId)
     : Core(core)
-    , ContextData(std::make_unique<Internals>(contextId))
+    , Internals(std::make_unique<InternalData>(contextId))
 {
     if (Core.IsInitialized())
     {
-        ContextData->Initialize(Core.GetRenderIndex(), Core.GetStage());
+        Internals->Initialize(Core.GetRenderIndex());
     }
 }
 
@@ -491,24 +410,26 @@ UsdBridgeRenderContextShared::~UsdBridgeRenderContextShared() = default;
 
 void UsdBridgeRenderContextShared::SetCameraPath(const SdfPath& cameraPath)
 {
-    ContextData->CameraPath = cameraPath;
-    ContextData->RenderSettingsData.SetCameraPath(cameraPath);
-    Core.GetUsdWriter().SaveScene();
+    Internals->CameraPath = cameraPath;
 
-    if (ContextData->TaskController)
-    {
-        ContextData->TaskController->SetCameraPath(cameraPath);
-    }
+    if (Internals->TaskController)
+        Internals->TaskController->SetCameraPath(cameraPath);
 }
 
 void UsdBridgeRenderContextShared::SetWorldPath(const SdfPath& worldPath)
 {
-    ContextData->WorldPath = worldPath;
+    Internals->WorldPath = worldPath;
 }
 
-void UsdBridgeRenderContextShared::Render(uint32_t width, uint32_t height, double timeStep)
+void UsdBridgeRenderContextShared::SetRenderBufferSize(uint32_t width, uint32_t height)
 {
-    if (!ContextData->Initialized)
+    if (Internals->Initialized)
+        Internals->SetResolution(width, height);
+}
+
+void UsdBridgeRenderContextShared::Render(double timeStep)
+{
+    if (!Internals->Initialized)
         return;
 
     UsdImagingDelegate* sceneDelegate = Core.GetSceneDelegate();
@@ -519,21 +440,19 @@ void UsdBridgeRenderContextShared::Render(uint32_t width, uint32_t height, doubl
     //sceneDelegate->SetSceneMaterialsEnabled(true);
     //sceneDelegate->SetSceneLightsEnabled(true);
 
-    ContextData->SetResolution(width, height, Core.GetUsdWriter());
-
     HdReprSelector reprSelector(HdReprTokens->smoothHull);
     HdRprimCollection collection(HdTokens->geometry, reprSelector);
 
     // Filter to specific world if set
-    if (!ContextData->WorldPath.IsEmpty())
+    if (!Internals->WorldPath.IsEmpty())
     {
-        collection.SetRootPath(ContextData->WorldPath);
+        collection.SetRootPath(Internals->WorldPath);
     }
 
-    CameraUtilFraming framing(GfRect2i(GfVec2i(0, 0), width, height));
+    CameraUtilFraming framing(GfRect2i(GfVec2i(0, 0), Internals->ResolutionWidth(), Internals->ResolutionHeight()));
 
-    ContextData->TaskController->SetCollection(collection);
-    ContextData->TaskController->SetFraming(framing);
+    Internals->TaskController->SetCollection(collection);
+    Internals->TaskController->SetFraming(framing);
 
     HdxRenderTaskParams taskParams;
     taskParams.enableLighting = true;
@@ -545,34 +464,34 @@ void UsdBridgeRenderContextShared::Render(uint32_t width, uint32_t height, doubl
     taskParams.enableSceneMaterials = true;
     taskParams.enableSceneLights = true;
 
-    ContextData->TaskController->SetRenderParams(taskParams);
-    ContextData->TaskController->SetEnableSelection(false);
+    Internals->TaskController->SetRenderParams(taskParams);
+    Internals->TaskController->SetEnableSelection(false);
 
     HdxColorCorrectionTaskParams hdParams;
     hdParams.colorCorrectionMode = HdxColorCorrectionTokens->sRGB;
-    ContextData->TaskController->SetColorCorrectionParams(hdParams);
+    Internals->TaskController->SetColorCorrectionParams(hdParams);
 
     HdxSelectionTrackerSharedPtr emptySelection = std::make_shared<HdxSelectionTracker>();
     Core.GetEngine()->SetTaskContextData(HdxTokens->selectionState, VtValue(emptySelection));
-    Core.GetEngine()->SetTaskContextData(HdxTokens->lightingContext, VtValue(ContextData->LightingContext));
+    Core.GetEngine()->SetTaskContextData(HdxTokens->lightingContext, VtValue(Internals->LightingContext));
 
     GLF_POST_PENDING_GL_ERRORS();
 
-    HdTaskSharedPtrVector tasks = ContextData->TaskController->GetRenderingTasks();
+    HdTaskSharedPtrVector tasks = Internals->TaskController->GetRenderingTasks();
     Core.GetEngine()->Execute(Core.GetRenderIndex(), &tasks);
 }
 
 bool UsdBridgeRenderContextShared::FrameReady(bool wait)
 {
-    if (!ContextData->Initialized)
+    if (!Internals->Initialized)
         return true;
 
-    return FrameOps::FrameReady(ContextData->TaskController->GetRenderOutput(HdAovTokens->color));
+    return FrameOps::FrameReady(Internals->TaskController->GetRenderOutput(HdAovTokens->color));
 }
 
 void* UsdBridgeRenderContextShared::MapFrame(UsdBridgeType& returnFormat)
 {
-    if (!ContextData->Initialized)
+    if (!Internals->Initialized)
         return nullptr;
 
 #ifdef USDBRIDGE_RENDERER_USE_COLORTEXTURE
@@ -587,28 +506,28 @@ void* UsdBridgeRenderContextShared::MapFrame(UsdBridgeType& returnFormat)
         }
     }
 
-    return FrameOps::MapFrameTexture(Core.GetHgi(), colorTextureHandle, ContextData->FrameState, returnFormat);
+    return FrameOps::MapFrameTexture(Core.GetHgi(), colorTextureHandle, Internals->FrameState, returnFormat);
 #else
-    return FrameOps::MapFrameBuffer(ContextData->TaskController->GetRenderOutput(HdAovTokens->color), returnFormat);
+    return FrameOps::MapFrameBuffer(Internals->TaskController->GetRenderOutput(HdAovTokens->color), returnFormat);
 #endif
 }
 
 void UsdBridgeRenderContextShared::UnmapFrame()
 {
-    if (!ContextData->Initialized)
+    if (!Internals->Initialized)
         return;
 
     GLF_POST_PENDING_GL_ERRORS();
 
 #ifndef USDBRIDGE_RENDERER_USE_COLORTEXTURE
-    FrameOps::UnmapFrameBuffer(ContextData->TaskController->GetRenderOutput(HdAovTokens->color));
+    FrameOps::UnmapFrameBuffer(Internals->TaskController->GetRenderOutput(HdAovTokens->color));
 #endif
     // When using COLORTEXTURE, the buffer is owned by FrameState, nothing to unmap
 }
 
 bool UsdBridgeRenderContextShared::IsInitialized() const
 {
-    return ContextData->Initialized;
+    return Internals->Initialized;
 }
 
 // =============================================================================
@@ -633,37 +552,39 @@ public:
 class UsdBridgeRenderContextStandalone : public UsdBridgeRenderContext
 {
 public:
-    UsdBridgeRenderContextStandalone(UsdBridgeUsdWriter& usdWriter, const char* rendererPluginName, const SdfPath& contextId);
+    UsdBridgeRenderContextStandalone(
+        UsdBridgeUsdWriter& usdWriter, const char* rendererPluginName, const SdfPath& contextId);
     ~UsdBridgeRenderContextStandalone() override;
 
     void SetCameraPath(const SdfPath& cameraPath) override;
     void SetWorldPath(const SdfPath& worldPath) override;
-    void Render(uint32_t width, uint32_t height, double timeStep) override;
+    void SetRenderBufferSize(uint32_t width, uint32_t height) override;
+    void Render(double timeStep) override;
     bool FrameReady(bool wait) override;
     void* MapFrame(UsdBridgeType& returnFormat) override;
     void UnmapFrame() override;
     bool IsInitialized() const override;
 
 private:
-    class Internals;
-    std::unique_ptr<Internals> ContextData;
+    class InternalData;
+    std::unique_ptr<InternalData> Internals;
     UsdBridgeUsdWriter& UsdWriter;
 };
 
-class UsdBridgeRenderContextStandalone::Internals : public RenderContextInternalsBase
+class UsdBridgeRenderContextStandalone::InternalData : public RenderContextInternalsBase
 {
 public:
-    Internals(const SdfPath& contextId)
+    InternalData(const SdfPath& contextId)
     {
-        InitializeBase(contextId);
+        (void)contextId;
     }
 
-    ~Internals()
+    ~InternalData()
     {
         delete RenderEngineGL;
     }
 
-    void Initialize(const char* rendererPluginName, UsdStageRefPtr stage, const UsdBridgeLogObject& logObj)
+    void Initialize(const char* rendererPluginName, const UsdBridgeLogObject& logObj)
     {
         if (!EnsureOpenGLContext())
         {
@@ -677,19 +598,17 @@ public:
         RenderEngineGL->SetRendererAov(HdAovTokens->color);
         RenderEngineGL->SetOverrideWindowPolicy(CameraUtilMatchVertically);
 
-        RenderSettingsData.CreatePrims(stage);
-
         Initialized = true;
     }
 
-    void SetResolution(uint32_t width, uint32_t height, UsdBridgeUsdWriter& usdWriter)
+    void SetResolution(uint32_t width, uint32_t height)
     {
         if (!ResolutionChanged(width, height))
             return;
 
         RenderEngineGL->SetRenderBufferSize(GfVec2i(width, height));
         ConfigureAovSettings(RenderEngineGL->GetTaskController());
-        UpdateResolutionState(width, height, usdWriter);
+        CommitResolutionCache(width, height);
     }
 
     UsdBridgeStandaloneEngine* RenderEngineGL = nullptr;
@@ -698,42 +617,38 @@ public:
 UsdBridgeRenderContextStandalone::UsdBridgeRenderContextStandalone(
     UsdBridgeUsdWriter& usdWriter, const char* rendererPluginName, const SdfPath& contextId)
     : UsdWriter(usdWriter)
-    , ContextData(std::make_unique<Internals>(contextId))
+    , Internals(std::make_unique<InternalData>(contextId))
 {
-    UsdStageRefPtr stage = UsdWriter.GetSceneStage();
-    if (stage)
-    {
-        ContextData->Initialize(rendererPluginName, stage, UsdWriter.LogObject);
-    }
+    Internals->Initialize(rendererPluginName, UsdWriter.LogObject);
 }
 
 UsdBridgeRenderContextStandalone::~UsdBridgeRenderContextStandalone() = default;
 
 void UsdBridgeRenderContextStandalone::SetCameraPath(const SdfPath& cameraPath)
 {
-    ContextData->CameraPath = cameraPath;
-    ContextData->RenderSettingsData.SetCameraPath(cameraPath);
-    UsdWriter.SaveScene();
+    Internals->CameraPath = cameraPath;
 
-    if (ContextData->RenderEngineGL)
-    {
-        ContextData->RenderEngineGL->SetCameraPath(cameraPath);
-    }
+    if (Internals->RenderEngineGL)
+        Internals->RenderEngineGL->SetCameraPath(cameraPath);
 }
 
 void UsdBridgeRenderContextStandalone::SetWorldPath(const SdfPath& worldPath)
 {
-    ContextData->WorldPath = worldPath;
+    Internals->WorldPath = worldPath;
 }
 
-void UsdBridgeRenderContextStandalone::Render(uint32_t width, uint32_t height, double timeStep)
+void UsdBridgeRenderContextStandalone::SetRenderBufferSize(uint32_t width, uint32_t height)
 {
-    if (!ContextData->Initialized)
+    if (Internals->Initialized)
+        Internals->SetResolution(width, height);
+}
+
+void UsdBridgeRenderContextStandalone::Render(double timeStep)
+{
+    if (!Internals->Initialized)
         return;
 
-    ContextData->SetResolution(width, height, UsdWriter);
-
-    CameraUtilFraming framing(GfRect2i(GfVec2i(0, 0), width, height));
+    CameraUtilFraming framing(GfRect2i(GfVec2i(0, 0), Internals->ResolutionWidth(), Internals->ResolutionHeight()));
 
     UsdImagingGLRenderParams glRenderParams;
     glRenderParams.frame = UsdTimeCode(timeStep);
@@ -748,63 +663,63 @@ void UsdBridgeRenderContextStandalone::Render(uint32_t width, uint32_t height, d
     glRenderParams.highlight = false;
     glRenderParams.colorCorrectionMode = HdxColorCorrectionTokens->sRGB;
 
-    ContextData->RenderEngineGL->SetFraming(framing);
+    Internals->RenderEngineGL->SetFraming(framing);
 
     // Determine root prim for rendering - use world path if set, otherwise stage root
     UsdStageRefPtr stage = UsdWriter.GetSceneStage();
     UsdPrim rootPrim;
-    if (!ContextData->WorldPath.IsEmpty())
+    if (!Internals->WorldPath.IsEmpty())
     {
-        rootPrim = stage->GetPrimAtPath(ContextData->WorldPath);
+        rootPrim = stage->GetPrimAtPath(Internals->WorldPath);
     }
     if (!rootPrim)
     {
         rootPrim = stage->GetPseudoRoot();
     }
 
-    ContextData->RenderEngineGL->Render(rootPrim, glRenderParams);
+    Internals->RenderEngineGL->Render(rootPrim, glRenderParams);
 }
 
 bool UsdBridgeRenderContextStandalone::FrameReady(bool wait)
 {
-    if (!ContextData->Initialized)
+    if (!Internals->Initialized)
         return true;
 
-    return FrameOps::FrameReady(ContextData->RenderEngineGL->GetAovRenderBuffer(HdAovTokens->color));
+    return FrameOps::FrameReady(Internals->RenderEngineGL->GetAovRenderBuffer(HdAovTokens->color));
 }
 
 void* UsdBridgeRenderContextStandalone::MapFrame(UsdBridgeType& returnFormat)
 {
-    if (!ContextData->Initialized)
+    if (!Internals->Initialized)
         return nullptr;
 
 #ifdef USDBRIDGE_RENDERER_USE_COLORTEXTURE
     return FrameOps::MapFrameTexture(
-        ContextData->RenderEngineGL->GetHgi(),
-        ContextData->RenderEngineGL->GetAovTexture(HdAovTokens->color),
-        ContextData->FrameState,
+        Internals->RenderEngineGL->GetHgi(),
+        Internals->RenderEngineGL->GetAovTexture(HdAovTokens->color),
+        Internals->FrameState,
         returnFormat);
 #else
-    return FrameOps::MapFrameBuffer(ContextData->RenderEngineGL->GetAovRenderBuffer(HdAovTokens->color), returnFormat);
+    return FrameOps::MapFrameBuffer(Internals->RenderEngineGL->GetAovRenderBuffer(HdAovTokens->color), returnFormat);
 #endif
 }
 
 void UsdBridgeRenderContextStandalone::UnmapFrame()
 {
-    if (!ContextData->Initialized)
+    if (!Internals->Initialized)
         return;
 
     GLF_POST_PENDING_GL_ERRORS();
 
 #ifndef USDBRIDGE_RENDERER_USE_COLORTEXTURE
-    FrameOps::UnmapFrameBuffer(ContextData->RenderEngineGL->GetAovRenderBuffer(HdAovTokens->color));
+    FrameOps::UnmapFrameBuffer(Internals->RenderEngineGL->GetAovRenderBuffer(HdAovTokens->color));
 #endif
     // When using COLORTEXTURE, the buffer is owned by FrameState, nothing to unmap
 }
 
 bool UsdBridgeRenderContextStandalone::IsInitialized() const
 {
-    return ContextData->Initialized;
+    return Internals->Initialized;
 }
 
 // =============================================================================
@@ -869,7 +784,8 @@ class UsdBridgeRenderContextStub : public UsdBridgeRenderContext
 public:
     void SetCameraPath(const pxr::SdfPath&) override {}
     void SetWorldPath(const pxr::SdfPath&) override {}
-    void Render(uint32_t, uint32_t, double) override {}
+    void SetRenderBufferSize(uint32_t, uint32_t) override {}
+    void Render(double) override {}
     bool FrameReady(bool) override { return true; }
     void* MapFrame(UsdBridgeType&) override { return nullptr; }
     void UnmapFrame() override {}

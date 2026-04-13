@@ -40,7 +40,8 @@ public:
 
     virtual void SetCameraPath(const pxr::SdfPath& cameraPath) = 0;
     virtual void SetWorldPath(const pxr::SdfPath& worldPath) = 0;
-    virtual void Render(uint32_t width, uint32_t height, double timeStep) = 0;
+    virtual void SetRenderBufferSize(uint32_t width, uint32_t height) = 0;
+    virtual void Render(double timeStep) = 0;
     virtual bool FrameReady(bool wait) = 0;
     virtual void* MapFrame(UsdBridgeType& returnFormat) = 0;
     virtual void UnmapFrame() = 0;
@@ -88,7 +89,6 @@ std::unique_ptr<UsdBridgeRenderContext> CreateRenderContext(
     UsdBridgeRendererCore* core,  // Required for Shared mode, can be null for Standalone
     UsdBridgeUsdWriter& usdWriter,
     const char* rendererPluginName,
-    const pxr::SdfPath& contextId
-);
+    const pxr::SdfPath& contextId);
 
 #endif

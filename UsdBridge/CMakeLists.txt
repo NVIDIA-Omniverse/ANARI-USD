@@ -125,10 +125,10 @@ if(NOT (USD_ROOT_DIR_DEBUG STREQUAL USD_ROOT_DIR_RELEASE))
   endif()
 endif()
 
-list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade usdLux usdUtils plug)
+list(APPEND USD_INIT_TARGETS usdGeom usdVol usdShade usdLux usdUtils plug usdRender)
 if(${USD_DEVICE_RENDERING_ENABLED})
   find_package(OpenGL REQUIRED)
-  list(APPEND USD_INIT_TARGETS usdHydra usdImaging usdRender hgi hdx glf usdImagingGL)
+  list(APPEND USD_INIT_TARGETS usdHydra usdImaging hgi hdx glf usdImagingGL)
 endif()
 flatten_and_cleanup_targets(USD_TARGETS "${USD_INIT_TARGETS}")
 message(STATUS "USD_TARGETS: ${USD_TARGETS}")
@@ -171,6 +171,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeUsdWriter_Material.cpp
   UsdBridgeUsdWriter_Volume.cpp
   UsdBridgeTimeEvaluator.cpp
+  UsdBridgeRenderSettingsState.cpp
   UsdBridgeRenderContext.cpp
   UsdBridgeGLContext.cpp
   UsdRenderManager.cpp
@@ -182,6 +183,7 @@ set(USDBRIDGE_SOURCES
   UsdBridgeUsdWriter_Common.h
   UsdBridgeUsdWriter_Arrays.h
   UsdBridgeTimeEvaluator.h
+  UsdBridgeRenderSettingsState.h
   UsdBridgeRenderContext.h
   UsdBridgeGLContext.h
   UsdRenderManager.h
