@@ -318,6 +318,5 @@ class UsdDevice : public anari::DeviceImpl, public UsdParameterizedBaseObject<Us
     const void* statusUserData = nullptr;
     ANARIStatusCallback userSetStatusFunc = nullptr;
     const void* userSetStatusUserData = nullptr;
-    std::vector<char> lastStatusMessage;
 };
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2020 The Khronos Group
+// Copyright 2020 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UsdDevice.h"
@@ -196,22 +196,26 @@ void UsdDevice::reportStatus(void* source,
   const char *format,
   va_list* arglist)
 {
+  // Use a thread-local buffer: USD diagnostic callbacks may fire from any thread,
+  // so a shared member vector would cause data races.
+  thread_local std::vector<char> messageBuffer;
+
   if(arglist)
   {
     va_list arglist_copy;
     va_copy(arglist_copy, *arglist);
     int count = std::vsnprintf(nullptr, 0, format, *arglist);
 
-    lastStatusMessage.resize(count + 1);
+    messageBuffer.resize(count + 1);
 
-    std::vsnprintf(lastStatusMessage.data(), count + 1, format, arglist_copy);
+    std::vsnprintf(messageBuffer.data(), count + 1, format, arglist_copy);
     va_end(arglist_copy);
   }
   else
   {
     int count = static_cast<int>(strlen(format));
-    lastStatusMessage.resize(count + 1);
-    std::memcpy(lastStatusMessage.data(), format, count + 1);
+    messageBuffer.resize(count + 1);
+    std::memcpy(messageBuffer.data(), format, count + 1);
   }
 
   if (statusFunc != nullptr)
@@ -223,7 +227,7 @@ void UsdDevice::reportStatus(void* source,
       sourceType,
       severity,
       statusCode,
-      lastStatusMessage.data());
+      messageBuffer.data());
   }
 }
 
