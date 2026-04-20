@@ -79,17 +79,20 @@ void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPa
   // Set the direction transform via a viewmatrix
   GfVec3d eyePoint(0.0, 0.0, 0.0);
   GfVec3d fwdDir(lightData.Direction.Data);
-  GfVec3d approxUpDir((lightData.Direction.Data[1] > lightData.Direction.Data[0]) ?
-    GfVec3d(1.0, 0.0, 0.0) : GfVec3d(0.0, 1.0, 0.0)); // SetLookAt will orthogonalize
+  const double absX = std::fabs(lightData.Direction.Data[0]);
+  const double absY = std::fabs(lightData.Direction.Data[1]);
+  GfVec3d approxUpDir = (absX < absY) ? GfVec3d(1.0, 0.0, 0.0) : GfVec3d(0.0, 1.0, 0.0);// SetLookAt will orthogonalize
   GfVec3d lookAtPoint = eyePoint+fwdDir;
 
   GfMatrix4d viewMatrix;
   viewMatrix.SetLookAt(eyePoint, lookAtPoint, approxUpDir);
 
+  GfMatrix4d xform = viewMatrix.GetInverse(); // local-to-world
+
   lightPrim.ClearXformOpOrder();
   UsdGeomXformOp xformOp = lightPrim.AddTransformOp();
 
-  ClearAndSetUsdAttribute(xformOp.GetAttr(), viewMatrix, timeEval.Eval(DMI::DIRECTION),
+  ClearAndSetUsdAttribute(xformOp.GetAttr(), xform, timeEval.Eval(DMI::DIRECTION),
     timeVarHasChanged && !timeEval.IsTimeVarying(DMI::DIRECTION));
 }
 

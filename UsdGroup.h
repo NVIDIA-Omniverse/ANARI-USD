@@ -12,7 +12,8 @@ class UsdDataArray;
 enum class UsdGroupComponents
 {
   SURFACES = 0,
-  VOLUMES
+  VOLUMES,
+  LIGHTS
 };
 
 struct UsdGroupData
@@ -23,6 +24,7 @@ struct UsdGroupData
   int timeVarying = 0xFFFFFFFF; // Bitmask indicating which attributes are time-varying.
   UsdDataArray* surfaces = nullptr;
   UsdDataArray* volumes = nullptr;
+  UsdDataArray* lights = nullptr;
 };
 
 class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHandle, UsdGroupComponents>
@@ -35,7 +37,8 @@ class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHan
 
     static constexpr ComponentPair componentParamNames[] = {
       ComponentPair(UsdGroupComponents::SURFACES, "surface"),
-      ComponentPair(UsdGroupComponents::VOLUMES, "volume")};
+      ComponentPair(UsdGroupComponents::VOLUMES, "volume"),
+      ComponentPair(UsdGroupComponents::LIGHTS, "light")};
 
   protected:
     bool deferCommit(UsdDevice* device) override;
@@ -44,6 +47,7 @@ class UsdGroup : public UsdBridgedBaseObject<UsdGroup, UsdGroupData, UsdGroupHan
 
     std::vector<UsdSurfaceHandle> surfaceHandles; // for convenience
     std::vector<UsdVolumeHandle> volumeHandles; // for convenience
+    std::vector<UsdLightHandle> lightHandles; // for convenience
     std::vector<int> instanceableValues; // for convenience
 };
 

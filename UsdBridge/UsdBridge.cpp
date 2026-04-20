@@ -763,6 +763,11 @@ void UsdBridge::SetLightRefs(UsdWorldHandle world, const UsdLightHandle* lights,
   SetNoClipRefs(world, lights, numLights, lightPathRp, timeVarying, timeStep, instanceableValues);
 }
 
+void UsdBridge::SetLightRefs(UsdGroupHandle group, const UsdLightHandle* lights, uint64_t numLights, bool timeVarying, double timeStep, const int* instanceableValues)
+{
+  SetNoClipRefs(group, lights, numLights, lightPathRp, timeVarying, timeStep, instanceableValues);
+}
+
 void UsdBridge::SetGeometryRef(UsdSurfaceHandle surface, UsdGeometryHandle geometry, double timeStep, double geomTimeStep)
 {
   if (surface.value == nullptr) return;
@@ -935,6 +940,11 @@ void UsdBridge::DeleteVolumeRefs(UsdGroupHandle group, bool timeVarying, double 
 void UsdBridge::DeleteLightRefs(UsdWorldHandle world, bool timeVarying, double timeStep)
 {
   DeleteAllRefs(world, lightPathRp, timeVarying, timeStep);
+}
+
+void UsdBridge::DeleteLightRefs(UsdGroupHandle group, bool timeVarying, double timeStep)
+{
+  DeleteAllRefs(group, lightPathRp, timeVarying, timeStep);
 }
 
 void UsdBridge::DeleteGeometryRef(UsdSurfaceHandle surface, double timeStep)
