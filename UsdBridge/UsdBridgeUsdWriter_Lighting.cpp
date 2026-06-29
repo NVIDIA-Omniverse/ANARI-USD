@@ -15,16 +15,24 @@ namespace
 
     lightPrim.CreateColorAttr();
     lightPrim.CreateIntensityAttr();
+    lightPrim.CreateExposureAttr();
+    lightPrim.CreateNormalizeAttr();
   }
 
   void CreateDirectionalLight(UsdStageRefPtr lightStage, const SdfPath& lightPrimPath)
   {
     CreateLightCommon<UsdLuxDistantLight>(lightStage, lightPrimPath);
+    UsdLuxDistantLight lightPrim = UsdLuxDistantLight::Get(lightStage, lightPrimPath);
+    assert(lightPrim);
+    lightPrim.CreateAngleAttr();
   }
 
   void CreatePointLight(UsdStageRefPtr lightStage, const SdfPath& lightPrimPath)
   {
     CreateLightCommon<UsdLuxSphereLight>(lightStage, lightPrimPath);
+    UsdLuxSphereLight lightPrim = UsdLuxSphereLight::Get(lightStage, lightPrimPath);
+    assert(lightPrim);
+    lightPrim.CreateRadiusAttr();
   }
 
   void CreateDomeLight(UsdStageRefPtr lightStage, const SdfPath& lightPrimPath)
@@ -59,10 +67,20 @@ namespace
     GfVec3f colorValue(lightData.Color.Data);
     ClearAndSetUsdAttribute(lightPrim.GetColorAttr(), colorValue,
       timeEval.Eval(DMI::COLOR), timeVarHasChanged && !timeEval.IsTimeVarying(DMI::COLOR));
-    
+
     ClearAndSetUsdAttribute(lightPrim.GetIntensityAttr(), lightData.Intensity,
       timeEval.Eval(DMI::INTENSITY), timeVarHasChanged && !timeEval.IsTimeVarying(DMI::INTENSITY));
-  
+
+    // Exposure shares the time-varying behavior of intensity since it is
+    // derived from the same source magnitude.
+    ClearAndSetUsdAttribute(lightPrim.GetExposureAttr(), lightData.Exposure,
+      timeEval.Eval(DMI::INTENSITY), timeVarHasChanged && !timeEval.IsTimeVarying(DMI::INTENSITY));
+
+    // Author normalize=true so 'intensity' has a renderer-independent
+    // physical meaning across light types: lux for DistantLight,
+    // candela for SphereLight, nits for DomeLight.
+    lightPrim.GetNormalizeAttr().Set(true);
+
     return lightPrim;
   }
 }
@@ -75,6 +93,12 @@ void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPa
   const TimeEvaluator<UsdBridgeDirectionalLightData> timeEval(lightData, timeStep);
   UsdLuxDistantLight lightPrim = UpdateUsdLightCommon<UsdBridgeDirectionalLightData, UsdLuxDistantLight>(
     timeVarStage, lightPrimPath, lightData, timeStep, timeVarHasChanged, timeEval);
+
+  // ANARI angularDiameter is in radians; UsdLuxDistantLight inputs:angle is in degrees.
+  const float angleDeg = lightData.AngularDiameter * (180.0f / float(M_PI));
+  ClearAndSetUsdAttribute(lightPrim.GetAngleAttr(), angleDeg,
+    timeEval.Eval(DMI::ANGULAR_DIAMETER),
+    timeVarHasChanged && !timeEval.IsTimeVarying(DMI::ANGULAR_DIAMETER));
 
   // Set the direction transform via a viewmatrix
   GfVec3d eyePoint(0.0, 0.0, 0.0);
@@ -104,7 +128,11 @@ void UsdBridgeUsdWriter::UpdateUsdLight(UsdStageRefPtr timeVarStage, const SdfPa
   const TimeEvaluator<UsdBridgePointLightData> timeEval(lightData, timeStep);
   UsdLuxSphereLight lightPrim = UpdateUsdLightCommon<UsdBridgePointLightData, UsdLuxSphereLight>(
     timeVarStage, lightPrimPath, lightData, timeStep, timeVarHasChanged, timeEval);
-  
+
+  ClearAndSetUsdAttribute(lightPrim.GetRadiusAttr(), lightData.Radius,
+    timeEval.Eval(DMI::RADIUS),
+    timeVarHasChanged && !timeEval.IsTimeVarying(DMI::RADIUS));
+
   GfVec3f position(lightData.Position.Data);
 
   lightPrim.ClearXformOpOrder();

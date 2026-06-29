@@ -15,7 +15,9 @@ enum class UsdLightComponents
   POWER,
   RADIANCE,
   POSITION,
-  DIRECTION
+  DIRECTION,
+  ANGULAR_DIAMETER,
+  RADIUS
 };
 
 struct UsdLightData
@@ -32,6 +34,10 @@ struct UsdLightData
   float intensity = -1.0f;
   float power = -1.0f;
   float radiance = -1.0f;
+  // ANARI directional light parameter, in radians. Default 0 = perfectly parallel.
+  float angularDiameter = 0.0f;
+  // ANARI point light parameter, sphere radius. Default 0 = true point source.
+  float radius = 0.0f;
 };
 
 class UsdLight : public UsdBridgedBaseObject<UsdLight, UsdLightData, UsdLightHandle, UsdLightComponents>
@@ -55,7 +61,9 @@ class UsdLight : public UsdBridgedBaseObject<UsdLight, UsdLightData, UsdLightHan
       ComponentPair(UsdLightComponents::POWER, "power"),
       ComponentPair(UsdLightComponents::RADIANCE, "radiance"),
       ComponentPair(UsdLightComponents::POSITION, "position"),
-      ComponentPair(UsdLightComponents::DIRECTION, "direction")};
+      ComponentPair(UsdLightComponents::DIRECTION, "direction"),
+      ComponentPair(UsdLightComponents::ANGULAR_DIAMETER, "angularDiameter"),
+      ComponentPair(UsdLightComponents::RADIUS, "radius")};
 
   protected:
     bool deferCommit(UsdDevice* device) override;

@@ -744,6 +744,10 @@ struct UsdBridgeCommonLightData
 {
   UsdFloat3 Color { 1.0f, 1.0f, 1.0f };
   float Intensity = 1.0f;
+  // Photometric exposure (powers of 2 multiplier on Intensity), authored as
+  // inputs:exposure on the UsdLuxLight. Used to keep Intensity in a
+  // human-readable range when the source magnitude is very large.
+  float Exposure = 0.0f;
 };
 
 struct UsdBridgeDirectionalLightData : public UsdBridgeCommonLightData
@@ -754,11 +758,15 @@ struct UsdBridgeDirectionalLightData : public UsdBridgeCommonLightData
     COLOR = (1 << 0),
     INTENSITY = (1 << 1),
     DIRECTION = (1 << 2),
-    ALL = (1 << 3) - 1
+    ANGULAR_DIAMETER = (1 << 3),
+    ALL = (1 << 4) - 1
   };
   DataMemberId TimeVarying = DataMemberId::ALL;
 
   UsdFloat3 Direction { 0.0, 0.0f, -1.0f };
+  // Apparent angular size of the source in radians (ANARI units).
+  // 0 means perfectly parallel rays; ~0.00925 rad (0.53 deg) approximates the sun.
+  float AngularDiameter = 0.0f;
 };
 
 struct UsdBridgePointLightData : public UsdBridgeCommonLightData
@@ -769,11 +777,14 @@ struct UsdBridgePointLightData : public UsdBridgeCommonLightData
     COLOR = (1 << 0),
     INTENSITY = (1 << 1),
     POSITION = (1 << 2),
-    ALL = (1 << 3) - 1
+    RADIUS = (1 << 3),
+    ALL = (1 << 4) - 1
   };
   DataMemberId TimeVarying = DataMemberId::ALL;
 
   UsdFloat3 Position { 0.0, 0.0f, 0.0f };
+  // Sphere radius in scene units. 0 means a true point source (no soft shadows).
+  float Radius = 0.0f;
 };
 
 struct UsdBridgeDomeLightData : public UsdBridgeCommonLightData
