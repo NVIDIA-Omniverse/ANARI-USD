@@ -102,7 +102,7 @@ float texcoord[] = {
   1.0f,
   0.0f,
   1.0f };
-int32_t index[] = { 0, 1, 2, 2, 1, 3 };
+int32_t indices[] = { 0, 1, 2, 2, 1, 3 };
 
 float protoVertex[] = {-3.0f,
   -1.0f,
@@ -215,7 +215,7 @@ ANARIInstance createMeshInstance(ANARIDevice dev, TestParameters_t testParams,
     anariRelease(dev, array);
   }
 
-  array = anariNewArray1D(dev, index, 0, 0, ANARI_INT32_VEC3, 2);
+  array = anariNewArray1D(dev, indices, 0, 0, ANARI_INT32_VEC3, 2);
   anariCommitParameters(dev, array);
   anariSetParameter(dev, mesh, "primitive.index", ANARI_ARRAY, &array);
   anariRelease(dev, array);
