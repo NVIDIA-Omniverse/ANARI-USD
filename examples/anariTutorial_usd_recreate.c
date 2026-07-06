@@ -258,10 +258,10 @@ int main(int argc, const char **argv)
     anariRelease(dev, group);
 
     // create and setup light for Ambient Occlusion
-    ANARILight light = anariNewLight(dev, "ambient");
+    ANARILight light = anariNewLight(dev, "hdri");
     anariSetParameter(dev, light, "name", ANARI_STRING, "tutorialLight");
-    float lightIntensity = 1000.0f;
-    anariSetParameter(dev, light, "intensity", ANARI_FLOAT32, &lightIntensity);
+    float lightRadiance = 1.0f;
+    anariSetParameter(dev, light, "radiance", ANARI_FLOAT32, &lightRadiance);
     anariCommitParameters(dev, light);
     array = anariNewArray1D(dev, &light, 0, 0, ANARI_LIGHT, 1);
     anariCommitParameters(dev, array);

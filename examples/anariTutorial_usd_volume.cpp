@@ -263,7 +263,7 @@ void GravityVolume::commit()
 
   // create and setup light
   auto light = anari::newObject<anari::Light>(d, "directional");
-  anari::setParameter(d, light, "irradiance", 1000.0f);
+  anari::setParameter(d, light, "irradiance", 1.0f);
   anari::commitParameters(d, light);
   anari::setAndReleaseParameter(
       d, m_world, "light", anari::newArray1D(d, &light));
