@@ -74,7 +74,11 @@ if (USD_DEVICE_USE_OPENVDB)
       cmake/OpenVDB
       lib/cmake/OpenVDB
   )
-  list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake" ${OPENVDB_MODULE_DIR})
+  # Also expose the parent UsdBridge/cmake dir so FindOpenVDB's internal
+  # find_package(TBB) can locate the local FindTBB.cmake. A dynamically-built
+  # OpenVDB package may ship no CMake modules of its own, so without this the
+  # lookup falls back to CONFIG mode and fails when no TBBConfig.cmake is provided.
+  list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake" "${CMAKE_CURRENT_LIST_DIR}/../cmake" ${OPENVDB_MODULE_DIR})
 
   # Set dep package roots (or manual lib dirs) and find variables
 
@@ -124,7 +128,8 @@ if (USD_DEVICE_USE_OPENVDB)
   
   find_package(OpenVDB REQUIRED)
 
-  # Pop two paths to remove current dir and OPENVDB_MODULE_DIR
+  # Pop three paths to remove current dir, parent cmake dir and OPENVDB_MODULE_DIR
+  list(POP_FRONT CMAKE_MODULE_PATH)
   list(POP_FRONT CMAKE_MODULE_PATH)
   list(POP_FRONT CMAKE_MODULE_PATH)
 
@@ -170,7 +175,20 @@ install(TARGETS ${PROJECT_NAME}
 ## Install optional pdbs
 ## install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
 
-# No dependency install required; all dynamic dependencies should be shared with USD and therefore installed in the parent-level cmake,
-# and if not, make sure they are static to avoid problems with versioning.
+# Most dynamic dependencies are shared with USD and therefore installed in the parent-level cmake.
+# OpenVDB is the exception: when linked dynamically its runtime library must be redistributed next
+# to the device (any compression deps such as blosc/zlib may be embedded in it, while tbb is shared
+# with USD). When linked statically it is compiled into this component, so nothing extra is installed.
+if(USD_DEVICE_USE_OPENVDB AND NOT OPENVDB_USE_STATIC_LIBS AND INSTALL_USD_DEPS)
+  if(WIN32)
+    install(DIRECTORY "${OpenVDB_ROOT}/bin/"
+      DESTINATION ${CMAKE_INSTALL_BINDIR}
+      FILES_MATCHING PATTERN "openvdb*${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  else()
+    install(DIRECTORY "${OpenVDB_ROOT}/lib/"
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      FILES_MATCHING PATTERN "libopenvdb*${CMAKE_SHARED_LIBRARY_SUFFIX}*")
+  endif()
+endif()
 
 message( "-------------------- End UsdBridgeVolume CmakeLists.txt ----------------------------------------")

@@ -8,7 +8,7 @@ This project can be used purely to output USD files to local disk without any fu
 
 On Windows and Linux this library builds against:
     - ANARI SDK (corresponding to git tagged version of this repo) at https://github.com/KhronosGroup/ANARI-SDK
-    - USD version 23.xx or 24.xx, with (if enabled) OpenVDB 10 or 11.
+    - USD version 25.11 (Boost-free), with (if enabled) OpenVDB 12.
 
 USD can be built/installed in any of the following ways (depending on desired capabilities):
     - Get prebuilt USD and optional Omniverse packages according to [Downloading the Omniverse libraries](#downloading-the-omniverse-libraries)

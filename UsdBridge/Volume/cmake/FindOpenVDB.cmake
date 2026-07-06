@@ -1,5 +1,5 @@
 # Copyright Contributors to the OpenVDB Project
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: Apache-2.0
 #
 #[=======================================================================[.rst:
 
@@ -109,7 +109,7 @@ may be provided to tell this module where to look.
 
 #]=======================================================================]
 
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.20)
 include(GNUInstallDirs)
 
 
@@ -334,10 +334,8 @@ set(_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
 set(OPENVDB_PYTHON_PATH_SUFFIXES
   lib64/python
-  lib64/python2.7
   lib64/python3
   lib/python
-  lib/python2.7
   lib/python3
 )
 
@@ -383,14 +381,14 @@ foreach(COMPONENT ${OpenVDB_FIND_COMPONENTS})
   )
 
   if(${COMPONENT} STREQUAL "pyopenvdb")
-    set(_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_PREFIXES "${CMAKE_FIND_LIBRARY_PREFIXES}")
+    set(_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_PREFIXES ${CMAKE_FIND_LIBRARY_PREFIXES})
     set(CMAKE_FIND_LIBRARY_PREFIXES ";lib") # find non-prefixed
     find_library(OpenVDB_${COMPONENT}_LIBRARY ${LIB_NAME}
       ${_FIND_OPENVDB_ADDITIONAL_OPTIONS}
       PATHS ${_VDB_COMPONENT_SEARCH_DIRS}
       PATH_SUFFIXES ${OPENVDB_PYTHON_PATH_SUFFIXES}
     )
-    set(CMAKE_FIND_LIBRARY_PREFIXES "${_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_PREFIXES}")
+    set(CMAKE_FIND_LIBRARY_PREFIXES ${_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_PREFIXES})
   elseif(${COMPONENT} STREQUAL "openvdb_je")
     # alias to the result of openvdb which should be handled first
     set(OpenVDB_${COMPONENT}_LIBRARY ${OpenVDB_openvdb_LIBRARY})
@@ -398,9 +396,13 @@ foreach(COMPONENT ${OpenVDB_FIND_COMPONENTS})
     # alias to the result of openvdb which should be handled first
     set(OpenVDB_${COMPONENT}_LIBRARY ${OpenVDB_openvdb_LIBRARY})
   else()
+    # >>> LOCAL DELTA (#1): MSVC static-lib prefix disambiguation <<<
+    # Some static OpenVDB packages ship the core lib as "libopenvdb.lib" next to
+    # the dynamic import "openvdb.lib". On MSVC the default find prefix is empty,
+    # so force the "lib" prefix when statically linking to pick the static lib.
     set(_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_PREFIXES "${CMAKE_FIND_LIBRARY_PREFIXES}")
     if(MSVC AND OPENVDB_USE_STATIC_LIBS)
-        set(CMAKE_FIND_LIBRARY_PREFIXES "lib") # static libs always prefixed
+      set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
     endif()
     find_library(OpenVDB_${COMPONENT}_LIBRARY ${LIB_NAME}
       ${_FIND_OPENVDB_ADDITIONAL_OPTIONS}
@@ -408,6 +410,7 @@ foreach(COMPONENT ${OpenVDB_FIND_COMPONENTS})
       PATH_SUFFIXES ${OPENVDB_LIB_PATH_SUFFIXES}
     )
     set(CMAKE_FIND_LIBRARY_PREFIXES "${_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_PREFIXES}")
+    # >>> END LOCAL DELTA (#1) <<<
   endif()
 
   list(APPEND OpenVDB_LIB_COMPONENTS ${OpenVDB_${COMPONENT}_LIBRARY})
@@ -433,7 +436,7 @@ unset(OPENVDB_LIB_PATH_SUFFIXES)
 
 # Reset library suffix
 
-set(CMAKE_FIND_LIBRARY_SUFFIXES "${_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES}")
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
 unset(_OPENVDB_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
 
 # ------------------------------------------------------------------------
@@ -497,46 +500,10 @@ endif()
 
 find_package(TBB REQUIRED COMPONENTS tbb)
 
-if(NOT OPENVDB_USE_STATIC_LIBS AND NOT Boost_USE_STATIC_LIBS)
-  # @note  Both of these must be set for Boost 1.70 (VFX2020) to link against
-  #        boost shared libraries (more specifically libraries built with -fPIC).
-  #        http://boost.2283326.n4.nabble.com/CMake-config-scripts-broken-in-1-70-td4708957.html
-  #        https://github.com/boostorg/boost_install/commit/160c7cb2b2c720e74463865ef0454d4c4cd9ae7c
-  set(BUILD_SHARED_LIBS ON)
-  set(Boost_USE_STATIC_LIBS OFF)
-endif()
-
-find_package(Boost REQUIRED COMPONENTS iostreams)
-
 # Add deps for pyopenvdb
-# @todo track for numpy
 
 if(pyopenvdb IN_LIST OpenVDB_FIND_COMPONENTS)
   find_package(Python REQUIRED)
-
-  # Boost python handling - try and find both python and pythonXx (version suffixed).
-  # Prioritize the version suffixed library, failing if neither exist.
-
-  find_package(Boost ${MINIMUM_BOOST_VERSION}
-    QUIET COMPONENTS python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}
-  )
-
-  if(TARGET Boost::python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR})
-    set(BOOST_PYTHON_LIB "python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
-    message(STATUS "Found boost_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
-  else()
-    find_package(Boost ${MINIMUM_BOOST_VERSION} QUIET COMPONENTS python)
-    if(TARGET Boost::python)
-      set(BOOST_PYTHON_LIB "python")
-      message(STATUS "Found non-suffixed boost_python, assuming to be python version "
-        "\"${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}\" compatible"
-      )
-    else()
-      message(FATAL_ERROR "Unable to find boost_python or "
-        "boost_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}."
-      )
-    endif()
-  endif()
 endif()
 
 # Add deps for openvdb_ax
@@ -655,6 +622,20 @@ elseif(NOT OPENVDB_USE_STATIC_LIBS)
   unset(_OPENVDB_PREREQUISITE_LIST)
 endif()
 
+# >>> LOCAL DELTA (#2): skip blosc/zlib resolution on the dynamic path <<<
+# Some dynamically-built OpenVDB packages statically embed blosc and zlib into
+# the openvdb shared library and ship no separate blosc/zlib import libs,
+# headers or runtime DLLs. version.h still advertises OPENVDB_USE_BLOSC/ZLIB,
+# which would otherwise force find_package(Blosc/ZLIB REQUIRED) (no module/files
+# are available) and add non-existent link dependencies. Only resolve them as
+# external packages when statically linking OpenVDB, where the consumer must
+# provide them itself.
+if(NOT OPENVDB_USE_STATIC_LIBS)
+  set(OpenVDB_USES_BLOSC OFF)
+  set(OpenVDB_USES_ZLIB OFF)
+endif()
+# >>> END LOCAL DELTA (#2) <<<
+
 if(OpenVDB_USES_BLOSC)
   find_package(Blosc REQUIRED)
 endif()
@@ -668,19 +649,11 @@ if(OpenVDB_USES_LOG4CPLUS)
 endif()
 
 if(OpenVDB_USES_IMATH_HALF)
-  find_package(Imath CONFIG)
-  if (NOT TARGET Imath::Imath)
-    find_package(IlmBase REQUIRED COMPONENTS Half)
-  endif()
+  find_package(Imath REQUIRED CONFIG)
+endif()
 
-  if(WIN32)
-    # @note OPENVDB_OPENEXR_STATICLIB is old functionality and should be removed
-    if(OPENEXR_USE_STATIC_LIBS OR
-        ("${ILMBASE_LIB_TYPE}" STREQUAL "STATIC_LIBRARY") OR
-        ("${IMATH_LIB_TYPE}" STREQUAL "STATIC_LIBRARY"))
-      list(APPEND OpenVDB_DEFINITIONS OPENVDB_OPENEXR_STATICLIB)
-    endif()
-  endif()
+if(OpenVDB_USES_DELAYED_LOADING)
+  find_package(Boost REQUIRED COMPONENTS iostreams)
 endif()
 
 if(UNIX)
@@ -688,15 +661,11 @@ if(UNIX)
 endif()
 
 # Set deps. Note that the order here is important. If we're building against
-# Houdini 17.5 we must include IlmBase deps first to ensure the users chosen
+# Houdini we must include Imath deps first to ensure the users chosen
 # namespaced headers are correctly prioritized. Otherwise other include paths
 # from shared installs (including houdini) may pull in the wrong headers
 
 set(_OPENVDB_VISIBLE_DEPENDENCIES "")
-
-if(OPENVDB_USE_STATIC_LIBS AND Boost_USE_STATIC_LIBS)
-  list(APPEND _OPENVDB_VISIBLE_DEPENDENCIES Boost::iostreams)
-endif()
 
 if(OpenVDB_USES_DELAYED_LOADING)
   list(APPEND _OPENVDB_VISIBLE_DEPENDENCIES Boost::iostreams)
@@ -704,7 +673,7 @@ if(OpenVDB_USES_DELAYED_LOADING)
 endif()
 
 if(OpenVDB_USES_IMATH_HALF)
-  list(APPEND _OPENVDB_VISIBLE_DEPENDENCIES $<TARGET_NAME_IF_EXISTS:IlmBase::Half> $<TARGET_NAME_IF_EXISTS:Imath::Imath>)
+  list(APPEND _OPENVDB_VISIBLE_DEPENDENCIES Imath::Imath)
 endif()
 
 if(OpenVDB_USES_LOG4CPLUS)
@@ -731,12 +700,16 @@ if(NOT OPENVDB_USE_STATIC_LIBS)
     list(APPEND _OPENVDB_HIDDEN_DEPENDENCIES ZLIB::ZLIB)
   endif()
 else()
+  # >>> LOCAL DELTA (#3): propagate static optional deps as visible deps <<<
+  # When statically linking OpenVDB its optional dependencies must appear on the
+  # consumer's link line so their symbols resolve (upstream adds nothing here).
   if(OpenVDB_USES_BLOSC AND BLOSC_USE_STATIC_LIBS)
     list(APPEND _OPENVDB_VISIBLE_DEPENDENCIES Blosc::blosc)
   endif()
   if(OpenVDB_USES_ZLIB AND ZLIB_USE_STATIC_LIBS)
     list(APPEND _OPENVDB_VISIBLE_DEPENDENCIES ZLIB::ZLIB)
   endif()
+  # >>> END LOCAL DELTA (#3) <<<
 endif()
 
 if(openvdb_je IN_LIST OpenVDB_FIND_COMPONENTS)
@@ -804,7 +777,7 @@ if(OpenVDB_pyopenvdb_LIBRARY)
     set_target_properties(OpenVDB::pyopenvdb PROPERTIES
       IMPORTED_LOCATION "${OpenVDB_pyopenvdb_LIBRARY}"
       INTERFACE_INCLUDE_DIRECTORIES "${OpenVDB_pyopenvdb_INCLUDE_DIR};${PYTHON_INCLUDE_DIR}"
-      INTERFACE_LINK_LIBRARIES "OpenVDB::openvdb;Boost::${BOOST_PYTHON_LIB};${PYTHON_LIBRARIES}"
+      INTERFACE_LINK_LIBRARIES "OpenVDB::openvdb;${PYTHON_LIBRARIES}"
       INTERFACE_COMPILE_FEATURES cxx_std_17
    )
   endif()

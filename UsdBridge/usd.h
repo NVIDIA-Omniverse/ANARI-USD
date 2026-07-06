@@ -10,8 +10,9 @@
 #pragma warning(disable:4996) // call to std::copy with parameters that may be unsafe
 #define NOMINMAX // Make sure nobody #defines min or max
 // Python must be included first because it monkeys with macros that cause
-// TBB to fail to compile in debug mode if TBB is included before Python
-#include <boost/python/object.hpp>
+// TBB to fail to compile in debug mode if TBB is included before Python.
+// USD's pySafePython.h pulls in Python.h safely.
+#include <pxr/base/tf/pySafePython.h>
 #include <pxr/pxr.h>
 #include <pxr/base/tf/token.h>
 #include <pxr/base/tf/diagnosticMgr.h>

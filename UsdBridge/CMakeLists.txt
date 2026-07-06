@@ -88,7 +88,7 @@ endif()
 
 # Find TBB BEFORE processing USD (USD targets reference TBB::tbb)
 if(DEFINED TBB_ROOT)
-  # Add our custom cmake directory to module path for FindTBB.cmake
+  # Add the local cmake directory to module path for FindTBB.cmake
   list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
   find_package(TBB REQUIRED COMPONENTS tbb)
   list(POP_FRONT CMAKE_MODULE_PATH)
@@ -111,7 +111,13 @@ if(${USD_DEVICE_RENDERING_ENABLED} AND NOT TARGET opensubdiv::opensubdiv)
   )
 endif()
 
-# Search in config mode (USD will now skip TBB finding and use our targets)
+# pxrConfig.cmake performs a find_dependency(OpenSubdiv CONFIG), but some USD
+# distributions only ship the prebuilt OpenSubdiv libs (e.g. osdCPU/osdGPU)
+# without a CMake config package. The OpenSubdiv symbols are already provided
+# through pxrTargets, so disable USD's config-mode lookup, as is done for TBB above.
+set(PXR_FIND_OPENSUBDIV_IN_CONFIG OFF)
+
+# Search in config mode (USD will now skip TBB finding and use the targets defined above)
 find_package(pxr REQUIRED
   HINTS ${USD_ROOT_DIR_CURRENT})
 
