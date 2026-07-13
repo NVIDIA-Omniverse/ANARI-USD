@@ -634,8 +634,10 @@ void doTest(TestParameters_t testParams)
   float cam_up[] = {0.f, 1.f, 0.f};
   float cam_pos_mesh[] = {9.0f, 13.0f, 16.0f};
   float cam_view_mesh[] = {-1.0f, -1.5f, -1.0f};
-  float cam_pos_grid[] = {393.26795f, 570.90515f, 822.79516f};
-  float cam_view_grid[] = {-0.5f, -0.7f, -2.0f};     
+  // Grid spans ~[0,495] in X/Y around center (247.5, 247.5, 0). Framed close and
+  // aimed at that center so the whole grid nearly fills the 4:3 viewport.
+  float cam_pos_grid[] = {336.7f, 414.4f, 505.8f};
+  float cam_view_grid[] = {-0.16519f, -0.30907f, -0.93667f};
   float* cam_pos = (testParams.testType == TEST_MESH) ? cam_pos_mesh : cam_pos_grid;
   float* cam_view = (testParams.testType == TEST_MESH) ? cam_view_mesh : cam_view_grid;
   float cam_far = (testParams.testType == TEST_MESH) ? 1000.0f : 1500.0f;
