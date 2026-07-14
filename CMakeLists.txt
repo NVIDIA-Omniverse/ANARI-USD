@@ -250,7 +250,18 @@ if(USD_DEVICE_MPI_ENABLED)
           "${_OPENMPI_LIB_DIR}/libopen-pal*.so*"
           "${_OPENMPI_LIB_DIR}/libpmix*.so*")
         if(MPI_SHARED_LIBS)
-          install(FILES ${MPI_SHARED_LIBS} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+          # The lib dir usually only holds the unversioned .so dev symlinks that
+          # point at the real SONAME libraries (e.g. libmpi_cxx.so.40) elsewhere
+          # on the system. FOLLOW_SYMLINK_CHAIN installs the real file plus every
+          # symlink in the chain, so the loader can resolve the versioned SONAME
+          # the device actually links against at runtime.
+          install(CODE "
+            file(INSTALL
+              DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
+              TYPE SHARED_LIBRARY
+              FOLLOW_SYMLINK_CHAIN
+              FILES ${MPI_SHARED_LIBS})
+          ")
         else()
           message(WARNING "No OpenMPI shared libraries found under ${_OPENMPI_LIB_DIR}")
         endif()
