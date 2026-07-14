@@ -249,6 +249,19 @@ if(USD_DEVICE_MPI_ENABLED)
           "${_OPENMPI_LIB_DIR}/libopen-rte*.so*"
           "${_OPENMPI_LIB_DIR}/libopen-pal*.so*"
           "${_OPENMPI_LIB_DIR}/libpmix*.so*")
+        # OpenMPI (libopen-pal/libopen-rte) links transitively against hwloc and
+        # libevent, which live in the base multiarch dir rather than the
+        # openmpi/ subdir. The GPU-less test environment doesn't ship these, so
+        # bundle them alongside the MPI libraries or the loader can't resolve
+        # libmpi.so.40 at runtime (libhwloc.so.15, libevent_core-2.1.so.7, ...).
+        get_filename_component(_MPI_MULTIARCH_DIR "${_OPENMPI_LIB_DIR}/../.." ABSOLUTE)
+        if(IS_DIRECTORY "${_MPI_MULTIARCH_DIR}")
+          file(GLOB MPI_TRANSITIVE_LIBS
+            "${_MPI_MULTIARCH_DIR}/libhwloc.so*"
+            "${_MPI_MULTIARCH_DIR}/libevent*.so*"
+            "${_MPI_MULTIARCH_DIR}/libpmix.so*")
+          list(APPEND MPI_SHARED_LIBS ${MPI_TRANSITIVE_LIBS})
+        endif()
         if(MPI_SHARED_LIBS)
           # The lib dir usually only holds the unversioned .so dev symlinks that
           # point at the real SONAME libraries (e.g. libmpi_cxx.so.40) elsewhere
