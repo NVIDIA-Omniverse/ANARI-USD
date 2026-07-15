@@ -244,8 +244,8 @@ if(USD_DEVICE_MPI_ENABLED)
       endif()
       if(_OPENMPI_LIB_DIR)
         message(STATUS "MPI runtime install lib: ${_OPENMPI_LIB_DIR}")
-        # pmix comes from the multiarch dir below, not here: globbing it from
-        # both dirs installs the chain twice and breaks FOLLOW_SYMLINK_CHAIN.
+        # pmix comes from the multiarch dir below, not here, to avoid globbing
+        # its symlink chain twice.
         file(GLOB MPI_SHARED_LIBS
           "${_OPENMPI_LIB_DIR}/libmpi*.so*"
           "${_OPENMPI_LIB_DIR}/libopen-rte*.so*"
@@ -260,19 +260,29 @@ if(USD_DEVICE_MPI_ENABLED)
             "${_MPI_MULTIARCH_DIR}/libpmix.so*")
           list(APPEND MPI_SHARED_LIBS ${MPI_TRANSITIVE_LIBS})
         endif()
-        # Dedupe: a duplicate SONAME chain breaks FOLLOW_SYMLINK_CHAIN.
         if(MPI_SHARED_LIBS)
           list(REMOVE_DUPLICATES MPI_SHARED_LIBS)
         endif()
         if(MPI_SHARED_LIBS)
-          # FOLLOW_SYMLINK_CHAIN installs the real lib plus its .so symlinks so
-          # the loader can resolve the versioned SONAME at runtime.
+          # Install the chain by hand: copy real libs and recreate each symlink
+          # ourselves. FOLLOW_SYMLINK_CHAIN chokes on pmix's symlink layout with
+          # "Too many levels of symbolic links".
           install(CODE "
-            file(INSTALL
-              DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
-              TYPE SHARED_LIBRARY
-              FOLLOW_SYMLINK_CHAIN
-              FILES ${MPI_SHARED_LIBS})
+            set(_mpi_dest \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\")
+            file(MAKE_DIRECTORY \"\${_mpi_dest}\")
+            foreach(_mpi_lib ${MPI_SHARED_LIBS})
+              get_filename_component(_mpi_name \"\${_mpi_lib}\" NAME)
+              if(IS_SYMLINK \"\${_mpi_lib}\")
+                file(READ_SYMLINK \"\${_mpi_lib}\" _mpi_tgt)
+                get_filename_component(_mpi_tgt \"\${_mpi_tgt}\" NAME)
+                message(STATUS \"Installing symlink: \${_mpi_dest}/\${_mpi_name} -> \${_mpi_tgt}\")
+                file(REMOVE \"\${_mpi_dest}/\${_mpi_name}\")
+                execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink
+                  \"\${_mpi_tgt}\" \"\${_mpi_dest}/\${_mpi_name}\")
+              else()
+                file(INSTALL DESTINATION \"\${_mpi_dest}\" TYPE SHARED_LIBRARY FILES \"\${_mpi_lib}\")
+              endif()
+            endforeach()
           ")
         else()
           message(WARNING "No OpenMPI shared libraries found under ${_OPENMPI_LIB_DIR}")
