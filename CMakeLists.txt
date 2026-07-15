@@ -244,16 +244,14 @@ if(USD_DEVICE_MPI_ENABLED)
       endif()
       if(_OPENMPI_LIB_DIR)
         message(STATUS "MPI runtime install lib: ${_OPENMPI_LIB_DIR}")
+        # pmix comes from the multiarch dir below, not here: globbing it from
+        # both dirs installs the chain twice and breaks FOLLOW_SYMLINK_CHAIN.
         file(GLOB MPI_SHARED_LIBS
           "${_OPENMPI_LIB_DIR}/libmpi*.so*"
           "${_OPENMPI_LIB_DIR}/libopen-rte*.so*"
-          "${_OPENMPI_LIB_DIR}/libopen-pal*.so*"
-          "${_OPENMPI_LIB_DIR}/libpmix*.so*")
-        # OpenMPI (libopen-pal/libopen-rte) links transitively against hwloc and
-        # libevent, which live in the base multiarch dir rather than the
-        # openmpi/ subdir. The GPU-less test environment doesn't ship these, so
-        # bundle them alongside the MPI libraries or the loader can't resolve
-        # libmpi.so.40 at runtime (libhwloc.so.15, libevent_core-2.1.so.7, ...).
+          "${_OPENMPI_LIB_DIR}/libopen-pal*.so*")
+        # hwloc/libevent/pmix are transitive deps in the multiarch dir, not the
+        # openmpi/ subdir, and aren't shipped on the GPU-less test runners.
         get_filename_component(_MPI_MULTIARCH_DIR "${_OPENMPI_LIB_DIR}/../.." ABSOLUTE)
         if(IS_DIRECTORY "${_MPI_MULTIARCH_DIR}")
           file(GLOB MPI_TRANSITIVE_LIBS
@@ -262,12 +260,13 @@ if(USD_DEVICE_MPI_ENABLED)
             "${_MPI_MULTIARCH_DIR}/libpmix.so*")
           list(APPEND MPI_SHARED_LIBS ${MPI_TRANSITIVE_LIBS})
         endif()
+        # Dedupe: a duplicate SONAME chain breaks FOLLOW_SYMLINK_CHAIN.
         if(MPI_SHARED_LIBS)
-          # The lib dir usually only holds the unversioned .so dev symlinks that
-          # point at the real SONAME libraries (e.g. libmpi_cxx.so.40) elsewhere
-          # on the system. FOLLOW_SYMLINK_CHAIN installs the real file plus every
-          # symlink in the chain, so the loader can resolve the versioned SONAME
-          # the device actually links against at runtime.
+          list(REMOVE_DUPLICATES MPI_SHARED_LIBS)
+        endif()
+        if(MPI_SHARED_LIBS)
+          # FOLLOW_SYMLINK_CHAIN installs the real lib plus its .so symlinks so
+          # the loader can resolve the versioned SONAME at runtime.
           install(CODE "
             file(INSTALL
               DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
