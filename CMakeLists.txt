@@ -264,24 +264,39 @@ if(USD_DEVICE_MPI_ENABLED)
           list(REMOVE_DUPLICATES MPI_SHARED_LIBS)
         endif()
         if(MPI_SHARED_LIBS)
-          # Install the chain by hand: copy real libs and recreate each symlink
-          # ourselves. FOLLOW_SYMLINK_CHAIN chokes on pmix's symlink layout with
-          # "Too many levels of symbolic links".
+          # Install by walking each symlink chain across directories, copying the
+          # real lib and recreating the .so/.so.N symlinks. This mirrors
+          # FOLLOW_SYMLINK_CHAIN (which follows the openmpi/lib .so links into the
+          # multiarch dir for the real SONAME) but avoids its pmix ELOOP bug.
           install(CODE "
             set(_mpi_dest \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\")
             file(MAKE_DIRECTORY \"\${_mpi_dest}\")
             foreach(_mpi_lib ${MPI_SHARED_LIBS})
-              get_filename_component(_mpi_name \"\${_mpi_lib}\" NAME)
-              if(IS_SYMLINK \"\${_mpi_lib}\")
-                file(READ_SYMLINK \"\${_mpi_lib}\" _mpi_tgt)
-                get_filename_component(_mpi_tgt \"\${_mpi_tgt}\" NAME)
-                message(STATUS \"Installing symlink: \${_mpi_dest}/\${_mpi_name} -> \${_mpi_tgt}\")
-                file(REMOVE \"\${_mpi_dest}/\${_mpi_name}\")
-                execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink
-                  \"\${_mpi_tgt}\" \"\${_mpi_dest}/\${_mpi_name}\")
-              else()
-                file(INSTALL DESTINATION \"\${_mpi_dest}\" TYPE SHARED_LIBRARY FILES \"\${_mpi_lib}\")
-              endif()
+              set(_mpi_cur \"\${_mpi_lib}\")
+              set(_mpi_hops 0)
+              while(_mpi_hops LESS 16)
+                math(EXPR _mpi_hops \"\${_mpi_hops} + 1\")
+                get_filename_component(_mpi_name \"\${_mpi_cur}\" NAME)
+                get_filename_component(_mpi_dir \"\${_mpi_cur}\" DIRECTORY)
+                if(IS_SYMLINK \"\${_mpi_cur}\")
+                  file(READ_SYMLINK \"\${_mpi_cur}\" _mpi_tgt)
+                  get_filename_component(_mpi_tgtname \"\${_mpi_tgt}\" NAME)
+                  if(NOT _mpi_tgtname STREQUAL _mpi_name)
+                    message(STATUS \"Installing symlink: \${_mpi_dest}/\${_mpi_name} -> \${_mpi_tgtname}\")
+                    file(REMOVE \"\${_mpi_dest}/\${_mpi_name}\")
+                    execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink
+                      \"\${_mpi_tgtname}\" \"\${_mpi_dest}/\${_mpi_name}\")
+                  endif()
+                  if(IS_ABSOLUTE \"\${_mpi_tgt}\")
+                    set(_mpi_cur \"\${_mpi_tgt}\")
+                  else()
+                    get_filename_component(_mpi_cur \"\${_mpi_dir}/\${_mpi_tgt}\" ABSOLUTE)
+                  endif()
+                else()
+                  file(INSTALL DESTINATION \"\${_mpi_dest}\" TYPE SHARED_LIBRARY FILES \"\${_mpi_cur}\")
+                  break()
+                endif()
+              endwhile()
             endforeach()
           ")
         else()
